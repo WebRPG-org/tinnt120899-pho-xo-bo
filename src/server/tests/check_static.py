@@ -214,9 +214,9 @@ expected_tests = {
     "SocialTests.cs": 22,
     "EconomyTests.cs": 22,
 }
-check("T9a", "Đủ 4 file test EditMode (Jobs/TimeSystem/Social/Economy)",
-      set(expected_tests) == {f.name for f in editmode_files},
-      f"có: {[f.name for f in editmode_files]}" if set(expected_tests) != {f.name for f in editmode_files} else "")
+check("T9a", "Đủ 4 file test EditMode gốc (Jobs/TimeSystem/Social/Economy)",
+      set(expected_tests) <= {f.name for f in editmode_files},
+      f"có: {[f.name for f in editmode_files]}" if not set(expected_tests) <= {f.name for f in editmode_files} else "")
 for fname, expected in expected_tests.items():
     fpath = EDITMODE / fname
     if not fpath.exists():
@@ -259,6 +259,58 @@ check("T9g", "Mọi file test EditMode đều UTF-8", not bad_test_utf8,
 bad_test_secret = [f.name for f in editmode_files if secret_pat.search(read(f))]
 check("T9h", "Không có secret/token/key trong file test EditMode", not bad_test_secret,
       f"nghi ngờ ở: {bad_test_secret}" if bad_test_secret else "")
+
+# ---- 10. File test EditMode đợt 2 (18/11 ~18:45) ----
+# C6 tiếp: phủ nốt 6 module logic thuần còn lại (Inventory/Crafting/
+# Exploration/PlayerProgress/District+TitleConflict/PhoneHub) — tổng EditMode
+# nay 207 test (82 cũ + 125 mới). Vẫn chưa chạy được (cần Unity 2022 LTS).
+expected_tests_2 = {
+    "InventoryTests.cs": 15,
+    "CraftingTests.cs": 16,
+    "ExplorationTests.cs": 17,
+    "PlayerProgressTests.cs": 30,
+    "DistrictTests.cs": 29,
+    "PhoneHubTests.cs": 18,
+}
+check("T10a", "Đủ 6 file test EditMode đợt 2",
+      set(expected_tests_2) <= {f.name for f in editmode_files},
+      f"thiếu: {sorted(set(expected_tests_2) - {f.name for f in editmode_files})}" if not set(expected_tests_2) <= {f.name for f in editmode_files} else "")
+for fname, expected in expected_tests_2.items():
+    fpath = EDITMODE / fname
+    if not fpath.exists():
+        check(f"T10b-{fname}", f"{fname} tồn tại", False, "thiếu file")
+        continue
+    content = read(fpath)
+    n_tests = len(re.findall(r"\[Test\]", content))
+    n_methods = len(re.findall(r"public void \w+\(", content))
+    check(f"T10b-{fname}", f"{fname}: {expected} test method",
+          n_tests == expected and n_methods == expected,
+          f"[Test]={n_tests}, public void={n_methods}, kỳ vọng {expected}")
+    clean = strip_strings_comments(content)
+    ok, detail = True, ""
+    for o, c in [("{", "}"), ("(", ")"), ("[", "]")]:
+        if clean.count(o) != clean.count(c):
+            ok = False
+            detail += f"{o}{c}: {clean.count(o)} vs {clean.count(c)}; "
+    check(f"T10c-{fname}", f"Ngoặc cân bằng {fname}", ok, detail or "cân bằng")
+    check(f"T10d-{fname}", f"{fname} dùng NUnit + namespace PhoXoBo.Tests",
+          "using NUnit.Framework;" in content and "namespace PhoXoBo.Tests" in content)
+    check(f"T10e-{fname}", f"{fname} không dùng UnityEngine (logic thuần)",
+          "UnityEngine" not in content)
+# T10f: mỗi file test đợt 2 phải nhắc đúng API thật đang test (không bịa API).
+api_markers = {
+    "InventoryTests.cs": ["ItemCatalog", "BuffFor", "EndFrame"],
+    "CraftingTests.cs": ["ToolBehaviour", "CanCraft", "MissingIngredients"],
+    "ExplorationTests.cs": ["HotspotsInDistrict", "CanFastTravel", "GuideHint"],
+    "PlayerProgressTests.cs": ["CanOpenChapter", "SuggestEnding", "RankAtRisk"],
+    "DistrictTests.cs": ["Districts.All", "IsBlocked", "ExpectedCount"],
+    "PhoneHubTests.cs": ["TabOrder", "SelectTab", "TotalUnread"],
+}
+for fname, markers in api_markers.items():
+    content = read(EDITMODE / fname)
+    missing = [m for m in markers if m not in content]
+    check(f"T10f-{fname}", f"{fname} nhắc đúng API thật", not missing,
+          f"thiếu: {missing}" if missing else "")
 
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)

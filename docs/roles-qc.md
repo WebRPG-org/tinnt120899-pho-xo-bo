@@ -110,18 +110,21 @@ Thứ tự làm — mỗi bước xong thì push 1 commit để GitHub thấy ti
 | C8 | Art / nhạc slice | Đồ hoạ + track có bản quyền rõ ràng (vai Đồ hoạ §1) | 4 khu + 1 nhân vật + UI điện thoại, rubric 8 chiều ≥12/16 |
 | C9 | Chốt số còn thiếu | Chủ chốt: trần chỉ số, ngưỡng An Yên, 10 nhóm nghề, 6 quyết định kiến trúc | Ghi vào GDD + `GameBalance.cs` cùng lúc, chạy lại `check_static.py` PASS |
 
-**Hiện trạng 18/11/2026 ~17:00:** C1 xong ở mức khung file (10 file
+**Hiện trạng 18/11/2026 ~18:50:** C1 xong ở mức khung file (10 file
 `ProjectSettings/*.asset` + scene `SliceXomTroCu.unity`; chưa verify mở bằng
 Unity — cần máy có Unity 2022.3.62f1 sinh `Library/` + `.csproj` và kiểm tra
 Play lần đầu). C2–C9 vẫn chưa xong (chưa chạy được).
-Đã xong phần chuẩn bị cho C5/C6: kiểm tra tĩnh 83/83 PASS
+Đã xong phần chuẩn bị cho C5/C6: kiểm tra tĩnh 119/119 PASS
 (`docs/test-report.md`), `Social.cs` + `Economy.cs` đã viết theo đúng số
 chốt để test chạy được sau này có cái mà test, test xUnit server
 (`EconomyLedgerTests.cs`, 17 test, chưa chạy — cần .NET 8 SDK) +
 `Program.cs` đã nối `EconomyLedger` singleton với 2 endpoint
 `/ledger/balance` + `/ledger/gift`, test EditMode Unity (`JobsPayTests.cs`
 28 test + `TimeSystemTests.cs` 10 test + `SocialTests.cs` 22 test +
-`EconomyTests.cs` 22 test = **82 test**, chưa chạy — cần Unity 2022 LTS) +
+`EconomyTests.cs` 22 test + `InventoryTests.cs` 15 test +
+`CraftingTests.cs` 16 test + `ExplorationTests.cs` 17 test +
+`PlayerProgressTests.cs` 30 test + `DistrictTests.cs` 29 test +
+`PhoneHubTests.cs` 18 test = **207 test**, chưa chạy — cần Unity 2022 LTS) +
 `PhoXoBo.asmdef`. Đã sửa trong đợt 17:00: `Stats.WithValues` cho phép khởi
 tạo Stats tùy ý nên hệ số lương mốc 50/0 nay test được (28 test Jobs, đã
 ghi trong `docs/test-report.md`); `TimeSystem` không wrap quá 30 phút vẫn
@@ -129,7 +132,17 @@ chưa có chốt GDD — giữ nguyên, không coi là bug. **Đợt 17:50: sử
 `Social.Divorce` (điều kiện `&&` → `||`, phải vừa Spouse vừa Cuoi mới ly
 hôn được) + 2 test hồi quy; nhóm kiểm tra tĩnh T9 mới (17 mục) quét file
 test EditMode; ghi nhận quirk `Buy("phong-tro")` tính tiền thuê vào
-TotalAssetsVnd để GDD xem lại sau.**
+TotalAssetsVnd để GDD xem lại sau.** **Đợt 18:50: test EditMode phủ nốt 6 module
+logic thuần còn lại — Inventory 15 + Crafting 16 + Exploration 17 +
+PlayerProgress 30 + District/TitleConflict 29 + PhoneHub 18 = 125 test mới, tổng
+EditMode 207 test; kiểm tra tĩnh 119/119 PASS (nhóm T10 mới; T9a đã sửa từ bắt
+đúng 4 file thành kiểm tra tập con). Ghi nhận 7 hành vi lạ chưa sửa (xem
+`docs/test-report.md` đợt 18:50): `Inventory.Use` ghi đè khung buff, `Add` áo
+mưa số lượng 2 vẫn qua, `Explore` không dùng tham số `gameDay`, `Craft` để lại
+key = 0, `TitleConflict` chỉ chặn một chiều + phân biệt hoa/thường,
+`PhoneHub.Notify` đếm cả khi đóng, `SuggestEnding` ưu tiên cứng. Toàn bộ module
+logic thuần đã có test; chỉ còn các file MonoBehaviour chưa có test (cần Unity
+PlayMode).**
 
 ## 5. Vai PM — Roadmap, owner, việc chờ chốt
 

@@ -7,7 +7,53 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
-## Lần chạy mới nhất: 18/11/2026 ~17:50 (giờ VN)
+## Lần chạy mới nhất: 18/11/2026 ~18:50 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **119/119 PASS, exit 0** — tăng từ 83/83: nhóm T10 mới quét 6 file
+  test EditMode đợt 2 (36 mục: đủ 6 file, số test khớp 15/16/17/30/29/18,
+  ngoặc cân bằng, NUnit + namespace, không dùng UnityEngine, nhắc đúng API
+  thật). 1 lỗi script trong lần chạy này (đã sửa, chạy lại PASS): T9a cũ bắt
+  đúng 4 file test, nay đã có 10 file — đã sửa thành kiểm tra tập con.
+- **Luồng song song — test EditMode cho 6 module logic thuần còn lại (chuẩn bị C6):**
+  `InventoryTests.cs` 15 test (Add/Use/BuffFor/EndFrame, catalog 4 item slice),
+  `CraftingTests.cs` 16 test (ToolBehaviour 12 combo 4 tool × 3 tier, 3 công thức,
+  CanCraft/Craft/MissingIngredients), `ExplorationTests.cs` 17 test (5 hotspot,
+  HotspotsInDistrict, CanFastTravel, Explore 1 lần/ngày, GuideHint 4 NPC),
+  `PlayerProgressTests.cs` 30 test (CanOpenChapter 5 chương, SuggestEnding 6 kết
+  thúc, RankAtRisk biên 100/30), `DistrictTests.cs` 29 test (18 khu đúng thứ tự/
+  tên/Tier + TitleConflict.IsBlocked 7 danh hiệu), `PhoneHubTests.cs` 18 test
+  (9 tab đúng thứ tự, Open/Close/Toggle/SelectTab, Notify/Unread/TotalUnread,
+  sự kiện TabChanged/OpenChanged). Tổng EditMode nay **207 test** (82 cũ + 125
+  mới) — vẫn **chưa chạy được** (VM không có Unity; cần Unity 2022.3.62f1 +
+  Unity Test Runner). Toàn bộ module logic thuần client nay đã có test:
+  Jobs, TimeSystem, Social, Economy, Inventory, Crafting, Exploration,
+  PlayerProgress, District/TitleConflict, PhoneHub. Chỉ còn các file
+  MonoBehaviour (PlayerController, CameraFollowBehaviour, GameManagerBehaviour,
+  HotspotView, PhoneHubView) chưa có test — cần Unity để test PlayMode.
+- **Hành vi lạ phát hiện khi viết test (ghi nhận, chưa sửa code — để GDD/PM xem lại):**
+  1. `Inventory.Use` ghi đè khung buff trong catalog (`def.Effect with { Frame =
+     currentFrame }`): cơm tấm catalog ghi khung Chiều nhưng dùng lúc Sáng thì
+     buff rơi vào Sáng — khung ghi trong catalog thực tế không có tác dụng lúc dùng.
+  2. `Inventory.Add` đồ không stackable chỉ chặn khi túi đã có món đó:
+     `Add("ao-mua", 2)` lúc túi trống vẫn trả true và giữ 2 áo mưa.
+  3. `Exploration.Explore` nhận tham số `gameDay` nhưng không dùng: ngày mới chỉ
+     có hiệu lực khi người gọi tự gọi `NewGameDay` — đổi số ngày lúc gọi Explore
+     không tự reset lượt khám phá.
+  4. `Crafting.Craft` để lại key nguyên liệu = 0 trong Dictionary sau khi chế hết.
+  5. `TitleConflict.IsBlocked` chỉ chặn một chiều: đang có "Cảnh sát" thì nhận
+     "Tướng Cướp" vẫn được; so sánh `==` nên phân biệt hoa/thường.
+  6. `PhoneHub.SelectTab` luôn kích hoạt `TabChanged` kể cả chọn đúng tab hiện
+     tại; `Notify` vẫn đếm khi điện thoại đang đóng (không kiểm tra `IsOpen`).
+  7. `PlayerProgress.SuggestEnding` có thứ tự ưu tiên cứng
+     SieuGiau > GiamDoc > HocGia > GiaDinh > TuDo.
+  8. (ghi nhận từ đợt 17:50, nhắc lại) `Buy("phong-tro")` tính tiền thuê vào
+     `TotalAssetsVnd`; `AdvanceStage` không kiểm tra Kind.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (207 test) chưa biên
+  dịch/chạy lần nào (VM không có dotnet/Unity). Server chưa chạy; client chưa
+  có scene slice chơi được.
+
+## Lần chạy trước: 18/11/2026 ~17:50 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
 - Kết quả: **83/83 PASS, exit 0** — tăng từ 66/66: nhóm T9 mới quét file test
@@ -193,6 +239,24 @@
   chưa biên dịch/chạy lần nào; server chưa chạy; client chưa có scene slice
   chơi được. Cần máy có Unity 2022 LTS + .NET 8 SDK để chạy `dotnet test` và
   Unity Test Runner trước khi coi C5/C6 là xong.
+
+## Hiện trạng thật (18/11/2026 ~18:50, lúc viết báo cáo này)
+
+- Kiểm tra tĩnh: **119/119 PASS** (`check_static.py`, gồm nhóm T10 mới quét
+  6 file test EditMode đợt 2).
+- Test EditMode Unity nay **207 test** (Jobs 28 + TimeSystem 10 + Social 22 +
+  Economy 22 + Inventory 15 + Crafting 16 + Exploration 17 + PlayerProgress 30 +
+  District 29 + PhoneHub 18) — vẫn chưa chạy được lần nào (VM không có
+  dotnet/Unity). Toàn bộ module logic thuần client đã có test; chỉ còn các file
+  MonoBehaviour chưa có test (cần Unity PlayMode).
+- Hành vi lạ ghi nhận khi viết test (chưa sửa, để GDD/PM xem lại):
+  `Inventory.Use` ghi đè khung buff, `Add` áo mưa số lượng 2 vẫn qua,
+  `Explore` không dùng tham số `gameDay`, `Craft` để lại key = 0,
+  `TitleConflict` chỉ chặn một chiều + phân biệt hoa/thường,
+  `PhoneHub.Notify` đếm cả khi đóng, `SuggestEnding` ưu tiên cứng.
+- Vẫn chưa chạy được: không có dotnet/Unity trên VM — xUnit (17 test) và
+  EditMode test (207 test) chưa biên dịch/chạy lần nào; server chưa chạy;
+  client chưa có scene slice chơi được.
 
 ## Hiện trạng thật (18/11/2026 ~17:50, lúc viết báo cáo này)
 
