@@ -36,17 +36,26 @@
 <body>
 <div id="wrap">
   <h1>Phố Xô Bồ</h1>
-  <p class="sub">Slice web tĩnh — theo mô hình web của Treasure of Nadia (mở link là chơi, không cài đặt)</p>
+  <p class="sub">Slice web chơi được thật — kiến trúc HTML5 kiểu Treasure of Nadia (mở link là chơi, không cài đặt) · vẽ 2.5D isometric thử nghiệm, bấm "Đổi góc nhìn" để về top-down như Nadia</p>
   <canvas id="game" width="464" height="420"></canvas>
   <div id="hud">
     <span id="h-money">💰 0đ</span><span id="h-day">Ngày 1</span><span id="h-frame">Sáng</span>
+    <span id="h-clock">⏱ 10:00 tới khung sau</span>
     <span id="h-district">Xóm Trọ Cũ</span><span id="h-stats">Thể 100 · Trí 100 · Tâm 100</span>
   </div>
   <div class="row">
     <button id="btn-work">🧹 Làm ca nghề</button>
     <button id="btn-craft">🛒 Chế Xe Đẩy</button>
+    <button id="btn-craft2">🔦 Chế Đèn Soi</button>
+    <button id="btn-use">🍜 Dùng đồ ăn/sách</button>
     <button id="btn-phone">📱 Điện thoại</button>
+    <button id="btn-view">🔄 Đổi góc nhìn</button>
     <button id="btn-next">⏭️ Sang khung sau</button>
+  </div>
+  <div id="dlg" style="display:none; background:#241d0c; border:2px solid #d9a441; border-radius:8px; padding:10px; margin-top:8px;">
+    <h2 id="dlg-name" style="font-size:15px; margin-bottom:6px;"></h2>
+    <p id="dlg-text" style="font-size:13px; line-height:1.6; margin-bottom:8px;"></p>
+    <div id="dlg-choices" class="row" style="margin-top:0;"></div>
   </div>
   <div id="phone">
     <h2>📱 Điện thoại — menu chính</h2>
@@ -54,9 +63,16 @@
     <div id="tabbody"></div>
   </div>
   <div id="log"></div>
-  <small class="note">WASD / chạm để đi · E hoặc chạm hotspot để nhặt · P mở điện thoại · Lưu tự động (localStorage)</small>
+  <small class="note">WASD / chạm để đi · E nói chuyện/nhặt · P mở điện thoại · U dùng đồ ăn/sách · Lưu tự động (localStorage, 3 ô save ở tab Cài đặt)</small>
 </div>
-<script src="data/maps.js"></script>
+<script src="data/Items.js"></script>
+<script src="data/Actors.js"></script>
+<script src="data/Skills.js"></script>
+<script src="data/CommonEvents.js"></script>
+<script src="data/MapInfos.js"></script>
+<script src="data/Maps.js"></script>
+<script src="data/System.js"></script>
+<script src="js/iso.js"></script>
 <script src="js/game.js"></script>
 </body>
 </html>

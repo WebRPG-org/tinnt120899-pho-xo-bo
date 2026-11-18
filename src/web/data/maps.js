@@ -1,3 +1,7 @@
+// LEGACY — dữ liệu slice cũ, đã chuyển sang kiến trúc data-driven kiểu RPG
+// Maker MV: data/Items.js, data/Actors.js, data/Skills.js,
+// data/CommonEvents.js, data/MapInfos.js, data/Maps.js, data/System.js.
+// File này giữ lại để đối chiếu số liệu cũ, game.js mới KHÔNG dùng nó nữa.
 // Phố Xô Bồ — dữ liệu khu slice (cùng số với GameBalance.cs / docs/districts.md)
 // Định dạng data-driven kiểu RPG Maker MV (data/*.json): map -> hotspot -> NPC.
 // Mở file trực tiếp vẫn chạy (không cần fetch, tránh lỗi CORS khi mở file://).
