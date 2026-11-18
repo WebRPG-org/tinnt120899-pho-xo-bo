@@ -7,7 +7,37 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
-## Lần chạy mới nhất: 18/11/2026 ~17:00 (giờ VN)
+## Lần chạy mới nhất: 18/11/2026 ~17:50 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **83/83 PASS, exit 0** — tăng từ 66/66: nhóm T9 mới quét file test
+  EditMode (17 mục: đủ 4 file, số test khớp 28/10/22/22, ngoặc cân bằng,
+  NUnit + namespace, hồi quy bug Divorce, UTF-8, không secret).
+- **Luồng song song — test EditMode cho Social + Economy (chuẩn bị C6):**
+  `SocialTests.cs` 22 test (bỏ bê 7/14/21 ngày, Interact +5, AdvanceStage
+  ngưỡng 50/70/80, giới hạn 3 quan hệ sâu, 1 BestFriend, supporter +20% EXP,
+  solo penalty 40% PROVISIONAL trong khoảng 30–50% chốt, nhóm tan 7 ngày,
+  Divorce, BreakUp) + `EconomyTests.cs` 22 test (lãi 0,5% + làm tròn xuống,
+  gửi/rút tiết kiệm, mua đồ + fame 50, đấu giá phí 5% + chia nguyên, barter,
+  chia tài sản ly hôn, set bonus, dress-code, 4 hàm cấm, TotalAssetsVnd,
+  catalog thang nhà 6 bậc). Tổng EditMode nay **82 test** (28 Jobs + 10
+  TimeSystem + 22 Social + 22 Economy) — vẫn **chưa chạy được** (VM không có
+  Unity; cần Unity 2022.3.62f1 + Unity Test Runner).
+- **BUG THẬT PHÁT HIỆN KHI VIẾT TEST — ĐÃ SỬA BẰNG CODE (18/11):**
+  `Social.Divorce` dùng `(Kind != Spouse && Stage != Cuoi)` nên Spouse chưa
+  cưới vẫn ly hôn được (chỉ cần 1 trong 2 điều kiện là đủ). Đã sửa thành `||`
+  — phải vừa là Spouse vừa đang ở Stage Cuoi mới ly hôn được; thêm 2 test
+  (Spouse chưa cưới → false, Lover ở Stage Cuoi → false) + kiểm tra hồi quy
+  T9e trong `check_static.py` (dòng điều kiện if, không tính comment nhắc bug cũ).
+  Ghi nhận thêm (không phải bug, để GDD xem lại sau): `Buy("phong-tro")`
+  thêm phòng trọ vào `Owned` nên `TotalAssetsVnd` tính cả 2tr tiền thuê tháng
+  như tài sản; `AdvanceStage` không kiểm tra Kind (Spouse cũng đi được
+  HenHo → DinhHon → Cuoi).
+- **1 lỗi script trong lần chạy này (đã sửa, chạy lại PASS):** T9e lúc đầu FAIL
+  giả — regex lấy cả khối Divorce gồm comment nhắc ký tự `&&` của bug cũ.
+  Đã sửa chỉ xét dòng điều kiện `if (...)` thay vì cả khối.
+
+## Lần chạy trước: 18/11/2026 ~17:00 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
 - Kết quả: **66/66 PASS, exit 0** — không vỡ kiểm tra cũ.
@@ -163,6 +193,20 @@
   chưa biên dịch/chạy lần nào; server chưa chạy; client chưa có scene slice
   chơi được. Cần máy có Unity 2022 LTS + .NET 8 SDK để chạy `dotnet test` và
   Unity Test Runner trước khi coi C5/C6 là xong.
+
+## Hiện trạng thật (18/11/2026 ~17:50, lúc viết báo cáo này)
+
+- Kiểm tra tĩnh: **83/83 PASS** (`check_static.py`, gồm nhóm T9 mới quét
+  file test EditMode).
+- Test EditMode Unity nay **82 test** (Jobs 28 + TimeSystem 10 + Social 22 +
+  Economy 22) — vẫn chưa chạy được lần nào (VM không có dotnet/Unity).
+  Bug `Social.Divorce` (điều kiện `&&` sai) đã sửa thành `||` + 2 test hồi quy.
+- Khung Unity C1 đã có ở mức file (`ProjectSettings/` 10 file `.asset` +
+  scene `SliceXomTroCu.unity`); **chưa verify mở bằng Unity** — cần máy có
+  Unity 2022.3.62f1 sinh `Library/` + `.csproj` và kiểm tra Play lần đầu.
+- Vẫn chưa chạy được: không có dotnet/Unity trên VM — xUnit (17 test) và
+  EditMode test (82 test) chưa biên dịch/chạy lần nào; server chưa chạy;
+  client chưa có scene slice chơi được.
 
 ## Hiện trạng thật (18/11/2026 ~17:00, lúc viết báo cáo này)
 

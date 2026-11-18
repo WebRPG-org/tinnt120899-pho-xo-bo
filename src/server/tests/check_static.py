@@ -19,6 +19,9 @@ Script này chỉ kiểm tra được:
      chốt khớp GameBalance.cs, ranh giới pháp lý, không secret, UTF-8.
      (Trước 18/11 chỉ quét file client; EconomyLedger.cs từng chỉ được kiểm
      bằng script tạm trong /tmp — nay đã đưa vào script chính.)
+  9. File test EditMode (src/client/Assets/Tests/EditMode/): số lượng test
+     khớp, dùng NUnit, ngoặc cân bằng, UTF-8 — và kiểm tra hồi quy cho bug
+     Divorce đã sửa 18/11 (điều kiện || thay vì &&).
 
 Thoát 0 = tất cả PASS. Thoát 1 = có FAIL — xem docs/test-report.md.
 """
@@ -199,6 +202,63 @@ check("T8h", "Program.cs đăng ký EconomyLedger singleton",
       "AddSingleton<EconomyLedger>" in program)
 check("T8i", "Program.cs giữ endpoint /health",
       '"/health"' in program)
+
+# ---- 9. File test EditMode (src/client/Assets/Tests/EditMode/) ----
+# C6: test chạy được sau này có cái mà test — kiểm tra tĩnh đếm số test,
+# bắt đúng framework, và khóa hồi quy bug Divorce đã sửa 18/11.
+EDITMODE = ROOT / "src" / "client" / "Assets" / "Tests" / "EditMode"
+editmode_files = sorted(EDITMODE.glob("*.cs"))
+expected_tests = {
+    "JobsPayTests.cs": 28,
+    "TimeSystemTests.cs": 10,
+    "SocialTests.cs": 22,
+    "EconomyTests.cs": 22,
+}
+check("T9a", "Đủ 4 file test EditMode (Jobs/TimeSystem/Social/Economy)",
+      set(expected_tests) == {f.name for f in editmode_files},
+      f"có: {[f.name for f in editmode_files]}" if set(expected_tests) != {f.name for f in editmode_files} else "")
+for fname, expected in expected_tests.items():
+    fpath = EDITMODE / fname
+    if not fpath.exists():
+        check(f"T9b-{fname}", f"{fname} tồn tại", False, "thiếu file")
+        continue
+    content = read(fpath)
+    n_tests = len(re.findall(r"\[Test\]", content))
+    n_methods = len(re.findall(r"public void \w+\(", content))
+    check(f"T9b-{fname}", f"{fname}: {expected} test method",
+          n_tests == expected and n_methods == expected,
+          f"[Test]={n_tests}, public void={n_methods}, kỳ vọng {expected}")
+    clean = strip_strings_comments(content)
+    ok, detail = True, ""
+    for o, c in [("{", "}"), ("(", ")"), ("[", "]")]:
+        if clean.count(o) != clean.count(c):
+            ok = False
+            detail += f"{o}{c}: {clean.count(o)} vs {clean.count(c)}; "
+    check(f"T9c-{fname}", f"Ngoặc cân bằng {fname}", ok, detail or "cân bằng")
+    check(f"T9d-{fname}", f"{fname} dùng NUnit + namespace PhoXoBo.Tests",
+          "using NUnit.Framework;" in content and "namespace PhoXoBo.Tests" in content)
+# T9e: hồi quy bug Divorce 18/11 — Social.cs phải dùng || (Spouse VÀ Cuoi),
+# không còn && (chỉ cần 1 trong 2 là ly hôn được). Chỉ xét dòng điều kiện if,
+# không xét comment (comment vẫn nhắc lại ký tự && của bug cũ).
+divorce_m = re.search(r"if \(rel == null[^;]*\) return false;", social)
+divorce_ok = divorce_m is not None and "||" in divorce_m.group(0) and "&&" not in divorce_m.group(0)
+check("T9e", "Divorce: Spouse VÀ Cuoi mới ly hôn được (||, không &&)",
+      divorce_ok, "không tìm thấy điều kiện Divorce dùng ||" if not divorce_ok else "")
+# T9f: test EditMode phải có test khóa hành vi đã sửa (Spouse chưa cưới ly hôn false).
+social_tests = read(EDITMODE / "SocialTests.cs")
+check("T9f", "SocialTests có test Spouse chưa cưới ly hôn false",
+      "Divorce_SpouseChuaCuoi_TraFalse" in social_tests)
+bad_test_utf8 = []
+for f in editmode_files:
+    try:
+        f.read_bytes().decode("utf-8")
+    except UnicodeDecodeError:
+        bad_test_utf8.append(f.name)
+check("T9g", "Mọi file test EditMode đều UTF-8", not bad_test_utf8,
+      str(bad_test_utf8) if bad_test_utf8 else "")
+bad_test_secret = [f.name for f in editmode_files if secret_pat.search(read(f))]
+check("T9h", "Không có secret/token/key trong file test EditMode", not bad_test_secret,
+      f"nghi ngờ ở: {bad_test_secret}" if bad_test_secret else "")
 
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)

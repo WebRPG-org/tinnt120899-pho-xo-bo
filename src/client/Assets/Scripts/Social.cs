@@ -192,7 +192,9 @@ namespace PhoXoBo
         public bool Divorce(string personId)
         {
             var rel = Get(personId);
-            if (rel == null || (rel.Kind != RelationshipKind.Spouse && rel.Stage != RelationshipStage.Cuoi)) return false;
+            // Chỉ ly hôn được khi vừa là Spouse vừa đang ở Stage Cuoi.
+            // (18/11: sửa bug — trước đây dùng && nên Spouse chưa cưới vẫn ly hôn được.)
+            if (rel == null || rel.Kind != RelationshipKind.Spouse || rel.Stage != RelationshipStage.Cuoi) return false;
             rel.BreakUp();
             _marriages.Remove(personId);
             return true;

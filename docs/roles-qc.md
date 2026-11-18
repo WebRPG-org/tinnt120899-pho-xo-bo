@@ -114,17 +114,22 @@ Thứ tự làm — mỗi bước xong thì push 1 commit để GitHub thấy ti
 `ProjectSettings/*.asset` + scene `SliceXomTroCu.unity`; chưa verify mở bằng
 Unity — cần máy có Unity 2022.3.62f1 sinh `Library/` + `.csproj` và kiểm tra
 Play lần đầu). C2–C9 vẫn chưa xong (chưa chạy được).
-Đã xong phần chuẩn bị cho C5/C6: kiểm tra tĩnh 66/66 PASS
+Đã xong phần chuẩn bị cho C5/C6: kiểm tra tĩnh 83/83 PASS
 (`docs/test-report.md`), `Social.cs` + `Economy.cs` đã viết theo đúng số
 chốt để test chạy được sau này có cái mà test, test xUnit server
 (`EconomyLedgerTests.cs`, 17 test, chưa chạy — cần .NET 8 SDK) +
 `Program.cs` đã nối `EconomyLedger` singleton với 2 endpoint
 `/ledger/balance` + `/ledger/gift`, test EditMode Unity (`JobsPayTests.cs`
-28 test + `TimeSystemTests.cs` 10 test, chưa chạy — cần Unity 2022 LTS) +
+28 test + `TimeSystemTests.cs` 10 test + `SocialTests.cs` 22 test +
+`EconomyTests.cs` 22 test = **82 test**, chưa chạy — cần Unity 2022 LTS) +
 `PhoXoBo.asmdef`. Đã sửa trong đợt 17:00: `Stats.WithValues` cho phép khởi
 tạo Stats tùy ý nên hệ số lương mốc 50/0 nay test được (28 test Jobs, đã
 ghi trong `docs/test-report.md`); `TimeSystem` không wrap quá 30 phút vẫn
-chưa có chốt GDD — giữ nguyên, không coi là bug.
+chưa có chốt GDD — giữ nguyên, không coi là bug. **Đợt 17:50: sửa bug thật
+`Social.Divorce` (điều kiện `&&` → `||`, phải vừa Spouse vừa Cuoi mới ly
+hôn được) + 2 test hồi quy; nhóm kiểm tra tĩnh T9 mới (17 mục) quét file
+test EditMode; ghi nhận quirk `Buy("phong-tro")` tính tiền thuê vào
+TotalAssetsVnd để GDD xem lại sau.**
 
 ## 5. Vai PM — Roadmap, owner, việc chờ chốt
 
