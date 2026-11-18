@@ -7,6 +7,50 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 19/11/2026 ~01:50 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **215/215 PASS, exit 0** — tăng từ 211/211: nhóm T17 mới (4 mục)
+  khóa 2 plugin mới; `node --check` nay 10/10 file JS nadia.
+- **2 plugin slice mới (Giai đoạn 2):** `PXB_Crafting.js` (537 dòng, port
+  `Crafting.cs`: 3 công thức đúng số C# — xe-đẩy 1/2/2, đèn-soi 2/2, quà-tặng
+  2/1; ToolBehaviour 4 tool × 3 bậc; CanCraft/Craft/MissingIngredients; Craft
+  trừ đúng + xóa key về 0; học công thức qua NPC `learnRecipe`/`craftCurrent`
+  chặn `chua-hoc-cong-thuc`; túi nguyên liệu chung `$gameSystem.pxbMaterials`
+  với Hotspot; smoke 52/52 PASS) + `PXB_PhoneHub.js` (381 dòng, port
+  `PhoneHub.cs`: 9 tab đúng thứ tự, Open/Close/Toggle/SelectTab,
+  Notify/Unread/TotalUnread, callback `onTabChanged`/`onOpenChanged`, plugin
+  command, phím P qua `Scene_Map.update`; smoke 56/56 PASS); `plugins.js`
+  nay 8 plugin (Balance → Stats → Time → Isometric → Hotspot → Crafting →
+  Jobs → PhoneHub).
+- **Bug thật phát hiện khi smoke test PhoneHub (đã sửa bằng code):** gọi
+  `install()` 2 lần wrap core 2 lần khiến plugin command/phím P kích hoạt
+  2 lần — đã sửa bằng guard `_installed` (chỉ khóa khi lần trước đã móc
+  được core), sau đó 56/56 mới đạt.
+- **Lệch phát hiện khi port (ghi nhận, chưa sửa nguồn):** (1) Crafting: GDD
+  Mục 6/7 không có số chế tạo nào (chỉ nhắc "cổng tiến trình" + side quest
+  chế quà tặng) — toàn bộ số lấy từ `Crafting.cs`, PROVISIONAL; chỉ có công
+  thức bậc 1 (C# cũng vậy — công thức nâng cấp tool bậc 2/3 thuộc
+  `PXB_Tools.js` / GDD chưa chốt); `item:qua-tang` chưa có Item trong
+  `data/Items.json` nên plugin chỉ đếm trong `craftedItems`, chưa cộng vào
+  `$gameParty`; cơ chế "đã học" là thêm mới (C# chỉ ghi `UnlockNote` bằng
+  chữ) — mặc định chưa học công thức nào, New Game / `PXB_Story` sau này
+  phải gọi `learnRecipe`, nếu không slice chưa chế được gì; "cổng tiến
+  trình" chưa nối mở khu (do `PXB_Story`/`PXB_Hotspot` giữ). (2) PhoneHub:
+  Notify đếm cả khi đóng + Open/SelectTab luôn kích hoạt TabChanged kể cả
+  đúng tab hiện tại — giữ đúng C#, để GDD/PM xem lại; chính tả "Sức khỏe"
+  theo C# (GDD viết "Sức khoẻ"); phím P / nút điện thoại không có trong
+  `PhoneHub.cs` — plugin thêm hook phím P, nút trên màn hình là việc của
+  lớp UI, chưa làm.
+- **Còn lại chưa xong (Giai đoạn 2):** tile data toàn 0 (chưa có tileset
+  CC0 nên IsoTilemap chưa vẽ được gì thật), img/audio trống, plugin còn
+  lại (PXB_Education/Economy/Social/Titles/Story…) chưa viết. Việc tiếp
+  theo lớn nhất: PXB_Education.js + PXB_Economy.js, rồi tileset CC0 + tile
+  data thật cho Map001–002 để mở trình duyệt thấy map Xóm Trọ Cũ.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa
+  biên dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test`
+  vẫn kẹt RAM — chạy qua GitHub Actions; Unity chưa có).
+
 ## Lần chạy mới nhất: 19/11/2026 ~00:50 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)

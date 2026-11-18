@@ -667,19 +667,21 @@ check("T14s", "PXB_Isometric.js: 'use strict', không require, không API NW.js"
 
 # T14t–u: plugins.js (Balance → Stats → Time → Isometric → Hotspot → Jobs, cả 6 bật) + main.js.
 plugins_js = read(NADIA / "js" / "plugins.js")
-check("T14t", "plugins.js: thứ tự Balance < Stats < Time < Isometric < Hotspot < Jobs, cả 6 đều bật",
+check("T14t", "plugins.js: thứ tự Balance < Stats < Time < Isometric < Hotspot < Crafting < Jobs < PhoneHub, cả 8 đều bật",
       plugins_js.find('"PXB_Balance"') < plugins_js.find('"PXB_Stats"')
       < plugins_js.find('"PXB_Time"') < plugins_js.find('"PXB_Isometric"')
-      < plugins_js.find('"PXB_Hotspot"') < plugins_js.find('"PXB_Jobs"')
-      and plugins_js.count('"status": true') == 6)
+      < plugins_js.find('"PXB_Hotspot"') < plugins_js.find('"PXB_Crafting"')
+      < plugins_js.find('"PXB_Jobs"') < plugins_js.find('"PXB_PhoneHub"')
+      and plugins_js.count('"status": true') == 8)
 main_js = read(NADIA / "js" / "main.js")
 check("T14u", "main.js: PluginManager.setup($plugins) + SceneManager.run(Scene_Boot)",
       "PluginManager.setup($plugins)" in main_js and "SceneManager.run(Scene_Boot)" in main_js)
 
-# T14v: node --check 8 file JS nadia (node v24 có sẵn trên VM).
+# T14v: node --check 10 file JS nadia (node v24 có sẵn trên VM).
 node_files = [NADIA_PLUGINS / "PXB_Balance.js", NADIA_PLUGINS / "PXB_Isometric.js",
               NADIA_PLUGINS / "PXB_Stats.js", NADIA_PLUGINS / "PXB_Time.js",
               NADIA_PLUGINS / "PXB_Hotspot.js", NADIA_PLUGINS / "PXB_Jobs.js",
+              NADIA_PLUGINS / "PXB_Crafting.js", NADIA_PLUGINS / "PXB_PhoneHub.js",
               NADIA / "js" / "plugins.js", NADIA / "js" / "main.js"]
 node_ok, node_detail = True, ""
 try:
@@ -691,7 +693,7 @@ try:
 except FileNotFoundError:
     node_ok = False
     node_detail = "không tìm thấy lệnh node"
-check("T14v", "node --check: 8 file JS nadia qua cú pháp", node_ok, node_detail)
+check("T14v", "node --check: 10 file JS nadia qua cú pháp", node_ok, node_detail)
 
 # T14w–y: Actors/Classes/Items — chéo tham chiếu + giá khớp Items.js.
 actors = json.loads(read(NADIA_DATA / "Actors.json"))
@@ -799,10 +801,11 @@ missing_time = [t for t in time_tokens if t not in time_js]
 check("T15e", "PXB_Time.js: 30 phút/3 khung/10 phút + isMissed + sự kiện thứ 7 20:00 (giờ game, PROVISIONAL)",
       not missing_time and '"use strict"' in time_js and "require(" not in time_js,
       f"thiếu: {missing_time}" if missing_time else "")
-# T15f: plugins.js đã khai báo đủ 6 plugin (kiểm thứ tự + số lượng ở T14t).
-check("T15f", "plugins.js: khai báo đủ 6 plugin PXB_Balance/Stats/Time/Isometric/Hotspot/Jobs",
+# T15f: plugins.js đã khai báo đủ 8 plugin (kiểm thứ tự + số lượng ở T14t).
+check("T15f", "plugins.js: khai báo đủ 8 plugin PXB_Balance/Stats/Time/Isometric/Hotspot/Crafting/Jobs/PhoneHub",
       all(f'"{n}"' in plugins_js for n in
-          ["PXB_Balance", "PXB_Stats", "PXB_Time", "PXB_Isometric", "PXB_Hotspot", "PXB_Jobs"]))
+          ["PXB_Balance", "PXB_Stats", "PXB_Time", "PXB_Isometric", "PXB_Hotspot",
+           "PXB_Crafting", "PXB_Jobs", "PXB_PhoneHub"]))
 # T15g–h: index.html + README nadia đã cập nhật trạng thái core (không còn ghi "CHƯA CÓ" cho core).
 check("T15g", "index.html: không còn ghi 'CHƯA CÓ FILE CORE' (core đã về)",
       "CHƯA CÓ FILE CORE" not in index_html and "MV v1.6.1" in index_html)
@@ -843,11 +846,12 @@ missing_jobs = [t for t in jobs_tokens if t not in jobs_js]
 check("T16c", "PXB_Jobs.js: 3 nghề + lương chỉ số + quota tuần + cung–cầu + thi chứng chỉ + lưu $gameSystem",
       not missing_jobs and '"use strict"' in jobs_js and "require(" not in jobs_js,
       f"thiếu: {missing_jobs}" if missing_jobs else "")
-# T16d: plugins.js đủ 6 plugin, thứ tự đúng (kiểm lại độc lập với T14t).
-check("T16d", "plugins.js: đủ 6 plugin, Balance đầu, Hotspot/Jobs sau Isometric, cả 6 bật",
-      plugins_js.count('"status": true') == 6
+# T16d: plugins.js đủ 8 plugin, thứ tự đúng (kiểm lại độc lập với T14t).
+check("T16d", "plugins.js: đủ 8 plugin, Balance đầu, Crafting sau Hotspot, PhoneHub cuối, cả 8 bật",
+      plugins_js.count('"status": true') == 8
       and plugins_js.find('"PXB_Isometric"') < plugins_js.find('"PXB_Hotspot"')
-      < plugins_js.find('"PXB_Jobs"'))
+      < plugins_js.find('"PXB_Crafting"') < plugins_js.find('"PXB_Jobs"')
+      < plugins_js.find('"PXB_PhoneHub"'))
 # T16e: 3 file plugin mới/sửa đều UTF-8 (nội dung đã qua node --check ở T14v).
 t16_utf8_bad = []
 for _p in [NADIA_PLUGINS / "PXB_Isometric.js", NADIA_PLUGINS / "PXB_Hotspot.js",
@@ -858,6 +862,41 @@ for _p in [NADIA_PLUGINS / "PXB_Isometric.js", NADIA_PLUGINS / "PXB_Hotspot.js",
         t16_utf8_bad.append(_p.name)
 check("T16e", "PXB_Isometric/Hotspot/Jobs đều UTF-8", not t16_utf8_bad,
       f"không UTF-8: {t16_utf8_bad}" if t16_utf8_bad else "")
+
+# ---- Nhóm T17 — PXB_Crafting + PXB_PhoneHub (19/11/2026 ~01:50) ----
+# T17a: PXB_Crafting.js — port Crafting.cs (3 công thức đúng số C#, ToolBehaviour
+# 4 tool × 3 bậc, Craft xóa key 0, học qua NPC, túi chung pxbMaterials).
+crafting_js = read(NADIA_PLUGINS / "PXB_Crafting.js")
+crafting_tokens = ["pxbCrafting", "learnRecipe", "craftCurrent", "toolBehaviour",
+                   "missingIngredients", "$gameSystem.pxbCrafting",
+                   "chua-hoc-cong-thuc", "pxbMaterials", "PROVISIONAL"]
+missing_crafting = [t for t in crafting_tokens if t not in crafting_js]
+check("T17a", "PXB_Crafting.js: 3 công thức + ToolBehaviour + Craft xóa key 0 + học qua NPC + túi chung Hotspot",
+      not missing_crafting and '"use strict"' in crafting_js and "require(" not in crafting_js,
+      f"thiếu: {missing_crafting}" if missing_crafting else "")
+# T17b: PXB_PhoneHub.js — port PhoneHub.cs (9 tab, Open/Close/Toggle/SelectTab,
+# Notify/Unread, callback TabChanged/OpenChanged, phím P, guard _installed).
+phonehub_js = read(NADIA_PLUGINS / "PXB_PhoneHub.js")
+phonehub_tokens = ["pxbPhoneHub", "onTabChanged", "onOpenChanged", "totalUnread",
+                   "$gameSystem.pxbPhoneHub", "keyMapper", '"phone"', "_installed"]
+missing_phonehub = [t for t in phonehub_tokens if t not in phonehub_js]
+check("T17b", "PXB_PhoneHub.js: 9 tab + Open/Close/Toggle + Notify/Unread + callback + phím P + guard install",
+      not missing_phonehub and '"use strict"' in phonehub_js and "require(" not in phonehub_js,
+      f"thiếu: {missing_phonehub}" if missing_phonehub else "")
+# T17c: plugins.js đủ 8 plugin, thứ tự đúng (kiểm lại độc lập với T14t/T16d).
+check("T17c", "plugins.js: đủ 8 plugin, Crafting sau Hotspot, PhoneHub cuối, cả 8 bật",
+      plugins_js.count('"status": true') == 8
+      and plugins_js.find('"PXB_Hotspot"') < plugins_js.find('"PXB_Crafting"')
+      < plugins_js.find('"PXB_Jobs"') < plugins_js.find('"PXB_PhoneHub"'))
+# T17d: 2 file plugin mới đều UTF-8 (nội dung đã qua node --check ở T14v).
+t17_utf8_bad = []
+for _p in [NADIA_PLUGINS / "PXB_Crafting.js", NADIA_PLUGINS / "PXB_PhoneHub.js"]:
+    try:
+        _p.read_bytes().decode("utf-8")
+    except UnicodeDecodeError:
+        t17_utf8_bad.append(_p.name)
+check("T17d", "PXB_Crafting/PhoneHub đều UTF-8", not t17_utf8_bad,
+      f"không UTF-8: {t17_utf8_bad}" if t17_utf8_bad else "")
 
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)
@@ -871,5 +910,6 @@ if failed:
 print("\nTất cả kiểm tra tĩnh PASS — lưu ý: đây KHÔNG phải build/test chạy được.")
 print("Unity vẫn chưa có; dotnet 8.0.428 có ở ~/.dotnet; core MV v1.6.1 đã có;")
 print("PXB_Isometric v2 đã móc Tilemap (smoke test stub 36/36 PASS), Hotspot/Jobs")
-print("đã viết (smoke 26/26 + 40/40 PASS), nhưng tile data toàn 0, img/audio trống,")
+print("đã viết (smoke 26/26 + 40/40 PASS), Crafting/PhoneHub đã viết (smoke")
+print("52/52 + 56/56 PASS), nhưng tile data toàn 0, img/audio trống,")
 print("nên chưa mở trình duyệt chơi được thật (xem docs/test-report.md).")

@@ -34,9 +34,21 @@ var $plugins = [
     "parameters": {}
   },
   {
+    "name": "PXB_Crafting",
+    "status": true,
+    "description": "Chế tạo kiểu Nadia: 3 công thức slice + 4 công cụ × 3 bậc + học qua NPC (port Crafting.cs).",
+    "parameters": {}
+  },
+  {
     "name": "PXB_Jobs",
     "status": true,
     "description": "3 nghề slice + lương theo chỉ số + quota tuần + cung–cầu + thi chứng chỉ (port Jobs.cs).",
+    "parameters": {}
+  },
+  {
+    "name": "PXB_PhoneHub",
+    "status": true,
+    "description": "Điện thoại hub: 9 tab + thông báo chưa đọc + phím P (port PhoneHub.cs).",
     "parameters": {}
   }
 ];
