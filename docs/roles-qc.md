@@ -110,6 +110,14 @@ Thứ tự làm — mỗi bước xong thì push 1 commit để GitHub thấy ti
 | C8 | Art / nhạc slice | Đồ hoạ + track có bản quyền rõ ràng (vai Đồ hoạ §1) | 4 khu + 1 nhân vật + UI điện thoại, rubric 8 chiều ≥12/16 |
 | C9 | Chốt số còn thiếu | Chủ chốt: trần chỉ số, ngưỡng An Yên, 10 nhóm nghề, 6 quyết định kiến trúc | Ghi vào GDD + `GameBalance.cs` cùng lúc, chạy lại `check_static.py` PASS |
 
+**Hiện trạng 18/11/2026 ~21:50:** Follow-up C2 XONG — spec art chi tiết khu
+17/18 nay đã có trong `docs/art-assets.md` (§3/§4: verbatim, bố cục, prop,
+NPC Ông Ba / Anh Hải khớp `GuideHint`, hotspot khớp `Exploration.cs`,
+shot list ≤ 8/khu); kiểm tra tĩnh 167/167 PASS (nhóm T13 mới, 11 mục).
+C2 vẫn chưa xong (chưa mở bằng Unity, chưa có art, chưa bấm Play được);
+C3–C9 vẫn chưa xong. Việc follow-up C2 tiếp theo: art pass vẽ 4 khu theo
+spec (C8) — cần đồ hoạ + track nhạc chốt, chưa có.
+
 **Hiện trạng 18/11/2026 ~20:50:** C2 tiến thêm 1 bước — 4/4 scene slice đầu
 nay đã có khung file (thêm `SliceCongVienAnBinh.unity` khu 17, hotspot
 `hs-cong-vien` + `SlicePhoDiBoChoDem.unity` khu 18, hotspot `hs-cho-dem`;

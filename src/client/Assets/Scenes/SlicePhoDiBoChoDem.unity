@@ -18,9 +18,8 @@
 # hs-cong-vien o SliceCongVienAnBinh.unity.
 # Mau nen giu nguyen nhu mau (da khoa #F9EDCE); xu ly sang dem la viec cua
 # art pass sau, khong doi mau o khung scene nay.
-# docs/art-assets.md hien chi co spec chi tiet khu 1–2, chua co muc rieng cho
-# khu 18 — spec art chi tiet khu 18 la viec follow-up, khong bia spec vao
-# scene nay.
+# Spec art chi tiet khu 18 o docs/art-assets.md §4 (mo ta verbatim, bo cuc,
+# prop, NPC Anh Hai, hotspot hs-cho-dem) — khong bia spec vao scene nay.
 --- !u!29 &1
 OcclusionCullingSettings:
   m_ObjectHideFlags: 0

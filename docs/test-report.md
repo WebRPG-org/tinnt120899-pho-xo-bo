@@ -7,6 +7,30 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 18/11/2026 ~21:50 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **167/167 PASS, exit 0** — tăng từ 156/156: nhóm T13 mới (11 mục)
+  khóa spec art khu 17/18.
+- **Follow-up C2 (roles-qc.md §6): spec art chi tiết khu 17/18 đã có trong
+  `docs/art-assets.md` (§3 Công Viên An Bình, §4 Phố Đi Bộ – Chợ Đêm):**
+  mô tả verbatim nguyên văn `art-style.md` §4; bố cục isometric + điểm neo;
+  bảng prop; NPC dẫn đường khớp đúng `Exploration.cs` `GuideHint` (khu 17
+  Ông Ba, khu 18 Anh Hải — cùng người với anh Hải ở khu 2, đã ghi rõ không
+  vẽ thành 2 người); hotspot khớp đúng code (`hs-cong-vien` Ván gỗ ×1 khung
+  Chiều, `hs-cho-dem` Vải vụn ×2 khung Tối); bảng Sáng/Chiều/Tối + mưa/nắng/
+  Tết; shot list ≤ 8 shot mỗi khu (PROVISIONAL). Tiêu đề file đổi thành
+  "4 khu slice đầu", các mục cũ đánh lại số (§3–§6 cũ thành §5–§8). Header
+  2 scene mới nay trỏ thẳng tới đúng mục spec (§3/§4), không còn ghi "chưa
+  có mục riêng". Không bịa số mới: mọi vật liệu / khung / NPC đều lấy từ
+  `Exploration.cs` + `docs/districts.md` (khu chung luôn mở, khu 18 có sự
+  kiện 20:00 thứ 7 + Bụi Đời Chợ Cá).
+- **Còn lại chưa xong (C2):** 4/4 scene slice vẫn chỉ là khung file (chưa mở
+  bằng Unity, chưa có art, chưa bấm Play được); C3–C9 vẫn chưa xong.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa biên
+  dịch/chạy lần nào (VM không có dotnet/Unity). Server chưa chạy; client chưa
+  có scene slice chơi được.
+
 ## Lần chạy mới nhất: 18/11/2026 ~20:50 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)

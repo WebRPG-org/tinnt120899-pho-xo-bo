@@ -1,14 +1,14 @@
-# Spec tài sản đồ hoạ 2.5D — 2 khu slice đầu: Xóm Trọ Cũ + Chợ Đầu Mối
+# Spec tài sản đồ hoạ 2.5D — 4 khu slice đầu: Xóm Trọ Cũ + Chợ Đầu Mối + Công Viên An Bình + Phố Đi Bộ – Chợ Đêm
 
 > Chuẩn tham khảo: Treasure of Nadia (`docs/nadia-reference.md`) + skill
 > `soulful_short_video` — khoá thế giới, khoá diễn viên, khoá giọng trước khi
 > sản xuất; hỏng thì vẽ / quay lại, không vá trong edit.
 > Chuẩn đồ hoạ chung đã lock: `docs/art-style.md`. File này là spec chi tiết
-> cho 2 khu slice đầu (khu 1 và khu 2 trong đúng 18 khu, `docs/districts.md`).
+> cho 4 khu slice đầu (khu 1, 2, 17, 18 trong đúng 18 khu, `docs/districts.md`).
 > Mọi mô tả verbatim dưới đây dùng **nguyên văn** trong mọi prompt / brief vẽ —
 > đổi chữ là đổi mặt phố. Số cấu hình slice ghi PROVISIONAL, chưa chốt.
 
-## 0. Lock chung cho cả 2 khu (không đổi giữa chừng)
+## 0. Lock chung cho cả 4 khu (không đổi giữa chừng)
 
 - **Khung hình:** isometric 2.5D, camera orthographic, góc X ~30° / Y 45°,
   tỉ lệ 9:16 (mobile dọc) làm chuẩn, 16:9 cho PC/Web sau. Nhân vật pivot đáy
@@ -205,7 +205,164 @@
 | Nắng | Nắng gắt, bạt che căng, người bán đội nón lá. |
 | Tết | Sạp hoa quả Tết, quất / đào bày đầu chợ, đèn lồng đỏ treo trên mái bạt — chỉ thay prop trang trí, không đổi bố cục khu. |
 
-## 3. Placeholder CC0 — nguồn, quy tắc, bảng theo dõi
+## 3. Khu 17 — Công Viên An Bình (Khu chung, luôn mở, chữa lành)
+
+> Khu chung (17, 18) luôn mở cho mọi người chơi, không phân tầng
+> (`docs/districts.md`). Công dụng chốt: gặp gỡ, hẹn hò, sự kiện cộng đồng,
+> chữa lành. Không phải khu bắt đầu kiếm tiền — là nơi "thở" giữa các ca làm,
+> đúng kiểu Nadia cho người chơi quay lại địa điểm yên tĩnh để hồi sức.
+
+### 3.1 Mô tả verbatim (dùng nguyên văn, từ `docs/art-style.md` §4)
+
+> "công viên buổi chiều, cây xanh, ghế đá, người già tập thể dục, trẻ con chơi,
+> ánh nắng vàng dịu, yên tĩnh"
+
+### 3.2 Bố cục isometric (slice)
+
+- Lối đi lát gạch chạy chéo theo trục isometric, hai bên là thảm cỏ + cây xanh
+  lớn, ghế đá đặt dọc lối đi, sân chơi trẻ con ở góc xa (mở sau nếu cần —
+  trong slice chỉ cần lối đi + 2–3 ghế đá + 1 cây lớn làm điểm neo).
+- Điểm neo: **ghế đá dưới cây xanh lớn + người già tập thể dục buổi chiều**.
+  Đây là ảnh tham chiếu của khu — mọi take sau đối chiếu với ảnh này, lệch
+  là vẽ lại.
+- Khu vực chơi được trong slice: lối đi chính, ghế đá hotspot, bãi cỏ gặp gỡ.
+  Ngoài slice (mở sau): hồ nước, sân tập dưỡng sinh, khu sự kiện cộng đồng.
+
+### 3.3 Vật liệu + prop (mỗi prop có mô tả verbatim, không để model tự bịa)
+
+| Prop | Mô tả verbatim | Vật liệu / màu |
+|------|---------------|----------------|
+| Ghế đá công viên | "ghế đá xám, mặt ghế nhẵn bóng vì người ngồi nhiều, kê dưới bóng cây" | Đá xám ấm, không xám lạnh xanh |
+| Cây xanh lớn | "cây xanh tán rộng, lá xanh đậm, bóng mát phủ ghế đá" | Lá #4E7A3A, thân nâu |
+| Lối đi lát gạch | "lối đi lát gạch đỏ nhạt, lá khô rơi rải rác, sạch sẽ" | Gạch đỏ nhạt, lá khô vàng |
+| Đèn công viên | "đèn gang xanh thẫm, chao đèn vàng, chiều tối mới bật" | Gang xanh thẫm, đèn vàng #E0A800 |
+| Thảm cỏ | "cỏ xanh, có chỗ cỏ ngả vàng vì nắng, trẻ con ngồi chơi" | Cỏ #4E7A3A, chỗ ngả vàng |
+| Thùng rác công viên | "thùng rác xanh lá, nắp đậy, đặt cạnh ghế đá" | Xanh lá #4E7A3A |
+| Nắng vàng dịu buổi chiều | "ánh nắng vàng dịu xiên qua tán cây, vệt sáng lốm đốm trên lối đi" | Ánh sáng vàng, bóng lốm đốm |
+
+### 3.4 NPC trong khu (khoá diễn viên)
+
+| NPC | Mô tả verbatim | Biểu cảm (2–3 micro-beat / cảnh) |
+|-----|---------------|----------------------------------|
+| Ông Ba — NPC dẫn đường | "người già Việt, tóc bạc, áo thun trắng, quần short, dép lê, dáng gầy, ngồi ghế đá" | Hiền → trầm ngâm khi khuyên → cười nhẹ. Gợi ý bằng lời thoại khi người chơi bí (`Exploration.cs` `GuideHint`: "Ngồi ghế đá nghĩ cho kỹ đã"). |
+| Người già tập thể dục (quần chúng) | "người già Việt, tóc bạc, đồ thể thao sáng màu, đi bộ chậm quanh công viên" | Thư thái → vẫy tay chào → tập tay chậm. Phản ứng lệch nhịp với ông Ba. |
+| Trẻ con chơi (quần chúng) | "trẻ con Việt, áo thun màu sáng, chạy nhảy trên bãi cỏ, cười đùa" | Hào hứng → mệt ngồi nghỉ → cười khi chơi tiếp. Không đứng yên như tượng — có chuyển động. |
+
+- Tay đơn giản: vẫy tay chào, chạm má suy nghĩ, cầm túi đồ — không cầm vật
+  nhỏ khéo léo. Trẻ con không vẽ cảnh nguy hiểm (leo cao, chạy ra đường).
+
+### 3.5 Hotspot lấp lánh (khớp code `Exploration.cs`)
+
+| Hotspot (id code) | Vị trí trên map | Vật liệu nhặt | Khung tốt | Dấu hiệu nhìn thấy |
+|---|---|---|---|---|
+| `hs-cong-vien` — "Ghế đá công viên" | Ghế đá dưới cây xanh lớn, giữa lối đi | Ván gỗ ×1 | Chiều | Điểm sáng lấp lánh trên mặt ghế đá, viền sáng vàng, to ≥ 44×44 pt |
+
+- Nhặt 1 lần / 1 ngày game; quay lại ngày sau có vật mới. Hotspot ẩn chỉ
+  hiện khi có Đèn Soi bậc cao.
+
+### 3.6 Day / night — mưa / nắng — Tết
+
+| Trạng thái | Thay đổi hình ảnh (lock) |
+|---|---|
+| Sáng (khung 1) | Nắng sớm nhẹ, sương mỏng trên cỏ, ít người; ghế đá còn ướt sương. |
+| Chiều (khung 2) | Ánh nắng vàng dịu, người già tập thể dục, trẻ con chơi đông nhất; hotspot `hs-cong-vien` sáng rõ. |
+| Tối (khung 3) | Đèn công viên vàng bật, công viên vắng dần, ghế đá tối — hotspot mờ đi (khung tốt là Chiều, không phải Tối). |
+| Mưa | Lối đi ướt bóng nước, ghế đá ướt, NPC che ô / trú dưới tán cây; Xe Đẩy bậc thấp không đi được đường mưa. |
+| Nắng | Nắng gắt hơn, bóng cây đậm, NPC đội nón lá / ngồi dưới bóng mát. |
+| Tết | Đèn lồng đỏ treo trên cây dọc lối đi, hoa đào bày gần ghế đá — chỉ thay prop trang trí, không đổi bố cục khu. |
+
+### 3.7 Shot list gợi ý — Công Viên An Bình (PROVISIONAL, chốt khi quay)
+
+1. Toàn công viên buổi chiều, nắng vàng dịu qua tán cây (establishing).
+2. Cận ghế đá dưới cây lớn, lá khô trên lối đi.
+3. Ông Ba ngồi ghế đá, trầm ngâm → cười nhẹ khuyên người chơi.
+4. Người già tập thể dục đi bộ qua, vẫy tay chào.
+5. Trẻ con chơi trên bãi cỏ, cười đùa.
+6. Hotspot ghế đá lấp lánh buổi chiều.
+7. Đèn công viên bật lúc chập tối.
+8. Công viên Tết, đèn lồng đỏ trên cây (biến thể).
+
+## 4. Khu 18 — Phố Đi Bộ – Chợ Đêm (Khu chung, luôn mở, sự kiện 20:00 thứ 7)
+
+> Khu chung (17, 18) luôn mở cho mọi người chơi, không phân tầng
+> (`docs/districts.md`). Công dụng chốt: sự kiện chung 20:00 thứ 7, buôn bán
+> đêm, Bụi Đời Chợ Cá. Đây là khu "đông người" nhất trong 4 khu slice — đối
+> lập với sự yên tĩnh của Công Viên An Bình (khu 17).
+
+### 4.1 Mô tả verbatim (dùng nguyên văn, từ `docs/art-style.md` §4)
+
+> "phố đi bộ ban đêm, đèn lồng vàng, sạp ăn vặt khói bay, ghế nhựa, đông người,
+> nhạc nhẹ từ loa nhỏ"
+
+### 4.2 Bố cục isometric (slice)
+
+- Phố đi bộ chạy chéo theo trục isometric, hai dãy sạp ăn vặt đối diện, lối
+  đi giữa đủ đông người đi bộ tránh nhau, không có xe máy chạy qua.
+- Điểm neo: **dãy đèn lồng vàng treo ngang phố + sạp ăn vặt khói bay đầu phố**.
+  Đây là ảnh tham chiếu của khu — mọi take sau đối chiếu với ảnh này, lệch
+  là vẽ lại.
+- Khu vực chơi được trong slice: phố đi bộ chính, sạp đêm cuối phố (hotspot),
+  dãy ghế nhựa ven phố. Ngoài slice (mở sau): sân khấu sự kiện 20:00 thứ 7,
+  khu Bụi Đời Chợ Cá, bãi giữ xe.
+
+### 4.3 Vật liệu + prop (mỗi prop có mô tả verbatim, không để model tự bịa)
+
+| Prop | Mô tả verbatim | Vật liệu / màu |
+|------|---------------|----------------|
+| Đèn lồng vàng | "đèn lồng vàng treo ngang phố, sáng ấm, dây đèn căng đều" | Vàng #E0A800, dây đen |
+| Sạp ăn vặt khói bay | "sạp ăn vặt, nồi hấp khói bay, mùi thơm, bảng giá ghi tay" | Sạp gỗ nâu, khói trắng mỏng |
+| Ghế nhựa | "ghế nhựa xanh đỏ xếp quanh sạp, bàn nhựa thấp, ly nước mía" | Nhựa xanh/đỏ, ly thủy tinh |
+| Loa nhỏ | "loa nhỏ đặt trên sạp, phát nhạc nhẹ, dây điện gọn" | Loa đen, dây gọn |
+| Biển hiệu sạp | "biển hiệu vải, chữ tay, đèn vàng hắt từ dưới" | Vải trắng, chữ đỏ/đen |
+| Đèn đường phố đi bộ | "đèn đường vàng, cột đen, sáng đều cả phố" | Cột đen, đèn vàng |
+| Thùng rác phân loại | "thùng rác phân loại cuối phố, nắp đậy, đặt cạnh sạp đêm" | Xanh lá / xám |
+| Nền phố lát đá | "nền phố lát đá xám ấm, sạch, phản chiếu đèn vàng" | Đá xám ấm #8A7F70 |
+
+### 4.4 NPC trong khu (khoá diễn viên)
+
+| NPC | Mô tả verbatim | Biểu cảm (2–3 micro-beat / cảnh) |
+|-----|---------------|----------------------------------|
+| Anh Hải — NPC dẫn đường | "đàn ông Việt, da ngăm, áo thun đen, quần short, đội nón lá" | Mệt sau ca → tỉnh khi có khách → cười khi dạy chế Đèn Soi. Gợi ý bằng lời thoại khi người chơi bí (`Exploration.cs` `GuideHint`: "Đêm nay đông khách, vừa bán vừa nhặt được đồ"). Cùng người với anh Hải ở Chợ Đầu Mối (khu 2) — không vẽ thành 2 người khác nhau. |
+| Người bán sạp đêm (quần chúng) | "người Việt, da vàng tự nhiên, tóc đen, mặc đồ thường ngày, tạp dề, tay thoăn thoắt bán hàng" | Cười mời khách → nghiêm khi mặc cả → vui khi bán được hàng. Phản ứng lệch nhau, không đồng bộ. |
+| Người đi bộ / khách ăn vặt (quần chúng) | "người Việt, da vàng tự nhiên, tóc đen, mặc đồ thường ngày, dáng người bình thường" | Đi dạo, ngồi ghế nhựa ăn vặt, nghe nhạc — có chuyển động, không đứng yên như tượng. |
+
+- Tay đơn giản: vẫy tay chào, cầm túi đồ, bưng khay — không cầm vật nhỏ
+  khéo léo. Khói bay vẽ mỏng, không che mặt nhân vật.
+
+### 4.5 Hotspot lấp lánh (khớp code `Exploration.cs`)
+
+| Hotspot (id code) | Vị trí trên map | Vật liệu nhặt | Khung tốt | Dấu hiệu nhìn thấy |
+|---|---|---|---|---|
+| `hs-cho-dem` — "Sạp đêm cuối phố" | Sạp ăn vặt cuối phố, cạnh thùng rác phân loại | Vải vụn ×2 | Tối | Điểm sáng lấp lánh trên sạp đêm, viền sáng vàng, to ≥ 44×44 pt |
+
+- Nhặt 1 lần / 1 ngày game; quay lại ngày sau có vật mới. Hotspot ẩn chỉ
+  hiện khi có Đèn Soi bậc cao.
+- Sự kiện chung 20:00 thứ 7 tổ chức ở khu này (xem `docs/districts.md`) —
+  spec ánh sáng / sân khấu sự kiện là việc riêng, không vẽ vào slice này.
+
+### 4.6 Day / night — mưa / nắng — Tết
+
+| Trạng thái | Thay đổi hình ảnh (lock) |
+|---|---|
+| Sáng (khung 1) | Phố vắng, sạp chưa mở, đèn lồng tắt; chỉ có người dọn phố. |
+| Chiều (khung 2) | Sạp bắt đầu dọn hàng, đèn lồng chưa bật, người đi bộ thưa dần. |
+| Tối (khung 3) | Đèn lồng vàng bật hết, sạp ăn vặt khói bay, đông người nhất; hotspot `hs-cho-dem` sáng rõ. |
+| Mưa | Phố ướt bóng nước, sạp căng bạt, khách trú mưa dưới mái hiên; Xe Đẩy bậc thấp không đi được đường mưa. |
+| Nắng | Ban ngày nắng gắt, sạp đóng cửa, phố vắng — khu này sống về đêm, không vẽ cảnh nắng gắt đông người. |
+| Tết | Đèn lồng đỏ thêm vào dãy đèn vàng, cành đào bày đầu phố, sạp bánh Tết — chỉ thay prop trang trí, không đổi bố cục khu. |
+
+### 4.7 Shot list gợi ý — Phố Đi Bộ – Chợ Đêm (PROVISIONAL, chốt khi quay)
+
+1. Toàn phố ban đêm, đèn lồng vàng + khói sạp ăn vặt (establishing).
+2. Sạp ăn vặt đầu phố, nồi hấp khói bay, bảng giá ghi tay.
+3. Anh Hải bán hàng, mệt → tỉnh khi có khách → cười.
+4. Khách ngồi ghế nhựa ăn vặt, nghe nhạc nhẹ từ loa nhỏ.
+5. Hotspot sạp đêm cuối phố lấp lánh.
+6. Người đi bộ đông, đèn lồng phản chiếu trên nền đá.
+7. Sạp đóng cửa dần cuối đêm, đèn lồng tắt từng dãy.
+8. Phố Tết, đèn lồng đỏ + sạp bánh Tết (biến thể).
+
+## 5. Placeholder CC0 — nguồn, quy tắc, bảng theo dõi
 
 - **Chỉ dùng:** Kenney.nl (CC0) và OpenGameArt.org (chỉ mục có tag CC0).
   Unity Top-Down Starter Kit (Unity 6.4) — art CC0 kèm kit, chỉ làm mẫu.
@@ -220,7 +377,7 @@
 |---|---|---|---|
 | (chưa có) | — | — | `assets/` đang trống |
 
-## 4. Shot list + kiểm tra dailies (theo skill `soulful_short_video`)
+## 6. Shot list + kiểm tra dailies (theo skill `soulful_short_video`)
 
 - Mỗi khu ≤ 8 shot cho 30 giây, shot trung bình 3–4 giây, không shot nào
   quá 4 giây. Quay theo thứ tự shot list, kiểm tra mỗi take với lock set /
@@ -255,7 +412,7 @@
 7. Xe ba gác chở rau đầy rời chợ.
 8. Sạp Tết, hoa quả + đèn lồng đỏ (biến thể).
 
-## 5. Checklist trước khi vẽ / quay khu mới
+## 7. Checklist trước khi vẽ / quay khu mới
 
 - [ ] Mô tả verbatim khu đã viết, dùng nguyên văn trong mọi prompt / brief?
 - [ ] Ảnh tham chiếu (reference still) đã có, mọi take đối chiếu với nó?
@@ -268,7 +425,7 @@
 - [ ] Số liệu mới có mâu thuẫn `GameBalance.cs` / GDD không? Số chưa chốt ghi PROVISIONAL?
 - [ ] Rubric đủ 12/16, không chiều nào 0 — chưa đủ thì vẽ / quay lại, không vá trong edit?
 
-## 6. Liên hệ file khác
+## 8. Liên hệ file khác
 
 - Chuẩn chung: `docs/art-style.md` (§1 lock thế giới, §2 palette, §4 verbatim
   4 khu, §5 placeholder CC0, §6 rubric, §7 kỹ thuật 2.5D).

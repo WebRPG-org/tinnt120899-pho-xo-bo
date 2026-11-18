@@ -16,10 +16,10 @@
 # xem Scripts/README.md). hs-tro-toi o scene SliceXomTroCu.unity;
 # hs-cho-sang + hs-cho-chieu o scene SliceChoDauMoi.unity;
 # hs-cho-dem o scene SlicePhoDiBoChoDem.unity.
-# GHI CHU: docs/art-assets.md hien chi co spec chi tiet khu 1–2, chua co muc
-# rieng cho khu 17 — spec art chi tiet khu 17 la viec follow-up, khong bia spec
-# vao scene nay. Mau nen giu nguyen nhu mau (da khoa #F9EDCE); xu ly sang
-# chieu/toi la viec cua art pass sau, khong doi mau o khung scene nay.
+# GHI CHU: spec art chi tiet khu 17 o docs/art-assets.md §3 (mo ta verbatim,
+# bo cuc, prop, NPC Ong Ba, hotspot hs-cong-vien) — khong bia spec vao scene
+# nay. Mau nen giu nguyen nhu mau (da khoa #F9EDCE); xu ly sang chieu/toi la
+# viec cua art pass sau, khong doi mau o khung scene nay.
 --- !u!29 &1
 OcclusionCullingSettings:
   m_ObjectHideFlags: 0

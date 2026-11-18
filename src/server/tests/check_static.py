@@ -444,6 +444,42 @@ for name in ["SliceCongVienAnBinh.unity", "SlicePhoDiBoChoDem.unity"]:
     check(f"T12j-{name}", f"{name}: SliceRoot có đúng 3 con (200031/200041/200071)",
           kids == ["200031", "200041", "200071"], f"con: {kids}" if kids != ["200031", "200041", "200071"] else "")
 
+# ---- Nhóm T13: spec art chi tiết khu 17/18 (docs/art-assets.md §3/§4) ----
+# Follow-up C2 (roles-qc.md §6): art-assets.md trước đây chỉ có khu 1–2.
+art_assets = read(DOCS / "art-assets.md")
+check("T13a", "art-assets.md: có mục riêng khu 17 (§3) + khu 18 (§4)",
+      "## 3. Khu 17 — Công Viên An Bình" in art_assets
+      and "## 4. Khu 18 — Phố Đi Bộ – Chợ Đêm" in art_assets)
+check("T13b", "art-assets.md: tiêu đề đã là 4 khu slice đầu",
+      "4 khu slice đầu" in art_assets)
+# Verbatim 4 khu (art-style.md §4) phải có trong đúng mục spec của nó.
+check("T13c", "art-assets.md §3: có mô tả verbatim khu 17",
+      "công viên buổi chiều, cây xanh, ghế đá, người già" in art_assets)
+check("T13d", "art-assets.md §4: có mô tả verbatim khu 18",
+      "phố đi bộ ban đêm, đèn lồng vàng, sạp ăn vặt" in art_assets)
+# Hotspot trong spec phải khớp đúng Exploration.cs (id + vật + số lượng + khung).
+check("T13e", "art-assets.md §3: hs-cong-vien nhặt Ván gỗ ×1, khung Chiều",
+      "hs-cong-vien" in art_assets and "Ván gỗ ×1" in art_assets
+      and "Chiều" in art_assets)
+check("T13f", "art-assets.md §4: hs-cho-dem nhặt Vải vụn ×2, khung Tối",
+      "hs-cho-dem" in art_assets and "Vải vụn ×2" in art_assets
+      and "Tối" in art_assets)
+# NPC dẫn đường trong spec phải khớp GuideHint trong Exploration.cs.
+check("T13g", "art-assets.md: NPC dẫn đường khu 17 là Ông Ba, khu 18 là Anh Hải",
+      "Ông Ba" in art_assets and "Anh Hải" in art_assets)
+check("T13h", "art-assets.md: Anh Hải khu 18 là cùng người với khu 2",
+      "Cùng người với anh Hải ở Chợ Đầu Mối" in art_assets)
+# Ghi chú khu chung (districts.md) phải có trong cả 2 mục spec.
+check("T13i", "art-assets.md §3/§4: khu chung luôn mở, không phân tầng",
+      art_assets.count("luôn mở cho mọi người chơi, không phân tầng") >= 2)
+# 2 scene mới trỏ tới đúng mục spec (không còn ghi "chưa có mục riêng").
+for name, section in [("SliceCongVienAnBinh.unity", "§3"),
+                      ("SlicePhoDiBoChoDem.unity", "§4")]:
+    content = read(SCENES / name)
+    check(f"T13j-{name}", f"{name}: header trỏ spec art-assets.md {section}",
+          f"docs/art-assets.md {section}" in content
+          and "chua co muc rieng" not in content)
+
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)
 failed = [r for r in results if not r[2]]
