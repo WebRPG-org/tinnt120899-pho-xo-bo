@@ -118,6 +118,8 @@ C2 vẫn chưa xong (chưa mở bằng Unity, chưa có art, chưa bấm Play đ
 C3–C9 vẫn chưa xong. Việc follow-up C2 tiếp theo: art pass vẽ 4 khu theo
 spec (C8) — cần đồ hoạ + track nhạc chốt, chưa có.
 
+**Hiện trạng 19/11/2026 ~00:50 — ISOMETRIC V2 ĐÃ MÓC TILEMAP + 2 PLUGIN SLICE:** `PXB_Isometric.js` v2 (456 dòng): `PXB_IsoTilemap` kế thừa `Tilemap`, vẽ tile thường thành thoi 64×32 (quay 45° + co), `screenX/screenY` chiếu isometric, `createTilemap` alias, cuộn map pan theo origin; smoke test stub core MV 36/36 PASS; `install()` false khi không có core. `PXB_Hotspot.js` (484 dòng, port Exploration.cs, smoke 26/26 PASS) + `PXB_Jobs.js` (548 dòng, port Jobs.cs, smoke 40/40 PASS); `plugins.js` nay 6 plugin. Kiểm tra tĩnh 211/211 PASS (nhóm T16 mới, 5 mục). CHƯA chơi được: tile data toàn 0, chưa có tileset CC0, autotile/bóng/mép bàn chưa vẽ, plugin PhoneHub/Crafting/Education/Economy/Social/Titles/Story chưa viết. Checklist C1–C9 (§6) vẫn giữ cho đường Unity (phương án dự phòng); đường chính nay là Giai đoạn 1–5 của `docs/architecture-nadia.md`. Việc tiếp theo lớn nhất: PXB_Crafting.js + PXB_PhoneHub.js, rồi tileset CC0 + tile data thật cho Map001–002 để mở trình duyệt thấy map Xóm Trọ Cũ.
+
 **Hiện trạng 19/11/2026 ~00:05 — CORE MV ĐÃ VỀ + 2 PLUGIN SLICE:** core MV
 v1.6.1 (MIT) đủ 12 file trong `src/nadia/www/js/` (tổng 2.341.224 byte,
 `node --check` 12/12 PASS; nguồn tag community 1.3b — repo không có tag

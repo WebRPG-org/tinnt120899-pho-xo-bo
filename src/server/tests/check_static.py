@@ -665,19 +665,21 @@ check("T14r", "PXB_Isometric.js: chiếu (x−y)×tileW/2, (x+y)×tileH/2; sort 
 check("T14s", "PXB_Isometric.js: 'use strict', không require, không API NW.js",
       '"use strict"' in iso and "require(" not in iso and "process." not in iso and "nw." not in iso)
 
-# T14t–u: plugins.js (Balance → Stats → Time → Isometric, cả 4 bật) + main.js.
+# T14t–u: plugins.js (Balance → Stats → Time → Isometric → Hotspot → Jobs, cả 6 bật) + main.js.
 plugins_js = read(NADIA / "js" / "plugins.js")
-check("T14t", "plugins.js: thứ tự Balance < Stats < Time < Isometric, cả 4 đều bật",
+check("T14t", "plugins.js: thứ tự Balance < Stats < Time < Isometric < Hotspot < Jobs, cả 6 đều bật",
       plugins_js.find('"PXB_Balance"') < plugins_js.find('"PXB_Stats"')
       < plugins_js.find('"PXB_Time"') < plugins_js.find('"PXB_Isometric"')
-      and plugins_js.count('"status": true') == 4)
+      < plugins_js.find('"PXB_Hotspot"') < plugins_js.find('"PXB_Jobs"')
+      and plugins_js.count('"status": true') == 6)
 main_js = read(NADIA / "js" / "main.js")
 check("T14u", "main.js: PluginManager.setup($plugins) + SceneManager.run(Scene_Boot)",
       "PluginManager.setup($plugins)" in main_js and "SceneManager.run(Scene_Boot)" in main_js)
 
-# T14v: node --check 6 file JS nadia (node v24 có sẵn trên VM).
+# T14v: node --check 8 file JS nadia (node v24 có sẵn trên VM).
 node_files = [NADIA_PLUGINS / "PXB_Balance.js", NADIA_PLUGINS / "PXB_Isometric.js",
               NADIA_PLUGINS / "PXB_Stats.js", NADIA_PLUGINS / "PXB_Time.js",
+              NADIA_PLUGINS / "PXB_Hotspot.js", NADIA_PLUGINS / "PXB_Jobs.js",
               NADIA / "js" / "plugins.js", NADIA / "js" / "main.js"]
 node_ok, node_detail = True, ""
 try:
@@ -689,7 +691,7 @@ try:
 except FileNotFoundError:
     node_ok = False
     node_detail = "không tìm thấy lệnh node"
-check("T14v", "node --check: 6 file JS nadia qua cú pháp", node_ok, node_detail)
+check("T14v", "node --check: 8 file JS nadia qua cú pháp", node_ok, node_detail)
 
 # T14w–y: Actors/Classes/Items — chéo tham chiếu + giá khớp Items.js.
 actors = json.loads(read(NADIA_DATA / "Actors.json"))
@@ -797,10 +799,10 @@ missing_time = [t for t in time_tokens if t not in time_js]
 check("T15e", "PXB_Time.js: 30 phút/3 khung/10 phút + isMissed + sự kiện thứ 7 20:00 (giờ game, PROVISIONAL)",
       not missing_time and '"use strict"' in time_js and "require(" not in time_js,
       f"thiếu: {missing_time}" if missing_time else "")
-# T15f: plugins.js đã khai báo đủ 4 plugin (kiểm thứ tự + số lượng ở T14t).
-check("T15f", "plugins.js: khai báo đủ 4 plugin PXB_Balance/Stats/Time/Isometric",
+# T15f: plugins.js đã khai báo đủ 6 plugin (kiểm thứ tự + số lượng ở T14t).
+check("T15f", "plugins.js: khai báo đủ 6 plugin PXB_Balance/Stats/Time/Isometric/Hotspot/Jobs",
       all(f'"{n}"' in plugins_js for n in
-          ["PXB_Balance", "PXB_Stats", "PXB_Time", "PXB_Isometric"]))
+          ["PXB_Balance", "PXB_Stats", "PXB_Time", "PXB_Isometric", "PXB_Hotspot", "PXB_Jobs"]))
 # T15g–h: index.html + README nadia đã cập nhật trạng thái core (không còn ghi "CHƯA CÓ" cho core).
 check("T15g", "index.html: không còn ghi 'CHƯA CÓ FILE CORE' (core đã về)",
       "CHƯA CÓ FILE CORE" not in index_html and "MV v1.6.1" in index_html)
@@ -808,6 +810,54 @@ nadia_readme = read(ROOT / "src" / "nadia" / "README.md")
 check("T15h", "src/nadia/README.md: ghi core MV v1.6.1 ĐÃ CÓ + nguồn tag community 1.3b",
       "core MV v1.6.1" in nadia_readme and "ĐÃ CÓ" in nadia_readme
       and "community 1.3b" in nadia_readme)
+
+# ---- Nhóm T16 — PXB_Isometric v2 (móc Tilemap) + PXB_Hotspot + PXB_Jobs (19/11/2026 ~00:50) ----
+# T16a: PXB_Isometric.js v2 — IsoTilemap kế thừa Tilemap, alias screenX/screenY
+# + createTilemap, vẽ tile thường thành thoi (quay 45° + co), bỏ autotile.
+iso_v2 = read(NADIA_PLUGINS / "PXB_Isometric.js")
+iso_tokens = ["IsoTilemap", "Object.create(Tilemap.prototype)",
+              "Game_CharacterBase.prototype.screenX",
+              "Game_CharacterBase.prototype.screenY",
+              "Spriteset_Map.prototype.createTilemap",
+              "DIAMOND_ROTATION = Math.PI / 4", "DIAMOND_SCALE_X",
+              "normalTileSource", "originFor", "panFromOrigin",
+              "diamondCenter", "skippedAutotile",
+              "this.scrolledX()", "this.scrolledY()"]
+missing_iso = [t for t in iso_tokens if t not in iso_v2]
+check("T16a", "PXB_Isometric v2: IsoTilemap kế thừa Tilemap + alias screenX/screenY/createTilemap + vẽ thoi + bỏ autotile",
+      not missing_iso and '"use strict"' in iso_v2 and "require(" not in iso_v2,
+      f"thiếu: {missing_iso}" if missing_iso else "")
+# T16b: PXB_Hotspot.js — port Exploration.cs (5 hotspot, 1 lần/ngày, đúng khung, GuideHint).
+hotspot_js = read(NADIA_PLUGINS / "PXB_Hotspot.js")
+hotspot_tokens = ["pxbHotspot", "wrong-frame", "already", "GuideHint",
+                  "hotspotsInDistrict", "$gameSystem.pxbHotspot", "PROVISIONAL"]
+missing_hotspot = [t for t in hotspot_tokens if t not in hotspot_js]
+check("T16b", "PXB_Hotspot.js: 5 hotspot + nhặt 1 lần/ngày + chặn sai khung + GuideHint + lưu $gameSystem",
+      not missing_hotspot and '"use strict"' in hotspot_js and "require(" not in hotspot_js,
+      f"thiếu: {missing_hotspot}" if missing_hotspot else "")
+# T16c: PXB_Jobs.js — port Jobs.cs (3 nghề, lương theo chỉ số, quota 14, cung–cầu, thi).
+jobs_js = read(NADIA_PLUGINS / "PXB_Jobs.js")
+jobs_tokens = ["pxbJobs", "het-quota", "takeExam", "grantExtraAttempt",
+               "setDemand", "$gameSystem.pxbJobs", "PROVISIONAL"]
+missing_jobs = [t for t in jobs_tokens if t not in jobs_js]
+check("T16c", "PXB_Jobs.js: 3 nghề + lương chỉ số + quota tuần + cung–cầu + thi chứng chỉ + lưu $gameSystem",
+      not missing_jobs and '"use strict"' in jobs_js and "require(" not in jobs_js,
+      f"thiếu: {missing_jobs}" if missing_jobs else "")
+# T16d: plugins.js đủ 6 plugin, thứ tự đúng (kiểm lại độc lập với T14t).
+check("T16d", "plugins.js: đủ 6 plugin, Balance đầu, Hotspot/Jobs sau Isometric, cả 6 bật",
+      plugins_js.count('"status": true') == 6
+      and plugins_js.find('"PXB_Isometric"') < plugins_js.find('"PXB_Hotspot"')
+      < plugins_js.find('"PXB_Jobs"'))
+# T16e: 3 file plugin mới/sửa đều UTF-8 (nội dung đã qua node --check ở T14v).
+t16_utf8_bad = []
+for _p in [NADIA_PLUGINS / "PXB_Isometric.js", NADIA_PLUGINS / "PXB_Hotspot.js",
+           NADIA_PLUGINS / "PXB_Jobs.js"]:
+    try:
+        _p.read_bytes().decode("utf-8")
+    except UnicodeDecodeError:
+        t16_utf8_bad.append(_p.name)
+check("T16e", "PXB_Isometric/Hotspot/Jobs đều UTF-8", not t16_utf8_bad,
+      f"không UTF-8: {t16_utf8_bad}" if t16_utf8_bad else "")
 
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)
@@ -819,6 +869,7 @@ if failed:
     print(f"\n{len(failed)} FAIL — chưa phải bản test được. Xem docs/test-report.md.")
     sys.exit(1)
 print("\nTất cả kiểm tra tĩnh PASS — lưu ý: đây KHÔNG phải build/test chạy được.")
-print("Unity vẫn chưa có; dotnet 8.0.428 có ở ~/.dotnet; core MV v1.6.1 đã có")
-print("nhưng PXB_Isometric chưa móc Tilemap, tile data toàn 0, img/audio trống,")
+print("Unity vẫn chưa có; dotnet 8.0.428 có ở ~/.dotnet; core MV v1.6.1 đã có;")
+print("PXB_Isometric v2 đã móc Tilemap (smoke test stub 36/36 PASS), Hotspot/Jobs")
+print("đã viết (smoke 26/26 + 40/40 PASS), nhưng tile data toàn 0, img/audio trống,")
 print("nên chưa mở trình duyệt chơi được thật (xem docs/test-report.md).")

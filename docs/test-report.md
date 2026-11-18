@@ -7,6 +7,53 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 19/11/2026 ~00:50 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **211/211 PASS, exit 0** — tăng từ 206/206: nhóm T16 mới (5 mục)
+  khóa Isometric v2 + 2 plugin mới; `node --check` nay 8/8 file JS nadia.
+- **PXB_Isometric v2 — ĐÃ MÓC TILEMAP (việc tiếp theo lớn nhất, xong):**
+  `PXB_IsoTilemap` kế thừa `Tilemap` (prototype chain nối trong `install()`),
+  vẽ tile thường (B–E + A5) thành hình thoi 64×32 bằng sprite MV quay 45° +
+  co (64/(48√2), 32/(48√2)); `Game_CharacterBase.screenX/screenY` chiếu
+  isometric (giữ `screenZ` gốc — sắp xếp chiều sâu tự đúng vì nhân vật là
+  con của Tilemap và `_sortChildren` xếp theo z rồi y iso);
+  `Spriteset_Map.createTilemap` dựng IsoTilemap (fallback về cách dựng gốc
+  nếu lỗi); cuộn map đổi `origin` MV thành độ dời iso của lớp tile.
+  Smoke test stub core MV (`/tmp/pxb-iso-smoke.js`, không commit): **36/36
+  PASS** (origin map 12×9 = {280, 472}, screenX/screenY (5,4) = (344, 648),
+  vẽ đúng 2 tile thường + bỏ 1 autotile, sprite thoi đúng frame/quay/tỉ lệ/
+  vị trí, pan origin (48,0) = (−32,−16), alias createTilemap);
+  `install()` không có core trả false. Giới hạn v2: autotile A1–A4, bóng,
+  mép bàn CHƯA vẽ (đếm vào `stats`); vẽ hết map không cắt viewport; cuộn
+  vẫn theo luật MV gốc (tile 48px) nên tâm cuộn chỉ gần đúng.
+- **2 plugin slice mới (Giai đoạn 2):** `PXB_Hotspot.js` (484 dòng, port
+  `Exploration.cs`: 5 hotspot, nhặt 1 lần/ngày game, chặn sai khung
+  `wrong-frame`, GuideHint 4 NPC + Bạn thân, lưu `$gameSystem.pxbHotspot`;
+  smoke 26/26 PASS) + `PXB_Jobs.js` (548 dòng, port `Jobs.cs`: 3 nghề,
+  lương mốc 50/0/100, khung tốt +25%, quota 14, cung–cầu xoay tuần
+  PROVISIONAL, thi chứng chỉ theo GDD; smoke 40/40 PASS); `plugins.js`
+  nay 6 plugin (Balance → Stats → Time → Isometric → Hotspot → Jobs).
+- **Lệch phát hiện khi port (ghi nhận, chưa sửa nguồn):** (1) Hotspot:
+  `Exploration.Explore()` KHÔNG kiểm tra khung (chỉ dùng `BestFrame` để
+  sắp xếp + sáng hơn) nhưng architecture §6 dòng 5 ghi "chỉ có đồ đúng
+  khung" — plugin chặn sai khung theo architecture, khi C# sửa theo thì
+  khớp; `districts.md` không có dữ liệu hotspot nào; `Exploration.cs`
+  không định nghĩa độ hiếm (cả 5 hotspot đều "thường"). (2) Jobs:
+  `Jobs.cs` hoàn toàn không có logic thi chứng chỉ — hệ thi (phí 5–20tr,
+  trượt mất phí, chờ tuần sau, nạp mua thêm 1 lượt/tuần) chỉ có trong GDD
+  Mục 6 + architecture §4.4; plugin triển khai thi theo GDD. Không lệch
+  số nào khác (lương/quota/khung/cung–cầu khớp Jobs.cs + GameBalance +
+  PXB_Balance + GDD).
+- **Còn lại chưa xong (Giai đoạn 1–2):** tile data toàn 0 (chưa có tileset
+  CC0 nên IsoTilemap chưa vẽ được gì thật), img/audio trống, plugin còn
+  lại (PXB_PhoneHub/Crafting/Education/Economy/Social/Titles/Story…)
+  chưa viết. Mở trình duyệt lúc này hết 404 ở core nhưng vẫn chưa chơi
+  được — trạng thái thật, không giấu.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa
+  biên dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test`
+  vẫn kẹt RAM — chạy qua GitHub Actions; Unity chưa có).
+
 ## Lần chạy mới nhất: 19/11/2026 ~00:05 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
