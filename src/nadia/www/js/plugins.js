@@ -50,6 +50,18 @@ var $plugins = [
     "status": true,
     "description": "Điện thoại hub: 9 tab + thông báo chưa đọc + phím P (port PhoneHub.cs).",
     "parameters": {}
+  },
+  {
+    "name": "PXB_Education",
+    "status": true,
+    "description": "Học vấn 5 bậc + khóa ngắn hạn + học bổng (port GDD Mục 5 / GameBalance.Degrees).",
+    "parameters": {}
+  },
+  {
+    "name": "PXB_Economy",
+    "status": true,
+    "description": "Ví + tiết kiệm + catalog 17 món + đấu giá + barter + 4 hành vi cấm (port Economy.cs).",
+    "parameters": {}
   }
 ];
 

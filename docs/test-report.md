@@ -7,6 +7,52 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 19/11/2026 ~02:55 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **219/219 PASS, exit 0** — tăng từ 215/215: nhóm T18 mới (4 mục)
+  khóa 2 plugin mới; `node --check` nay 12/12 file JS nadia.
+- **2 plugin slice mới (Giai đoạn 2):** `PXB_Education.js` (589 dòng, port
+  GDD Mục 5 / `GameBalance.Degrees`: 5 bậc đúng học phí/ngày/Trí/EXP/Danh
+  vọng/mentor; enroll chặn `chua-du-tri` / `can-mentor` (Tiến sĩ) /
+  `khong-du-tien` / `da-co-bang` / `dang-hoc`; tiến độ theo ngày game,
+  tốt nghiệp ghi `pendingExp`/`pendingFame` để event áp; khóa ngắn hạn
+  3–7 ngày, 2–10 triệu, +10 một chỉ số phụ; học bổng xét Trí + tiền;
+  ghế/khóa 20–30 + `registerOrder`; smoke 89/89 PASS) +
+  `PXB_Economy.js` (577 dòng, port `Economy.cs`: catalog đủ 17 món
+  6 nhà + 6 xe + 2 điện thoại + 3 quần áo đúng giá/chỉ số; ví riêng
+  tiền mặt/tiết kiệm/`creditScore` 100; lãi 0,5%/tháng game 30 ngày;
+  gửi/rút tiết kiệm; mua nhà/xe-sang +50 Danh vọng; đấu giá người bán
+  nhận giá − phí 5%; barter; chia tài sản ly hôn; set bonus đủ 3 món;
+  dress-code; 4 hàm cấm luôn false; smoke 78/78 PASS); `plugins.js`
+  nay 10 plugin (Balance → … → PhoneHub → Education → Economy).
+- **3 lỗi script trong lần chạy này (đã sửa, chạy lại PASS):** T14t/T16d/
+  T17c lúc đầu FAIL giả — 3 check cũ bắt đúng 8 plugin (`== 8`), nay
+  đã 10. Đã sửa thành `>= 8` (chỉ khóa 8 plugin gốc + thứ tự); T18c
+  mới đếm đủ 10.
+- **Lệch / PROVISIONAL ghi nhận khi port (chưa sửa nguồn):** (1)
+  Education: học phí trả 1 lần lúc đăng ký (GDD chưa chốt trả trước
+  hay góp); không học lại bằng đã có/bằng cao hơn (GDD chưa chốt học
+  nhảy bậc); ngưỡng học bổng Trí ≥ 60 + tiền < 20tr (GDD chỉ nói
+  "người nghèo mà Trí cao"); ghế 20–30 + thứ tự đăng ký, plugin không
+  tự chặn hết ghế; tốt nghiệp chỉ ghi `pendingExp`/`pendingFame`/
+  `pendingStatGain` để event áp (chưa có hệ EXP/Danh vọng chung, không
+  tự gọi PXB_Stats); được học song song 1 bằng + 1 khóa ngắn hạn
+  (GDD chưa chốt học chồng). (2) Economy: ví riêng trong
+  `$gameSystem.pxbEconomy`, KHÔNG dùng `$gameParty.gold()` như Jobs —
+  khi nối MV thật cần đồng bộ 1 chiều qua event; quirk
+  `Buy("phong-tro")` giữ đúng C# (trừ 2tr thuê nhưng vẫn thêm vào
+  Owned nên tổng tài sản không đổi); dress-code chỉ xét đồ loại
+  Clothes nên xe sang set "Sang trọng" vẫn KHÔNG qua.
+- **Còn lại chưa xong (Giai đoạn 2):** tile data toàn 0 (chưa có tileset
+  CC0 nên IsoTilemap chưa vẽ được gì thật), img/audio trống, plugin còn
+  lại (PXB_Social/Titles/Story…) chưa viết. Việc tiếp theo lớn nhất:
+  PXB_Social.js, rồi tileset CC0 + tile data thật cho Map001–002 để mở
+  trình duyệt thấy map Xóm Trọ Cũ.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa
+  biên dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test`
+  vẫn kẹt RAM — chạy qua GitHub Actions; Unity chưa có).
+
 ## Lần chạy mới nhất: 19/11/2026 ~01:50 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
