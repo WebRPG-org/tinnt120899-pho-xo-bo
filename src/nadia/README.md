@@ -14,12 +14,14 @@ src/nadia/
 ├── www/                        ← game (file tĩnh, deploy GitHub Pages)
 │   ├── index.html              ← thứ tự load core MV (§1.2)
 │   ├── js/
-│   │   ├── libs/               ← pixi.js v4, pixi-tilemap, lz-string… (CHƯA CÓ)
-│   │   ├── rpg_core.js … rpg_windows.js  ← core MV v1.6.1, MIT (CHƯA CÓ)
-│   │   ├── plugins.js          ← khai báo plugin ($plugins)
+│   │   ├── libs/               ← pixi.js v4.5.4, pixi-tilemap, lz-string… (core MV, MIT — ĐÃ CÓ)
+│   │   ├── rpg_core.js … rpg_windows.js  ← core MV v1.6.1, MIT (ĐÃ CÓ, tag community 1.3b)
+│   │   ├── plugins.js          ← khai báo plugin ($plugins, 4 plugin bật)
 │   │   ├── main.js             ← PluginManager.setup + SceneManager.run
 │   │   └── plugins/
 │   │       ├── PXB_Balance.js  ← hằng số duy nhất (port GameBalance.cs)
+│   │       ├── PXB_Stats.js    ← 3 chỉ số gốc + 4 pha trộn + trần tổng (port Stats.cs)
+│   │       ├── PXB_Time.js     ← 1 ngày 30 phút, 3 khung, sự kiện thứ 7 20:00 (port TimeSystem.cs)
 │   │       └── PXB_Isometric.js← phép chiếu 2.5D (bản đầu: chưa móc Tilemap)
 │   ├── data/
 │   │   ├── System.json         ← gameTitle, tiền "đồng", map bắt đầu 1
@@ -35,33 +37,46 @@ src/nadia/
 └── README.md                   ← file này
 ```
 
-## Hiện trạng thật (18/11/2026 ~22:45)
+## Hiện trạng thật (19/11/2026 ~00:05)
 
-- **Đã có (khung file, Giai đoạn 1):** `index.html` + `plugins.js` + `main.js`
-  + `PXB_Balance.js` + `PXB_Isometric.js` (bản đầu) + `data/` tối thiểu
-  (System, MapInfos đủ 18 khu, Map001–002, Actors, Classes, Items).
-  `node --check` 4/4 file JS OK; JSON hợp lệ; kiểm tra tĩnh
-  `check_static.py` nhóm T14 khóa khung này (xem `docs/test-report.md`).
+- **Đã có (Giai đoạn 1, tiến thêm):** core MV v1.6.1 (MIT) ĐÃ CÓ — 12 file
+  (6 `js/rpg_*.js` + 6 `js/libs/*`, tổng 2.341.224 byte, `node --check`
+  12/12 PASS). Nguồn: `rpgtkoolmv/corescript` tag community 1.3b — repo
+  không có tag v1.6.1; tag 1.3b chính là core v1.6.1 (header mỗi file ghi
+  "v1.6.1 (community-1.3b)"); 6 file rpg build bằng đúng `concat.js` của
+  repo; pixi.js v4.5.4 lấy từ bundle MV 1.6.1. Chỉ lấy code core + libs
+  MIT — không lấy asset/nhạc/nhân vật/map/cốt truyện của Nadia hay RPG Maker.
+  Plugin mới: `PXB_Stats.js` (261 dòng, port Stats.cs) + `PXB_Time.js`
+  (268 dòng, port TimeSystem.cs), `node --check` PASS, smoke test logic
+  thuần PASS; `plugins.js` nay khai báo 4 plugin (Balance → Stats → Time
+  → Isometric). Kiểm tra tĩnh nhóm T15 mới (8 mục) khóa core + 2 plugin.
 - **CHƯA CÓ — chưa mở trình duyệt chơi được:**
-  1. Core MV (`js/rpg_*.js`, `js/libs/pixi.js`…) — lấy từ
-     `rpgtkoolmv/corescript` v1.6.1 (MIT), chưa tải về. Mở `index.html` lúc
-     này lỗi 404 ở core — đó là trạng thái thật, không giấu.
-  2. `PXB_Isometric.js` chưa móc vào `Tilemap` — `install()` trả `false`
-     khi chưa có core; chưa vẽ được map isometric.
-  3. Tile data trong Map001/002 toàn 0 (chưa có tileset CC0) — event đã đủ
+  1. `PXB_Isometric.js` chưa móc vào `Tilemap` — `install()` trả `false`
+     khi chưa có core; nay core đã có, việc tiếp theo là móc Tilemap thật.
+  2. Tile data trong Map001/002 toàn 0 (chưa có tileset CC0) — event đã đủ
      nhưng map chưa có hình.
-  4. `img/` + `audio/` trống; plugin còn lại (`PXB_Stats`, `PXB_Time`,
-     `PXB_Hotspot`, `PXB_Crafting`, `PXB_Jobs`, `PXB_PhoneHub`…) chưa viết.
+  3. `img/` + `audio/` trống; plugin còn lại (`PXB_Hotspot`,
+     `PXB_Crafting`, `PXB_Jobs`, `PXB_PhoneHub`…) chưa viết.
+  4. Điểm PROVISIONAL mới (PXB_Time): ánh xạ "20:00 giờ game" trong ngày
+     game 30 phút (20:00 = phút thật thứ 25), ngày game 1 = Thứ Hai,
+     switch sự kiện thứ 7 = 1 — GDD chưa chốt, xem @help trong file.
+- **Đã có từ trước (khung file, Giai đoạn 1):** `index.html` + `plugins.js`
+  + `main.js` + `PXB_Balance.js` + `PXB_Isometric.js` (bản đầu) + `data/`
+  tối thiểu (System, MapInfos đủ 18 khu, Map001–002, Actors, Classes,
+  Items). `node --check` 6/6 file JS nadia OK; JSON hợp lệ; kiểm tra tĩnh
+  `check_static.py` nhóm T14+T15 khóa khung này (xem `docs/test-report.md`).
 
 ## Chạy / test
 
 ```sh
 # Cú pháp JS (chạy được ngay trên VM — node v24 có sẵn):
 node --check src/nadia/www/js/plugins/PXB_Balance.js
+node --check src/nadia/www/js/plugins/PXB_Stats.js
+node --check src/nadia/www/js/plugins/PXB_Time.js
 node --check src/nadia/www/js/plugins/PXB_Isometric.js
-# Kiểm tra tĩnh toàn repo (gồm nhóm T14 khóa khung nadia):
+# Kiểm tra tĩnh toàn repo (gồm nhóm T14+T15 khóa khung nadia):
 python3 src/server/tests/check_static.py
-# Chạy game thật (CHƯA ĐƯỢC — chờ core MV, xem mục trên):
+# Chạy game thật (CHƯA ĐƯỢC — chờ móc Tilemap + tileset, xem mục trên):
 cd src/nadia/www && python3 -m http.server 8000
 # rồi mở http://localhost:8000/ — KHÔNG mở file:// trực tiếp.
 ```
@@ -102,10 +117,10 @@ lấy theo C#:
 
 ## Lộ trình (docs/architecture-nadia.md §11)
 
-1. **Khung (đợt này)** — xong ở mức file; còn thiếu core MV + móc Tilemap
-   + tileset thì mới mở trình duyệt thấy map được.
-2. Slice chơi được — port `PXB_Stats`, `PXB_Time`, `PXB_Hotspot`,
-   `PXB_Crafting`, `PXB_Jobs`, `PXB_PhoneHub`; 2 map slice, 3 nghề,
+1. **Khung (đợt này)** — core MV đã về; còn thiếu móc Tilemap + tileset
+   thì mới mở trình duyệt thấy map được.
+2. Slice chơi được — port `PXB_Hotspot`, `PXB_Crafting`, `PXB_Jobs`,
+   `PXB_PhoneHub` (PXB_Stats + PXB_Time đã xong); 2 map slice, 3 nghề,
    2 công thức; chơi hết 1 ngày game, save/load được.
 3. Đủ 18 khu + 5 chương.
 4. Online (`PXB_Online.js` + server .NET).

@@ -10,6 +10,18 @@ var $plugins = [
     "parameters": {}
   },
   {
+    "name": "PXB_Stats",
+    "status": true,
+    "description": "3 chỉ số gốc Thể/Trí/Tâm + 4 pha trộn + trần tổng, lưu vào $gameSystem (port Stats.cs).",
+    "parameters": {}
+  },
+  {
+    "name": "PXB_Time",
+    "status": true,
+    "description": "1 ngày game = 30 phút thật, 3 khung Sáng/Chiều/Tối; miss khung không phạt; sự kiện chung thứ 7 20:00 (port TimeSystem.cs).",
+    "parameters": {}
+  },
+  {
     "name": "PXB_Isometric",
     "status": true,
     "description": "Render 2.5D isometric trên Pixi (bản đầu: chỉ phép chiếu + sắp xếp, chưa móc Tilemap).",

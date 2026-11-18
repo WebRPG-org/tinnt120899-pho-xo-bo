@@ -9,10 +9,12 @@
   <title>Phố Xô Bồ</title>
   <!--
     Thứ tự load theo core RPG Maker MV v1.6.1 (docs/architecture-nadia.md §1.2).
-    CHƯA CÓ FILE CORE TRONG REPO (Giai đoạn 1 — khung): các file js/libs/* và
-    js/rpg_*.js lấy từ rpgtkoolmv/corescript v1.6.1 (MIT), chưa tải về. Mở file
-    này bằng trình duyệt lúc này sẽ lỗi 404 ở core — ĐÓ LÀ TRẠNG THÁI THẬT,
-    không giấu. Khi core đã về, thứ tự dưới đây là đúng, không cần sửa.
+    Core MV v1.6.1 (MIT) ĐÃ CÓ trong repo từ 19/11/2026 ~00:05 (nhóm T15):
+    js/rpg_*.js + js/libs/* lấy từ rpgtkoolmv/corescript tag community 1.3b
+    (header mỗi file ghi "v1.6.1 (community-1.3b)"), build bằng concat.js
+    của repo, pixi v4.5.4 từ bundle MV. Chỉ lấy code core + libs MIT.
+    Mở trình duyệt lúc này vẫn chưa chơi được: PXB_Isometric chưa móc
+    Tilemap, tile data toàn 0, img/audio trống — xem src/nadia/README.md.
     KHÔNG mở file:// trực tiếp — phải qua web server (python3 -m http.server),
     trình duyệt chặn load data file từ ổ đĩa (xem docs/architecture-nadia.md §1.7).
   -->

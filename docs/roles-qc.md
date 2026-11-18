@@ -118,6 +118,16 @@ C2 vẫn chưa xong (chưa mở bằng Unity, chưa có art, chưa bấm Play đ
 C3–C9 vẫn chưa xong. Việc follow-up C2 tiếp theo: art pass vẽ 4 khu theo
 spec (C8) — cần đồ hoạ + track nhạc chốt, chưa có.
 
+**Hiện trạng 19/11/2026 ~00:05 — CORE MV ĐÃ VỀ + 2 PLUGIN SLICE:** core MV
+v1.6.1 (MIT) đủ 12 file trong `src/nadia/www/js/` (tổng 2.341.224 byte,
+`node --check` 12/12 PASS; nguồn tag community 1.3b — repo không có tag
+v1.6.1); `PXB_Stats.js` + `PXB_Time.js` đã viết (port Stats.cs/TimeSystem.cs,
+smoke test logic thuần PASS); `plugins.js` nay 4 plugin. Kiểm tra tĩnh
+206/206 PASS (nhóm T15 mới, 8 mục). CHƯA chơi được: `PXB_Isometric` chưa
+móc Tilemap (việc tiếp theo lớn nhất, nay core đã có), tile data toàn 0,
+img/audio trống. Checklist C1–C9 (§6) vẫn giữ cho đường Unity (phương án
+dự phòng); đường chính nay là Giai đoạn 1–5 của `docs/architecture-nadia.md`.
+
 **Hiện trạng 18/11/2026 ~22:45 — ĐỔI HƯỚNG SANG NADIA (chủ cho phép 22:30,
 `docs/architecture-nadia.md`):** Giai đoạn 1 khung file XONG — `src/nadia/www/`
 đã có index.html (thứ tự load §1.2) + plugins.js + main.js + `PXB_Balance.js`

@@ -7,6 +7,44 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 19/11/2026 ~00:05 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **206/206 PASS, exit 0** — tăng từ 198/198: nhóm T15 mới (8 mục)
+  khóa core MV + 2 plugin mới.
+- **Core MV v1.6.1 ĐÃ VỀ (Giai đoạn 1):** 12/12 file trong `src/nadia/www/`
+  (6 `js/rpg_*.js` + 6 `js/libs/*`, tổng 2.341.224 byte), `node --check`
+  12/12 PASS. Nguồn: `rpgtkoolmv/corescript` tag community 1.3b — repo
+  KHÔNG có tag v1.6.1; tag 1.3b chính là core v1.6.1 (header mỗi file ghi
+  "v1.6.1 (community-1.3b)"); 6 file rpg build bằng đúng `concat.js` của
+  repo; pixi.js v4.5.4 lấy từ bundle MV 1.6.1 (MIT). Chỉ lấy code core +
+  libs MIT — không lấy asset/nhạc/nhân vật/map/cốt truyện của Nadia hay
+  RPG Maker. 1 lỗi script trong lần chạy này (đã sửa, chạy lại PASS): T15g
+  lúc đầu FAIL giả — check tìm "core MV v1.6.1" thường trong khi comment
+  index.html ghi "Core MV v1.6.1" hoa C. 1 lỗi phát hiện khi viết T15 (đã
+  sửa trong script, không phải code game): `secret_pat` quét trúng chuỗi
+  "password=<redacted>" trong comment ví dụ của pixi.js — T14ab nay chỉ quét file
+  do mình viết; code upstream MIT được khóa riêng ở T15a–c (header +
+  node --check + UTF-8).
+- **2 plugin slice mới (Giai đoạn 2, port từ C#):** `PXB_Stats.js` (261
+  dòng: 3 gốc Thể/Trí/Tâm + 4 trộn Kỷ/Dũng/Sáng/An Yên + trần tổng 300
+  PROVISIONAL + Train đánh đổi + lưu `$gameSystem.pxbStats` đi theo save)
+  + `PXB_Time.js` (268 dòng: 1 ngày 30 phút, 3 khung 10 phút, miss không
+  phạt, sự kiện thứ 7 20:00 giờ game); `node --check` PASS; smoke test
+  logic thuần qua `module.exports` PASS (ctor tổng = 300, trộn, An Yên,
+  Train, biên khung, sự kiện); `plugins.js` nay 4 plugin (Balance → Stats
+  → Time → Isometric). Điểm PROVISIONAL mới: ánh xạ "20:00 giờ game" =
+  phút thật thứ 25 của ngày; ngày game 1 = Thứ Hai; switch sự kiện = 1;
+  phân bổ khởi đầu mặc định 100/100/100 — GDD chưa chốt.
+- **Còn lại chưa xong (Giai đoạn 1):** `PXB_Isometric` chưa móc Tilemap
+  (nay core đã có — việc tiếp theo lớn nhất); tile data toàn 0 (chưa có
+  tileset CC0); img/audio trống; plugin còn lại (PXB_Hotspot/Crafting/
+  Jobs/PhoneHub…) chưa viết. Mở trình duyệt lúc này hết 404 ở core nhưng
+  vẫn chưa chơi được — trạng thái thật, không giấu.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa
+  biên dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test`
+  vẫn kẹt RAM — chạy qua GitHub Actions; Unity chưa có).
+
 ## Lần chạy mới nhất: 18/11/2026 ~22:45 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
@@ -460,6 +498,25 @@
 - Phát hiện khi port: slice web lệch khỏi code C# ở 3 chỗ (nghề, công thức,
   hotspot hs-cho-dem/hs-hem-sang) — nadia lấy theo C#; web chưa sửa, để
   GDD/PM xem lại (chi tiết trong `src/nadia/README.md`).
+- Hành vi lạ còn lại (chưa sửa — để GDD/PM xem lại): `PhoneHub.Notify` đếm cả
+  khi đóng, `SuggestEnding` ưu tiên cứng, `Buy("phong-tro")` tính tiền thuê
+  vào tài sản, `AdvanceStage` không kiểm tra Kind.
+- Vẫn chưa chạy được: xUnit (17 test) và EditMode test (219 test) chưa biên
+  dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test` vẫn kẹt
+  RAM — chạy qua GitHub Actions; Unity chưa có).
+
+## Hiện trạng thật (19/11/2026 ~00:05, lúc viết báo cáo này)
+
+- Kiểm tra tĩnh: **206/206 PASS** (`check_static.py`, gồm nhóm T15 mới khóa
+  core MV + 2 plugin mới).
+- Core MV v1.6.1 ĐÃ CÓ trong repo (12 file, 2.341.224 byte, MIT, tag
+  community 1.3b); plugin `PXB_Stats.js` + `PXB_Time.js` đã viết (port
+  Stats.cs/TimeSystem.cs), `node --check` PASS, smoke test logic thuần PASS.
+- Chưa chơi được: `PXB_Isometric` chưa móc Tilemap (việc tiếp theo lớn
+  nhất, nay core đã có), tile data toàn 0, img/audio trống, plugin
+  Hotspot/Crafting/Jobs/PhoneHub chưa viết.
+- Điểm PROVISIONAL mới (PXB_Time): ánh xạ 20:00 giờ game = phút thật thứ
+  25 của ngày, ngày game 1 = Thứ Hai, switch sự kiện thứ 7 = 1 — GDD chưa chốt.
 - Hành vi lạ còn lại (chưa sửa — để GDD/PM xem lại): `PhoneHub.Notify` đếm cả
   khi đóng, `SuggestEnding` ưu tiên cứng, `Buy("phong-tro")` tính tiền thuê
   vào tài sản, `AdvanceStage` không kiểm tra Kind.

@@ -665,17 +665,19 @@ check("T14r", "PXB_Isometric.js: chiếu (x−y)×tileW/2, (x+y)×tileH/2; sort 
 check("T14s", "PXB_Isometric.js: 'use strict', không require, không API NW.js",
       '"use strict"' in iso and "require(" not in iso and "process." not in iso and "nw." not in iso)
 
-# T14t–u: plugins.js (Balance trước Isometric, cả 2 bật) + main.js (setup + run).
+# T14t–u: plugins.js (Balance → Stats → Time → Isometric, cả 4 bật) + main.js.
 plugins_js = read(NADIA / "js" / "plugins.js")
-check("T14t", "plugins.js: PXB_Balance đứng trước PXB_Isometric, cả 2 đều bật",
-      plugins_js.find('"PXB_Balance"') < plugins_js.find('"PXB_Isometric"')
-      and plugins_js.count('"status": true') == 2)
+check("T14t", "plugins.js: thứ tự Balance < Stats < Time < Isometric, cả 4 đều bật",
+      plugins_js.find('"PXB_Balance"') < plugins_js.find('"PXB_Stats"')
+      < plugins_js.find('"PXB_Time"') < plugins_js.find('"PXB_Isometric"')
+      and plugins_js.count('"status": true') == 4)
 main_js = read(NADIA / "js" / "main.js")
 check("T14u", "main.js: PluginManager.setup($plugins) + SceneManager.run(Scene_Boot)",
       "PluginManager.setup($plugins)" in main_js and "SceneManager.run(Scene_Boot)" in main_js)
 
-# T14v: node --check 4 file JS nadia (node v24 có sẵn trên VM).
+# T14v: node --check 6 file JS nadia (node v24 có sẵn trên VM).
 node_files = [NADIA_PLUGINS / "PXB_Balance.js", NADIA_PLUGINS / "PXB_Isometric.js",
+              NADIA_PLUGINS / "PXB_Stats.js", NADIA_PLUGINS / "PXB_Time.js",
               NADIA / "js" / "plugins.js", NADIA / "js" / "main.js"]
 node_ok, node_detail = True, ""
 try:
@@ -687,7 +689,7 @@ try:
 except FileNotFoundError:
     node_ok = False
     node_detail = "không tìm thấy lệnh node"
-check("T14v", "node --check: 4 file JS nadia qua cú pháp", node_ok, node_detail)
+check("T14v", "node --check: 6 file JS nadia qua cú pháp", node_ok, node_detail)
 
 # T14w–y: Actors/Classes/Items — chéo tham chiếu + giá khớp Items.js.
 actors = json.loads(read(NADIA_DATA / "Actors.json"))
@@ -716,19 +718,96 @@ package = json.loads(read(ROOT / "src" / "nadia" / "package.json"))
 check("T14aa", "package.json (NW.js): main = www/index.html",
       package.get("main") == "www/index.html")
 
-# T14ab–ac: không secret + UTF-8 cho toàn bộ file nadia.
-nadia_files = [p for p in sorted(NADIA.rglob("*")) if p.is_file()]
+# T14ab–ac: không secret + UTF-8 cho file nadia DO MÌNH VIẾT.
+# Ngoại lệ: js/rpg_*.js + js/libs/* là code upstream MIT (core MV v1.6.1 /
+# pixi v4.5.4) lấy nguyên văn, KHÔNG quét secret ở đây — pixi.js có chuỗi
+# "password=<redacted>" trong comment ví dụ của loader (không phải secret thật),
+# quét chung sẽ FAIL giả. Nguồn upstream được khóa riêng ở T15a–c
+# (header version + node --check + dung lượng).
+nadia_files = [p for p in sorted(NADIA.rglob("*")) if p.is_file()
+               and p.name not in {"rpg_core.js", "rpg_managers.js", "rpg_objects.js",
+                                  "rpg_scenes.js", "rpg_sprites.js", "rpg_windows.js"}
+               and "libs" not in p.parts]
 bad_nadia_secret = [p.name for p in nadia_files if secret_pat.search(read(p))]
-check("T14ab", "Không có secret/token/key trong file nadia", not bad_nadia_secret,
+check("T14ab", "Không có secret/token/key trong file nadia (do mình viết)", not bad_nadia_secret,
       f"nghi ngờ ở: {bad_nadia_secret}" if bad_nadia_secret else "")
+# T14ac: UTF-8 cho file nadia do mình viết (core/libs upstream kiểm ở T15c).
 bad_nadia_utf8 = []
 for p in nadia_files:
     try:
         p.read_bytes().decode("utf-8")
     except UnicodeDecodeError:
         bad_nadia_utf8.append(str(p.relative_to(ROOT)))
-check("T14ac", "Mọi file nadia đều UTF-8", not bad_nadia_utf8,
+check("T14ac", "Mọi file nadia (do mình viết) đều UTF-8", not bad_nadia_utf8,
       str(bad_nadia_utf8) if bad_nadia_utf8 else "")
+
+# ---- Nhóm T15 — core MV v1.6.1 + plugin PXB_Stats / PXB_Time (19/11/2026 ~00:05) ----
+# Core lấy từ rpgtkoolmv/corescript tag community 1.3b — header mỗi file
+# rpg_*.js ghi "v1.6.1 (community-1.3b)"; repo không có tag v1.6.1.
+# Libs lấy từ bundle MV 1.6.1 (pixi v4.5.4, MIT). Chỉ lấy code core + libs,
+# không lấy asset/nhạc/nhân vật/map/cốt truyện của Nadia hay RPG Maker.
+CORE_JS = ["rpg_core.js", "rpg_managers.js", "rpg_objects.js",
+           "rpg_scenes.js", "rpg_sprites.js", "rpg_windows.js"]
+CORE_LIBS = ["pixi.js", "pixi-tilemap.js", "pixi-picture.js",
+             "fpsmeter.js", "lz-string.js", "iphone-inline-video.browser.js"]
+core_paths = [NADIA / "js" / f for f in CORE_JS] + [NADIA / "js" / "libs" / f for f in CORE_LIBS]
+core_sizes = {p.name: p.stat().st_size for p in core_paths if p.is_file()}
+check("T15a", "Core MV: đủ 12 file (6 js/rpg_*.js + 6 js/libs/*), không file rỗng",
+      len(core_sizes) == 12 and all(s > 0 for s in core_sizes.values()),
+      f"thiếu/rỗng: {[f for f in CORE_JS + CORE_LIBS if f not in core_sizes or core_sizes.get(f, 0) == 0]}" if len(core_sizes) != 12 or not all(s > 0 for s in core_sizes.values()) else "")
+core_headers_ok = all(
+    "v1.6.1 (community-1.3b)" in read(NADIA / "js" / f).split("\n")[1]
+    for f in CORE_JS)
+check("T15b", "Core MV: 6 file rpg_*.js header 'v1.6.1 (community-1.3b)'; pixi.js v4.5.4",
+      core_headers_ok and "pixi.js - v4.5.4" in read(NADIA / "js" / "libs" / "pixi.js"),
+      "header sai" if not core_headers_ok else "")
+core_node_ok, core_node_detail = True, ""
+core_utf8_bad = []
+for p in core_paths:
+    try:
+        p.read_bytes().decode("utf-8")
+    except UnicodeDecodeError:
+        core_utf8_bad.append(p.name)
+    r = subprocess.run(["node", "--check", str(p)], capture_output=True, text=True, timeout=30)
+    if r.returncode != 0:
+        core_node_ok = False
+        core_node_detail += f"{p.name}: {r.stderr.strip()}; "
+check("T15c", "Core MV: node --check 12/12 file qua cú pháp + đều UTF-8",
+      core_node_ok and not core_utf8_bad,
+      (core_node_detail + f" không UTF-8: {core_utf8_bad}") if (not core_node_ok or core_utf8_bad) else "")
+
+# T15d: PXB_Stats.js — port Stats.cs (3 gốc + 4 trộn + trần + Train + save).
+stats_js = read(NADIA_PLUGINS / "PXB_Stats.js")
+stats_tokens = ["totalStatCap: 300", "statMax: 100", "anYenBalanceTolerance: 10",
+                "Stats.prototype.ky", "Stats.prototype.dung", "Stats.prototype.sang",
+                "Stats.prototype.anYen", "Stats.prototype.train",
+                "$gameSystem.pxbStats", "DataManager.createGameObjects",
+                "DataManager.extractSaveContents"]
+missing_stats = [t for t in stats_tokens if t not in stats_js]
+check("T15d", "PXB_Stats.js: 3 gốc + 4 trộn + trần 300 PROVISIONAL + Train + lưu $gameSystem.pxbStats",
+      not missing_stats and '"use strict"' in stats_js and "require(" not in stats_js,
+      f"thiếu: {missing_stats}" if missing_stats else "")
+# T15e: PXB_Time.js — port TimeSystem.cs (30 phút/3 khung/10 phút, miss không phạt, thứ 7 20:00).
+time_js = read(NADIA_PLUGINS / "PXB_Time.js")
+time_tokens = ["gameDayMinutes: 30", "framesPerDay: 3", "frameMinutes: 10",
+               '"Sáng", "Chiều", "Tối"', "function isMissed",
+               "EVENT_HOUR = 20", "isSaturdayEventTime", "shouldTriggerSaturdayEvent",
+               "PROVISIONAL"]
+missing_time = [t for t in time_tokens if t not in time_js]
+check("T15e", "PXB_Time.js: 30 phút/3 khung/10 phút + isMissed + sự kiện thứ 7 20:00 (giờ game, PROVISIONAL)",
+      not missing_time and '"use strict"' in time_js and "require(" not in time_js,
+      f"thiếu: {missing_time}" if missing_time else "")
+# T15f: plugins.js đã khai báo đủ 4 plugin (kiểm thứ tự + số lượng ở T14t).
+check("T15f", "plugins.js: khai báo đủ 4 plugin PXB_Balance/Stats/Time/Isometric",
+      all(f'"{n}"' in plugins_js for n in
+          ["PXB_Balance", "PXB_Stats", "PXB_Time", "PXB_Isometric"]))
+# T15g–h: index.html + README nadia đã cập nhật trạng thái core (không còn ghi "CHƯA CÓ" cho core).
+check("T15g", "index.html: không còn ghi 'CHƯA CÓ FILE CORE' (core đã về)",
+      "CHƯA CÓ FILE CORE" not in index_html and "MV v1.6.1" in index_html)
+nadia_readme = read(ROOT / "src" / "nadia" / "README.md")
+check("T15h", "src/nadia/README.md: ghi core MV v1.6.1 ĐÃ CÓ + nguồn tag community 1.3b",
+      "core MV v1.6.1" in nadia_readme and "ĐÃ CÓ" in nadia_readme
+      and "community 1.3b" in nadia_readme)
 
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)
@@ -740,5 +819,6 @@ if failed:
     print(f"\n{len(failed)} FAIL — chưa phải bản test được. Xem docs/test-report.md.")
     sys.exit(1)
 print("\nTất cả kiểm tra tĩnh PASS — lưu ý: đây KHÔNG phải build/test chạy được.")
-print("Unity vẫn chưa có; dotnet 8.0.428 có ở ~/.dotnet; nadia còn thiếu core MV")
+print("Unity vẫn chưa có; dotnet 8.0.428 có ở ~/.dotnet; core MV v1.6.1 đã có")
+print("nhưng PXB_Isometric chưa móc Tilemap, tile data toàn 0, img/audio trống,")
 print("nên chưa mở trình duyệt chơi được thật (xem docs/test-report.md).")
