@@ -68,6 +68,18 @@ var $plugins = [
     "status": true,
     "description": "Người yêu/vợ-chồng, bạn thân/hội bạn, gia đình, đối tác; bỏ bê 7 ngày, hỗ trợ +20% EXP, solo chậm 40% (port Social.cs).",
     "parameters": {}
+  },
+  {
+    "name": "PXB_Titles",
+    "status": true,
+    "description": "Xung đột danh hiệu 2 chiều + phe Chính/Tà/Trung lập + quest đổi phe 'Cải tà quy chính' (port TitleConflict.cs).",
+    "parameters": {}
+  },
+  {
+    "name": "PXB_Story",
+    "status": true,
+    "description": "5 chương Lên Phố → Thành Đạt + 6 kết thúc + tụt bậc chương 3 (port PlayerProgress.cs).",
+    "parameters": {}
   }
 ];
 

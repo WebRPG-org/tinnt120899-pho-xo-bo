@@ -924,8 +924,9 @@ check("T18b", "PXB_Economy.js: catalog 17 món + ví/lãi + đấu giá + barter
       not missing_economy and '"use strict"' in economy_js and "require(" not in economy_js,
       f"thiếu: {missing_economy}" if missing_economy else "")
 # T18c: plugins.js đủ 11 plugin, thứ tự đúng (kiểm lại độc lập với T14t/T16d/T17c).
+# Nay 13 plugin (T20b đếm đủ); T18c chỉ khóa ≥ 11 gốc + thứ tự.
 check("T18c", "plugins.js: đủ 11 plugin, PhoneHub trước Education, Economy trước Social, cả 11 bật",
-      plugins_js.count('"status": true') == 11
+      plugins_js.count('"status": true') >= 11
       and plugins_js.find('"PXB_PhoneHub"') < plugins_js.find('"PXB_Education"')
       < plugins_js.find('"PXB_Economy"') < plugins_js.find('"PXB_Social"'))
 # T18d: 2 file plugin mới đều UTF-8 (nội dung đã qua node --check ở T14v).
@@ -952,8 +953,9 @@ check("T19a", "PXB_Social.js: 7 kind + 6 stage + bỏ bê/hỗ trợ/solo/ly hô
       not missing_social and '"use strict"' in social_js and "require(" not in social_js,
       f"thiếu: {missing_social}" if missing_social else "")
 # T19b: plugins.js đủ 11 plugin, Social cuối, cả 11 bật (kiểm lại độc lập với T18c).
+# Nay 13 plugin (T20b đếm đủ); T19b chỉ khóa ≥ 11 gốc + thứ tự.
 check("T19b", "plugins.js: đủ 11 plugin, Economy trước Social, cả 11 bật",
-      plugins_js.count('"status": true') == 11
+      plugins_js.count('"status": true') >= 11
       and plugins_js.find('"PXB_Economy"') < plugins_js.find('"PXB_Social"'))
 # T19c: file plugin mới UTF-8 (nội dung đã qua node --check ở T14v).
 try:
@@ -974,6 +976,54 @@ check("T19d", "PXB_Social.divorce: điều kiện || (Spouse + Cuoi) + ngưỡng
       and "STAGE_DINH_HON_MIN = 70" in social_js
       and "STAGE_CUOI_MIN = 80" in social_js)
 
+# ---- Nhóm T20 — PXB_Titles + PXB_Story (19/11/2026 ~04:50) ----
+# T20a: PXB_Titles.js — port TitleConflict.cs (bảng chặn 7 dòng, chặn
+# 2 chiều, không phân biệt hoa/thường, phe Chính/Tà, quest đổi phe).
+titles_js = read(NADIA_PLUGINS / "PXB_Titles.js")
+titles_tokens = ["pxbTitles", "BLOCKED_BY", "isBlocked", "addTitle",
+                 "removeTitle", "hasTitle", "canTakeJob", "alignmentOf",
+                 "canRedeem", "redeem", "$gameSystem.pxbTitles", "PROVISIONAL"]
+missing_titles = [t for t in titles_tokens if t not in titles_js]
+check("T20a", "PXB_Titles.js: bảng chặn 7 dòng + chặn 2 chiều + phe + đổi phe",
+      not missing_titles and '"use strict"' in titles_js and "require(" not in titles_js,
+      f"thiếu: {missing_titles}" if missing_titles else "")
+# T20b: plugins.js đủ 13 plugin, Social trước Titles, Titles trước Story, cả 13 bật.
+check("T20b", "plugins.js: đủ 13 plugin, Social trước Titles trước Story, cả 13 bật",
+      plugins_js.count('"status": true') == 13
+      and plugins_js.find('"PXB_Social"') < plugins_js.find('"PXB_Titles"')
+      < plugins_js.find('"PXB_Story"'))
+# T20c: 2 file plugin mới đều UTF-8 (nội dung đã qua node --check ở T14v).
+t20_utf8_bad = []
+for _p in [NADIA_PLUGINS / "PXB_Titles.js", NADIA_PLUGINS / "PXB_Story.js"]:
+    try:
+        _p.read_bytes().decode("utf-8")
+    except UnicodeDecodeError:
+        t20_utf8_bad.append(_p.name)
+check("T20c", "PXB_Titles/Story đều UTF-8", not t20_utf8_bad,
+      f"không UTF-8: {t20_utf8_bad}" if t20_utf8_bad else "")
+# T20d: hồi quy quirk Kẻ Lừa Đảo — chỉ chặn "Luật Sư Chính Trực", KHÔNG
+# chặn "Luật Sư Bào Chữa" (bảng BLOCKED_BY chỉ có 1 dòng cho Kẻ Lừa Đảo).
+_kld_block = titles_js[titles_js.find('"Kẻ Lừa Đảo"'):]
+_kld_block = _kld_block[:_kld_block.find("],")]
+check("T20d", "PXB_Titles: Kẻ Lừa Đảo chỉ chặn Luật Sư Chính Trực, không chặn Luật Sư Bào Chữa",
+      "Luật Sư Chính Trực" in _kld_block
+      and "Luật Sư Bào Chữa" not in _kld_block
+      and "Tướng Cướp" in titles_js and "Trùm Buôn Lậu" in titles_js
+      and "Tham Quan" in titles_js and "Tỷ Phú Từ Thiện" in titles_js)
+# T20e: PXB_Story.js — port PlayerProgress.cs (5 chương, 6 kết thúc,
+# tụt bậc chương 3, advance/recordHelpQuest/passChapter3/setEnding).
+story_js = read(NADIA_PLUGINS / "PXB_Story.js")
+story_tokens = ["pxbStory", "canOpenChapter", "suggestEnding", "rankAtRisk",
+                "advanceChapter", "recordHelpQuest", "passChapter3",
+                "setEnding", "CHAPTERS", "LEN_PHO", "LAP_NGHIEP",
+                "KHUNG_HOANG", "VUC_DAY", "THANH_DAT", "ENDINGS",
+                "SieuGiau", "GiamDoc", "HocGia", "GiaDinh",
+                "TuDo", "ChuaMo", "$gameSystem.pxbStory"]
+missing_story = [t for t in story_tokens if t not in story_js]
+check("T20e", "PXB_Story.js: 5 chương + 6 kết thúc + tụt bậc + advance/help/pass/setEnding",
+      not missing_story and '"use strict"' in story_js and "require(" not in story_js,
+      f"thiếu: {missing_story}" if missing_story else "")
+
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)
 failed = [r for r in results if not r[2]]
@@ -988,6 +1038,7 @@ print("Unity vẫn chưa có; dotnet 8.0.428 có ở ~/.dotnet; core MV v1.6.1 �
 print("PXB_Isometric v2 đã móc Tilemap (smoke test stub 36/36 PASS), Hotspot/Jobs")
 print("đã viết (smoke 26/26 + 40/40 PASS), Crafting/PhoneHub đã viết (smoke")
 print("52/52 + 56/56 PASS), Education/Economy đã viết (smoke 89/89 + 78/78")
-print("PASS), Social đã viết (smoke 85/85 PASS), nhưng tile data toàn 0,")
+print("PASS), Social đã viết (smoke 85/85 PASS), Titles/Story đã viết (smoke")
+print("68/68 + 109/109 PASS), nhưng tile data toàn 0,")
 print("img/audio trống, nên chưa mở trình duyệt chơi được thật")
 print("(xem docs/test-report.md).")

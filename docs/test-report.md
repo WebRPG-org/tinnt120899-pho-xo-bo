@@ -705,3 +705,43 @@
 - Vẫn chưa chạy được: xUnit (17 test) và EditMode test (219 test) chưa biên
   dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test` vẫn kẹt
   RAM — chạy qua GitHub Actions; Unity chưa có).
+
+## Hiện trạng thật (19/11/2026 ~04:50, lúc viết báo cáo này)
+
+- Kiểm tra tĩnh: **228/228 PASS** (`check_static.py`, gồm nhóm T20 mới,
+  5 mục; 2 check cũ T18c/T19b nới `== 11` thành `>= 11` theo đúng mẫu
+  các đợt trước — T20b đếm đủ 13).
+- 2 plugin slice mới, làm song song 2 luồng: `PXB_Titles.js` (415 dòng,
+  port TitleConflict.cs / GDD Mục 3: bảng chặn 7 dòng, chặn 2 chiều,
+  không phân biệt hoa/thường, phe Chính/Tà/Trung lập, quest đổi phe
+  "Cải tà quy chính"; smoke 68/68 PASS) + `PXB_Story.js` (454 dòng,
+  port PlayerProgress.cs / GDD Mục 9: 5 chương, 6 kết thúc, tụt bậc
+  chương 3; smoke 109/109 PASS); `plugins.js` nay 13 plugin
+  (Social → Titles → Story); `node --check` 15/15 file JS nadia.
+- Lệch mới phát hiện (đã ghi trong @help của 2 plugin, plugin giữ đúng
+  C#): GDD Mục 3 không nhắc tên quest "Cải tà quy chính" (chỉ có trong
+  comment C#) và không liệt kê phe của từng danh hiệu (plugin suy ra từ
+  bảng chặn, PROVISIONAL); GDD nói danh hiệu có "yêu cầu chỉ số" và
+  hiển thị "1 chính + 2–3 phụ" nhưng C# không có logic đó; chương 2
+  GDD ghi "Trí 40 hoặc Cao đẳng" nhưng C# chỉ kiểm Trí/Danh vọng
+  (Cao đẳng cho Trí 40 nên trùng); chương 5 Học giả GDD ghi cần bằng
+  Tiến sĩ nhưng C# chỉ kiểm Trí/Danh vọng; chương 5 Gia đình GDD ghi
+  cần rank Trung lưu nhưng C# chỉ kiểm vợ/chồng + An Yên 80.
+- Check T20e bắt sai tên chương 1 lần (đòi `LenPho` kiểu PascalCase
+  trong khi plugin dùng `CHAPTERS.LEN_PHO` số 1–5, đúng enum C#) — đã
+  sửa danh sách token của check, không sửa plugin.
+- CHƯA chơi được: tile data toàn 0, chưa có tileset CC0. Plugin Phase 1
+  nay ĐÃ ĐỦ 13/13 theo `docs/architecture-nadia.md` §6 (#1–13, Titles
+  #11 + Story #12 là 2 cái cuối); còn lại là Phase 2: `PXB_MarketBattle`
+  (luật Bụi Đời Chợ Cá chưa chốt), `PXB_Online.js`, `PXB_SaveCloud.js`.
+  Checklist C1–C9 (§6) vẫn giữ cho đường Unity (phương án dự phòng);
+  đường chính nay là Giai đoạn 1–5 của `docs/architecture-nadia.md`.
+  Việc tiếp theo lớn nhất: tải tile Kenney/SBS + đóng atlas theo
+  `docs/tileset-plan.md` §4, rồi tile data thật cho Map001–002 để mở
+  trình duyệt thấy map Xóm Trọ Cũ.
+- Hành vi lạ còn lại (chưa sửa — để GDD/PM xem lại): `PhoneHub.Notify`
+  đếm cả khi đóng, `SuggestEnding` ưu tiên cứng, `Buy("phong-tro")`
+  tính tiền thuê vào tài sản, `AdvanceStage` không kiểm tra Kind.
+- Vẫn chưa chạy được: xUnit (17 test) và EditMode test (219 test) chưa
+  biên dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test`
+  vẫn kẹt RAM — chạy qua GitHub Actions; Unity chưa có).
