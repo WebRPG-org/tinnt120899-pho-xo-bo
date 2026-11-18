@@ -7,6 +7,51 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 19/11/2026 ~03:55 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **223/223 PASS, exit 0** — tăng từ 219/219: nhóm T19 mới (4 mục)
+  khóa plugin mới; `node --check` nay 13/13 file JS nadia.
+- **1 plugin slice mới (Giai đoạn 2):** `PXB_Social.js` (585 dòng, port
+  `Social.cs` / GDD Mục 8: 7 loại quan hệ, 6 stage, bỏ bê 7 ngày giảm thân
+  thiết, hỗ trợ +20% EXP, solo chậm 40%, ly hôn, hội bạn tan sau 7 ngày
+  không họp, NPC bạn thân lấp chỗ `seedSlice`; quan hệ lưu object thuần
+  trong `$gameSystem.pxbSocial` để vào save; plugin command Interact /
+  Neglect / AdvanceStage / Divorce / SeedSlice; smoke 85/85 PASS) +
+  `plugins.js` nay 11 plugin (…Economy → Social).
+- **Kế hoạch tileset CC0 (luồng song song):** `docs/tileset-plan.md` mới
+  (230 dòng): Kenney Isometric Tiles City/Landscape/Buildings/Roads
+  (CC0, URL đã verify) là ưu tiên 1; Screaming Brain 1000+ Isometric
+  Floor Tiles (OpenGameArt, CC0, 1.049 tile, 256×128 / 128×64) ưu tiên 2
+  cho sàn; Unity Top-Down Starter Kit chỉ tham khảo (không phải tileset
+  iso). Kết luận kỹ thuật: KHÔNG ép tile iso 64×32 vào layout tileset MV
+  (ô vuông 48×48) — dùng atlas theo khu qua `PXB_Isometric.js`, tile
+  downscale về 64×32, tường/vật cao vẽ dạng sprite neo đáy. PNG nhị phân
+  KHÔNG push được qua snapshot push (chỉ nhận UTF-8) — đưa vào repo bằng
+  git push từ máy có git hoặc upload web GitHub; chưa tải file nhị phân
+  nào vào repo trong lần này.
+- **Lệch / PROVISIONAL ghi nhận khi port (chưa sửa nguồn):** (1) Social:
+  `applyNeglect` trả drop tính theo công thức (có thể lớn hơn phần trừ
+  thực khi thân thiết kẹp về 0) + KHÔNG cập nhật `lastInteractionGameDay`
+  (quirk C# — gọi 2 lần cùng ngày trừ 2 lần, event chỉ gọi 1 lần/ngày);
+  `advanceStage` không kiểm tra Kind (để GDD/PM xem lại, như đã ghi từ
+  18/11); `divorce` dùng `||` (bug đã sửa 18/11 — T19d khóa hồi quy, chỉ
+  Spouse đang Cuoi mới ly hôn được); `seedSlice` thêm NPC "Bạn thân"
+  (personId `ban-than`, tên TẠM — GDD Mục 11 chưa chốt tên, PXB_Story
+  sau này thay bằng NPC thật); solo penalty 40% là điểm giữa khoảng
+  30–50% đã chốt; ngưỡng stage 50/70/80 + thân thiết khởi đầu 20 +
+  interact +5 + giảm bỏ bê 10/bước đều PROVISIONAL. (2) Tileset: kích
+  thước tile Kenney + tên file thật + checksum SHA-256 CHƯA CÓ (ghi trong
+  tileset-plan.md §6, đo sau khi tải).
+- **Còn lại chưa xong (Giai đoạn 2):** tile data toàn 0 (chưa có tileset
+  CC0 nên IsoTilemap chưa vẽ được gì thật), img/audio trống, plugin còn
+  lại (PXB_Titles/Story…) chưa viết. Việc tiếp theo lớn nhất:
+  PXB_Titles.js + PXB_Story.js, rồi tải tile Kenney/SBS + đóng atlas theo
+  tileset-plan.md §4 (PNG đưa vào repo bằng git push, không qua snapshot).
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa
+  biên dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test`
+  vẫn kẹt RAM — chạy qua GitHub Actions; Unity chưa có).
+
 ## Lần chạy mới nhất: 19/11/2026 ~02:55 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)

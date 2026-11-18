@@ -672,17 +672,18 @@ check("T14t", "plugins.js: thứ tự Balance < Stats < Time < Isometric < Hotsp
       < plugins_js.find('"PXB_Time"') < plugins_js.find('"PXB_Isometric"')
       < plugins_js.find('"PXB_Hotspot"') < plugins_js.find('"PXB_Crafting"')
       < plugins_js.find('"PXB_Jobs"') < plugins_js.find('"PXB_PhoneHub"')
-      and plugins_js.count('"status": true') >= 8)  # nay 10 plugin (T18c đếm đủ); T14t chỉ khóa 8 gốc + thứ tự
+      and plugins_js.count('"status": true') >= 8)  # nay 11 plugin (T19b đếm đủ); T14t chỉ khóa 8 gốc + thứ tự
 main_js = read(NADIA / "js" / "main.js")
 check("T14u", "main.js: PluginManager.setup($plugins) + SceneManager.run(Scene_Boot)",
       "PluginManager.setup($plugins)" in main_js and "SceneManager.run(Scene_Boot)" in main_js)
 
-# T14v: node --check 12 file JS nadia (node v24 có sẵn trên VM).
+# T14v: node --check 13 file JS nadia (node v24 có sẵn trên VM).
 node_files = [NADIA_PLUGINS / "PXB_Balance.js", NADIA_PLUGINS / "PXB_Isometric.js",
               NADIA_PLUGINS / "PXB_Stats.js", NADIA_PLUGINS / "PXB_Time.js",
               NADIA_PLUGINS / "PXB_Hotspot.js", NADIA_PLUGINS / "PXB_Jobs.js",
               NADIA_PLUGINS / "PXB_Crafting.js", NADIA_PLUGINS / "PXB_PhoneHub.js",
               NADIA_PLUGINS / "PXB_Education.js", NADIA_PLUGINS / "PXB_Economy.js",
+              NADIA_PLUGINS / "PXB_Social.js",
               NADIA / "js" / "plugins.js", NADIA / "js" / "main.js"]
 node_ok, node_detail = True, ""
 try:
@@ -694,7 +695,7 @@ try:
 except FileNotFoundError:
     node_ok = False
     node_detail = "không tìm thấy lệnh node"
-check("T14v", "node --check: 12 file JS nadia qua cú pháp", node_ok, node_detail)
+check("T14v", "node --check: 13 file JS nadia qua cú pháp", node_ok, node_detail)
 
 # T14w–y: Actors/Classes/Items — chéo tham chiếu + giá khớp Items.js.
 actors = json.loads(read(NADIA_DATA / "Actors.json"))
@@ -852,7 +853,7 @@ check("T16d", "plugins.js: 8 plugin gốc đủ, Balance đầu, Crafting sau Ho
       plugins_js.count('"status": true') >= 8
       and plugins_js.find('"PXB_Isometric"') < plugins_js.find('"PXB_Hotspot"')
       < plugins_js.find('"PXB_Crafting"') < plugins_js.find('"PXB_Jobs"')
-      < plugins_js.find('"PXB_PhoneHub"'))  # nay 10 plugin; T16d chỉ khóa thứ tự 8 gốc
+      < plugins_js.find('"PXB_PhoneHub"'))  # nay 11 plugin; T16d chỉ khóa thứ tự 8 gốc
 # T16e: 3 file plugin mới/sửa đều UTF-8 (nội dung đã qua node --check ở T14v).
 t16_utf8_bad = []
 for _p in [NADIA_PLUGINS / "PXB_Isometric.js", NADIA_PLUGINS / "PXB_Hotspot.js",
@@ -888,7 +889,7 @@ check("T17b", "PXB_PhoneHub.js: 9 tab + Open/Close/Toggle + Notify/Unread + call
 check("T17c", "plugins.js: 8 plugin gốc đủ, Crafting sau Hotspot, PhoneHub sau Jobs, đều bật",
       plugins_js.count('"status": true') >= 8
       and plugins_js.find('"PXB_Hotspot"') < plugins_js.find('"PXB_Crafting"')
-      < plugins_js.find('"PXB_Jobs"') < plugins_js.find('"PXB_PhoneHub"'))  # nay 10 plugin; T17c chỉ khóa thứ tự 8 gốc
+      < plugins_js.find('"PXB_Jobs"') < plugins_js.find('"PXB_PhoneHub"'))  # nay 11 plugin; T17c chỉ khóa thứ tự 8 gốc
 # T17d: 2 file plugin mới đều UTF-8 (nội dung đã qua node --check ở T14v).
 t17_utf8_bad = []
 for _p in [NADIA_PLUGINS / "PXB_Crafting.js", NADIA_PLUGINS / "PXB_PhoneHub.js"]:
@@ -922,11 +923,11 @@ missing_economy = [t for t in economy_tokens if t not in economy_js]
 check("T18b", "PXB_Economy.js: catalog 17 món + ví/lãi + đấu giá + barter + set bonus + 4 hàm cấm",
       not missing_economy and '"use strict"' in economy_js and "require(" not in economy_js,
       f"thiếu: {missing_economy}" if missing_economy else "")
-# T18c: plugins.js đủ 10 plugin, thứ tự đúng (kiểm lại độc lập với T14t/T16d/T17c).
-check("T18c", "plugins.js: đủ 10 plugin, PhoneHub trước Education, Economy cuối, cả 10 bật",
-      plugins_js.count('"status": true') == 10
+# T18c: plugins.js đủ 11 plugin, thứ tự đúng (kiểm lại độc lập với T14t/T16d/T17c).
+check("T18c", "plugins.js: đủ 11 plugin, PhoneHub trước Education, Economy trước Social, cả 11 bật",
+      plugins_js.count('"status": true') == 11
       and plugins_js.find('"PXB_PhoneHub"') < plugins_js.find('"PXB_Education"')
-      < plugins_js.find('"PXB_Economy"'))
+      < plugins_js.find('"PXB_Economy"') < plugins_js.find('"PXB_Social"'))
 # T18d: 2 file plugin mới đều UTF-8 (nội dung đã qua node --check ở T14v).
 t18_utf8_bad = []
 for _p in [NADIA_PLUGINS / "PXB_Education.js", NADIA_PLUGINS / "PXB_Economy.js"]:
@@ -936,6 +937,42 @@ for _p in [NADIA_PLUGINS / "PXB_Education.js", NADIA_PLUGINS / "PXB_Economy.js"]
         t18_utf8_bad.append(_p.name)
 check("T18d", "PXB_Education/Economy đều UTF-8", not t18_utf8_bad,
       f"không UTF-8: {t18_utf8_bad}" if t18_utf8_bad else "")
+
+# ---- Nhóm T19 — PXB_Social (19/11/2026 ~03:55) ----
+# T19a: PXB_Social.js — port Social.cs (7 loại quan hệ, 6 stage, bỏ bê
+# 7 ngày, hỗ trợ +20% EXP, solo 40%, ly hôn, hội bạn tan, seedSlice).
+social_js = read(NADIA_PLUGINS / "PXB_Social.js")
+social_tokens = ["pxbSocial", "createRelationship", "isDeep", "applyNeglect",
+                 "advanceStage", "breakUp", "addRel", "hasSupporter",
+                 "applySupportBonus", "applySoloPenalty", "checkGroupDissolved",
+                 "divorce", "recordMarriage", "isMarriedTo", "seedSlice",
+                 "$gameSystem.pxbSocial", "PROVISIONAL"]
+missing_social = [t for t in social_tokens if t not in social_js]
+check("T19a", "PXB_Social.js: 7 kind + 6 stage + bỏ bê/hỗ trợ/solo/ly hôn/nhóm tan/seedSlice",
+      not missing_social and '"use strict"' in social_js and "require(" not in social_js,
+      f"thiếu: {missing_social}" if missing_social else "")
+# T19b: plugins.js đủ 11 plugin, Social cuối, cả 11 bật (kiểm lại độc lập với T18c).
+check("T19b", "plugins.js: đủ 11 plugin, Economy trước Social, cả 11 bật",
+      plugins_js.count('"status": true') == 11
+      and plugins_js.find('"PXB_Economy"') < plugins_js.find('"PXB_Social"'))
+# T19c: file plugin mới UTF-8 (nội dung đã qua node --check ở T14v).
+try:
+    (NADIA_PLUGINS / "PXB_Social.js").read_bytes().decode("utf-8")
+    t19_utf8_ok = True
+except UnicodeDecodeError:
+    t19_utf8_ok = False
+check("T19c", "PXB_Social.js UTF-8", t19_utf8_ok)
+# T19d: hồi quy bug ly hôn 18/11 — divorce() chặn bằng || (Spouse VÀ
+# Cuoi mới được), không dùng && như bản lỗi; ngưỡng stage 50/70/80 có đủ.
+_divorce_block = social_js[social_js.find("function divorce("):]
+_divorce_block = _divorce_block[:_divorce_block.find("\n  }\n")]
+check("T19d", "PXB_Social.divorce: điều kiện || (Spouse + Cuoi) + ngưỡng stage 50/70/80",
+      "||" in _divorce_block
+      and "rel.kind !== KINDS.SPOUSE" in _divorce_block
+      and "rel.stage !== STAGES.CUOI" in _divorce_block
+      and "STAGE_HEN_HO_MIN = 50" in social_js
+      and "STAGE_DINH_HON_MIN = 70" in social_js
+      and "STAGE_CUOI_MIN = 80" in social_js)
 
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)
@@ -951,5 +988,6 @@ print("Unity vẫn chưa có; dotnet 8.0.428 có ở ~/.dotnet; core MV v1.6.1 �
 print("PXB_Isometric v2 đã móc Tilemap (smoke test stub 36/36 PASS), Hotspot/Jobs")
 print("đã viết (smoke 26/26 + 40/40 PASS), Crafting/PhoneHub đã viết (smoke")
 print("52/52 + 56/56 PASS), Education/Economy đã viết (smoke 89/89 + 78/78")
-print("PASS), nhưng tile data toàn 0, img/audio trống,")
-print("nên chưa mở trình duyệt chơi được thật (xem docs/test-report.md).")
+print("PASS), Social đã viết (smoke 85/85 PASS), nhưng tile data toàn 0,")
+print("img/audio trống, nên chưa mở trình duyệt chơi được thật")
+print("(xem docs/test-report.md).")

@@ -62,6 +62,12 @@ var $plugins = [
     "status": true,
     "description": "Ví + tiết kiệm + catalog 17 món + đấu giá + barter + 4 hành vi cấm (port Economy.cs).",
     "parameters": {}
+  },
+  {
+    "name": "PXB_Social",
+    "status": true,
+    "description": "Người yêu/vợ-chồng, bạn thân/hội bạn, gia đình, đối tác; bỏ bê 7 ngày, hỗ trợ +20% EXP, solo chậm 40% (port Social.cs).",
+    "parameters": {}
   }
 ];
 
