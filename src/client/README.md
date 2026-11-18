@@ -1,6 +1,10 @@
 # Client — Unity 2.5D
 
-Khung placeholder C# (chưa phải project Unity đầy đủ — project Unity sẽ được tạo bằng Unity Hub / Unity 2022 LTS khi bắt đầu làm thật).
+Khung Unity 2022.3.62f1 ở mức file (18/11): đã có `ProjectSettings/`
+(10 file `.asset` tối thiểu, khóa hằng isometric sort axis (0, 1, −0.26)),
+`Packages/manifest.json`, scene slice `Assets/Scenes/SliceXomTroCu.unity`
+(Xóm Trọ Cũ, chưa có art). **Chưa verify mở bằng Unity thật** — lần đầu mở
+cần Unity 2022.3.62f1 sinh `Library/` + `.csproj` (C3) và kiểm tra Play.
 
 ## Cấu trúc
 

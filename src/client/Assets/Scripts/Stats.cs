@@ -24,12 +24,24 @@ namespace PhoXoBo
         public int Tri { get; private set; } // Xanh — Trí
         public int Tam { get; private set; } // Vàng — Tâm
 
-        public Stats(int the, int tri, int tam)
+        public Stats(int the, int tri, int tam) : this(the, tri, tam, skipTotalCheck: false) { }
+
+        /// <summary>
+        /// CHỈ DÙNG CHO TEST: tạo Stats với giá trị tùy ý, không yêu cầu tổng = TotalCap.
+        /// Nhân vật thật trong game luôn qua ctor chính (tổng khởi đầu = 300);
+        /// factory này chỉ để test được các mốc chỉ số thấp (ví dụ hệ số lương ở 50/0
+        /// trong Jobs.PayPerShift) mà ctor chính không tạo ra được.
+        /// Giá trị từng chỉ số vẫn kẹp trong 0..StatMax như ctor chính.
+        /// </summary>
+        public static Stats WithValues(int the, int tri, int tam) =>
+            new Stats(the, tri, tam, skipTotalCheck: true);
+
+        private Stats(int the, int tri, int tam, bool skipTotalCheck)
         {
             The = Math.Clamp(the, 0, StatMax);
             Tri = Math.Clamp(tri, 0, StatMax);
             Tam = Math.Clamp(tam, 0, StatMax);
-            if (Total != TotalCap)
+            if (!skipTotalCheck && Total != TotalCap)
                 throw new ArgumentException($"Tổng chỉ số khởi đầu phải bằng trần {TotalCap} (gacha chỉ đổi phân bổ, không đổi tổng).");
         }
 

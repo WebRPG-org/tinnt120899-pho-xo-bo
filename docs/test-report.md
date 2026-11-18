@@ -7,6 +7,35 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 18/11/2026 ~17:00 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **66/66 PASS, exit 0** — không vỡ kiểm tra cũ.
+- **Luồng A — sửa phát hiện `Stats` (đã ghi ở lần ~15:55, nay đã sửa bằng code):**
+  `Stats.cs` thêm factory `Stats.WithValues(the, tri, tam)` — tạo `Stats` với
+  giá trị tùy ý, không yêu cầu tổng = 300 (PROVISIONAL); từng chỉ số vẫn kẹp
+  0..100; ctor chính giữ nguyên (tổng phải = 300). `JobsPayTests.cs` từ 16
+  lên **28 test method** (+12): hệ số lương mốc 50 (1.0) và mốc 0 (sàn 0.5)
+  cho cả 3 nghề slice, nhân khung tốt + thiếu người, làm tròn xuống, kiểm tra
+  độ dốc tuyến tính mốc 60, `WithValues` kẹp giá trị, và `Stats.Train` đánh
+  đổi thật qua `WithValues`. Mốc 50/0 khớp đúng công thức `Jobs.cs`
+  (`max(0.5, 1.0 + (chỉ số − 50) × 0.01)`), không bịa số mới.
+- **Luồng B — khung Unity C1 (file-level, chưa verify mở bằng Unity):**
+  `src/client/ProjectSettings/` thêm 10 file `.asset` tối thiểu
+  (ProjectSettings, EditorSettings, GraphicsSettings — đã khóa hằng isometric
+  `TransparencySortAxis (0, 1, −0.26)`, QualitySettings 6 mức, TagManager,
+  TimeManager, Physics2DSettings, DynamicsManager, AudioManager,
+  NavMeshAreas) + scene `Assets/Scenes/SliceXomTroCu.unity` (camera ortho,
+  nền vàng nắng #F9EDCE, GO `SliceRoot`, chưa có art). Đã có sẵn từ trước:
+  `ProjectVersion.txt` 2022.3.62f1, `Packages/manifest.json` (test-framework
+  1.1.33), `Assets/Scenes/Main.unity`, `.gitignore` đủ Library/Temp/Logs.
+  **Chưa verify:** Unity lần đầu mở còn phải sinh `Library/`, `*.csproj`
+  (C3), `.meta` thư mục, `InputManager.asset` / `EditorBuildSettings.asset`
+  và chuẩn hóa lại các `.asset` tối thiểu — cần máy có Unity 2022.3.62f1.
+- **Vẫn chưa chạy được:** 28 test EditMode + 17 test xUnit vẫn chưa biên dịch/
+  chạy lần nào (VM không có dotnet/Unity). `TimeSystem` không wrap quá 30
+  phút vẫn chưa có chốt GDD — giữ nguyên, không coi là bug.
+
 ## Lần chạy mới nhất: 18/11/2026 ~15:55 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
@@ -134,3 +163,15 @@
   chưa biên dịch/chạy lần nào; server chưa chạy; client chưa có scene slice
   chơi được. Cần máy có Unity 2022 LTS + .NET 8 SDK để chạy `dotnet test` và
   Unity Test Runner trước khi coi C5/C6 là xong.
+
+## Hiện trạng thật (18/11/2026 ~17:00, lúc viết báo cáo này)
+
+- Kiểm tra tĩnh: **66/66 PASS** (`check_static.py`).
+- `Stats.WithValues` đã sửa xong phát hiện "chỉ khởi tạo được (100,100,100)";
+  `JobsPayTests.cs` nay 28 test (mốc lương 50/0 đã test được qua API công khai).
+- Khung Unity C1 đã có ở mức file (`ProjectSettings/` 10 file `.asset` +
+  scene `SliceXomTroCu.unity`); **chưa verify mở bằng Unity** — cần máy có
+  Unity 2022.3.62f1 sinh `Library/` + `.csproj` và kiểm tra Play lần đầu.
+- Vẫn chưa chạy được: không có dotnet/Unity trên VM — xUnit (17 test) và
+  EditMode test (28 + 10 test) chưa biên dịch/chạy lần nào; server chưa chạy;
+  client chưa có scene slice chơi được.
