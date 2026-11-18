@@ -5,6 +5,9 @@
 > Nguồn Nadia: fan guide / walkthrough (naguides.com, yekbot.com, gamegoon.net) — KHÔNG phải tài liệu
 > chính thức của NLT Media. Engine của Nadia các nguồn mâu thuẫn nhau, nên **chỉ lấy thiết kế hệ
 > thống, không lấy kiến trúc kỹ thuật**. Không copy asset, nhạc, lời thoại hay nhân vật của Nadia.
+> Cập nhật 18/11/2026 (`docs/tech-switch-nadia.md`): đã xác minh Nadia chạy **RPG Maker MV**
+> (xogx.com: "RPG Maker (play in your browser)"; SteamDB: RPGMaker + NWJS + NodeJS) — bản web
+> là HTML5/JS (Pixi WebGL renderer), file tĩnh, không phải Unity WebGL `.wasm`.
 > Chi tiết đầy đủ hơn (kèm Gánh Phố / Đế Chế Vỉa Hè / Hàng Rong): `docs/references.md` §4.
 > GDD Mục 2 tóm tắt ngắn; file này là bản đối chiếu đầy đủ.
 

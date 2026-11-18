@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Phố Xô Bồ — Chơi thử trên web</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1a1408; color: #f5ead0; font-family: system-ui, sans-serif; }
+  #wrap { max-width: 480px; margin: 0 auto; padding: 8px; }
+  h1 { font-size: 20px; text-align: center; margin: 6px 0 2px; }
+  p.sub { text-align: center; font-size: 12px; opacity: .75; margin-bottom: 8px; }
+  #game { width: 100%; height: 420px; display: block; background: #f9edce;
+          border: 2px solid #d9a441; border-radius: 8px; touch-action: none; }
+  #hud { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; font-size: 13px; }
+  #hud span { background: #2c2410; padding: 4px 8px; border-radius: 6px; }
+  #log { height: 90px; overflow-y: auto; background: #241d0c; border-radius: 6px;
+         padding: 8px; font-size: 13px; line-height: 1.5; }
+  #log div { margin-bottom: 2px; }
+  .row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  button { flex: 1; min-width: 100px; padding: 10px 6px; font-size: 14px;
+           background: #d9a441; color: #1a1408; border: 0; border-radius: 8px;
+           font-weight: bold; cursor: pointer; }
+  button:active { background: #b4452f; color: #fff; }
+  #phone { display: none; background: #111; border: 2px solid #d9a441; border-radius: 12px;
+           padding: 10px; margin-top: 8px; }
+  #phone.open { display: block; }
+  #phone h2 { font-size: 15px; margin-bottom: 6px; }
+  #tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+  #tabs button { min-width: 0; flex: 1 1 30%; padding: 6px 2px; font-size: 12px; background: #333; color: #f5ead0; }
+  #tabs button.on { background: #d9a441; color: #1a1408; }
+  #tabbody { font-size: 13px; line-height: 1.6; min-height: 70px; }
+  small.note { display: block; text-align: center; opacity: .6; font-size: 11px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>Phố Xô Bồ</h1>
+  <p class="sub">Slice web tĩnh — theo mô hình web của Treasure of Nadia (mở link là chơi, không cài đặt)</p>
+  <canvas id="game" width="464" height="420"></canvas>
+  <div id="hud">
+    <span id="h-money">💰 0đ</span><span id="h-day">Ngày 1</span><span id="h-frame">Sáng</span>
+    <span id="h-district">Xóm Trọ Cũ</span><span id="h-stats">Thể 100 · Trí 100 · Tâm 100</span>
+  </div>
+  <div class="row">
+    <button id="btn-work">🧹 Làm ca nghề</button>
+    <button id="btn-craft">🛒 Chế Xe Đẩy</button>
+    <button id="btn-phone">📱 Điện thoại</button>
+    <button id="btn-next">⏭️ Sang khung sau</button>
+  </div>
+  <div id="phone">
+    <h2>📱 Điện thoại — menu chính</h2>
+    <div id="tabs"></div>
+    <div id="tabbody"></div>
+  </div>
+  <div id="log"></div>
+  <small class="note">WASD / chạm để đi · E hoặc chạm hotspot để nhặt · P mở điện thoại · Lưu tự động (localStorage)</small>
+</div>
+<script src="data/maps.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
