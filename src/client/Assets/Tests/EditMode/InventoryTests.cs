@@ -8,12 +8,12 @@
 // phải đổi theo): giá cơm tấm 35_000, cà phê 25_000, sách 80_000, áo mưa 120_000;
 // buff +5 vào 1 chỉ số gốc trong 1 khung (cơm tấm Thể/Chiều, cà phê Trí/Sáng,
 // sách Trí/Tối); áo mưa không buff, chỉ mở điều kiện "Làm được ca mưa, không bị ướt".
-// Lưu ý hành vi thật (ghi nhận, chưa phải kiểm chứng kỳ vọng):
-// - Use GHI ĐÈ khung của buff trong catalog bằng khung hiện tại: cơm tấm (catalog
-//   ghi khung Chiều) mà dùng lúc Sáng thì buff rơi vào khung Sáng, không phải Chiều
-//   (xem test Use_KhungHienTaiGhiDeKhungCatalog).
-// - Add đồ không stackable chỉ chặn khi túi ĐÃ CÓ món đó: Add("ao-mua", 2) lúc túi
-//   trống vẫn trả true và giữ 2 cái (xem test Add_DoKhongStackable_Them2CungLuc).
+// Hành vi đã sửa (18/11, sửa 2 bug ghi trong docs/test-report.md đợt 18:50):
+// - Add đồ không stackable: quantity > 1 thì trả false, không thêm gì — kể cả lúc
+//   túi trống (trước đây Add("ao-mua", 2) lúc túi trống vẫn trả true và giữ 2 cái).
+// - Use áp buff đúng khung ghi trong catalog: cơm tấm (catalog ghi khung Chiều) mà
+//   dùng lúc Sáng thì buff vẫn vào khung Chiều, không bị ghi đè bằng khung lúc dùng
+//   (xem test Use_BuffApDungKhungCatalog).
 using NUnit.Framework;
 
 namespace PhoXoBo.Tests
@@ -64,15 +64,37 @@ namespace PhoXoBo.Tests
         }
 
         [Test]
-        public void Add_DoKhongStackable_Them2CungLuc()
+        public void Add_DoKhongStackable_Them2CungLuc_TraFalseVaKhongThem()
         {
-            // HÀNH VI LẠ — ghi nhận, chưa sửa code: Add chỉ chặn khi Count(itemId) > 0,
-            // nên Add("ao-mua", 2) lúc túi trống vẫn trả true và giữ 2 cái, dù áo mưa
-            // là đồ không stackable (chỉ được giữ 1). Test này khóa hành vi hiện tại;
-            // nếu code sửa chặn quantity > 1 thì test này phải đổi theo.
+            // ĐÃ SỬA 18/11 (bug test-report.md đợt 18:50): trước đây Add("ao-mua", 2)
+            // lúc túi trống trả true và giữ 2 cái. Hành vi đúng: đồ không stackable
+            // chỉ nhận đúng 1 cái mỗi lần, quantity > 1 thì trả false, không thêm gì
+            // (nhất quán với việc mua thêm khi túi đã có món đó cũng trả false).
             var inv = new Inventory();
-            Assert.IsTrue(inv.Add("ao-mua", 2));
-            Assert.AreEqual(2, inv.Count("ao-mua"), "Lạ: túi trống + quantity 2 vẫn nhận 2 áo mưa");
+            Assert.IsFalse(inv.Add("ao-mua", 2), "Đồ không stackable mua 2 cái cùng lúc thì trả false");
+            Assert.AreEqual(0, inv.Count("ao-mua"), "Mua thất bại thì túi vẫn trống");
+        }
+
+        [Test]
+        public void Add_DoKhongStackable_DaCo1RoiThem2_TraFalseVaGiu1()
+        {
+            // Hồi quy Bug 1: túi đã có 1 áo mưa, mua thêm 2 cùng lúc cũng phải chặn.
+            var inv = new Inventory();
+            Assert.IsTrue(inv.Add("ao-mua"));
+            Assert.IsFalse(inv.Add("ao-mua", 2), "Đã có 1 thì mua thêm 2 cũng trả false");
+            Assert.AreEqual(1, inv.Count("ao-mua"), "Số lượng vẫn giữ 1");
+        }
+
+        [Test]
+        public void Add_DoKhongStackable_Them2ThatBai_RoiThem1ThanhCong()
+        {
+            // Hồi quy Bug 1: lần mua 2 thất bại không được thêm lẻ 1 cái nào vào túi —
+            // gọi lại với quantity = 1 sau đó vẫn mua được bình thường.
+            var inv = new Inventory();
+            Assert.IsFalse(inv.Add("ao-mua", 2));
+            Assert.AreEqual(0, inv.Count("ao-mua"));
+            Assert.IsTrue(inv.Add("ao-mua", 1), "Mua đúng 1 cái thì vẫn được");
+            Assert.AreEqual(1, inv.Count("ao-mua"));
         }
 
         // --- Use: không có đồ -> false; trừ 1; kích hoạt buff đúng khung ---
@@ -112,20 +134,51 @@ namespace PhoXoBo.Tests
         }
 
         [Test]
-        public void Use_KhungHienTaiGhiDeKhungCatalog()
+        public void Use_BuffApDungKhungCatalog_DungLucSang_VanVaoChieu()
         {
-            // HÀNH VI LẠ — ghi nhận, chưa sửa code: Use thêm buff bằng
-            // `def.Effect with { Frame = currentFrame }` nên khung ghi trong catalog
-            // (cơm tấm = Chiều) bị ghi đè bằng khung lúc dùng. Cơm tấm dùng lúc Sáng
-            // thì buff rơi vào Sáng, không phải Chiều như catalog ghi.
+            // ĐÃ SỬA 18/11 (bug test-report.md đợt 18:50): trước đây Use ghi đè khung
+            // buff bằng khung lúc dùng nên cơm tấm (catalog ghi Chiều) dùng lúc Sáng
+            // thì buff rơi vào Sáng. Hành vi đúng: buff áp đúng khung ghi trong catalog.
             var inv = new Inventory();
             Assert.IsTrue(inv.Add("com-tam"));
             Assert.IsTrue(inv.Use("com-tam", TimeFrame.Sang));
-            Assert.AreEqual(5, inv.BuffFor(BaseStat.The, TimeFrame.Sang),
-                "Lạ: dùng lúc Sáng thì buff vào Sáng");
-            Assert.AreEqual(0, inv.BuffFor(BaseStat.The, TimeFrame.Chieu),
-                "Lạ: khung Chiều trong catalog không nhận buff");
-            Assert.AreEqual(TimeFrame.Sang, inv.ActiveBuffs[0].Frame);
+            Assert.AreEqual(0, inv.BuffFor(BaseStat.The, TimeFrame.Sang),
+                "Dùng lúc Sáng nhưng buff catalog là Chiều nên Sáng không nhận buff");
+            Assert.AreEqual(5, inv.BuffFor(BaseStat.The, TimeFrame.Chieu),
+                "Cơm tấm +5 Thể trong khung Chiều như catalog ghi (PROVISIONAL)");
+            Assert.AreEqual(TimeFrame.Chieu, inv.ActiveBuffs[0].Frame);
+        }
+
+        [Test]
+        public void Use_BuffCatalogKhungChieu_DungLucToi_VanVaoChieu()
+        {
+            // Hồi quy Bug 2 với khung khác: cơm tấm dùng lúc Tối vẫn buff vào Chiều.
+            var inv = new Inventory();
+            Assert.IsTrue(inv.Add("com-tam"));
+            Assert.IsTrue(inv.Use("com-tam", TimeFrame.Toi));
+            Assert.AreEqual(0, inv.BuffFor(BaseStat.The, TimeFrame.Toi));
+            Assert.AreEqual(5, inv.BuffFor(BaseStat.The, TimeFrame.Chieu));
+            Assert.AreEqual(TimeFrame.Chieu, inv.ActiveBuffs[0].Frame);
+        }
+
+        [Test]
+        public void Use_BuffCatalogKhungSang_DungLucChieu_EndFrameTheoKhungCatalog()
+        {
+            // Hồi quy Bug 2: cà phê (catalog ghi Sáng) dùng lúc Chiều thì buff vào
+            // Sáng — nên hết khung Chiều buff vẫn còn, hết khung Sáng buff mới mất.
+            var inv = new Inventory();
+            Assert.IsTrue(inv.Add("ca-phe"));
+            Assert.IsTrue(inv.Use("ca-phe", TimeFrame.Chieu));
+            Assert.AreEqual(5, inv.BuffFor(BaseStat.Tri, TimeFrame.Sang));
+            Assert.AreEqual(0, inv.BuffFor(BaseStat.Tri, TimeFrame.Chieu));
+
+            inv.EndFrame(TimeFrame.Chieu);
+            Assert.AreEqual(5, inv.BuffFor(BaseStat.Tri, TimeFrame.Sang),
+                "Hết khung Chiều không xóa buff khung Sáng");
+            inv.EndFrame(TimeFrame.Sang);
+            Assert.AreEqual(0, inv.BuffFor(BaseStat.Tri, TimeFrame.Sang),
+                "Hết khung Sáng thì buff khung Sáng mất");
+            Assert.AreEqual(0, inv.ActiveBuffs.Count);
         }
 
         // --- BuffFor: cộng dồn cùng stat + khung, khác khung/stat không tính ---

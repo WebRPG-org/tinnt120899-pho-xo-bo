@@ -11,11 +11,11 @@
 // hs-cho-chieu (khu 2, Chiều, sắt vụn ×1), hs-tro-toi (khu 1, Tối, chai nhựa ×2),
 // hs-cong-vien (khu 17, Chiều, ván gỗ ×1), hs-cho-dem (khu 18, Tối, vải vụn ×2);
 // fast-travel slice mở 4 khu {1, 2, 17, 18}; mỗi hotspot chỉ khám phá 1 lần / 1 ngày game.
-// Lưu ý hành vi thật (ghi nhận, chưa phải kiểm chứng kỳ vọng):
-// - Explore NHẬN tham số gameDay nhưng KHÔNG DÙNG tới: đổi ngày mà không gọi
-//   NewGameDay thì hotspot vẫn tính là đã khám phá (xem test
-//   Explore_DoiGameDayNhungChuaNewGameDay_VanFalse). Ngày mới chỉ có hiệu lực khi
-//   người gọi tự gọi NewGameDay để xóa visitedToday.
+// Lưu ý hành vi thật (đã sửa 18/11, xem test Explore_DoiGameDay_TuResetVaKhamPhaLaiDuoc):
+// - Explore TỰ reset lượt khám phá trong ngày khi gameDay khác ngày đã lưu (gọi
+//   NewGameDay đã có) — người gọi không cần tự gọi NewGameDay trước nữa.
+//   Trước 18/11 Explore nhận tham số gameDay nhưng KHÔNG DÙNG tới: đổi ngày mà
+//   không gọi NewGameDay thì hotspot vẫn tính là đã khám phá (hành vi lạ đợt 18:50).
 // - CanFastTravel kiểm tra khu có trong Districts.All (18 khu) TRƯỚC rồi mới kiểm
 //   tra unlocked, nên khu không tồn tại trả false dù có trong danh sách unlocked.
 using System.Collections.Generic;
@@ -201,19 +201,60 @@ namespace PhoXoBo.Tests
         }
 
         [Test]
-        public void Explore_DoiGameDayNhungChuaNewGameDay_VanFalse()
+        public void Explore_DoiGameDay_TuResetVaKhamPhaLaiDuoc()
         {
-            // HÀNH VI LẠ — ghi nhận, chưa sửa code: Explore nhận tham số gameDay nhưng
-            // KHÔNG DÙNG tới trong hàm; chỉ NewGameDay mới xóa visitedToday. Đổi số ngày
-            // khi gọi Explore mà không gọi NewGameDay thì hotspot vẫn tính là đã khám
-            // phá. Test này khóa hành vi hiện tại; nếu code dùng gameDay để tự reset
-            // thì test này phải đổi theo.
+            // ĐÃ SỬA 18/11 (thay test cũ Explore_DoiGameDayNhungChuaNewGameDay_VanFalse
+            // khóa hành vi lạ): Explore tự gọi NewGameDay khi gameDay khác ngày đã
+            // lưu — đổi ngày khi gọi Explore là đủ, không cần người gọi tự gọi
+            // NewGameDay trước nữa.
             var visited = new HashSet<string>();
             var materials = new Dictionary<string, int>();
             Assert.IsTrue(Exploration.Explore("hs-cho-dem", 1, visited, materials));
+            Assert.AreEqual(2, materials[MaterialIds.VaiVun]);
+
+            Assert.IsTrue(Exploration.Explore("hs-cho-dem", 2, visited, materials),
+                "Sang ngày 2 thì Explore tự reset lượt, khám phá lại được");
+            Assert.AreEqual(4, materials[MaterialIds.VaiVun], "Ngày mới nhặt thêm 2 vải vụn");
+
             Assert.IsFalse(Exploration.Explore("hs-cho-dem", 2, visited, materials),
-                "Lạ: sang ngày 2 nhưng chưa NewGameDay thì vẫn false");
-            Assert.AreEqual(2, materials[MaterialIds.VaiVun], "Không cộng thêm vải vụn");
+                "Cùng ngày 2 khám phá lần 2 thì vẫn false");
+            Assert.AreEqual(4, materials[MaterialIds.VaiVun], "Lần 2 cùng ngày không cộng thêm");
+        }
+
+        [Test]
+        public void Explore_DoiGameDay_TuResetCaHotspotKhac()
+        {
+            // Hồi quy Bug 2: reset ngày mới xóa TOÀN BỘ lượt trong ngày, không chỉ
+            // hotspot đang khám phá — hotspot khác đã thăm ngày 1 cũng khám phá lại
+            // được ở ngày 2 chỉ nhờ 1 lần gọi Explore sang ngày mới.
+            var visited = new HashSet<string>();
+            var materials = new Dictionary<string, int>();
+            Assert.IsTrue(Exploration.Explore("hs-cho-sang", 1, visited, materials));
+            Assert.IsTrue(Exploration.Explore("hs-cho-chieu", 1, visited, materials));
+            Assert.AreEqual(2, visited.Count, "Ngày 1 đã thăm 2 hotspot");
+
+            // Chỉ gọi Explore hs-cho-sang sang ngày 2 — lần gọi này tự reset cả lượt
+            // của hs-cho-chieu dù hs-cho-chieu không được gọi trong lần reset đó.
+            Assert.IsTrue(Exploration.Explore("hs-cho-sang", 2, visited, materials));
+            Assert.AreEqual(1, visited.Count, "Sau reset, visited chỉ còn hotspot vừa khám phá ngày 2");
+            Assert.IsTrue(Exploration.Explore("hs-cho-chieu", 2, visited, materials),
+                "Hotspot khác đã thăm ngày 1 cũng khám phá lại được ở ngày 2");
+            Assert.AreEqual(2, materials[MaterialIds.SatVun], "Ngày mới nhặt thêm 1 sắt vụn");
+        }
+
+        [Test]
+        public void Explore_DoiGameDayVeNgayCu_CungTuReset()
+        {
+            // Hồi quy Bug 2: quy tắc reset là gameDay KHÁC ngày đã lưu (không phải
+            // chỉ lớn hơn) — quay lại ngày cũ hơn cũng tính là ngày khác, tự reset.
+            var visited = new HashSet<string>();
+            var materials = new Dictionary<string, int>();
+            Assert.IsTrue(Exploration.Explore("hs-tro-toi", 2, visited, materials));
+            Assert.AreEqual(2, materials[MaterialIds.ChaiNhua]);
+
+            Assert.IsTrue(Exploration.Explore("hs-tro-toi", 1, visited, materials),
+                "Ngày 1 khác ngày 2 đã lưu thì tự reset, khám phá lại được");
+            Assert.AreEqual(4, materials[MaterialIds.ChaiNhua], "Nhặt thêm 2 chai nhựa");
         }
 
         [Test]

@@ -7,6 +7,43 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 18/11/2026 ~19:50 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **129/129 PASS, exit 0** — tăng từ 119/119: nhóm T11 mới (10 mục)
+  khóa 4 bug đã sửa trong đợt này + tổng EditMode 219 test.
+- **Luồng song song — sửa 4 bug đã ghi nhận ở đợt 18:50 (code thật + test hồi quy):**
+  1. `Inventory.Add` đồ không stackable: `Add("ao-mua", 2)` lúc túi trống nay
+     trả false, không thêm gì (all-or-nothing — nhất quán với hành vi khi túi
+     đã có món đó; muốn 1 cái thì gọi lại quantity = 1).
+  2. `Inventory.Use`: bỏ `def.Effect with { Frame = currentFrame }` — buff áp
+     đúng khung ghi trong catalog (cơm tấm dùng lúc Tối vẫn buff vào Chiều).
+  3. `Crafting.Craft`: nguyên liệu về 0 thì `materials.Remove(materialId)` —
+     không để lại key = 0 trong Dictionary.
+  4. `Exploration.Explore`: tự gọi `NewGameDay(visitedToday)` khi `gameDay`
+     khác ngày đã lưu (`_currentDay`, null = chưa khám phá lần nào trong phiên
+     thì chỉ ghi nhận ngày, không reset — tránh xóa lượt đã lưu trong save).
+  5. `TitleConflict.IsBlocked`: chặn cả hai chiều (tra thẳng
+     `BlockedBy[wanted]`, không cần bảng ngược riêng) + so sánh
+     `OrdinalIgnoreCase` (dictionary + `string.Equals`); thêm guard null.
+  - Test hồi quy mới: Inventory +4 (19), Crafting +2 (18), Exploration +3
+    (19), District +4 (33) = **+12 test, tổng EditMode nay 219 test**
+    (Jobs 28 + TimeSystem 10 + Social 22 + Economy 22 + Inventory 19 +
+    Crafting 18 + Exploration 19 + PlayerProgress 30 + District 33 +
+    PhoneHub 18) — vẫn **chưa chạy được** (VM không có Unity; cần Unity
+    2022.3.62f1 + Unity Test Runner). 1 lỗi script trong lần chạy này (đã sửa,
+    chạy lại PASS): T11b lúc đầu FAIL giả — chuỗi `with { Frame = currentFrame }`
+    vẫn còn trong comment nhắc bug cũ; đã sửa chỉ xét code sau khi strip comment.
+- **Hành vi lạ còn lại (chưa sửa — để GDD/PM xem lại, là quyết định thiết kế
+  chứ không phải bug rõ):** `PhoneHub.Notify` đếm cả khi điện thoại đóng
+  (thông báo đến khi đóng máy là hành vi bình thường của điện thoại);
+  `PlayerProgress.SuggestEnding` thứ tự ưu tiên cứng SieuGiau > GiamDoc >
+  HocGia > GiaDinh > TuDo; `Buy("phong-tro")` tính tiền thuê vào
+  `TotalAssetsVnd`; `AdvanceStage` không kiểm tra Kind.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa biên
+  dịch/chạy lần nào (VM không có dotnet/Unity). Server chưa chạy; client chưa
+  có scene slice chơi được.
+
 ## Lần chạy mới nhất: 18/11/2026 ~18:50 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
@@ -282,4 +319,20 @@
   Unity 2022.3.62f1 sinh `Library/` + `.csproj` và kiểm tra Play lần đầu.
 - Vẫn chưa chạy được: không có dotnet/Unity trên VM — xUnit (17 test) và
   EditMode test (28 + 10 test) chưa biên dịch/chạy lần nào; server chưa chạy;
+  client chưa có scene slice chơi được.
+
+## Hiện trạng thật (18/11/2026 ~19:50, lúc viết báo cáo này)
+
+- Kiểm tra tĩnh: **129/129 PASS** (`check_static.py`, gồm nhóm T11 mới khóa
+  4 bug đã sửa + tổng EditMode 219 test).
+- 4 bug ghi nhận ở đợt 18:50 nay đã sửa bằng code + 12 test hồi quy:
+  Inventory.Add đồ không stackable (all-or-nothing), Inventory.Use áp đúng
+  khung catalog, Crafting.Craft xóa key nguyên liệu về 0, Exploration.Explore
+  tự reset khi đổi ngày, TitleConflict.IsBlocked chặn 2 chiều + không phân
+  biệt hoa/thường.
+- Hành vi lạ còn lại (chưa sửa, để GDD/PM xem lại): `PhoneHub.Notify` đếm cả
+  khi đóng, `SuggestEnding` ưu tiên cứng, `Buy("phong-tro")` tính tiền thuê
+  vào tài sản, `AdvanceStage` không kiểm tra Kind.
+- Vẫn chưa chạy được: không có dotnet/Unity trên VM — xUnit (17 test) và
+  EditMode test (219 test) chưa biên dịch/chạy lần nào; server chưa chạy;
   client chưa có scene slice chơi được.

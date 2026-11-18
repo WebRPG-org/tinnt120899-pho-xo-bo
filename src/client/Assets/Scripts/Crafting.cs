@@ -108,12 +108,20 @@ namespace PhoXoBo
         /// Chế 1 món: trừ nguyên liệu, trả về ResultId. Trả null nếu công thức không có
         /// hoặc thiếu nguyên liệu. Server là nguồn sự thật khi online — client chỉ giữ
         /// bản đếm tạm để hiển thị (giống Jobs.WeeklyQuotaTracker).
+        /// Nguyên liệu nào chế hết (số lượng về 0) thì XÓA key khỏi túi, không để lại
+        /// entry 0 — túi chỉ giữ nguyên liệu còn thật (sửa 18/11, xem test
+        /// Craft_TruDungSoLuongVaTraResultId).
         /// </summary>
         public static string? Craft(Recipe recipe, Dictionary<string, int> materials)
         {
             if (!CanCraft(recipe, materials)) return null;
             foreach (var (materialId, needed) in recipe.Ingredients)
-                materials[materialId] = materials[materialId] - needed;
+            {
+                var conLai = materials[materialId] - needed;
+                // Chế hết loại này thì xóa key khỏi túi, không để lại entry 0.
+                if (conLai <= 0) materials.Remove(materialId);
+                else materials[materialId] = conLai;
+            }
             return recipe.ResultId;
         }
 

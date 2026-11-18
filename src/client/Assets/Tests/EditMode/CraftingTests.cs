@@ -9,9 +9,10 @@
 // -> "tool:XeDay:1"), che-den-soi (Sắt Vụn 2 + Chai Nhựa 2 -> "tool:DenSoi:1"),
 // che-qua-tang (Lá Chuối 2 + Vải Vụn 1 -> "item:qua-tang"); mô tả hành vi 12 combo
 // công cụ × bậc (không phải số chốt, code gameplay dùng bậc để rẽ nhánh).
-// Lưu ý hành vi thật (ghi nhận, chưa phải kiểm chứng kỳ vọng):
+// Lưu ý hành vi thật (đã sửa 18/11, xem test Craft_TruDungSoLuongVaTraResultId):
 // - Craft trừ nguyên liệu TRỰC TIẾP trên Dictionary truyền vào (đổi số lượng trong
-//   túi gọi hàm), và để lại key còn 0 chứ không xóa key (xem test Craft_TruDungSoLuong).
+//   túi gọi hàm), và nguyên liệu nào chế hết (về 0) thì XÓA key khỏi túi, không để
+//   lại entry 0. Trước 18/11 key còn 0 vẫn nằm lại trong túi (hành vi lạ đợt 18:50).
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
@@ -181,8 +182,62 @@ namespace PhoXoBo.Tests
             Assert.AreEqual("tool:XeDay:1", Crafting.Craft(recipe, materials));
             Assert.AreEqual(2, materials[MaterialIds.KhungSat], "Khung Sắt 3 - 1 = 2");
             Assert.AreEqual(3, materials[MaterialIds.BanhXe], "Bánh Xe 5 - 2 = 3");
-            Assert.AreEqual(0, materials[MaterialIds.VanGo],
-                "Ván Gỗ 2 - 2 = 0 — key còn lại với giá trị 0, không bị xóa khỏi túi");
+            // ĐÃ SỬA 18/11: Ván Gỗ 2 - 2 = 0 thì key bị XÓA khỏi túi, không để lại
+            // entry 0 (trước đây test này assert materials[Ván Gỗ] == 0).
+            Assert.IsFalse(materials.ContainsKey(MaterialIds.VanGo),
+                "Ván Gỗ chế hết thì key bị xóa khỏi túi, không để lại entry 0");
+            Assert.AreEqual(2, materials.Count, "Túi chỉ còn Khung Sắt + Bánh Xe");
+        }
+
+        [Test]
+        public void Craft_CheHet1Loai_XoaKey_NguyenLieuKhacConNguyen()
+        {
+            // Hồi quy Bug 1: chế hết đúng 1 loại thì chỉ xóa key loại đó, loại khác
+            // còn nguyên số lượng (không xóa nhầm, không trừ nhầm).
+            var recipe = Crafting.Get("che-xe-day")!;
+            var materials = new Dictionary<string, int>
+            {
+                [MaterialIds.KhungSat] = 1, [MaterialIds.BanhXe] = 5, [MaterialIds.VanGo] = 2,
+                [MaterialIds.SatVun] = 3, // nguyên liệu không dùng trong công thức
+            };
+            Assert.AreEqual("tool:XeDay:1", Crafting.Craft(recipe, materials));
+            Assert.IsFalse(materials.ContainsKey(MaterialIds.KhungSat),
+                "Khung Sắt 1 - 1 = 0 thì key bị xóa");
+            Assert.IsFalse(materials.ContainsKey(MaterialIds.VanGo),
+                "Ván Gỗ 2 - 2 = 0 thì key bị xóa");
+            Assert.AreEqual(3, materials[MaterialIds.BanhXe], "Bánh Xe 5 - 2 = 3, key còn lại");
+            Assert.AreEqual(3, materials[MaterialIds.SatVun],
+                "Sắt Vụn không dùng trong công thức thì không đổi");
+            Assert.AreEqual(2, materials.Count, "Túi chỉ còn Bánh Xe + Sắt Vụn");
+        }
+
+        [Test]
+        public void Craft_Che2LanLienTiep_XoaKeyDanVaTraNullKhiHet()
+        {
+            // Hồi quy Bug 1: chế 2 lần liên tiếp — lần 2 trừ nốt số còn lại về 0 thì
+            // xóa key; lần 3 hết nguyên liệu thì trả null, không trừ gì thêm.
+            var recipe = Crafting.Get("che-xe-day")!;
+            var materials = new Dictionary<string, int>
+            {
+                [MaterialIds.KhungSat] = 2, [MaterialIds.BanhXe] = 4, [MaterialIds.VanGo] = 4,
+            };
+            Assert.AreEqual("tool:XeDay:1", Crafting.Craft(recipe, materials));
+            Assert.AreEqual(1, materials[MaterialIds.KhungSat]);
+            Assert.AreEqual(2, materials[MaterialIds.BanhXe]);
+            Assert.AreEqual(2, materials[MaterialIds.VanGo]);
+
+            Assert.AreEqual("tool:XeDay:1", Crafting.Craft(recipe, materials));
+            Assert.AreEqual(0, materials.Count,
+                "Chế lần 2 trừ hết cả 3 loại về 0 thì túi trống, không còn key 0 nào");
+            Assert.IsFalse(materials.ContainsKey(MaterialIds.KhungSat));
+            Assert.IsFalse(materials.ContainsKey(MaterialIds.BanhXe));
+            Assert.IsFalse(materials.ContainsKey(MaterialIds.VanGo));
+
+            Assert.IsNull(Crafting.Craft(recipe, materials),
+                "Hết nguyên liệu thì chế lần 3 trả null");
+            Assert.AreEqual(0, materials.Count, "Chế thất bại thì túi vẫn trống");
+            Assert.IsFalse(Crafting.CanCraft(recipe, materials),
+                "Sau khi key bị xóa thì CanCraft trả false (không còn nguyên liệu)");
         }
 
         [Test]
@@ -207,8 +262,13 @@ namespace PhoXoBo.Tests
                 [MaterialIds.LaChuoi] = 2, [MaterialIds.VaiVun] = 1,
             };
             Assert.AreEqual("item:qua-tang", Crafting.Craft(recipe, materials));
-            Assert.AreEqual(0, materials[MaterialIds.LaChuoi]);
-            Assert.AreEqual(0, materials[MaterialIds.VaiVun]);
+            // ĐÃ SỬA 18/11: chế hết cả 2 loại thì cả 2 key đều bị xóa, túi trống
+            // (trước đây test này assert materials[...] == 0 cho cả 2 loại).
+            Assert.IsFalse(materials.ContainsKey(MaterialIds.LaChuoi),
+                "Lá Chuối chế hết thì key bị xóa khỏi túi");
+            Assert.IsFalse(materials.ContainsKey(MaterialIds.VaiVun),
+                "Vải Vụn chế hết thì key bị xóa khỏi túi");
+            Assert.AreEqual(0, materials.Count, "Chế hết cả 2 loại thì túi trống");
         }
 
         // --- MissingIngredients: trả đúng số còn thiếu từng loại, đủ thì rỗng ---

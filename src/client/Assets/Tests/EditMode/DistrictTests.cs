@@ -9,11 +9,13 @@
 // Số / danh sách lấy đúng code, Mục 3 đã chốt — không có số PROVISIONAL ở đây:
 // đúng 18 khu, Id 1–18 theo đúng thứ tự trong Districts.All; tầng lớp LaoDong 1–4,
 // CanTrungLuu 5–7, TrungLuu 8–10, ThuongLuu 11–13, SieuGiau 14–16, Chung 17–18.
-// Lưu ý hành vi thật (ghi nhận, chưa phải kiểm chứng kỳ vọng):
-// - IsBlocked so sánh chuỗi bằng == (phân biệt hoa/thường, khớp đúng từng ký tự).
-// - TitleConflict chỉ chặn một chiều theo bảng BlockedBy: danh hiệu trong bảng chặn
-//   danh hiệu/nghề muốn nhận, chiều ngược lại không tự động chặn (ví dụ "Cảnh sát"
-//   đang có không chặn việc nhận "Tướng Cướp" — xem test IsBlocked_KhongChanNguoc).
+// Lưu ý hành vi đã sửa (bug #5 đợt 18:50, đã sửa trong TitleConflict.cs):
+// - IsBlocked chặn CẢ HAI CHIỀU của mỗi cặp xung đột: danh hiệu trong bảng chặn
+//   danh hiệu/nghề muốn nhận, và chiều ngược lại cũng chặn (ví dụ đang có
+//   "Cảnh sát" thì không nhận được "Tướng Cướp" — xem test IsBlocked_ChanCaHaiChieu).
+// - So sánh tên danh hiệu KHÔNG phân biệt hoa/thường (OrdinalIgnoreCase).
+// - Bảng cặp xung đột không đổi; "Kẻ Lừa Đảo" vẫn KHÔNG chặn "Luật Sư Bào Chữa"
+//   (cả hai chiều).
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
@@ -280,25 +282,80 @@ namespace PhoXoBo.Tests
         }
 
         [Test]
-        public void IsBlocked_KhongChanNguoc()
+        public void IsBlocked_ChanCaHaiChieu()
         {
-            // Chặn chỉ một chiều theo bảng: đang có "Cảnh sát" (nghề bị chặn) thì
-            // việc nhận "Tướng Cướp" KHÔNG bị chặn — bảng không có dòng ngược lại.
-            // Ghi nhận hành vi thật của code; muốn đổi phe cần quest "Cải tà quy chính"
-            // theo comment trong TitleConflict.cs.
-            Assert.IsFalse(TitleConflict.IsBlocked(new[] { "Cảnh sát" }, "Tướng Cướp"));
-            Assert.IsFalse(TitleConflict.IsBlocked(new[] { "Kẻ Bỏ Học" }, "Học Giả"));
+            // ĐÃ SỬA (bug #5 đợt 18:50): chặn cả hai chiều của mỗi cặp xung đột —
+            // test cũ IsBlocked_KhongChanNguoc assert hành vi một chiều đã sai, nay
+            // cập nhật thành assert chặn ngược. Muốn đổi phe cần quest
+            // "Cải tà quy chính" theo comment trong TitleConflict.cs.
+            Assert.IsTrue(TitleConflict.IsBlocked(new[] { "Cảnh sát" }, "Tướng Cướp"));
+            Assert.IsTrue(TitleConflict.IsBlocked(new[] { "Kẻ Bỏ Học" }, "Học Giả"));
+            // Chiều xuôi vẫn chặn như cũ.
+            Assert.IsTrue(TitleConflict.IsBlocked(new[] { "Tướng Cướp" }, "Cảnh sát"));
+            Assert.IsTrue(TitleConflict.IsBlocked(new[] { "Học Giả" }, "Kẻ Bỏ Học"));
         }
 
         [Test]
-        public void IsBlocked_PhanBietHoaThuong()
+        public void IsBlocked_KhongPhanBietHoaThuong()
         {
-            // So sánh bằng == nên "cảnh sát" viết thường không khớp "Cảnh sát" trong bảng.
-            // Ghi nhận hành vi thật của code (không phải kỳ vọng GDD).
-            Assert.IsFalse(TitleConflict.IsBlocked(new[] { "Tướng Cướp" }, "cảnh sát"),
-                "Chuỗi phải khớp đúng từng ký tự, kể cả hoa/thường");
-            Assert.IsFalse(TitleConflict.IsBlocked(new[] { "tướng cướp" }, "Cảnh sát"),
-                "Danh hiệu đang có viết sai hoa/thường thì bảng cũng không tra được");
+            // ĐÃ SỬA (bug #5 đợt 18:50): so sánh không phân biệt hoa/thường —
+            // test cũ IsBlocked_PhanBietHoaThuong assert "cảnh sát" viết thường
+            // không khớp đã sai, nay cập nhật thành assert vẫn chặn.
+            Assert.IsTrue(TitleConflict.IsBlocked(new[] { "Tướng Cướp" }, "cảnh sát"),
+                "Tên muốn nhận viết thường vẫn phải khớp 'Cảnh sát' trong bảng");
+            Assert.IsTrue(TitleConflict.IsBlocked(new[] { "tướng cướp" }, "Cảnh sát"),
+                "Danh hiệu đang có viết sai hoa/thường vẫn phải tra được trong bảng");
+        }
+
+        // --- Hồi quy bug #5 đợt 18:50: chặn ngược cho mọi cặp xung đột ---
+
+        [Test]
+        public void IsBlocked_ChanNguoc_TuongCuopVaTrumBuonLau()
+        {
+            // Cả 4 nghề bị chặn đều chặn ngược lại cả Tướng Cướp lẫn Trùm Buôn Lậu.
+            foreach (var nghe in new[] { "Cảnh sát", "Thẩm phán", "Hải quan", "Giáo viên" })
+            {
+                Assert.IsTrue(TitleConflict.IsBlocked(new[] { nghe }, "Tướng Cướp"),
+                    $"'{nghe}' đang có phải chặn nhận 'Tướng Cướp'");
+                Assert.IsTrue(TitleConflict.IsBlocked(new[] { nghe }, "Trùm Buôn Lậu"),
+                    $"'{nghe}' đang có phải chặn nhận 'Trùm Buôn Lậu'");
+            }
+        }
+
+        [Test]
+        public void IsBlocked_ChanNguoc_CacCapConLai()
+        {
+            // Tham Quan <-> Thanh Liêm / Người Hùng.
+            Assert.IsTrue(TitleConflict.IsBlocked(new[] { "Thanh Liêm" }, "Tham Quan"));
+            Assert.IsTrue(TitleConflict.IsBlocked(new[] { "Người Hùng" }, "Tham Quan"));
+            // Học Giả / Tiến sĩ <-> Kẻ Bỏ Học.
+            Assert.IsTrue(TitleConflict.IsBlocked(new[] { "Kẻ Bỏ Học" }, "Tiến sĩ"));
+            // Tỷ Phú Từ Thiện <-> Kẻ Keo Kiệt.
+            Assert.IsTrue(TitleConflict.IsBlocked(new[] { "Kẻ Keo Kiệt" }, "Tỷ Phú Từ Thiện"));
+            // Kẻ Lừa Đảo <-> Luật Sư Chính Trực.
+            Assert.IsTrue(TitleConflict.IsBlocked(new[] { "Luật Sư Chính Trực" }, "Kẻ Lừa Đảo"));
+        }
+
+        [Test]
+        public void IsBlocked_ChanNguoc_KhongChanSai()
+        {
+            // Chặn ngược không được sinh thêm cặp ngoài bảng: nghề không liên quan
+            // vẫn không chặn, và ngoại lệ "Luật Sư Bào Chữa" giữ nguyên cả hai chiều.
+            Assert.IsFalse(TitleConflict.IsBlocked(new[] { "Bác sĩ" }, "Tướng Cướp"));
+            Assert.IsFalse(TitleConflict.IsBlocked(new[] { "Kỹ sư" }, "Trùm Buôn Lậu"));
+            Assert.IsFalse(TitleConflict.IsBlocked(new[] { "Luật Sư Bào Chữa" }, "Kẻ Lừa Đảo"),
+                "Code ghi rõ: 'Kẻ Lừa Đảo' không chặn 'Luật Sư Bào Chữa' — chiều ngược cũng vậy");
+            Assert.IsFalse(TitleConflict.IsBlocked(new[] { "Kẻ Lừa Đảo" }, "Luật Sư Bào Chữa"));
+        }
+
+        [Test]
+        public void IsBlocked_KhongPhanBietHoaThuong_HonHop()
+        {
+            // Hoa/thường lẫn lộn vẫn chặn, cả hai chiều.
+            Assert.IsTrue(TitleConflict.IsBlocked(new[] { "TƯỚNG CƯỚP" }, "CẢNH SÁT"));
+            Assert.IsTrue(TitleConflict.IsBlocked(new[] { "cảnh sát" }, "tướng cướp"));
+            Assert.IsTrue(TitleConflict.IsBlocked(new[] { "kẻ bỏ học" }, "HỌC GIẢ"));
+            Assert.IsTrue(TitleConflict.IsBlocked(new[] { "Tham Quan" }, "thanh liêm"));
         }
     }
 }

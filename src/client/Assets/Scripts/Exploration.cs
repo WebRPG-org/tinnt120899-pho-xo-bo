@@ -84,6 +84,10 @@ namespace PhoXoBo
         /// Khám phá 1 hotspot: nhặt nguyên liệu vào túi nguyên liệu.
         /// Mỗi hotspot chỉ khám phá 1 lần / 1 ngày game — quay lại ngày sau có vật mới
         /// (đúng kiểu Nadia: quay lại địa điểm cũ có vật/sự kiện mới).
+        /// Sang ngày game mới thì Explore TỰ reset lượt khám phá trong ngày (gọi
+        /// NewGameDay đã có) khi gameDay khác ngày đã lưu — người gọi không cần tự
+        /// gọi NewGameDay trước nữa (sửa 18/11; trước đây gameDay nhận vào nhưng
+        /// không dùng, đổi ngày mà không NewGameDay thì hotspot vẫn tính đã khám phá).
         /// Trả false nếu hotspot không có, hoặc đã khám phá trong ngày game này.
         /// </summary>
         public static bool Explore(
@@ -94,12 +98,23 @@ namespace PhoXoBo
         {
             var hotspot = Get(hotspotId);
             if (hotspot == null) return false;
+            // Sang ngày mới thì tự reset lượt khám phá trong ngày (dùng đúng
+            // NewGameDay đã có). _currentDay null = chưa khám phá lần nào trong
+            // phiên này (vd. vừa load save): chỉ ghi nhận ngày, không reset để
+            // khỏi xóa lượt đã lưu trong save.
+            if (_currentDay.HasValue && gameDay != _currentDay.Value)
+                NewGameDay(visitedToday);
+            _currentDay = gameDay;
             if (visitedToday.Contains(hotspotId)) return false; // Đã nhặt hôm nay — mai quay lại có đồ mới.
             visitedToday.Add(hotspotId);
             materials.TryGetValue(hotspot.MaterialId, out var count);
             materials[hotspot.MaterialId] = count + hotspot.AmountPerVisit;
             return true;
         }
+
+        // Ngày game hiện tại đã lưu — Explore dùng để tự reset lượt khi sang ngày
+        // mới (xem Explore). null = chưa khám phá lần nào trong phiên này.
+        private static int? _currentDay;
 
         /// <summary>Sang ngày game mới: reset lượt khám phá trong ngày.</summary>
         public static void NewGameDay(HashSet<string> visitedToday) => visitedToday.Clear();

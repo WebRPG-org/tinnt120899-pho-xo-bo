@@ -265,11 +265,11 @@ check("T9h", "Không có secret/token/key trong file test EditMode", not bad_tes
 # Exploration/PlayerProgress/District+TitleConflict/PhoneHub) — tổng EditMode
 # nay 207 test (82 cũ + 125 mới). Vẫn chưa chạy được (cần Unity 2022 LTS).
 expected_tests_2 = {
-    "InventoryTests.cs": 15,
-    "CraftingTests.cs": 16,
-    "ExplorationTests.cs": 17,
+    "InventoryTests.cs": 19,
+    "CraftingTests.cs": 18,
+    "ExplorationTests.cs": 19,
     "PlayerProgressTests.cs": 30,
-    "DistrictTests.cs": 29,
+    "DistrictTests.cs": 33,
     "PhoneHubTests.cs": 18,
 }
 check("T10a", "Đủ 6 file test EditMode đợt 2",
@@ -311,6 +311,57 @@ for fname, markers in api_markers.items():
     missing = [m for m in markers if m not in content]
     check(f"T10f-{fname}", f"{fname} nhắc đúng API thật", not missing,
           f"thiếu: {missing}" if missing else "")
+
+# ---- 11. Hồi quy 4 bug đã sửa 18/11 ~19:50 (đợt này) ----
+# Các hành vi lạ ghi ở docs/test-report.md đợt 18:50 nay đã sửa bằng code:
+# Inventory.Add đồ không stackable, Inventory.Use ghi đè khung buff,
+# Crafting.Craft để lại key = 0, Exploration.Explore không dùng gameDay,
+# TitleConflict.IsBlocked chỉ chặn một chiều + phân biệt hoa/thường.
+inventory = read(SCRIPTS / "Inventory.cs")
+crafting = read(SCRIPTS / "Crafting.cs")
+exploration = read(SCRIPTS / "Exploration.cs")
+title_conflict = read(SCRIPTS / "TitleConflict.cs")
+inventory_tests = read(EDITMODE / "InventoryTests.cs")
+crafting_tests = read(EDITMODE / "CraftingTests.cs")
+exploration_tests = read(EDITMODE / "ExplorationTests.cs")
+district_tests = read(EDITMODE / "DistrictTests.cs")
+
+check("T11a", "Inventory.Add: đồ không stackable quantity > 1 trả false (all-or-nothing)",
+      "quantity > 1 || Count(itemId) > 0" in inventory)
+check("T11b", "Inventory.Use: không còn ghi đè khung buff bằng currentFrame",
+      "with { Frame = currentFrame }" not in strip_strings_comments(inventory)
+      and "def.Effect" in inventory)
+check("T11c", "InventoryTests có 4 test hồi quy Add/Use 18/11",
+      all(t in inventory_tests for t in [
+          "Add_DoKhongStackable_DaCo1RoiThem2_TraFalseVaGiu1",
+          "Add_DoKhongStackable_Them2ThatBai_RoiThem1ThanhCong",
+          "Use_BuffCatalogKhungChieu_DungLucToi_VanVaoChieu",
+          "Use_BuffCatalogKhungSang_DungLucChieu_EndFrameTheoKhungCatalog"]))
+check("T11d", "Crafting.Craft: nguyên liệu về 0 thì xóa key",
+      "materials.Remove(materialId)" in crafting)
+check("T11e", "CraftingTests có 2 test hồi quy xóa key 18/11",
+      "Craft_CheHet1Loai_XoaKey_NguyenLieuKhacConNguyen" in crafting_tests
+      and "Craft_Che2LanLienTiep_XoaKeyDanVaTraNullKhiHet" in crafting_tests)
+check("T11f", "Exploration.Explore: tự reset khi gameDay khác ngày đã lưu",
+      "_currentDay" in exploration and "NewGameDay(visitedToday)" in exploration)
+check("T11g", "ExplorationTests có 3 test hồi quy tự reset ngày 18/11",
+      all(t in exploration_tests for t in [
+          "Explore_DoiGameDay_TuResetVaKhamPhaLaiDuoc",
+          "Explore_DoiGameDay_TuResetCaHotspotKhac",
+          "Explore_DoiGameDayVeNgayCu_CungTuReset"]))
+check("T11h", "TitleConflict.IsBlocked: chặn 2 chiều + không phân biệt hoa/thường",
+      "OrdinalIgnoreCase" in title_conflict
+      and "BlockedBy.TryGetValue(wantedTitleOrJob" in title_conflict)
+check("T11i", "DistrictTests có 4 test hồi quy chặn 2 chiều / hoa-thường 18/11",
+      all(t in district_tests for t in [
+          "IsBlocked_ChanNguoc_TuongCuopVaTrumBuonLau",
+          "IsBlocked_ChanNguoc_CacCapConLai",
+          "IsBlocked_ChanNguoc_KhongChanSai",
+          "IsBlocked_KhongPhanBietHoaThuong_HonHop"]))
+# T11j: tổng EditMode nay 219 test (207 cũ + 12 mới đợt này).
+total_tests = sum(len(re.findall(r"\[Test\]", read(f))) for f in editmode_files)
+check("T11j", "Tổng test EditMode = 219 (207 + 12 hồi quy đợt này)",
+      total_tests == 219, f"đếm được {total_tests}")
 
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)

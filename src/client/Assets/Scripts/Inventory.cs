@@ -57,7 +57,13 @@ namespace PhoXoBo
         {
             var def = ItemCatalog.Get(itemId);
             if (def == null || quantity <= 0) return false;
-            if (!def.Stackable && Count(itemId) > 0) return false; // Đồ không xếp chồng: chỉ giữ 1 cái.
+            // Đồ không xếp chồng: chỉ giữ đúng 1 cái, và chỉ nhận đúng 1 cái mỗi lần.
+            // Lựa chọn thiết kế: quantity > 1 thì trả false, không thêm gì — nhất quán
+            // với hành vi hiện tại khi túi đã có món đó (cũng trả false, không thêm),
+            // thay vì âm thầm bớt số lượng xuống 1. Người mua muốn 1 cái thì gọi lại
+            // với quantity = 1. Trước đây chỉ chặn khi túi đã có món đó nên
+            // Add("ao-mua", 2) lúc túi trống vẫn nhận 2 cái (bug, đã sửa).
+            if (!def.Stackable && (quantity > 1 || Count(itemId) > 0)) return false;
             _items[itemId] = Count(itemId) + quantity;
             return true;
         }
@@ -68,8 +74,14 @@ namespace PhoXoBo
             var def = ItemCatalog.Get(itemId);
             if (def == null || Count(itemId) <= 0) return false;
             _items[itemId] = Count(itemId) - 1;
+            // Buff áp đúng khung ghi trong catalog (def.Effect.Frame), KHÔNG ghi đè
+            // bằng khung hiện tại: khung trong catalog mới là khung buff có tác dụng.
+            // Trước đây `def.Effect with { Frame = currentFrame }` ghi đè khung catalog
+            // nên cơm tấm (catalog ghi Chiều) dùng lúc Sáng thì buff rơi vào Sáng (bug,
+            // đã sửa). Tham số currentFrame giữ lại để không đổi API của người gọi;
+            // nó không còn quyết định khung buff.
             if (def.Effect != null)
-                _activeBuffs.Add(def.Effect with { Frame = currentFrame });
+                _activeBuffs.Add(def.Effect);
             return true;
         }
 
