@@ -363,6 +363,87 @@ total_tests = sum(len(re.findall(r"\[Test\]", read(f))) for f in editmode_files)
 check("T11j", "Tổng test EditMode = 219 (207 + 12 hồi quy đợt này)",
       total_tests == 219, f"đếm được {total_tests}")
 
+# ---- 12. Scene slice C2 (18/11 ~20:50, đợt này) ----
+# 4/4 khu slice đầu nay đã có khung scene: Xóm Trọ Cũ, Chợ Đầu Mối,
+# Công Viên An Bình, Phố Đi Bộ – Chợ Đêm — mỗi scene có GameManager +
+# Player + CameraFollowBehaviour + đúng hotspot trong Exploration.Hotspots.
+# Vẫn là khung file, CHƯA verify mở bằng Unity (cần Unity 2022.3.62f1).
+SCENES = ROOT / "src" / "client" / "Assets" / "Scenes"
+slice_scenes = {
+    "SliceXomTroCu.unity": ["hs-tro-toi"],
+    "SliceChoDauMoi.unity": ["hs-cho-sang", "hs-cho-chieu"],
+    "SliceCongVienAnBinh.unity": ["hs-cong-vien"],
+    "SlicePhoDiBoChoDem.unity": ["hs-cho-dem"],
+}
+check("T12a", "Đủ 4 file scene slice + .meta kèm theo",
+      all((SCENES / name).exists() and (SCENES / (name + ".meta")).exists()
+          for name in slice_scenes),
+      f"thiếu: {[n for n in slice_scenes if not (SCENES / n).exists()]}" if not all((SCENES / n).exists() for n in slice_scenes) else "")
+scene_guids = []
+for name in slice_scenes:
+    meta = SCENES / (name + ".meta")
+    if meta.exists():
+        m = re.search(r"guid: ([0-9a-f]{32})", read(meta))
+        scene_guids.append(m.group(1) if m else "?")
+check("T12b", "GUID .meta 4 scene slice khác nhau",
+      len(set(scene_guids)) == 4 and "?" not in scene_guids,
+      f"guids: {scene_guids}" if len(set(scene_guids)) != 4 else "")
+# HotspotId trong Exploration.Hotspots (không bịa hotspot mới).
+exploration_ids = set(re.findall(r'new\("(hs-[a-z-]+)"', exploration))
+for name, expected_ids in slice_scenes.items():
+    content = read(SCENES / name)
+    found_ids = re.findall(r"hotspotId: (hs-[a-z-]+)", content)
+    check(f"T12c-{name}", f"{name}: đúng hotspot {expected_ids}",
+          sorted(found_ids) == sorted(expected_ids),
+          f"tìm thấy: {found_ids}" if sorted(found_ids) != sorted(expected_ids) else "")
+    missing = [h for h in found_ids if h not in exploration_ids]
+    check(f"T12d-{name}", f"{name}: hotspotId có trong Exploration.Hotspots",
+          not missing, f"không có trong code: {missing}" if missing else "")
+    # Mỗi scene phải có đủ bộ khung C2: GameManager + Player + Camera follow + ortho.
+    check(f"T12e-{name}", f"{name}: có GameManager + Player + CameraFollow + ortho",
+          "m_Name: GameManagerBehaviour" in content
+          and "m_Name: PlayerController" in content
+          and "m_Name: CameraFollowBehaviour" in content
+          and "m_Orthographic: 1" in content)
+# T12f: mô tả verbatim 4 khu (art-style.md §4) có trong đúng scene của nó.
+verbatim = {
+    "SliceXomTroCu.unity": "hem nho Sai Gon",
+    "SliceChoDauMoi.unity": "cho dau moi luc 5 gio sang",
+    "SliceCongVienAnBinh.unity": "công viên buổi chiều",
+    "SlicePhoDiBoChoDem.unity": "phố đi bộ ban đêm",
+}
+for name, phrase in verbatim.items():
+    check(f"T12f-{name}", f"{name}: có mô tả verbatim khu",
+          phrase in read(SCENES / name), f"không thấy '{phrase}'" if phrase not in read(SCENES / name) else "")
+# T12g: 2 scene 1-hotspot không còn khối hotspot thừa (fileID 200080–200082).
+for name in ["SliceCongVienAnBinh.unity", "SlicePhoDiBoChoDem.unity"]:
+    content = read(SCENES / name)
+    check(f"T12g-{name}", f"{name}: không còn fileID hotspot thừa 200080–200082",
+          "200080" not in content and "200081" not in content and "200082" not in content)
+# T12h: không còn dòng "doi scene khu rieng (chua tao)" — 4/4 scene đã có khung.
+stale = [n for n in slice_scenes if "doi scene khu rieng (chua tao)" in read(SCENES / n)]
+check("T12h", "Không còn ghi 'doi scene khu rieng (chua tao)' trong scene slice",
+      not stale, f"còn ở: {stale}" if stale else "")
+# T12i: script GUID trong scene khớp GUID .meta của file script (không bịa GUID).
+script_guids = {
+    "CameraFollowBehaviour": "b47485bf41524aef9420a3919465d89c",
+    "GameManagerBehaviour": "765b24e3fb5d469f91aa8ce876756c4d",
+    "PlayerController": "23c238a56c0543ec914294648218364d",
+    "HotspotView": "b00dbcf48e09433cb7f973d11b2ddec9",
+}
+for name in slice_scenes:
+    content = read(SCENES / name)
+    ok_guid = all(g in content for g in script_guids.values())
+    check(f"T12i-{name}", f"{name}: script GUID khớp file script thật",
+          ok_guid, "thiếu GUID script" if not ok_guid else "")
+# T12j: SliceRoot của 2 scene mới liệt kê đúng 3 con (khu + NOTE + 1 hotspot).
+for name in ["SliceCongVienAnBinh.unity", "SlicePhoDiBoChoDem.unity"]:
+    content = read(SCENES / name)
+    m = re.search(r"m_Name: SliceRoot.*?m_Children:\n((?:  - \{fileID: \d+\}\n)+)", content, flags=re.S)
+    kids = re.findall(r"\{fileID: (\d+)\}", m.group(1)) if m else []
+    check(f"T12j-{name}", f"{name}: SliceRoot có đúng 3 con (200031/200041/200071)",
+          kids == ["200031", "200041", "200071"], f"con: {kids}" if kids != ["200031", "200041", "200071"] else "")
+
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)
 failed = [r for r in results if not r[2]]

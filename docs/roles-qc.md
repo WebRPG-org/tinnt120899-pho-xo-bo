@@ -110,6 +110,15 @@ Thứ tự làm — mỗi bước xong thì push 1 commit để GitHub thấy ti
 | C8 | Art / nhạc slice | Đồ hoạ + track có bản quyền rõ ràng (vai Đồ hoạ §1) | 4 khu + 1 nhân vật + UI điện thoại, rubric 8 chiều ≥12/16 |
 | C9 | Chốt số còn thiếu | Chủ chốt: trần chỉ số, ngưỡng An Yên, 10 nhóm nghề, 6 quyết định kiến trúc | Ghi vào GDD + `GameBalance.cs` cùng lúc, chạy lại `check_static.py` PASS |
 
+**Hiện trạng 18/11/2026 ~20:50:** C2 tiến thêm 1 bước — 4/4 scene slice đầu
+nay đã có khung file (thêm `SliceCongVienAnBinh.unity` khu 17, hotspot
+`hs-cong-vien` + `SlicePhoDiBoChoDem.unity` khu 18, hotspot `hs-cho-dem`;
+mỗi scene có GameManager + Player + CameraFollowBehaviour + camera ortho +
+mô tả verbatim `art-style.md` §4); kiểm tra tĩnh 156/156 PASS (nhóm T12 mới,
+27 mục, xem `docs/test-report.md`). C2 vẫn chưa xong (chưa mở bằng Unity,
+chưa có art, chưa bấm Play được); C3–C9 vẫn chưa xong. Việc follow-up C2:
+spec art chi tiết khu 17/18 chưa có trong `docs/art-assets.md` (chỉ có khu 1–2).
+
 **Hiện trạng 18/11/2026 ~19:50:** C1 xong ở mức khung file (10 file
 `ProjectSettings/*.asset` + scene `SliceXomTroCu.unity`; chưa verify mở bằng
 Unity — cần máy có Unity 2022.3.62f1 sinh `Library/` + `.csproj` và kiểm tra

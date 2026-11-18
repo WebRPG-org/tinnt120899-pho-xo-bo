@@ -7,6 +7,31 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 18/11/2026 ~20:50 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **156/156 PASS, exit 0** — tăng từ 129/129: nhóm T12 mới (27 mục)
+  khóa 4 scene slice.
+- **Luồng song song — 2 scene slice còn lại (C2):**
+  `SliceCongVienAnBinh.unity` (khu 17, hotspot `hs-cong-vien` “Ghế đá công
+  viên”, khung Chiều, Ván gỗ ×1) + `SlicePhoDiBoChoDem.unity` (khu 18,
+  hotspot `hs-cho-dem` “Sạp đêm cuối phố”, khung Tối, Vải vụn ×2) — mỗi scene
+  có GameManager + Player + CameraFollowBehaviour + camera ortho + mô tả
+  verbatim `docs/art-style.md` §4; `.meta` guid mới, duy nhất; không bịa
+  hotspot / prop / màu mới. **Sửa lỗi header cũ:** `SliceChoDauMoi.unity`
+  từng ghi nhầm “Xom Tro Cu (khu 1/18” — đã sửa thành khu 2; 2 scene cũ đã
+  cập nhật dòng “doi scene khu rieng (chua tao)” → trỏ tới 2 scene mới.
+  1 lỗi script trong lần chạy này (đã sửa, chạy lại PASS): T12f lúc đầu FAIL
+  giả — chuỗi kiểm tra không dấu trong khi header scene mới ghi đúng mô tả
+  verbatim có dấu của `art-style.md` §4.
+- **Còn lại chưa xong (C2):** spec art chi tiết khu 17/18 chưa có trong
+  `docs/art-assets.md` (hiện chỉ có khu 1–2) — việc follow-up; xử lý sáng
+  chiều / tối là việc của art pass sau, khung scene giữ nguyên màu nền đã
+  khóa #F9EDCE.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa biên
+  dịch/chạy lần nào (VM không có dotnet/Unity). Server chưa chạy; client chưa
+  có scene slice chơi được (4/4 scene slice mới chỉ là khung file).
+
 ## Lần chạy mới nhất: 18/11/2026 ~19:50 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
@@ -336,3 +361,20 @@
 - Vẫn chưa chạy được: không có dotnet/Unity trên VM — xUnit (17 test) và
   EditMode test (219 test) chưa biên dịch/chạy lần nào; server chưa chạy;
   client chưa có scene slice chơi được.
+
+## Hiện trạng thật (18/11/2026 ~20:50, lúc viết báo cáo này)
+
+- Kiểm tra tĩnh: **156/156 PASS** (`check_static.py`, gồm nhóm T12 mới khóa
+  4 scene slice).
+- C2 tiến thêm 1 bước: 4/4 scene slice đầu nay đã có khung file
+  (`SliceXomTroCu`, `SliceChoDauMoi`, `SliceCongVienAnBinh` khu 17,
+  `SlicePhoDiBoChoDem` khu 18 — mỗi scene GameManager + Player +
+  CameraFollowBehaviour + camera ortho + đúng hotspot trong
+  `Exploration.cs`); đã sửa header `SliceChoDauMoi.unity` ghi nhầm khu 1.
+- Hành vi lạ còn lại (chưa sửa, để GDD/PM xem lại): `PhoneHub.Notify` đếm cả
+  khi đóng, `SuggestEnding` ưu tiên cứng, `Buy("phong-tro")` tính tiền thuê
+  vào tài sản, `AdvanceStage` không kiểm tra Kind. Việc follow-up C2: spec art
+  chi tiết khu 17/18 chưa có trong `docs/art-assets.md` (chỉ có khu 1–2).
+- Vẫn chưa chạy được: không có dotnet/Unity trên VM — xUnit (17 test) và
+  EditMode test (219 test) chưa biên dịch/chạy lần nào; server chưa chạy;
+  client chưa có scene slice chơi được (4/4 scene mới chỉ là khung file).

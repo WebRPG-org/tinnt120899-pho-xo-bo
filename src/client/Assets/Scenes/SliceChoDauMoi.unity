@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
-# SCENE SLICE — Xom Tro Cu (khu 1/18, slice dau tien). Khung C1/C2.
+# SCENE SLICE — Cho Dau Moi (khu 2/18, slice dau tien). Khung C1/C2.
 # Mo ta verbatim (docs/art-style.md §4 — dung nguyen van moi lan):
 # "cho dau moi luc 5 gio sang, sap rau cu xep cao, la chuoi, thung xop, xe ba
 #  gac, nguoi ganh hang, den vang, hoi suong".
@@ -14,7 +14,8 @@
 # Hotspot hs-cho-sang + hs-cho-chieu (HotspotView), CameraFollowBehaviour tren
 # Main Camera (tam — thay bang CinemachineBrain + VirtualCamera trong Editor,
 # xem Scripts/README.md). hs-tro-toi o scene SliceXomTroCu.unity;
-# hs-cong-vien (17) + hs-cho-dem (18) doi scene khu rieng (chua tao).
+# hs-cong-vien (17) o scene SliceCongVienAnBinh.unity; hs-cho-dem (18) o scene
+# SlicePhoDiBoChoDem.unity (them 18/11 — 4/4 scene slice da co khung).
 --- !u!29 &1
 OcclusionCullingSettings:
   m_ObjectHideFlags: 0

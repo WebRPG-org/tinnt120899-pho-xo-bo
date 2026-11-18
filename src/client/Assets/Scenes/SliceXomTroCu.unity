@@ -14,7 +14,8 @@
 # Hotspot hs-tro-toi (HotspotView), CameraFollowBehaviour tren Main Camera (tam —
 # thay bang CinemachineBrain + VirtualCamera trong Editor, xem Scripts/README.md).
 # Hotspot slice con lai (hs-cho-sang, hs-cho-chieu) o scene SliceChoDauMoi.unity;
-# hs-cong-vien (17) + hs-cho-dem (18) doi scene khu rieng (chua tao).
+# hs-cong-vien (17) o scene SliceCongVienAnBinh.unity; hs-cho-dem (18) o scene
+# SlicePhoDiBoChoDem.unity (them 18/11 — 4/4 scene slice da co khung).
 --- !u!29 &1
 OcclusionCullingSettings:
   m_ObjectHideFlags: 0
