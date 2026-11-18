@@ -11,6 +11,9 @@ Assets/Scripts/
   District.cs       — Đúng 18 khu, 5 tầng (Mục 3)
   TitleConflict.cs  — Xung đột danh hiệu (Mục 3)
   GameBalance.cs    — Bảng số cân bằng: nguồn duy nhất cho số liệu đã chốt (Mục 5–9)
+  PhoneHub.cs       — Điện thoại là menu chính: 9 tab overlay (Mục 2)
+  Jobs.cs           — 3 nghề slice: bán rong, shipper, nhân viên quán + quota tuần (Mục 11)
+  Inventory.cs      — Túi đồ slice: mua/dùng vật phẩm, buff tạm 1 khung (Mục 2 + 7)
 ```
 
 ## Quy tắc

@@ -2,6 +2,24 @@
 
 Khung placeholder (chưa phải solution .NET đầy đủ — sẽ tạo bằng `dotnet new` khi bắt đầu làm thật).
 
+## File đã có (skeleton chạy được, chưa có DB thật)
+
+```
+src/
+  PhoXoBo.Server.csproj — project web .NET 8 (net8.0, Nullable, ImplicitUsings)
+  Program.cs            — minimal API, chỉ có GET /health -> {"status":"ok", ...}
+```
+
+Chạy (cần .NET 8 SDK — máy này chưa có, chỉ viết file, chưa build):
+
+```
+dotnet run --project src/server/src/PhoXoBo.Server.csproj
+curl http://localhost:5000/health
+```
+
+Chưa có: PostgreSQL / Redis, auth, ledger, module Identity / Economy / Inventory /
+Social / Leaderboard / Content (xem cấu trúc module dự kiến bên dưới).
+
 ## Stack chốt
 
 - .NET 8, modular monolith: 1 deployable, chia module theo business boundary.
