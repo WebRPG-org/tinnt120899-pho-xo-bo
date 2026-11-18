@@ -3,6 +3,10 @@
 > Áp dụng skill `soulful_short_video`: quay như quay thật — khoá thế giới, khoá
 > diễn viên, khoá giọng trước khi sản xuất; hỏng thì quay lại, không vá trong edit.
 > Chuẩn 2.5D đã chốt ở Mục 10 GDD. File này là lock để mọi art sau này đối chiếu.
+> Chuẩn đồ họa tham khảo Treasure of Nadia (chủ nhắc 18/11/2026 10:41 — bám sát suốt quá trình làm):
+> chi tiết nền thấy được khi zoom, vật dụng kể chuyện, hotspot lấp lánh rõ — xem
+> `docs/nadia-reference.md` §1 hàng 10. Cảnh 2D tĩnh PC của Nadia chuyển sang 2.5D isometric mobile;
+> KHÔNG lấy nội dung người lớn / harem, không copy asset / nhân vật / tên của Nadia.
 
 ## 1. Khóa thế giới trước (lock the world first)
 
@@ -16,6 +20,9 @@
 - Chi tiết thấy được khi zoom: sạp hàng có nồi niêu / lá chuối / ghế nhựa,
   bệnh viện có giường / máy, nhà có đồ nội thất. Ngày / đêm, mưa / nắng,
   trang trí Tết. NPC và giao thông sống động.
+- Hotspot kiểu Nadia, vẽ cho mobile: điểm sáng lấp lánh, to, viền sáng rõ, nhìn là biết
+  chạm được — không làm hotspot nhỏ li ti phải rà từng pixel. Hotspot ẩn chỉ hiện khi
+  có Đèn Soi bậc cao (xem `Crafting.cs` — Đèn Soi đổi hành vi theo bậc, đúng chuẩn Nadia).
 
 ## 2. Palette khóa (không đổi giữa chừng)
 

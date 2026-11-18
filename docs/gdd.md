@@ -17,7 +17,7 @@
 Chi tiết đầy đủ: `docs/references.md`.
 
 - **Lấy từ Gánh Phố:** Việt hoá sâu — mặc cả, bán theo giờ, mưa/nắng đổi nhu cầu, trật tự đô thị, giao thông, Tết, cưới/hỏi.
-- **Lấy từ Treasure of Nadia:** khám phá hotspot, inventory + crafting, gợi ý dẫn đường, quest gắn nhân vật, tuỳ chỉnh chi tiết. **Không lấy** nội dung người lớn; chuyển cảnh 2D tĩnh PC sang 2.5D isometric mobile.
+- **Lấy từ Treasure of Nadia:** khám phá hotspot, inventory + crafting, gợi ý dẫn đường, quest gắn nhân vật, tuỳ chỉnh chi tiết. **Không lấy** nội dung người lớn; chuyển cảnh 2D tĩnh PC sang 2.5D isometric mobile. **Chuẩn tham khảo đầy đủ, bắt buộc đối chiếu suốt quá trình làm: `docs/nadia-reference.md`** — vòng lặp khám phá → thu thập → chế tạo → mở khu (crafting là cổng tiến trình), hotspot lấp lánh to chạm được (không rà pixel), 4 công cụ nâng cấp đổi hành vi thật, fast-travel theo khu đã mở, NPC dẫn đường thay Soul Crystal (gợi ý nhúng trong lời thoại, không biến mất giữa game), điện thoại làm hub. Code: `src/client/Assets/Scripts/Exploration.cs` (hotspot + fast travel + NPC dẫn đường), `Crafting.cs` (công thức chế tạo, vd Xe Đẩy Hàng = Khung Sắt + Bánh Xe + Ván Gỗ, tương đương Basic Shovel của Nadia).
 - **Lấy từ Đế Chế Vỉa Hè:** NPC có đời sống riêng, sổ sách / thuế minh bạch, quan hệ nhiều tầng.
 - **Lấy từ Hàng Rong:** Bụi Đời Chợ Cá — tranh lãnh địa giữa các hợp tác xã.
 - **Điện thoại là menu chính:** overlay hub gồm Danh bạ / Tin nhắn, Ngân hàng, Bản đồ, Việc làm, Chợ, Học tập, Sức khoẻ, Xã hội, Cài đặt. Điện thoại không thay thế thế giới — vẫn phải đi lại trong phố.
