@@ -14,6 +14,11 @@ Assets/Scripts/
   PhoneHub.cs       — Điện thoại là menu chính: 9 tab overlay (Mục 2)
   Jobs.cs           — 3 nghề slice: bán rong, shipper, nhân viên quán + quota tuần (Mục 11)
   Inventory.cs      — Túi đồ slice: mua/dùng vật phẩm, buff tạm 1 khung (Mục 2 + 7)
+  Exploration.cs    — Hotspot khám phá theo khu, fast-travel, NPC dẫn đường (Mục 2, chuẩn Nadia)
+  Crafting.cs       — Chế tạo: 4 công cụ Việt nâng cấp đổi hành vi, công thức slice (Mục 2, chuẩn Nadia)
+  Social.cs         — Hệ xã hội: người yêu/vợ chồng, bạn thân, hội bạn, gia đình; bỏ bê 7 ngày, +20% EXP (Mục 8)
+  Economy.cs        — Ví + tài sản: lãi 0,5%/tháng, đấu giá phí 5%, barter, 4 hành vi cấm luôn trả false (Mục 7)
+  PlayerProgress.cs — Tiến trình 5 chương gắn bậc + ending (Mục 9)
 ```
 
 ## Quy tắc

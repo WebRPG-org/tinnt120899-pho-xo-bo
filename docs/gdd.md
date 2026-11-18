@@ -55,6 +55,7 @@ Xem `docs/stats.md`. Tóm tắt: 3 gốc Đỏ Thể / Xanh Trí / Vàng Tâm �
 ## Mục 7 — Tài chính + Nhà / Xe / Điện thoại / Quần áo
 
 Xem `docs/economy.md` (thang nhà/xe, vật phẩm 3 dòng chỉ số, ranh giới pháp lý VN).
+Số chốt tài chính: lãi tiết kiệm 0,5%/tháng game, phí sàn đấu giá 5%, mua lớn Danh vọng +50.
 
 ## Mục 8 — Xã hội
 
