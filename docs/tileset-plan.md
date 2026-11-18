@@ -25,7 +25,7 @@
 | Giấy phép | **CC0** — ghi rõ trên từng trang pack (đã mở và đọc trực tiếp) |
 | Pack | Isometric Tiles City (128 file) + Isometric Tiles Landscape (128 file) + Isometric Tiles Buildings (128 file); bổ sung: Isometric Tiles Vehicles, Isometric Roads (95 file, CC0, đã xác minh) |
 | URL tải (ĐÃ VERIFY) | https://kenney.nl/assets/isometric-tiles-city — https://kenney.nl/assets/isometric-tiles-landscape — https://kenney.nl/assets/isometric-tiles-buildings — https://kenney.nl/assets/isometric-roads — https://kenney.nl/assets/isometric-tiles-vehicles — trang tổng: https://kenney.nl/assets/tag:isometric |
-| Kích thước tile gốc | **CHƯA XÁC MINH** — trang Kenney không ghi kích thước pixel. Sau khi tải, mở 1 file PNG kiểm tra rồi ghi bổ sung vào đây. Không đoán (không ghi 64×32 hay 128×64 khi chưa đo). |
+| Kích thước tile gốc | **ĐÃ ĐO 19/11/2026 (xem §6):** tile City/Landscape canvas **132×~99** (hình thoi 128×64 + hông đất ~35px); Buildings 132×127 (nhà cao) / 99×~60 (mái nửa ô); Roads canvas 100×65; Vehicles sprite ~32×30 (16 hướng xoay). Không phải 64×32 gốc — downscale về footprint 64×32 khi đóng atlas (tools/tiles/build_atlas.py, NEAREST). |
 | Định dạng | Từng tile là 1 file PNG riêng (không phải sheet ghép sẵn) + template Tiled kèm theo (theo trang bundle Kenney Isometric Assets: https://kenney.itch.io/kenney-isometric-assets — lưu ý bundle này giá 4.95 USD và chứa nội dung độc quyền; các pack lẻ trên kenney.nl là miễn phí CC0, đừng nhầm bundle trả phí với pack lẻ miễn phí) |
 | Phù hợp Sài Gòn | Trung bình. Có đủ: đường, nhà phố, cây, đất/cỏ, xe. **Không có sẵn**: tường vàng loang lổ, mái tôn, dây điện chằng chịt, sạp chợ lá chuối, xe máy, ghế nhựa. Dùng làm nền + nhà phố rồi **recolor theo palette §2 art-style** (tường → #E8C86A, tôn → #3E7A6E / #B4452F). Phong cách Kenney hơi "hoạt hình Tây" — cần test 1 map trước khi chốt (xem §4). |
 | Ghi chú | Tải ở kenney.nl, nút Download dẫn qua itch.io / màn hình donate — bấm "Continue without donating" để tải miễn phí. Giữ lại biên lai/giấy phép CC0 (trang pack đã ghi CC0 là đủ, không cần ghi credit nhưng nên ghi nguồn trong file này). |
@@ -210,11 +210,109 @@ architecture-nadia — bỏ mục chốt 2.5D). Cách chuyển đổi, nếu là
 | URL Kenney City/Landscape/Buildings/Roads | ĐÃ VERIFY (mở trực tiếp, CC0) |
 | URL SBS Floor Tiles (OpenGameArt) | ĐÃ VERIFY (mở trực tiếp, CC0, 1.049 tile, 256×128 / 128×64) |
 | URL Unity Top-Down Starter Kit (case study) | ĐÃ VERIFY (CC0, nhưng không phải tileset iso — chỉ tham khảo) |
-| Kích thước tile Kenney | CHƯA XÁC MINH — đo sau khi tải |
-| Tên file thật dùng cho Map001/Map002 | CHƯA CÓ — liệt kê sau khi tải |
-| Checksum SHA-256 các file zip | CHƯA CÓ — tính sau khi tải |
-| PNG trong repo | KHÔNG CÓ — chưa tải file nhị phân nào; đưa vào bằng git push / upload web (§5) |
-| Atlas theo khu | CHƯA LÀM — làm sau bước test §4 |
+| Kích thước tile Kenney | **ĐÃ ĐO (xem §7):** City/Landscape 132×~99; Buildings 132×127 / 99×~60; Roads 100×65; Vehicles ~32×30 |
+| Tên file thật dùng cho Map001/Map002 | **ĐÃ CÓ (xem §7):** SBS sheet + ô; Kenney buildingTiles_000/001/009/014/021, cityTiles_014, roads roadNS |
+| Checksum SHA-256 các file zip | **ĐÃ CÓ (xem §7):** 6 file zip, đã tải 19/11/2026 |
+| PNG trong repo | **CHƯA — atlas PNG chỉ nằm ở máy làm việc** `/tmp/pxb-tiles/atlas/` (SHA-256 xem §7); đưa vào repo bằng git push / upload web (§5), KHÔNG qua snapshot |
+| Atlas theo khu | **ĐÃ ĐÓNG (19/11/2026):** atlas-map001 (5 tile) + atlas-map002 (6 tile), script `tools/tiles/build_atlas.py`, mapping JSON `src/nadia/www/data/atlas-map*.json` |
+| Tile data Map001/Map002 | **ĐÃ ĐIỀN (19/11/2026):** layer 0 108/108 ô, layer 1 28/108 ô, scheme atlas-code — cần PXB_Isometric v3 (atlas mode) mới vẽ được |
+
+## 7. Kết quả đo thật 19/11/2026 — đã tải 6 pack (CC0) về máy làm việc
+
+Tải bằng curl (kenney.nl chặn UA mặc định: 403; thêm UA trình duyệt +
+`Referer: https://kenney.nl/assets/<pack>` thì endpoint
+`download-link/<hex>` trả link ký — xem `tools/tiles/` không lưu link ký
+vì hết hạn). Zip lưu ở `/tmp/pxb-tiles/` (ngoài repo, đúng §5).
+
+| Pack | File zip | Dung lượng | SHA-256 |
+|---|---|---|---|
+| Kenney Isometric Tiles City | `kenney-isometric-tiles-city.zip` | 990.594 byte | `bea03c38f340af6df14949cc7ca23ac68f30d087d4867350424f08b697a7e01c` |
+| Kenney Isometric Tiles Landscape | `kenney-isometric-tiles-landscape.zip` | 1.141.541 byte | `18fa4fb22fa18bd4230e2422bc4123c986123c53966846b5a5bc219b331e7d3e` |
+| Kenney Isometric Tiles Buildings | `kenney-isometric-tiles-buildings.zip` | 1.706.949 byte | `0894214e3b604f3eef53b9fa633340ba4617e24053a6178fa81dab6bac3d6d5e` |
+| Kenney Isometric Roads | `kenney-isometric-roads.zip` | 621.468 byte | `dc7ffbe7d65c26cb2f46c6ce4beabf07206f410466a31572f572456728ed8f12` |
+| Kenney Isometric Tiles Vehicles | `kenney-isometric-tiles-vehicles.zip` | 2.269.908 byte | `b478cf692d936e2cfda2368f8d24505841508907adc343f1068a6b2ea457d3fd` |
+| SBS 1000+ Floor Tiles (bản nhỏ) | `sbs-floor-small-128x64.zip` | 880.313 byte | `d4d72f52ec543604c0d5a4bf3e4f0807e1000495c873646a3831b97afa7db5db` |
+
+### 7.1. Kenney — tile đã xác định bằng mắt (contact sheet 0–31)
+
+- **Landscape:** toàn bộ 0–31 là sông/kênh + dốc (không có cỏ phẳng ở
+  đầu danh sách). Tile phẳng dùng được: **010 cỏ phẳng**, **014 đất
+  phẳng**, **016 khối cỏ**, 015/021/022/028/029 dốc cỏ, 027 nước + bãi cát.
+- **City:** khối vỉa hè + dải đường: **014/015/021 vỉa hè**, **022 ngã tư**,
+  020/027/028 đường cong, 029/030 ngã ba, 000/002/003/006 đường có biển.
+- **Buildings:** nhà/sạp trên bệ dày: **000 nhà nhỏ cửa xanh**,
+  **001 sạp đỏ**, **003 nhà 2 tầng**, **007 sạp**, **009 sạp đỏ mái xanh**,
+  **014 nhà nâu có cửa**, **021 nhà nâu có bậc**, **022 nhà vàng-xanh**,
+  **030 nhà đỏ**; 005/006/013 là tấm mái phẳng (99×~55).
+- **Roads:** tên file mô tả, không cần đoán: `road.png`, `roadNS.png`,
+  `roadEW.png`, `roadNE/NW/ES/SW.png`, `crossroad.png`,
+  `grass.png`, `grassWhole.png`, `dirt.png`, `dirtDouble.png`,
+  `bridgeEW/NS.png`, `water.png`, `beach*.png`, `lotE/N/S/W.png`.
+- **Vehicles: CHỈ CÓ Ô TÔ** (sedan, truck, pick-up, taxi, police,
+  ambulance, garbage — mỗi loại 16 hướng xoay, sprite ~32×30).
+  **Không có xe máy** — đúng như dự báo §3: xe máy phải vẽ thêm.
+- **Kết luận §1 sửa lại:** kích thước tile gốc KHÔNG phải 64×32 —
+  canvas Kenney 132×99 (thoi 128×64 + hông), Roads 100×65. Atlas
+  downscale footprint về 64×32 bằng NEAREST (script §7.3).
+
+### 7.2. SBS — sheet, KHÔNG phải tile lẻ (sửa kết luận §1)
+
+Zip bản nhỏ chứa **10 sheet PNG** (không phải 1.049 file lẻ — 1.049 là số
+tile nằm trong các sheet):
+
+| Sheet | Kích thước | Lưới ô 128×64 |
+|---|---|---|
+| Worldmap `1 Forests 128x64.png` | 384×320 | 3×5 |
+| Worldmap `2 Ground - Dry 128x64.png` | 384×320 | 3×5 |
+| Worldmap `2 Ground - Rocky 128x64.png` | 384×320 | 3×5 |
+| Pathways `1 Basic Ground - 128x72.png` | 512×216 | 4×3 (ô 128×72) |
+| Pathways `1 Wilderness - 128x72.png` | 512×216 | 4×3 (ô 128×72) |
+| Pathways `2 Cyber Road -128x72.png` | 512×216 | 4×3 (ô 128×72) |
+| Pathways `Grass A - Road Yellow 128x72.png` | 512×72 | 4×1 (ô 128×72) |
+| Interior `1 Floor - Tiled 128x64.png` | 384×192 | 3×3 |
+| Interior `1 Floor - Wood 128x64.png` | 384×192 | 3×3 |
+| Interior `2 Decoration - Carpet 128x64.png` | 384×192 | 3×3 |
+
+Nền sheet là **đen đặc (~50% pixel đen)** — đã xác minh: cắt ô rồi áp mặt
+nạ hình thoi 2:1 (script §7.3), KHÔNG dùng exact-black toàn cục (ruột
+tile tối cũng có pixel gần đen). Ô đã dùng: Tiled (1,0) xám + (1,1) kem
+cho Map001; Rocky (1,1) đá xám + (0,3) đá đậm cho Map002.
+
+### 7.3. Atlas đã đóng — script + mapping + tile data thật (19/11/2026)
+
+- Script: `tools/tiles/build_atlas.py` (Pillow, NEAREST, tint RGB
+  PROVISIONAL theo palette art-style §2) + `tools/tiles/fill_map_data.py`
+  (điền Map data theo công thức MV `data[(z*h+y)*w+x]`, giữ nguyên event).
+- Selection: `tools/tiles/select-map001.json` (5 tile) +
+  `tools/tiles/select-map002.json` (6 tile) — ghi rõ nguồn + ô sheet +
+  tint + ghi chú Việt hóa từng tile.
+- Atlas PNG (chỉ ở máy làm việc `/tmp/pxb-tiles/atlas/`, chưa vào repo):
+  `atlas-map001.png` 512×64, SHA-256
+  `971faa8da7d2410ec288bedb5bf981440ad5c6e35bfd4e0348d4a98a98715940`;
+  `atlas-map002.png` 512×64, SHA-256
+  `d1329a32bd39d5738708375afa0d9759f0b26ebcdc209bc26b45ce4a39080949`.
+  Đưa vào `src/nadia/www/img/tilesets/` bằng git push / upload web (§5).
+- Mapping JSON (text, đã push): `src/nadia/www/data/atlas-map001.json`
+  (5 code) + `atlas-map002.json` (6 code). **Scheme atlas-code:**
+  mã 1..N trong Map data là mã atlas, KHÔNG phải tile ID MV
+  (B=0/C=256/A5=1536...) — đọc mapping JSON mới hiểu.
+- Tile data thật: `Map001.json`/`Map002.json` layer 0 108/108 ô
+  (sàn + xen kẽ + dải đường nhựa dọc x=5 ở Map002, xuyên qua ô cửa
+  (5,4)), layer 1 28/108 ô (tường/sạp ở biên bắc/tây/đông; biên nam
+  y=8 để trống như mặt tiền mở để không che sân trong khi nhìn iso).
+  Event giữ nguyên tọa độ (Map001: 5 event; Map002: 6 event).
+- **CHƯA vẽ được:** `PXB_Isometric.js` v2 đọc tile theo Tilemap MV
+  (bitmap tileset) nên chưa tiêu thụ được atlas-code — cần **v3 atlas
+  mode** (đọc mapping JSON + vẽ sprite từ atlas PNG, sort theo x+y)
+  mới mở trình duyệt thấy map thật. V3 là việc tiếp theo lớn nhất sau
+  đợt này (cùng với PXB_MarketBattle — luật chưa chốt).
+- **Lỗi script đã sửa trong đợt này:** `build_atlas.py` lúc đầu xếp tile
+  sai trục (`col, row = divmod(i, cols)` — divmod trả (thương, dư) nên
+  phải là `row, col`); atlas đầu ra dồn 1 cột dọc. Đã sửa + chạy lại,
+  atlas 512×64 xếp đúng 8 cột.
+- **Recolor PROVISIONAL:** tint tường vàng (1.08, 0.95, 0.6) cho nhà
+  Kenney + xám ấm cho sàn SBS chỉ là bước đầu — art pass (§4 bước 3:
+  dựng map mẫu + chấm rubric ≥12/16) vẫn chưa làm, chưa chốt pack.
 
 ## Nguồn (đã đọc 19/11/2026)
 

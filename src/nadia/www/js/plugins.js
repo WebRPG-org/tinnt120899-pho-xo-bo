@@ -40,6 +40,12 @@ var $plugins = [
     "parameters": {}
   },
   {
+    "name": "PXB_Tools",
+    "status": true,
+    "description": "4 công cụ × 3 bậc đổi hành vi thật: Xe Đẩy đi được đường mưa, Đèn Soi thấy hotspot ẩn/hiếm, Sổ Tay gợi ý rõ, Xẻng nhặt nhanh + thêm đồ/hiếm (port Crafting.cs ToolBehaviour).",
+    "parameters": {}
+  },
+  {
     "name": "PXB_Jobs",
     "status": true,
     "description": "3 nghề slice + lương theo chỉ số + quota tuần + cung–cầu + thi chứng chỉ (port Jobs.cs).",
@@ -79,6 +85,18 @@ var $plugins = [
     "name": "PXB_Story",
     "status": true,
     "description": "5 chương Lên Phố → Thành Đạt + 6 kết thúc + tụt bậc chương 3 (port PlayerProgress.cs).",
+    "parameters": {}
+  },
+  {
+    "name": "PXB_Online",
+    "status": true,
+    "description": "Online Phase 2: health + số dư + tặng tiền qua server .NET (IdempotencyKey, outbox khi offline); trade/đấu giá/công ty=guild chưa có endpoint nên trả server-chua-co-endpoint.",
+    "parameters": {}
+  },
+  {
+    "name": "PXB_SaveCloud",
+    "status": true,
+    "description": "Đồng bộ save kiểu xenvn: tài khoản tùy chọn, localStorage mặc định khi offline; upload/download lên server chưa có endpoint nên trả server-chua-co-endpoint.",
     "parameters": {}
   }
 ];

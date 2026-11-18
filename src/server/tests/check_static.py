@@ -677,13 +677,16 @@ main_js = read(NADIA / "js" / "main.js")
 check("T14u", "main.js: PluginManager.setup($plugins) + SceneManager.run(Scene_Boot)",
       "PluginManager.setup($plugins)" in main_js and "SceneManager.run(Scene_Boot)" in main_js)
 
-# T14v: node --check 13 file JS nadia (node v24 có sẵn trên VM).
+# T14v: node --check 18 file JS nadia (node v24 có sẵn trên VM).
 node_files = [NADIA_PLUGINS / "PXB_Balance.js", NADIA_PLUGINS / "PXB_Isometric.js",
               NADIA_PLUGINS / "PXB_Stats.js", NADIA_PLUGINS / "PXB_Time.js",
               NADIA_PLUGINS / "PXB_Hotspot.js", NADIA_PLUGINS / "PXB_Jobs.js",
-              NADIA_PLUGINS / "PXB_Crafting.js", NADIA_PLUGINS / "PXB_PhoneHub.js",
+              NADIA_PLUGINS / "PXB_Crafting.js", NADIA_PLUGINS / "PXB_Tools.js",
+              NADIA_PLUGINS / "PXB_PhoneHub.js",
               NADIA_PLUGINS / "PXB_Education.js", NADIA_PLUGINS / "PXB_Economy.js",
-              NADIA_PLUGINS / "PXB_Social.js",
+              NADIA_PLUGINS / "PXB_Social.js", NADIA_PLUGINS / "PXB_Titles.js",
+              NADIA_PLUGINS / "PXB_Story.js",
+              NADIA_PLUGINS / "PXB_Online.js", NADIA_PLUGINS / "PXB_SaveCloud.js",
               NADIA / "js" / "plugins.js", NADIA / "js" / "main.js"]
 node_ok, node_detail = True, ""
 try:
@@ -695,7 +698,7 @@ try:
 except FileNotFoundError:
     node_ok = False
     node_detail = "không tìm thấy lệnh node"
-check("T14v", "node --check: 13 file JS nadia qua cú pháp", node_ok, node_detail)
+check("T14v", "node --check: 18 file JS nadia qua cú pháp", node_ok, node_detail)
 
 # T14w–y: Actors/Classes/Items — chéo tham chiếu + giá khớp Items.js.
 actors = json.loads(read(NADIA_DATA / "Actors.json"))
@@ -989,7 +992,7 @@ check("T20a", "PXB_Titles.js: bảng chặn 7 dòng + chặn 2 chiều + phe + �
       f"thiếu: {missing_titles}" if missing_titles else "")
 # T20b: plugins.js đủ 13 plugin, Social trước Titles, Titles trước Story, cả 13 bật.
 check("T20b", "plugins.js: đủ 13 plugin, Social trước Titles trước Story, cả 13 bật",
-      plugins_js.count('"status": true') == 13
+      plugins_js.count('"status": true') >= 13
       and plugins_js.find('"PXB_Social"') < plugins_js.find('"PXB_Titles"')
       < plugins_js.find('"PXB_Story"'))
 # T20c: 2 file plugin mới đều UTF-8 (nội dung đã qua node --check ở T14v).
@@ -1024,6 +1027,217 @@ check("T20e", "PXB_Story.js: 5 chương + 6 kết thúc + tụt bậc + advance/
       not missing_story and '"use strict"' in story_js and "require(" not in story_js,
       f"thiếu: {missing_story}" if missing_story else "")
 
+# ---- Nhóm T21: tileset CC0 + atlas theo khu + tile data thật Map001/002 ----
+# (19/11/2026 ~06:00 — tải 6 pack Kenney/SBS, đóng atlas, điền Map data.)
+TOOLS_TILES = ROOT / "tools" / "tiles"
+# T21a: mapping JSON atlas hợp lệ: scheme atlas-code, tile 64x32, code
+# liên tục 1..N, mỗi tile đủ source + rect + layer.
+def _load_atlas(name):
+    try:
+        return json.loads(read(NADIA_DATA / name))
+    except Exception as e:  # noqa: BLE001 — ghi lỗi vào detail của check
+        return {"_error": str(e)}
+atlas1 = _load_atlas("atlas-map001.json")
+atlas2 = _load_atlas("atlas-map002.json")
+def _atlas_ok(a, n):
+    if "_error" in a:
+        return False
+    tiles = a.get("tiles", {})
+    if a.get("scheme") != "atlas-code" or a.get("tileW") != 64 \
+            or a.get("tileH") != 32 or len(tiles) != n:
+        return False
+    if sorted(int(k) for k in tiles) != list(range(1, n + 1)):
+        return False
+    for code, t in tiles.items():
+        if not t.get("source") or not t.get("name"):
+            return False
+        if not all(k in t for k in ("x", "y", "w", "h", "layer")):
+            return False
+        if t["w"] != 64 or t["h"] > 64 or t["x"] % 64 or t["y"] < 0:
+            return False
+    return True
+check("T21a", "atlas-map001/002.json: scheme atlas-code, tile 64x32, code 1..N đủ rect/layer",
+      _atlas_ok(atlas1, 5) and _atlas_ok(atlas2, 6),
+      "atlas lỗi: " + str(atlas1.get("_error") or atlas2.get("_error") or ""))
+# T21b: Map001/002 data thật: đủ 648, layer 0 108/108 ô, layer 1 28/108 ô,
+# mã dùng đều có trong mapping, ô event không có tường layer 1, note ghi atlas-code.
+def _map_data_ok(map_name, atlas):
+    try:
+        m = json.loads(read(NADIA_DATA / f"{map_name}.json"))
+    except Exception as e:  # noqa: BLE001
+        return False, str(e)
+    data = m.get("data", [])
+    w, h = m.get("width"), m.get("height")
+    if len(data) != 648 or w != 12 or h != 9:
+        return False, f"{map_name} data dài {len(data)}"
+    codes = {int(k) for k in atlas.get("tiles", {})}
+    layer0 = data[0:108]
+    layer1 = data[108:216]
+    if any(v == 0 for v in layer0) or sum(1 for v in layer1 if v) != 28:
+        return False, f"{map_name} layer0/layer1 sai số lượng"
+    if any(v not in codes for v in layer0 + layer1 if v):
+        return False, f"{map_name} có mã không nằm trong mapping"
+    events = {(e["x"], e["y"]) for e in m.get("events", []) if e}
+    for y in range(9):
+        for x in range(12):
+            if (x, y) in events and layer1[y * 12 + x] != 0:
+                return False, f"{map_name} tường đè lên event ({x},{y})"
+    if "atlas-code" not in m.get("note", ""):
+        return False, f"{map_name} note chưa ghi atlas-code"
+    return True, ""
+_ok1, _d1 = _map_data_ok("Map001", atlas1)
+_ok2, _d2 = _map_data_ok("Map002", atlas2)
+check("T21b", "Map001/002: layer0 108/108, layer1 28/108, mã khớp mapping, event không bị tường đè",
+      _ok1 and _ok2, _d1 or _d2)
+# T21c: selection JSON khớp mapping 1:1 (code + tên), tint trong (0, 1.5].
+def _sel_ok(sel_name, atlas):
+    try:
+        sel = json.loads(read(TOOLS_TILES / sel_name))
+    except Exception as e:  # noqa: BLE001
+        return False, str(e)
+    tiles = {t["code"]: t for t in sel.get("tiles", [])}
+    amap = {int(k): v for k, v in atlas.get("tiles", {}).items()}
+    if set(tiles) != set(amap):
+        return False, f"{sel_name} code lệch mapping"
+    for code, t in tiles.items():
+        if t["name"] != amap[code]["name"]:
+            return False, f"{sel_name} code {code} tên lệch mapping"
+        tint = t.get("tint") or [1.0, 1.0, 1.0]
+        if len(tint) != 3 or any(not (0 < v <= 1.5) for v in tint):
+            return False, f"{sel_name} code {code} tint lạ"
+        if "file" not in t and "sheet" not in t:
+            return False, f"{sel_name} code {code} thiếu nguồn"
+    return True, ""
+_ok1, _d1 = _sel_ok("select-map001.json", atlas1)
+_ok2, _d2 = _sel_ok("select-map002.json", atlas2)
+check("T21c", "select-map001/002.json khớp mapping 1:1 (code+tên), tint trong (0,1.5]",
+      _ok1 and _ok2, _d1 or _d2)
+# T21d: 2 script tile là text UTF-8, có mặt nạ thoi + NEAREST + công thức
+# MV, --src-dir bắt buộc (không hardcode đường tải về làm mặc định).
+def _tile_script_ok(name, tokens):
+    try:
+        src = read(TOOLS_TILES / name)
+    except Exception as e:  # noqa: BLE001
+        return False, str(e)
+    missing = [t for t in tokens if t not in src]
+    return not missing, f"thiếu: {missing}" if missing else ""
+_ok1, _d1 = _tile_script_ok("build_atlas.py",
+                            ["diamond_mask", "Image.NEAREST",
+                             "TARGET_W = 64", "atlas-code"])
+_ok2, _d2 = _tile_script_ok("fill_map_data.py",
+                            ["(z * h + y) * w + x", "event_cells",
+                             "atlas-code"])
+check("T21d", "build_atlas.py/fill_map_data.py: mặt nạ thoi + NEAREST + công thức MV + atlas-code",
+      _ok1 and _ok2, _d1 or _d2)
+# T21e: tileset-plan.md §7 ghi đủ 6 SHA-256 zip + 2 SHA-256 atlas + v3.
+_plan = read(DOCS / "tileset-plan.md")
+_shas = ["bea03c38f340af6df14949cc7ca23ac68f30d087d4867350424f08b697a7e01c",
+         "18fa4fb22fa18bd4230e2422bc4123c986123c53966846b5a5bc219b331e7d3e",
+         "0894214e3b604f3eef53b9fa633340ba4617e24053a6178fa81dab6bac3d6d5e",
+         "dc7ffbe7d65c26cb2f46c6ce4beabf07206f410466a31572f572456728ed8f12",
+         "b478cf692d936e2cfda2368f8d24505841508907adc343f1068a6b2ea457d3fd",
+         "d4d72f52ec543604c0d5a4bf3e4f0807e1000495c873646a3831b97afa7db5db",
+         "971faa8da7d2410ec288bedb5bf981440ad5c6e35bfd4e0348d4a98a98715940",
+         "d1329a32bd39d5738708375afa0d9759f0b26ebcdc209bc26b45ce4a39080949"]
+_missing_shas = [s for s in _shas if s not in _plan]
+check("T21e", "tileset-plan.md §7: đủ 6 SHA-256 zip + 2 SHA-256 atlas + nhắc PXB_Isometric v3",
+      not _missing_shas and "PXB_Isometric v3" in _plan,
+      f"thiếu SHA: {len(_missing_shas)}" if _missing_shas else "")
+
+# ---- Nhóm T22: PXB_Tools.js — 4 công cụ x 3 bậc (port Crafting.cs) ----
+# (19/11/2026 ~06:30 — 2 luồng song song: Tools + Online/SaveCloud.)
+# T22a: 12 câu ToolBehaviour đúng nguyên văn Crafting.cs + 4 tool + 3 bậc
+# + lưu $gameSystem.pxbTools.
+tools_js = read(NADIA_PLUGINS / "PXB_Tools.js")
+_behaviours = ["Chở được ít hàng, không đi được đường mưa.",
+               "Chở được nhiều hàng hơn.",
+               "Chở nhiều + đi được đường mưa, không bị ướt hàng.",
+               "Thấy hotspot thường.",
+               "Thấy hotspot thường + hotspot ẩn gần.",
+               "Thấy mọi hotspot, kể cả hotspot hiếm chỉ xuất hiện 1 khung/ngày.",
+               "NPC gợi ý chung chung.",
+               "NPC gợi ý rõ mục tiêu + khu cần tới.",
+               "NPC gợi ý rõ mục tiêu + khu + nguyên liệu còn thiếu.",
+               "Nhặt được nguyên liệu thường.",
+               "Nhặt nhanh hơn, thỉnh thoảng được thêm 1 nguyên liệu.",
+               "Nhặt nhanh + có cơ hội nhặt được nguyên liệu hiếm."]
+_missing_beh = [b for b in _behaviours if b not in tools_js]
+_tools_tokens = ["pxbTools", "toolTier", "toolBehaviour", "canUpgrade",
+                 "acquire", "hasTool", "XeDay", "DenSoi", "SoTay", "Xeng",
+                 "Tho", "Kha", "Tot", "$gameSystem.pxbTools"]
+_missing_tools = [t for t in _tools_tokens if t not in tools_js]
+check("T22a", "PXB_Tools.js: đủ 12 câu ToolBehaviour nguyên văn Crafting.cs + 4 tool x 3 bậc + pxbTools",
+      not _missing_beh and not _missing_tools
+      and '"use strict"' in tools_js and "require(" not in tools_js,
+      f"thiếu hành vi: {_missing_beh} token: {_missing_tools}" if (_missing_beh or _missing_tools) else "")
+# T22b: plugins.js đủ 16 plugin, Crafting trước Tools trước Jobs,
+# Story trước Online trước SaveCloud, cả 16 bật.
+check("T22b", "plugins.js: đủ 16 plugin, Crafting<Tools<Jobs, Story<Online<SaveCloud, cả 16 bật",
+      plugins_js.count('"status": true') == 16
+      and plugins_js.find('"PXB_Crafting"') < plugins_js.find('"PXB_Tools"')
+      < plugins_js.find('"PXB_Jobs"')
+      and plugins_js.find('"PXB_Story"') < plugins_js.find('"PXB_Online"')
+      < plugins_js.find('"PXB_SaveCloud"'))
+# T22c: 3 file plugin mới đều UTF-8 (nội dung đã qua node --check ở T14v).
+t22_utf8_bad = []
+for _p in [NADIA_PLUGINS / "PXB_Tools.js", NADIA_PLUGINS / "PXB_Online.js",
+           NADIA_PLUGINS / "PXB_SaveCloud.js"]:
+    try:
+        _p.read_bytes().decode("utf-8")
+    except UnicodeDecodeError:
+        t22_utf8_bad.append(_p.name)
+check("T22c", "PXB_Tools/Online/SaveCloud đều UTF-8", not t22_utf8_bad,
+      f"không UTF-8: {t22_utf8_bad}" if t22_utf8_bad else "")
+# T22d: chi phí nâng cấp PROVISIONAL (GDD chưa chốt) + API nâng cấp +
+# hành vi đổi thật theo bậc (sức chở / gợi ý / mưa).
+check("T22d", "PXB_Tools: chi phí nâng cấp PROVISIONAL + canUpgrade/acquire + carryCapacity/hintLevel/isRaining",
+      "PROVISIONAL" in tools_js and "canUpgrade" in tools_js
+      and "carryCapacity" in tools_js and "hintLevel" in tools_js
+      and "isRaining" in tools_js)
+# T22e: móc Đèn Soi vào hotspot (PXB_Hotspot) — bậc cao thấy hotspot ẩn.
+check("T22e", "PXB_Tools: móc PXB_Hotspot (Đèn Soi bậc cao thấy hotspot ẩn)",
+      "PXB_Hotspot" in tools_js and "hotspot" in tools_js.lower())
+
+# ---- Nhóm T23: PXB_Online.js + PXB_SaveCloud.js — online Phase 2 ----
+# T23a: Online gọi đúng endpoint server thật (.NET): /health,
+# /ledger/balance, /ledger/gift + IdempotencyKey + outbox khi offline.
+online_js = read(NADIA_PLUGINS / "PXB_Online.js")
+_online_tokens = ["/health", "/ledger/balance", "/ledger/gift",
+                  "IdempotencyKey", "outbox", "server-chua-co-endpoint",
+                  "pxbOnline", "baseUrl", "$gameSystem.pxbOnline"]
+_missing_online = [t for t in _online_tokens if t not in online_js]
+check("T23a", "PXB_Online.js: đúng 3 endpoint server thật + IdempotencyKey + outbox + pxbOnline",
+      not _missing_online and '"use strict"' in online_js
+      and "require(" not in online_js,
+      f"thiếu: {_missing_online}" if _missing_online else "")
+# T23b: SaveCloud — tài khoản tùy chọn, localStorage mặc định offline,
+# LZString nén save, upload/download/apply + login/logout.
+cloud_js = read(NADIA_PLUGINS / "PXB_SaveCloud.js")
+_cloud_tokens = ["pxbSaveCloud", "uploadSave", "downloadSave", "applySave",
+                 "login", "logout", "localStorage", "LZString",
+                 "server-chua-co-endpoint", "isLoggedIn"]
+_missing_cloud = [t for t in _cloud_tokens if t not in cloud_js]
+check("T23b", "PXB_SaveCloud.js: pxbSaveCloud + upload/download/apply + localStorage + LZString + login/logout",
+      not _missing_cloud and '"use strict"' in cloud_js
+      and "require(" not in cloud_js,
+      f"thiếu: {_missing_cloud}" if _missing_cloud else "")
+# T23c: trade/đấu giá/công ty=guild CHƯA có endpoint — luôn trả
+# server-chua-co-endpoint, KHÔNG giả vờ thành công, KHÔNG tự quyết tiền.
+check("T23c", "PXB_Online: trade/đấu giá/guild chưa có endpoint — luôn trả server-chua-co-endpoint",
+      "createTrade" in online_js and "listAuction" in online_js
+      and "guild" in online_js
+      and online_js.count("server-chua-co-endpoint") >= 3)
+# T23d: base URL cấu hình được qua tham số plugin, mặc định localhost:5000
+# (PROVISIONAL — server skeleton chạy local, chưa có domain thật).
+check("T23d", "PXB_Online: baseUrl qua tham số plugin, mặc định localhost:5000 PROVISIONAL",
+      "localhost:5000" in online_js and "PROVISIONAL" in online_js
+      and "baseUrl" in online_js)
+# T23e: SaveCloud không giả vờ đã đồng bộ — upload/download khi chưa có
+# endpoint trả server-chua-co-endpoint (không có "đồng bộ thành công" giả).
+check("T23e", "PXB_SaveCloud: chưa có endpoint thì upload/download trả server-chua-co-endpoint",
+      cloud_js.count("server-chua-co-endpoint") >= 3
+      and "uploadSave" in cloud_js and "downloadSave" in cloud_js)
+
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)
 failed = [r for r in results if not r[2]]
@@ -1039,6 +1253,10 @@ print("PXB_Isometric v2 đã móc Tilemap (smoke test stub 36/36 PASS), Hotspot/
 print("đã viết (smoke 26/26 + 40/40 PASS), Crafting/PhoneHub đã viết (smoke")
 print("52/52 + 56/56 PASS), Education/Economy đã viết (smoke 89/89 + 78/78")
 print("PASS), Social đã viết (smoke 85/85 PASS), Titles/Story đã viết (smoke")
-print("68/68 + 109/109 PASS), nhưng tile data toàn 0,")
-print("img/audio trống, nên chưa mở trình duyệt chơi được thật")
+print("68/68 + 109/109 PASS), Tools đã viết (smoke 140/140 PASS, 12 câu")
+print("ToolBehaviour đúng nguyên văn Crafting.cs), Online/SaveCloud đã viết")
+print("(smoke 68/68 PASS, trade/đấu giá/guild trả server-chua-co-endpoint),")
+print("tile data Map001/002 nay thật (atlas-code, layer 0 108/108 + layer 1")
+print("28/108), nhưng atlas PNG chưa vào repo + PXB_Isometric v3 (atlas")
+print("mode) chưa viết, img/audio trống, nên chưa mở trình duyệt chơi được thật")
 print("(xem docs/test-report.md).")

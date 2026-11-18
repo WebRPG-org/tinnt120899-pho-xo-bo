@@ -7,6 +7,83 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 19/11/2026 ~06:30 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **243/243 PASS, exit 0** — tăng từ 228/228: nhóm T21 mới
+  (5 mục, tileset/atlas/tile data), T22 mới (5 mục, PXB_Tools), T23 mới
+  (5 mục, PXB_Online/SaveCloud); `node --check` nay 18/18 file JS nadia
+  (đã sửa T14v: đợt 04:50 ghi "15/15" nhưng danh sách chỉ có 13 file —
+  thiếu PXB_Titles.js + PXB_Story.js; nay đủ 16 plugin + plugins.js +
+  main.js = 18 file).
+- **Tile CC0 đã tải thật + atlas đã đóng + tile data thật (luồng chính):**
+  tải 6 pack về máy làm việc `/tmp/pxb-tiles/` (KHÔNG vào repo — PNG nhị
+  phân không push được qua snapshot): 5 Kenney (City 990.594 byte,
+  Landscape 1.141.541, Buildings 1.706.949, Roads 621.468, Vehicles
+  2.269.908) + SBS Floor nhỏ 880.313 byte; SHA-256 cả 6 đã ghi trong
+  `docs/tileset-plan.md` §7. Đo thật: tile Kenney canvas 132×~99 (thoi
+  128×64 + hông đất), Buildings 132×127 / 99×~60, Roads 100×65, Vehicles
+  ~32×30; SBS là 10 sheet (không phải tile lẻ) — Worldmap 384×320
+  (lưới 3×5 ô 128×64), Interior 384×192 (3×3), Pathways 512×216
+  (ô 128×72), nền đen đặc. Xác định bằng mắt: Landscape 010 cỏ phẳng /
+  014 đất phẳng, City 014/015/021 vỉa hè / 022 ngã tư, Buildings
+  000/001/009/014/021 nhà-sạp, Roads đặt tên theo nội dung
+  (`roadNS.png`...). Vehicles CHỈ CÓ Ô TÔ — không có xe máy (phải vẽ thêm,
+  đúng dự báo). Script mới `tools/tiles/build_atlas.py` (mặt nạ hình thoi
+  2:1 cho SBS, tint PROVISIONAL theo palette art-style §2, downscale
+  NEAREST về footprint 64×32, cell atlas 64×64) + `fill_map_data.py`
+  (công thức MV `data[(z*h+y)*w+x]`, giữ nguyên event) + 2 selection JSON.
+  Atlas PNG: map001 512×64 (SHA-256
+  `971faa8d…15940`, 5 tile) + map002 512×64 (SHA-256 `d1329a32…80949`,
+  6 tile) — chỉ nằm ở máy làm việc, đưa vào repo bằng git push / upload
+  web (§5). Mapping JSON text đã push (`data/atlas-map*.json`,
+  scheme atlas-code). **Tile data thật:** Map001/Map002 layer 0 108/108
+  ô (sàn + xen kẽ + dải đường nhựa dọc x=5 ở Map002, xuyên qua ô cửa
+  (5,4)), layer 1 28/108 ô (tường/sạp biên bắc/tây/đông; biên nam để trống
+  như mặt tiền mở). **CHƯA vẽ được:** cần PXB_Isometric v3 (atlas mode)
+  mới đọc atlas-code — v2 đọc theo Tilemap MV. 1 lỗi script đã sửa:
+  `build_atlas.py` xếp tile sai trục (`col, row = divmod(i, cols)` phải
+  là `row, col`); atlas đầu dồn 1 cột dọc, đã chạy lại đúng 8 cột.
+- **3 plugin slice mới (2 luồng song song, Phase 2/4):**
+  `PXB_Tools.js` (977 dòng, port `Crafting.cs` ToolBehaviour: 4 công cụ
+  × 3 bậc đổi hành vi thật — Xe Đẩy bậc 3 đi được đường mưa, Đèn Soi bậc
+  2/3 thấy hotspot ẩn gần/hiếm, Sổ Tay gợi ý rõ mục tiêu/khu/nguyên liệu,
+  Xẻng nhặt nhanh + thêm đồ/hiếm; 12 câu hành vi đúng nguyên văn C# —
+  kiểm bằng grep; chi phí nâng cấp bậc 2/3 là PROVISIONAL suy từ công
+  thức bậc 1, GDD chưa chốt; smoke 140/140 PASS) +
+  `PXB_Online.js` (623 dòng, Phase 2: health + số dư + tặng tiền qua
+  endpoint server .NET thật `/health`, `/ledger/balance/{playerId}`,
+  `/ledger/gift` với IdempotencyKey, outbox khi offline; trade/đấu giá/
+  công ty=guild CHƯA có endpoint nên luôn trả `server-chua-co-endpoint`,
+  không giả vờ thành công, không tự quyết tiền người khác; base URL qua
+  tham số plugin, mặc định `http://localhost:5000` PROVISIONAL) +
+  `PXB_SaveCloud.js` (512 dòng: tài khoản tùy chọn, localStorage mặc định
+  khi offline, save JSON + LZString, upload/download/apply; server chưa
+  có endpoint save nên trả `server-chua-co-endpoint`, không giả vờ đã
+  đồng bộ); smoke Online+SaveCloud 68/68 PASS; `plugins.js` nay 16 plugin
+  (…Crafting → Tools → Jobs … Story → Online → SaveCloud).
+- **Lệch / PROVISIONAL ghi nhận khi port (chưa sửa nguồn):** (1) Tools:
+  chi phí nâng cấp bậc 2/3 + nguyên liệu hiếm `da-quy` + sức chở theo bậc
+  đều PROVISIONAL; Đèn Soi bậc 3 "hotspot hiếm 1 khung/ngày" chưa có
+  hotspot hiếm thật trong `PXB_Hotspot` (cả 5 hotspot đều "thường");
+  SoTay bậc 3 gợi ý "nguyên liệu còn thiếu" đọc từ `PXB_Crafting`
+  (cần Crafting có nguyên liệu — đã có túi chung `$gameSystem.pxbMaterials`).
+  (2) Online/SaveCloud: server chưa có auth (endpoint `/ledger/gift` hiện
+  tin playerId trong body — chỉ dùng nội bộ), chưa có endpoint guild/đấu
+  giá/save-sync; outbox gift chỉ gửi lại khi online, chưa có giới hạn
+  số lần thử lại. (3) Tiles: tint tường vàng/xám ấm chỉ là bước đầu —
+  art pass chấm rubric (§4 bước 3) vẫn chưa làm; xe máy + dây điện + sạp
+  lá chuối + thùng xốp vẫn phải vẽ thêm.
+- **Còn lại chưa xong (Giai đoạn 2–4):** PXB_Isometric v3 (atlas mode —
+  việc tiếp theo lớn nhất), PXB_MarketBattle (luật chưa chốt),
+  Map003–018 chưa có, img/audio trống (atlas PNG chờ đưa vào repo bằng
+  git push / upload web). Checklist C1–C9 (§6 roles-qc) vẫn giữ cho
+  đường Unity (phương án dự phòng); đường chính nay là Giai đoạn 1–5 của
+  `docs/architecture-nadia.md`.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa
+  biên dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test`
+  vẫn kẹt RAM — chạy qua GitHub Actions; Unity chưa có).
+
 ## Lần chạy mới nhất: 19/11/2026 ~03:55 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)

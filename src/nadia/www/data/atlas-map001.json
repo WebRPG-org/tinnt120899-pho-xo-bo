@@ -1,0 +1,83 @@
+{
+  "map": "Map001",
+  "mapName": "Xóm Trọ Cũ",
+  "atlasPng": "img/tilesets/atlas-map001.png",
+  "tileW": 64,
+  "tileH": 32,
+  "cellW": 64,
+  "cellH": 64,
+  "cols": 8,
+  "scheme": "atlas-code",
+  "tiles": {
+    "1": {
+      "name": "san-hem-xam",
+      "source": "sbs-floor-small-128x64/Small 128x64/Interior/1 Floor - Tiled 128x64.png cell=(1,0)",
+      "x": 0,
+      "y": 32,
+      "w": 64,
+      "h": 32,
+      "tint": [
+        1.06,
+        0.97,
+        0.82
+      ],
+      "layer": 0
+    },
+    "2": {
+      "name": "san-hem-kem",
+      "source": "sbs-floor-small-128x64/Small 128x64/Interior/1 Floor - Tiled 128x64.png cell=(1,1)",
+      "x": 64,
+      "y": 32,
+      "w": 64,
+      "h": 32,
+      "tint": [
+        1.06,
+        0.97,
+        0.82
+      ],
+      "layer": 0
+    },
+    "3": {
+      "name": "nha-tro-cua",
+      "source": "kenney-isometric-tiles-buildings/PNG/buildingTiles_014.png",
+      "x": 128,
+      "y": 2,
+      "w": 64,
+      "h": 62,
+      "tint": [
+        1.08,
+        0.95,
+        0.6
+      ],
+      "layer": 1
+    },
+    "4": {
+      "name": "nha-tro-bac",
+      "source": "kenney-isometric-tiles-buildings/PNG/buildingTiles_021.png",
+      "x": 192,
+      "y": 2,
+      "w": 64,
+      "h": 62,
+      "tint": [
+        1.08,
+        0.95,
+        0.6
+      ],
+      "layer": 1
+    },
+    "5": {
+      "name": "nha-nho-cua-xanh",
+      "source": "kenney-isometric-tiles-buildings/PNG/buildingTiles_000.png",
+      "x": 256,
+      "y": 9,
+      "w": 64,
+      "h": 55,
+      "tint": [
+        1.08,
+        0.95,
+        0.6
+      ],
+      "layer": 1
+    }
+  }
+}
