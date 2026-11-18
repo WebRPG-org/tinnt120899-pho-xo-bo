@@ -110,9 +110,17 @@ Thứ tự làm — mỗi bước xong thì push 1 commit để GitHub thấy ti
 | C8 | Art / nhạc slice | Đồ hoạ + track có bản quyền rõ ràng (vai Đồ hoạ §1) | 4 khu + 1 nhân vật + UI điện thoại, rubric 8 chiều ≥12/16 |
 | C9 | Chốt số còn thiếu | Chủ chốt: trần chỉ số, ngưỡng An Yên, 10 nhóm nghề, 6 quyết định kiến trúc | Ghi vào GDD + `GameBalance.cs` cùng lúc, chạy lại `check_static.py` PASS |
 
-**Hiện trạng 18/11/2026:** C1–C9 đều chưa xong. Đã xong phần chuẩn bị cho C5/C6:
-kiểm tra tĩnh 53/53 PASS (`docs/test-report.md`), `Social.cs` + `Economy.cs`
-đã viết theo đúng số chốt để test chạy được sau này có cái mà test.
+**Hiện trạng 18/11/2026 ~15:55:** C1–C9 đều chưa xong (chưa chạy được).
+Đã xong phần chuẩn bị cho C5/C6: kiểm tra tĩnh 66/66 PASS
+(`docs/test-report.md`), `Social.cs` + `Economy.cs` đã viết theo đúng số
+chốt để test chạy được sau này có cái mà test, test xUnit server
+(`EconomyLedgerTests.cs`, 17 test, chưa chạy — cần .NET 8 SDK) +
+`Program.cs` đã nối `EconomyLedger` singleton với 2 endpoint
+`/ledger/balance` + `/ledger/gift`, test EditMode Unity (`JobsPayTests.cs`
+16 test + `TimeSystemTests.cs` 10 test, chưa chạy — cần Unity 2022 LTS) +
+`PhoXoBo.asmdef`. Phát hiện khi viết test (chưa sửa): `Stats` chỉ khởi tạo
+được (100,100,100) nên hệ số lương mốc 50/0 chưa test được; `TimeSystem`
+không wrap quá 30 phút (chưa có chốt GDD).
 
 ## 5. Vai PM — Roadmap, owner, việc chờ chốt
 

@@ -15,6 +15,10 @@ Script này chỉ kiểm tra được:
      BuyWithRealMoney trong Economy.cs phải luôn trả false.
   6. Không có asset có bản quyền trong repo (assets/ phải trống hoặc chỉ CC0
      có ghi nguồn — hiện tại đang trống, đúng trạng thái).
+  8. File .cs server (src/server/src/) cũng được quét: ngoặc cân bằng, số
+     chốt khớp GameBalance.cs, ranh giới pháp lý, không secret, UTF-8.
+     (Trước 18/11 chỉ quét file client; EconomyLedger.cs từng chỉ được kiểm
+     bằng script tạm trong /tmp — nay đã đưa vào script chính.)
 
 Thoát 0 = tất cả PASS. Thoát 1 = có FAIL — xem docs/test-report.md.
 """
@@ -149,6 +153,52 @@ for f in cs_files:
     except UnicodeDecodeError:
         bad_utf8.append(f.name)
 check("T7", "Mọi file .cs đều UTF-8", not bad_utf8, str(bad_utf8) if bad_utf8 else "")
+
+# ---- 8. File .cs server (src/server/src/) ----
+# EconomyLedger.cs từng chỉ được kiểm bằng script tạm trong /tmp (xem
+# docs/test-report.md) — từ nay quét chung trong script chính.
+SERVER_SRC = ROOT / "src" / "server" / "src"
+server_cs_files = sorted(SERVER_SRC.glob("*.cs"))
+for f in server_cs_files:
+    clean = strip_strings_comments(read(f))
+    pairs = [("{", "}"), ("(", ")"), ("[", "]")]
+    ok, detail = True, ""
+    for o, c in pairs:
+        if clean.count(o) != clean.count(c):
+            ok = False
+            detail += f"{o}{c}: {clean.count(o)} vs {clean.count(c)}; "
+    check(f"T8a-{f.name}", f"Ngoặc cân bằng server {f.name}", ok, detail or "cân bằng")
+
+ledger = read(SERVER_SRC / "EconomyLedger.cs") if (SERVER_SRC / "EconomyLedger.cs").exists() else ""
+check("T8b", "EconomyLedger lãi 0,5% khớp GameBalance",
+      "BankInterestPerGameMonth = 0.005" in ledger)
+check("T8c", "EconomyLedger phí đấu giá 5% khớp GameBalance",
+      "AuctionFeePercent = 5" in ledger)
+check("T8d", "EconomyLedger 1 tháng game = 30 ngày (PROVISIONAL, khớp Economy.cs)",
+      "DaysPerGameMonth = 30" in ledger)
+# Ranh giới pháp lý server: các hàm cấm phải ném InvalidOperationException.
+for fn in ["CashOut", "LendWithInterest", "Gamble", "BuyWithRealMoney"]:
+    m = re.search(rf"public void {fn}\([^)]*\)\s*=>\s*\n?\s*throw new InvalidOperationException", ledger)
+    check(f"T8e-{fn}", f"EconomyLedger.{fn} ném InvalidOperationException (bị chặn)",
+          m is not None, f"không tìm thấy '{fn} => throw' trong EconomyLedger.cs" if m is None else "")
+bad_server = [f.name for f in server_cs_files if secret_pat.search(read(f))]
+check("T8f", "Không có secret/token/key trong file .cs server", not bad_server,
+      f"nghi ngờ ở: {bad_server}" if bad_server else "")
+bad_server_utf8 = []
+for f in server_cs_files:
+    try:
+        f.read_bytes().decode("utf-8")
+    except UnicodeDecodeError:
+        bad_server_utf8.append(f.name)
+check("T8g", "Mọi file .cs server đều UTF-8", not bad_server_utf8,
+      str(bad_server_utf8) if bad_server_utf8 else "")
+# Program.cs phải nối EconomyLedger (singleton) — C5: ledger chưa nối thì
+# endpoint /ledger/* không có gì để gọi; /health vẫn giữ nguyên.
+program = read(SERVER_SRC / "Program.cs") if (SERVER_SRC / "Program.cs").exists() else ""
+check("T8h", "Program.cs đăng ký EconomyLedger singleton",
+      "AddSingleton<EconomyLedger>" in program)
+check("T8i", "Program.cs giữ endpoint /health",
+      '"/health"' in program)
 
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)
