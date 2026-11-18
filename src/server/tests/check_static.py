@@ -4,7 +4,10 @@
 Chạy:  python3 src/server/tests/check_static.py
        (chạy từ thư mục gốc repo ~/workspace/pho-xo-bo)
 
-VM này không có dotnet / Unity / csc nên không biên dịch được code C#.
+VM này không có Unity / csc nên không biên dịch được code C#.
+dotnet 8.0.428 có ở ~/.dotnet (không trong PATH) nhưng `dotnet test` vẫn
+kẹt RAM — chạy qua GitHub Actions; node v24 có sẵn nên `node --check`
+chạy được cho file JS nadia (nhóm T14).
 Script này chỉ kiểm tra được:
   1. Ngoặc {} () [] cân bằng ở mọi file .cs (không chứng minh code đúng ngữ nghĩa).
   2. Số chốt (18 khu, 5 bậc học, lãi 0,5%, phí 5%, bỏ bê 7 ngày, +20% EXP,
@@ -22,6 +25,10 @@ Script này chỉ kiểm tra được:
   9. File test EditMode (src/client/Assets/Tests/EditMode/): số lượng test
      khớp, dùng NUnit, ngoặc cân bằng, UTF-8 — và kiểm tra hồi quy cho bug
      Divorce đã sửa 18/11 (điều kiện || thay vì &&).
+ 14. Khung Nadia Giai đoạn 1 (src/nadia/www/): thứ tự load index.html,
+     MapInfos đủ 18 khu, Map001/002 đúng hotspot/NPC/cửa theo C#,
+     PXB_Balance.js khớp số C#, PXB_Isometric.js đúng phép chiếu 2:1,
+     node --check 4 file JS, Actors/Classes/Items chéo tham chiếu.
 
 Thoát 0 = tất cả PASS. Thoát 1 = có FAIL — xem docs/test-report.md.
 """
@@ -480,6 +487,249 @@ for name, section in [("SliceCongVienAnBinh.unity", "§3"),
           f"docs/art-assets.md {section}" in content
           and "chua co muc rieng" not in content)
 
+# ---- 14. Khung Nadia Giai đoạn 1 (18/11 ~22:45, đợt này) ----
+# src/nadia/www/ theo docs/architecture-nadia.md §8/§11: index.html +
+# plugins.js + main.js + PXB_Balance.js + PXB_Isometric.js (bản đầu) +
+# data/ tối thiểu (System, MapInfos đủ 18 khu, Map001–002, Actors, Classes,
+# Items). Core MV CHƯA CÓ — checker không đòi file core, chỉ khóa khung đã
+# viết + số port đúng từ C# (GameBalance/Jobs/Crafting/Exploration/Stats).
+# Tọa độ event lấy từ src/web/data/Maps.js; số nghề/công thức/hotspot lấy
+# từ C# — web đã lệch khỏi C# ở 3 chỗ (xem src/nadia/README.md), không
+# port từ web.
+import json
+import subprocess
+
+NADIA = ROOT / "src" / "nadia" / "www"
+NADIA_DATA = NADIA / "data"
+NADIA_PLUGINS = NADIA / "js" / "plugins"
+
+# T14a: index.html — thứ tự load đúng architecture-nadia.md §1.2.
+index_html = read(NADIA / "index.html")
+load_order = ["js/libs/pixi.js", "js/rpg_core.js", "js/rpg_managers.js",
+              "js/rpg_objects.js", "js/rpg_scenes.js", "js/rpg_sprites.js",
+              "js/rpg_windows.js", "js/plugins.js", "js/main.js"]
+positions = [index_html.find(src) for src in load_order]
+check("T14a", "index.html: thứ tự load đúng §1.2 (pixi → core → plugins → main)",
+      all(p >= 0 for p in positions) and positions == sorted(positions),
+      f"không thấy/thứ tự sai: {[(s, p) for s, p in zip(load_order, positions) if p < 0]}" if not (all(p >= 0 for p in positions) and positions == sorted(positions)) else "")
+
+# T14b–d: MapInfos.json — đủ 18 khu, đúng thứ tự/tên/tầng, Bến Du Thuyền
+# nằm trong khu 16 (không phải khu riêng).
+mapinfos = json.loads(read(NADIA_DATA / "MapInfos.json"))
+expected_districts = ["Xóm Trọ Cũ", "Chợ Đầu Mối", "Khu Công Nhân", "Bến Xe Miền Đông",
+    "Làng Đại Học", "Chung Cư Cũ", "Phố Văn Phòng Nhỏ", "Khu Chung Cư Cao Cấp",
+    "Phố Thương Mại", "Khu Công Nghệ", "Phố Tây", "Khu Biệt Thự Ven Sông",
+    "Quận Tài Chính", "Đảo Thượng Lưu", "Khu Penthouse", "Khu Sân Golf & Resort",
+    "Công Viên An Bình", "Phố Đi Bộ – Chợ Đêm"]
+infos = [e for e in mapinfos if e]  # bỏ null đầu (chuẩn MV)
+check("T14b", "MapInfos.json: đủ 18 khu, id 1–18 đúng thứ tự",
+      len(infos) == 18 and [e["id"] for e in infos] == list(range(1, 19)),
+      f"đếm được {len(infos)}" if len(infos) != 18 else "")
+check("T14c", "MapInfos.json: tên 18 khu khớp districts.md / architecture §4.1",
+      [e["name"] for e in infos] == expected_districts,
+      f"sai ở: {[(i + 1, e['name']) for i, e in enumerate(infos) if e['name'] != expected_districts[i]]}" if [e["name"] for e in infos] != expected_districts else "")
+check("T14d", "MapInfos.json: Bến Du Thuyền nằm trong khu 16, không phải khu riêng",
+      "Bến Du Thuyền" in infos[15].get("unlock", "") and infos[15]["name"] == "Khu Sân Golf & Resort")
+
+# T14e–f: Map001/Map002 — JSON hợp lệ, lưới 12×9, data = 12*9*6 = 648.
+maps = {}
+maps_ok = True
+for mid in [1, 2]:
+    try:
+        maps[mid] = json.loads(read(NADIA_DATA / f"Map{mid:03d}.json"))
+    except Exception as exc:  # noqa: BLE001 — JSON lỗi thì FAIL, không crash script
+        maps_ok = False
+        maps[mid] = {}
+        check(f"T14e-Map{mid:03d}", f"Map{mid:03d}: JSON hợp lệ", False, str(exc))
+check("T14e", "Map001/Map002: JSON hợp lệ", maps_ok)
+for mid in [1, 2]:
+    m = maps[mid]
+    check(f"T14f-Map{mid:03d}", f"Map{mid:03d}: lưới 12×9, data = 648 (12*9*6)",
+          maps_ok and m.get("width") == 12 and m.get("height") == 9
+          and len(m.get("data", [])) == 648,
+          f"{m.get('width')}x{m.get('height')}, data {len(m.get('data', []))}" if maps_ok else "JSON lỗi")
+
+
+def hotspot_notes(m):
+    # note event hotspot có dạng: "hotspot <id> <item> <qty> <khung>".
+    notes = {}
+    for ev in m.get("events", []) or []:
+        if not ev:
+            continue
+        parts = ev.get("note", "").split()
+        if len(parts) == 5 and parts[0] == "hotspot":
+            notes[parts[1]] = (parts[2], int(parts[3]), parts[4])
+    return notes
+
+
+# T14g: hotspot trong Map001/002 khớp đúng Exploration.cs (id + vật + số + khung).
+expected_hotspots = {
+    1: {"hs-tro-toi": ("chai-nhua", 2, "Tối")},
+    2: {"hs-cho-sang": ("la-chuoi", 2, "Sáng"), "hs-cho-chieu": ("sat-vun", 1, "Chiều")},
+}
+for mid, expected in expected_hotspots.items():
+    found = hotspot_notes(maps[mid])
+    check(f"T14g-Map{mid:03d}", f"Map{mid:03d}: hotspot khớp Exploration.cs {sorted(expected)}",
+          maps_ok and found == expected,
+          f"tìm thấy: {found}" if found != expected else "")
+# T14h–i: 2 lệch của web slice KHÔNG được mang sang nadia (xem src/nadia/README.md).
+check("T14h", "Map002 KHÔNG có hs-cho-dem (theo Exploration.cs nó thuộc khu 18)",
+      maps_ok and "hs-cho-dem" not in hotspot_notes(maps[2]))
+check("T14i", "Map001 KHÔNG có hs-hem-sang (không có trong Exploration.cs)",
+      maps_ok and "hs-hem-sang" not in hotspot_notes(maps[1]))
+
+
+def npc_positions(m):
+    # note event NPC có dạng: "npc <id>".
+    pos = {}
+    for ev in m.get("events", []) or []:
+        if not ev:
+            continue
+        parts = ev.get("note", "").split()
+        if len(parts) == 2 and parts[0] == "npc":
+            pos[parts[1]] = (ev.get("x"), ev.get("y"))
+    return pos
+
+
+# T14j: NPC đúng tọa độ Actors.js (cô Tư 8,6; bạn thân 3,5; chị Lệ 2,2; anh Hải 6,3).
+check("T14j", "NPC Map001/002 đúng tọa độ Actors.js",
+      maps_ok and npc_positions(maps[1]) == {"co-tu": (8, 6), "ban-than": (3, 5)}
+      and npc_positions(maps[2]) == {"chi-le": (2, 2), "anh-hai": (6, 3)},
+      f"Map001: {npc_positions(maps[1])}, Map002: {npc_positions(maps[2])}" if maps_ok else "JSON lỗi")
+
+
+def event_notes(m, prefix):
+    out = []
+    for ev in m.get("events", []) or []:
+        if not ev:
+            continue
+        note = ev.get("note", "")
+        if note == prefix or note.startswith(prefix + " "):
+            out.append((note, ev.get("x"), ev.get("y")))
+    return out
+
+
+# T14k–l: cửa chuyển khu 2 chiều + Góc Chế Tạo đúng tọa độ Maps.js.
+check("T14k", "Transfer 2 chiều: Map001 (5,4 → Map002 5,4), Map002 (5,4 → Map001 5,4)",
+      maps_ok and ("transfer 2 5 4", 5, 4) in event_notes(maps[1], "transfer")
+      and ("transfer 1 5 4", 5, 4) in event_notes(maps[2], "transfer"))
+check("T14l", "Góc Chế Tạo: Map001 (2,2), Map002 (7,5)",
+      maps_ok and ("craft", 2, 2) in event_notes(maps[1], "craft")
+      and ("craft", 7, 5) in event_notes(maps[2], "craft"))
+
+# T14m–q: PXB_Balance.js — số khớp GameBalance.cs / Jobs.cs / Crafting.cs / Stats.cs.
+balance = read(NADIA_PLUGINS / "PXB_Balance.js")
+check("T14m", "PXB_Balance.js: 5 bậc học đúng học phí/ngày/Trí/EXP (GameBalance.cs)",
+      all(t in balance for t in ["feeVnd: 0,         days: 30", "feeVnd: 20000000,  days: 60",
+                                  "feeVnd: 80000000,  days: 120", "feeVnd: 200000000, days: 180",
+                                  "feeVnd: 500000000, days: 240"]))
+economy_tokens = [
+    "bankInterestPerGameMonth: 0.005", "auctionFeePercent: 5",
+    "neglectDaysToDropCloseness: 7", "supportedExpBonusPercent: 20",
+    "soloSlowerPercentMin: 30", "soloSlowerPercentMax: 50",
+    "roomRentPerMonthVnd: 2000000", "miniApartmentVnd: 800000000",
+    "smallTownhouseVnd: 3000000000", "largeTownhouseVnd: 8000000000",
+    "villaVnd: 25000000000", "penthouseIslandVnd: 100000000000",
+    "directorAssetsVnd: 10000000000", "superRichAssetsVnd: 100000000000",
+    "familyEndingAnYen: 80", "foodStallLicenseVnd: 50000000",
+    "clinicLicenseVnd: 200000000", "examFeeMinVnd: 5000000",
+    "examFeeMaxVnd: 20000000", "companyCapitalVnd: 500000000",
+    "shortageSalaryBonusPercent: 30", "saturatedSalaryCutPercent: 15",
+    "schoolSeatsPerCourseMin: 20", "schoolSeatsPerCourseMax: 30",
+]
+missing_economy = [t for t in economy_tokens if t not in balance]
+check("T14n", "PXB_Balance.js: lãi/phí/xã hội/thang nhà/rank/giấy phép khớp GameBalance.cs",
+      not missing_economy, f"thiếu: {missing_economy}" if missing_economy else "")
+check("T14o", "PXB_Balance.js: 3 nghề khớp Jobs.cs (bán rong Thể/Chiều/150k, shipper Thể/Tối/180k, quán Tâm/Sáng/150k, quota 14)",
+      all(t in balance for t in [
+          '"ban-rong",       name: "Bán rong",       mainStat: "the", goodFrame: "Chiều", basePayVnd: 150000, weeklyQuota: 14',
+          '"shipper",        name: "Shipper",        mainStat: "the", goodFrame: "Tối",   basePayVnd: 180000, weeklyQuota: 14',
+          '"nhan-vien-quan", name: "Nhân viên quán", mainStat: "tam", goodFrame: "Sáng",  basePayVnd: 150000, weeklyQuota: 14'])
+      and "goodFrameBonusPercent: 25" in balance)
+check("T14p", "PXB_Balance.js: 3 công thức khớp Crafting.cs (xe-đẩy 1/2/2, đèn-soi 2/2, quà-tặng 2/1)",
+      all(t in balance for t in [
+          '"khung-sat": 1, "banh-xe": 2, "van-go": 2',
+          '"sat-vun": 2, "chai-nhua": 2',
+          '"la-chuoi": 2, "vai-vun": 1']))
+check("T14q", "PXB_Balance.js: số chưa chốt ghi PROVISIONAL (trần 300, StatMax 100, An Yên ±10)",
+      "totalStatCap: 300, // PROVISIONAL" in balance
+      and "statMax: 100, // PROVISIONAL" in balance
+      and "anYenBalanceTolerance: 10, // PROVISIONAL" in balance)
+
+# T14r–s: PXB_Isometric.js — phép chiếu + sắp xếp + viewport, không require/NW.
+iso = read(NADIA_PLUGINS / "PXB_Isometric.js")
+check("T14r", "PXB_Isometric.js: chiếu (x−y)×tileW/2, (x+y)×tileH/2; sort x+y; tile 64×32; viewport 720×1280",
+      "(col - row) * (TILE_W / 2)" in iso and "(col + row) * (TILE_H / 2)" in iso
+      and "return col + row;" in iso and "TILE_W = 64" in iso and "TILE_H = 32" in iso
+      and "VIEWPORT_W = 720" in iso and "VIEWPORT_H = 1280" in iso)
+check("T14s", "PXB_Isometric.js: 'use strict', không require, không API NW.js",
+      '"use strict"' in iso and "require(" not in iso and "process." not in iso and "nw." not in iso)
+
+# T14t–u: plugins.js (Balance trước Isometric, cả 2 bật) + main.js (setup + run).
+plugins_js = read(NADIA / "js" / "plugins.js")
+check("T14t", "plugins.js: PXB_Balance đứng trước PXB_Isometric, cả 2 đều bật",
+      plugins_js.find('"PXB_Balance"') < plugins_js.find('"PXB_Isometric"')
+      and plugins_js.count('"status": true') == 2)
+main_js = read(NADIA / "js" / "main.js")
+check("T14u", "main.js: PluginManager.setup($plugins) + SceneManager.run(Scene_Boot)",
+      "PluginManager.setup($plugins)" in main_js and "SceneManager.run(Scene_Boot)" in main_js)
+
+# T14v: node --check 4 file JS nadia (node v24 có sẵn trên VM).
+node_files = [NADIA_PLUGINS / "PXB_Balance.js", NADIA_PLUGINS / "PXB_Isometric.js",
+              NADIA / "js" / "plugins.js", NADIA / "js" / "main.js"]
+node_ok, node_detail = True, ""
+try:
+    for jf in node_files:
+        r = subprocess.run(["node", "--check", str(jf)], capture_output=True, text=True, timeout=30)
+        if r.returncode != 0:
+            node_ok = False
+            node_detail += f"{jf.name}: {r.stderr.strip()}; "
+except FileNotFoundError:
+    node_ok = False
+    node_detail = "không tìm thấy lệnh node"
+check("T14v", "node --check: 4 file JS nadia qua cú pháp", node_ok, node_detail)
+
+# T14w–y: Actors/Classes/Items — chéo tham chiếu + giá khớp Items.js.
+actors = json.loads(read(NADIA_DATA / "Actors.json"))
+classes = json.loads(read(NADIA_DATA / "Classes.json"))
+items = json.loads(read(NADIA_DATA / "Items.json"))
+check("T14w", "Actors.json: 1 nhân vật chính, classId có trong Classes.json",
+      len([a for a in actors if a]) == 1 and actors[1]["classId"] == 1 and classes[1]["id"] == 1)
+item_notes = {}
+for it in items:
+    if it:
+        item_notes[it["note"].split()[1]] = it
+check("T14x", "Items.json: đủ 13 item; đủ hotspot item + nguyên liệu chế tạo + quà tặng",
+      len([it for it in items if it]) == 13
+      and all(k in item_notes for k in ["chai-nhua", "vai-vun", "la-chuoi", "sat-vun",
+                                         "khung-sat", "banh-xe", "van-go", "qua-tang"]))
+check("T14y", "Items.json: giá khớp Items.js (khung-sat 30000, banh-xe 50000, xe-day 500000, den-soi 120000)",
+      item_notes["khung-sat"]["price"] == 30000 and item_notes["banh-xe"]["price"] == 50000
+      and item_notes["xe-day"]["price"] == 500000 and item_notes["den-soi"]["price"] == 120000)
+
+# T14z–aa: System.json + package.json NW.js.
+system = json.loads(read(NADIA_DATA / "System.json"))
+check("T14z", "System.json: gameTitle Phố Xô Bồ, tiền 'đồng', map bắt đầu 1",
+      system.get("gameTitle") == "Phố Xô Bồ" and system.get("currencyUnit") == "đồng"
+      and system.get("startMapId") == 1)
+package = json.loads(read(ROOT / "src" / "nadia" / "package.json"))
+check("T14aa", "package.json (NW.js): main = www/index.html",
+      package.get("main") == "www/index.html")
+
+# T14ab–ac: không secret + UTF-8 cho toàn bộ file nadia.
+nadia_files = [p for p in sorted(NADIA.rglob("*")) if p.is_file()]
+bad_nadia_secret = [p.name for p in nadia_files if secret_pat.search(read(p))]
+check("T14ab", "Không có secret/token/key trong file nadia", not bad_nadia_secret,
+      f"nghi ngờ ở: {bad_nadia_secret}" if bad_nadia_secret else "")
+bad_nadia_utf8 = []
+for p in nadia_files:
+    try:
+        p.read_bytes().decode("utf-8")
+    except UnicodeDecodeError:
+        bad_nadia_utf8.append(str(p.relative_to(ROOT)))
+check("T14ac", "Mọi file nadia đều UTF-8", not bad_nadia_utf8,
+      str(bad_nadia_utf8) if bad_nadia_utf8 else "")
+
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)
 failed = [r for r in results if not r[2]]
@@ -490,4 +740,5 @@ if failed:
     print(f"\n{len(failed)} FAIL — chưa phải bản test được. Xem docs/test-report.md.")
     sys.exit(1)
 print("\nTất cả kiểm tra tĩnh PASS — lưu ý: đây KHÔNG phải build/test chạy được.")
-print("Cần máy có Unity 2022 LTS + .NET 8 SDK mới biên dịch và chơi được thật.")
+print("Unity vẫn chưa có; dotnet 8.0.428 có ở ~/.dotnet; nadia còn thiếu core MV")
+print("nên chưa mở trình duyệt chơi được thật (xem docs/test-report.md).")

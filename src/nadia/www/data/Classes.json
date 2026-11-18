@@ -1,0 +1,1 @@
+[null,{"id":1,"learnings":[],"name":"Sinh viên mới lên phố","note":"Class duy nhất của slice — nghề thật nằm trong PXB_Jobs.js (Classes.json của MV), không phải class MV. Bảng params MV không dùng cho chỉ số gốc (xem Actors.json) — chỉ để level 1 cho DataManager load được.","params":[[100],[100],[100],[100],[100],[100],[100],[100]]}]

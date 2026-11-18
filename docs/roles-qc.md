@@ -118,6 +118,23 @@ C2 vẫn chưa xong (chưa mở bằng Unity, chưa có art, chưa bấm Play đ
 C3–C9 vẫn chưa xong. Việc follow-up C2 tiếp theo: art pass vẽ 4 khu theo
 spec (C8) — cần đồ hoạ + track nhạc chốt, chưa có.
 
+**Hiện trạng 18/11/2026 ~22:45 — ĐỔI HƯỚNG SANG NADIA (chủ cho phép 22:30,
+`docs/architecture-nadia.md`):** Giai đoạn 1 khung file XONG — `src/nadia/www/`
+đã có index.html (thứ tự load §1.2) + plugins.js + main.js + `PXB_Balance.js`
+(port đúng GameBalance/Jobs/Crafting/Stats) + `PXB_Isometric.js` bản đầu
+(chiếu 64×32, sort x+y, viewport 720×1280, chưa móc Tilemap) + data tối thiểu
+(System, MapInfos đủ 18 khu, Map001–002, Actors, Classes, Items 13 món) +
+package.json NW.js + README. Kiểm tra tĩnh 198/198 PASS (nhóm T14 mới,
+31 mục); `node --check` 4/4 file JS OK. CHƯA chơi được: core MV
+(`js/rpg_*.js` + pixi libs) chưa tải về, `PXB_Isometric.install()` trả false,
+tile data toàn 0, img/audio trống. Việc tiếp theo: tải core MV v1.6.1 (MIT)
+về js/ + móc Tilemap isometric — rồi mới mở trình duyệt thấy map Xóm Trọ Cũ.
+Phát hiện khi port: slice web `src/web/data/*.js` lệch khỏi code C# ở 3 chỗ
+(nghề, công thức, hotspot hs-cho-dem/hs-hem-sang) — nadia lấy theo C#,
+chi tiết trong `src/nadia/README.md`; web chưa sửa (để GDD/PM xem lại).
+Checklist C1–C9 (§6) vẫn giữ cho đường Unity (phương án dự phòng); đường
+chính nay là Giai đoạn 1–5 của `docs/architecture-nadia.md`.
+
 **Hiện trạng 18/11/2026 ~20:50:** C2 tiến thêm 1 bước — 4/4 scene slice đầu
 nay đã có khung file (thêm `SliceCongVienAnBinh.unity` khu 17, hotspot
 `hs-cong-vien` + `SlicePhoDiBoChoDem.unity` khu 18, hotspot `hs-cho-dem`;

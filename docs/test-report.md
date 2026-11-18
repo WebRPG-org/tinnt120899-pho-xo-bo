@@ -7,6 +7,49 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 18/11/2026 ~22:45 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **198/198 PASS, exit 0** — tăng từ 167/167: nhóm T14 mới (31 mục)
+  khóa khung Nadia Giai đoạn 1.
+- **ĐỔI HƯỚNG SANG NADIA (chủ cho phép 18/11 22:30, `docs/architecture-nadia.md`):**
+  `src/nadia/www/` khung file xong — `index.html` (thứ tự load §1.2) +
+  `plugins.js` (PXB_Balance trước PXB_Isometric, cả 2 bật) + `main.js` +
+  `PXB_Balance.js` (port đúng GameBalance.cs: 5 bậc học, lãi 0,5%, phí 5%,
+  thang nhà, rank; Jobs.cs: 3 nghề Thể/Chiều/150k, Thể/Tối/180k,
+  Tâm/Sáng/150k, quota 14, khung tốt +25%; Crafting.cs: xe-đẩy 1/2/2,
+  đèn-soi 2/2, quà-tặng 2/1; Stats.cs PROVISIONAL: trần 300, StatMax 100,
+  An Yên ±10) + `PXB_Isometric.js` bản đầu (chiếu (x−y)×tileW/2,
+  (x+y)×tileH/2, tile 64×32, sort x+y, viewport 720×1280, `install()` trả
+  false khi chưa có core — không giả vờ render được) + data tối thiểu:
+  System.json (tiền "đồng", map bắt đầu 1), MapInfos.json đủ 18 khu
+  (Bến Du Thuyền trong khu 16), Map001.json/Map002.json (lưới 12×9,
+  data 648, event đúng Exploration.cs + Actors.js: hotspot hs-tro-toi /
+  hs-cho-sang / hs-cho-chieu, NPC cô Tư/bạn thân/chị Lệ/anh Hải đúng tọa độ,
+  transfer 2 chiều (5,4), Góc Chế Tạo (2,2)/(7,5)), Actors.json (1 nhân vật
+  "Bạn" — tên PROVISIONAL), Classes.json, Items.json (13 món, giá khớp
+  Items.js) + package.json NW.js + README. `node --check` 4/4 file JS OK
+  (node v24 có sẵn trên VM).
+- **Phát hiện khi port — slice web lệch khỏi code C# ở 3 chỗ (nadia lấy
+  theo C#, chưa sửa web):** (1) nghề: web ghi bán rong Tâm/100k/Sáng, C#
+  ghi Thể/150k/Chiều; shipper web 150k vs C# 180k; nhân viên quán web
+  100k/Chiều vs C# 150k/Sáng; (2) công thức: web xe-đẩy 1/1/1, đèn-soi 2/1;
+  C# xe-đẩy 1/2/2, đèn-soi 2/2 — bộ vật liệu khởi đầu 1/1/1 của web không đủ
+  chế xe-đẩy theo C#; (3) hotspot: web đặt hs-cho-dem ở map 2 (sắt-vụn ×1,
+  cần đèn-soi) + thêm hs-hem-sang ở map 1; C# đặt hs-cho-dem ở map 18
+  (vải-vụn ×2) và không có hs-hem-sang. Chi tiết trong `src/nadia/README.md`
+  — để GDD/PM xem lại.
+- **Còn lại chưa xong (Giai đoạn 1):** core MV (`js/rpg_*.js` +
+  `js/libs/pixi.js`…) chưa tải về (lấy từ rpgtkoolmv/corescript v1.6.1,
+  MIT); `PXB_Isometric` chưa móc Tilemap; tile data toàn 0 (chưa có tileset
+  CC0); img/audio trống; plugin còn lại (PXB_Stats/Time/Hotspot/Crafting/
+  Jobs/PhoneHub…) chưa viết. Mở trình duyệt lúc này lỗi 404 ở core —
+  trạng thái thật, không giấu.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa
+  biên dịch/chạy lần nào. Ghi chú mới: dotnet 8.0.428 CÓ ở `~/.dotnet`
+  (không trong PATH) — `dotnet test` vẫn kẹt RAM theo ghi nhận cũ, chạy qua
+  GitHub Actions; Unity vẫn chưa có.
+
 ## Lần chạy mới nhất: 18/11/2026 ~21:50 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
@@ -402,3 +445,24 @@
 - Vẫn chưa chạy được: không có dotnet/Unity trên VM — xUnit (17 test) và
   EditMode test (219 test) chưa biên dịch/chạy lần nào; server chưa chạy;
   client chưa có scene slice chơi được (4/4 scene mới chỉ là khung file).
+
+## Hiện trạng thật (18/11/2026 ~22:45, lúc viết báo cáo này)
+
+- Kiểm tra tĩnh: **198/198 PASS** (`check_static.py`, gồm nhóm T14 mới khóa
+  khung Nadia Giai đoạn 1).
+- Khung Nadia Giai đoạn 1 đã có ở mức file (`src/nadia/www/`): index.html,
+  plugins.js, main.js, PXB_Balance.js, PXB_Isometric.js (bản đầu), data tối
+  thiểu (System, MapInfos đủ 18 khu, Map001–002, Actors, Classes, Items),
+  package.json NW.js, README. `node --check` 4/4 file JS OK.
+- Chưa chơi được: core MV chưa tải về, PXB_Isometric chưa móc Tilemap, tile
+  data toàn 0, img/audio trống. Việc tiếp theo: tải core MV v1.6.1 (MIT) về
+  js/ + móc Tilemap isometric — rồi mới mở trình duyệt thấy map Xóm Trọ Cũ.
+- Phát hiện khi port: slice web lệch khỏi code C# ở 3 chỗ (nghề, công thức,
+  hotspot hs-cho-dem/hs-hem-sang) — nadia lấy theo C#; web chưa sửa, để
+  GDD/PM xem lại (chi tiết trong `src/nadia/README.md`).
+- Hành vi lạ còn lại (chưa sửa — để GDD/PM xem lại): `PhoneHub.Notify` đếm cả
+  khi đóng, `SuggestEnding` ưu tiên cứng, `Buy("phong-tro")` tính tiền thuê
+  vào tài sản, `AdvanceStage` không kiểm tra Kind.
+- Vẫn chưa chạy được: xUnit (17 test) và EditMode test (219 test) chưa biên
+  dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test` vẫn kẹt
+  RAM — chạy qua GitHub Actions; Unity chưa có).

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <!-- Màn dọc 9:16, không cho zoom tay (game mobile dọc như Nadia web). -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Phố Xô Bồ</title>
+  <!--
+    Thứ tự load theo core RPG Maker MV v1.6.1 (docs/architecture-nadia.md §1.2).
+    CHƯA CÓ FILE CORE TRONG REPO (Giai đoạn 1 — khung): các file js/libs/* và
+    js/rpg_*.js lấy từ rpgtkoolmv/corescript v1.6.1 (MIT), chưa tải về. Mở file
+    này bằng trình duyệt lúc này sẽ lỗi 404 ở core — ĐÓ LÀ TRẠNG THÁI THẬT,
+    không giấu. Khi core đã về, thứ tự dưới đây là đúng, không cần sửa.
+    KHÔNG mở file:// trực tiếp — phải qua web server (python3 -m http.server),
+    trình duyệt chặn load data file từ ổ đĩa (xem docs/architecture-nadia.md §1.7).
+  -->
+  <script type="text/javascript" src="js/libs/pixi.js"></script>
+  <script type="text/javascript" src="js/libs/pixi-tilemap.js"></script>
+  <script type="text/javascript" src="js/libs/pixi-picture.js"></script>
+  <script type="text/javascript" src="js/libs/fpsmeter.js"></script>
+  <script type="text/javascript" src="js/libs/lz-string.js"></script>
+  <script type="text/javascript" src="js/libs/iphone-inline-video.browser.js"></script>
+  <script type="text/javascript" src="js/rpg_core.js"></script>
+  <script type="text/javascript" src="js/rpg_managers.js"></script>
+  <script type="text/javascript" src="js/rpg_objects.js"></script>
+  <script type="text/javascript" src="js/rpg_scenes.js"></script>
+  <script type="text/javascript" src="js/rpg_sprites.js"></script>
+  <script type="text/javascript" src="js/rpg_windows.js"></script>
+  <script type="text/javascript" src="js/plugins.js"></script>
+  <script type="text/javascript" src="js/main.js"></script>
+  <style>
+    body { margin: 0; background: #F9EDCE; }
+    #loading {
+      position: fixed; inset: 0; display: flex; align-items: center;
+      justify-content: center; font-family: sans-serif; color: #8a5a2b;
+    }
+  </style>
+</head>
+<body>
+  <!-- Hiện cho tới khi Scene_Boot vẽ canvas (MV thay bằng canvas của game). -->
+  <div id="loading">Đang tải Phố Xô Bồ…</div>
+</body>
+</html>
