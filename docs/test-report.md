@@ -42,6 +42,39 @@
 - `check_static.py` tính sai thư mục gốc (`parents[2]` ra `src/` thay vì
   repo) → `FileNotFoundError`. Đã sửa thành `parents[3]`.
 
+## Lần chạy bổ sung — EconomyLedger (server), 18/11/2026 ~14:45 (giờ VN)
+
+> Luồng song song 3 (server + test). File mới: `src/server/src/EconomyLedger.cs`
+> (228 dòng) — sổ cái double-entry server-authoritative: mỗi bút toán Nợ 1 tài
+> khoản / Có 1 tài khoản khác, cùng số tiền; `Post()` chặn Nợ == Có và chặn
+> ghi trùng bằng IdempotencyKey; `IsBalanced()` kiểm tra tổng Nợ == tổng Có.
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy lại từ gốc repo)
+- Kết quả: **53/53 PASS, exit 0** — không vỡ kiểm tra cũ.
+- Kiểm tra riêng file server mới (script kiểm tra trong `/tmp`, không commit
+  vào repo vì `check_static.py` hiện chỉ quét file `.cs` client):
+  **18/18 PASS**, gồm:
+  - L1 — Ngoặc cân bằng `EconomyLedger.cs`: `{}` 10/10, `()` 67/67, `[]` 0/0.
+  - L2 — Số chốt khớp `GameBalance.cs`: lãi 0,5% (`0.005`), phí đấu giá 5%,
+    1 tháng game = 30 ngày (PROVISIONAL, khớp `Economy.cs`).
+  - L3 — `Post()` chặn Nợ == Có; chặn trùng IdempotencyKey; `IsBalanced()`;
+    `AuctionSale` tính phí `hammer * 5 / 100`, người bán nhận `hammer − phí`;
+    `Gift()` đi qua tài khoản trung gian `GiftTransit`, không Post cùng tài
+    khoản; `ApplyMonthlyInterest` dùng đúng `BankInterestPerGameMonth`.
+  - L4 — Ranh giới pháp lý: `CashOut`, `LendWithInterest`, `Gamble`,
+    `BuyWithRealMoney` đều bị chặn bằng `throw InvalidOperationException`.
+  - L5/L6 — Không có secret; file UTF-8.
+- **1 lỗi thật phát hiện khi viết code, đã sửa trước khi kiểm tra:** bản nháp
+  `Gift()` gọi `Post(..., PlayerCash, PlayerCash, ...)` — `Post()` chặn Nợ ==
+  Có nên sẽ ném lỗi. Đã sửa bằng tài khoản trung gian `GiftTransit` (người
+  tặng Nợ Cash / Có Transit, người nhận Nợ Transit / Có Cash). Hạn chế
+  skeleton đã ghi trong comment: `BalanceOf()` tính theo từng người chơi nên
+  số dư Transit của từng người không về 0 riêng lẻ — khi nối DB thật phải đối
+  chiếu Transit theo Reference, không theo PlayerId.
+- Chưa làm trong đợt này: `EconomyLedger` chưa được `Program.cs` gọi (server
+  vẫn chỉ có `GET /health`), chưa nối PostgreSQL, chưa có test xUnit chạy
+  được — vẫn là kiểm tra tĩnh, chưa phải build/test chạy được.
+
 ## Hiện trạng thật (18/11/2026, lúc viết báo cáo này)
 
 - Code: 13 file `.cs` client + server `.NET 8` skeleton (`Program.cs`,
