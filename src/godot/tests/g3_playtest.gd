@@ -1,13 +1,15 @@
 extends SceneTree
-## G3 playtest — chay scene Main that headless, mo phong choi that chuoi 1-2-3-4-5-6-7-8:
+## G3 playtest — chay scene Main that headless, mo phong choi that chuoi 1-2-3-4-5-6-7-8-9-10-11:
 ##   godot --headless --path src/godot -s res://tests/g3_playtest.gd
 ## Buoc: Map001 -> cua (5,4) sang Map002 -> cua MOI (5,8) sang Map003 (ADDED_DOORS)
 ## -> noi chuyen Anh Ba -> cua (5,8) sang Map004 -> noi chuyen Bac Tai
 ## -> cua (5,8) sang Map005 -> noi chuyen Thay Giao -> cua (5,8) sang Map006
 ## -> noi chuyen Cu Dan Chung Cu -> cua (5,8) sang Map007 -> noi chuyen
 ## Nhan Vien Van Phong -> cua (5,8) sang Map008 -> noi chuyen Cu Dan Cao Cap
-## -> cua (5,8) di Map009 (chua port) BI CHAN, van o Map008
-## -> di nguoc ve Map001 qua cac cua (5,4).
+## -> cua (5,8) sang Map009 -> noi chuyen Chu Cua Hang -> cua (5,8) sang
+## Map010 -> noi chuyen Lap Trinh Vien -> cua (5,8) sang Map011 -> noi
+## chuyen Nhan Vien Le Tan -> cua (5,8) di Map012 (chua port) BI CHAN,
+## van o Map011 -> di nguoc ve Map001 qua cac cua (5,4).
 
 var _frame := 0
 var _state := 0
@@ -129,12 +131,57 @@ func _on_frame() -> void:
 				_state = 8
 		8:
 			if not _main.player._moving:
-				_check("cua (5,8) Map008 di Map009 chua port: van o Map008",
-					_main.current_map_id == 8)
-				_check("player van o cua (5,8)", _main.player.tile == Vector2i(5, 8))
-				_main._transfer(7)
+				_check("cua (5,8) Map008 -> sang Map009", _main.current_map_id == 9)
+				_check("spawn o cua Map009 (5,4)", _main.player.tile == Vector2i(5, 4))
+				var npc7: Dictionary = _main.iso_map.event_at(Vector2i(3, 3))
+				_check("NPC Chu Cua Hang o (3,3)", String(npc7.get("name", "")) == "Chủ Cửa Hàng")
+				_main._interact(npc7)
+				_check("mo doi thoai Chu Cua Hang", _main.dialogue_open)
+				_main.close_dialogue()
+				_main.player.place(_main.iso_map, Vector2i(5, 7))
+				_step_down_into_door()
 				_state = 9
 		9:
+			if not _main.player._moving:
+				_check("cua (5,8) Map009 -> sang Map010", _main.current_map_id == 10)
+				_check("spawn o cua Map010 (5,4)", _main.player.tile == Vector2i(5, 4))
+				var npc8: Dictionary = _main.iso_map.event_at(Vector2i(3, 3))
+				_check("NPC Lap Trinh Vien o (3,3)", String(npc8.get("name", "")) == "Lập Trình Viên")
+				_main._interact(npc8)
+				_check("mo doi thoai Lap Trinh Vien", _main.dialogue_open)
+				_main.close_dialogue()
+				_main.player.place(_main.iso_map, Vector2i(5, 7))
+				_step_down_into_door()
+				_state = 10
+		10:
+			if not _main.player._moving:
+				_check("cua (5,8) Map010 -> sang Map011", _main.current_map_id == 11)
+				_check("spawn o cua Map011 (5,4)", _main.player.tile == Vector2i(5, 4))
+				var npc9: Dictionary = _main.iso_map.event_at(Vector2i(3, 3))
+				_check("NPC Nhan Vien Le Tan o (3,3)", String(npc9.get("name", "")) == "Nhân Viên Lễ Tân")
+				_main._interact(npc9)
+				_check("mo doi thoai Nhan Vien Le Tan", _main.dialogue_open)
+				_main.close_dialogue()
+				_main.player.place(_main.iso_map, Vector2i(5, 7))
+				_step_down_into_door()
+				_state = 11
+		11:
+			if not _main.player._moving:
+				_check("cua (5,8) Map011 di Map012 chua port: van o Map011",
+					_main.current_map_id == 11)
+				_check("player van o cua (5,8)", _main.player.tile == Vector2i(5, 8))
+				_main._transfer(10)
+				_state = 12
+		12:
+			_check("di nguoc ve Map010", _main.current_map_id == 10)
+			_check("spawn o cua Map010 (5,4)", _main.player.tile == Vector2i(5, 4))
+			_main._transfer(9)
+			_check("di nguoc ve Map009", _main.current_map_id == 9)
+			_main._transfer(8)
+			_check("di nguoc ve Map008", _main.current_map_id == 8)
+			_main._transfer(7)
+			_state = 13
+		13:
 			_check("di nguoc ve Map007", _main.current_map_id == 7)
 			_check("spawn o cua Map007 (5,4)", _main.player.tile == Vector2i(5, 4))
 			_main._transfer(6)
@@ -152,7 +199,7 @@ func _on_frame() -> void:
 				_main.player.tile == Vector2i(5, 4))
 			_main._transfer(1)
 			_check("di nguoc ve Map001", _main.current_map_id == 1)
-			_state = 10
-		10:
+			_state = 14
+		14:
 			print("G3 PLAYTEST: %d/%d PASS" % [_pass, _pass + _fail])
 			quit(0 if _fail == 0 else 1)

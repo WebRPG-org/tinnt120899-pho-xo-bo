@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Port Map001-Map008 tu RPG Maker MV sang Godot (G1 slice parity + G3 buoc 1-2).
+"""Port Map001-Map011 tu RPG Maker MV sang Godot (G1 slice parity + G3 buoc 1-3).
 
 Doc: python3 tools/godot/convert_maps.py
-Nguon (khong sua):  src/nadia/www/data/Map00{1..8}.json (tile data 12x9, events),
-                    src/nadia/www/data/atlas-map00{1..8}.json (vi tri tile trong atlas PNG),
+Nguon (khong sua):  src/nadia/www/data/Map00{1..9}.json + Map010.json + Map011.json (tile data 12x9, events),
+                    src/nadia/www/data/atlas-map00{1..9}.json + atlas-map010/011.json (vi tri tile trong atlas PNG),
                     src/nadia/www/data/Actors.js (greet/hint NPC — doc trong file),
                     src/nadia/www/js/plugins/PXB_Hotspot.js (bang hotspot slice),
                     src/nadia/www/data/System.json (diem bat dau 4,5 Map001).
@@ -25,6 +25,11 @@ Map008 Khu Chung Cu Cao Cap — ca 3 tai dung atlas-map001.png; do thi MV
 1-2-3-4-5-6-7-8 da thong 2 chieu san (khong can ADDED_DOORS them), cua
 cuoi Map008 -> Map009 chua port (bi chan co bao, nhu Map005 -> Map006 o
 buoc 1). Map006-008 khong co hotspot / Goc Che Tao trong MV.
+G3 buoc 3 (20/11): them Map009 Pho Thuong Mai, Map010 Khu Cong Nghe,
+Map011 Pho Tay — ca 3 tai dung atlas-map001.png; do thi MV 8-9-10-11
+da thong 2 chieu san (khong can ADDED_DOORS them), cua cuoi Map011 ->
+Map012 chua port (bi chan co bao). Map009-011 khong co hotspot /
+Goc Che Tao trong MV.
 """
 import json
 import shutil
@@ -34,7 +39,7 @@ ROOT = Path(__file__).resolve().parents[2]  # ~/workspace/pho-xo-bo
 MV = ROOT / "src/nadia/www/data"
 GODOT = ROOT / "src/godot"
 
-MAP_IDS = [1, 2, 3, 4, 5, 6, 7, 8]  # G3 buoc 2: 1-8 (Map009+ o buoc sau)
+MAP_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]  # G3 buoc 3: 1-11 (Map012+ o buoc sau)
 
 # --- Du lieu khong co trong Map JSON, lay tu Actors.js / PXB_Hotspot.js ---
 NPC_TEXT = {
@@ -126,6 +131,42 @@ NPC_TEXT = {
         "greet": "Chung cư cao cấp chỉ mở khi qua bài kiểm tra rank ở Chương 3. Qua được bài kiểm tra rank thì khu này mới mở.",
         "hint": "Chưa qua bài kiểm tra rank ở Chương 3 thì khu này chưa mở cho mình — học lên bậc, tích Danh vọng rồi quay lại.",
     },
+    # --- G3 buoc 3 (Map009-011): greet NGUYEN VAN tu lenh Show Text (code 401)
+    # trong Map JSON (nhieu dong 401 noi bang dau cach); hint do port viet moi,
+    # noi dung theo districts.md / GDD (cua hang mo theo Chuong 3 kiem tra rank,
+    # viec cong nghe can Tri cao, dich vu cao cap can Chuong 4: 3 quest giup
+    # nguoi + 1 quan he than thiet) — xem docs/godot-g3.md §1. Chua co trong
+    # Actors.js / MV.
+    "Chủ Cửa Hàng": {
+        "id": "chu-cua-hang",
+        "greet": "Phố này buôn bán quy mô vừa — toàn cửa hàng. Muốn mở cửa hàng ở đây thì phải qua Chương 3 — bài kiểm tra rank.",
+        "hint": "Muốn mở cửa hàng ở đây thì phải qua Chương 3 — bài kiểm tra rank. Vốn ít thì bắt đầu từ sạp chợ trước, tích Danh vọng rồi quay lại.",
+    },
+    "Người Bán Hàng": {
+        "id": "nguoi-ban-hang",
+        "greet": "Cửa hàng ở phố thương mại chỉ mở khi qua bài kiểm tra rank ở Chương 3. Qua được bài kiểm tra rank thì khu này mới mở.",
+        "hint": "Cửa hàng chỉ mở khi qua bài kiểm tra rank ở Chương 3 — học lên bậc, tích Danh vọng rồi quay lại mở cửa hàng.",
+    },
+    "Lập Trình Viên": {
+        "id": "lap-trinh-vien",
+        "greet": "Khu này việc công nghệ — yêu cầu Trí cao. Muốn làm việc công nghệ ở đây thì phải qua Chương 3 — bài kiểm tra rank.",
+        "hint": "Việc công nghệ cần Trí cao — học lên bậc, qua Chương 3 kiểm tra rank rồi quay lại xin việc ở đây.",
+    },
+    "Kỹ Sư Phần Mềm": {
+        "id": "ky-su-phan-mem",
+        "greet": "Việc công nghệ ở đây chỉ mở khi qua bài kiểm tra rank ở Chương 3. Trí cao mới làm được việc công nghệ ở đây.",
+        "hint": "Trí cao mới làm được việc công nghệ — mở điện thoại mục Học tập đăng ký bậc cao, Trí 60 trở lên rồi qua Chương 3 kiểm tra rank.",
+    },
+    "Nhân Viên Lễ Tân": {
+        "id": "nhan-vien-le-tan",
+        "greet": "Phố này dịch vụ cao cấp — cần ngoại ngữ và giao tiếp tốt. Muốn làm dịch vụ cao cấp ở đây thì phải qua Chương 4 — 3 quest giúp người + 1 quan hệ thân thiết.",
+        "hint": "Dịch vụ cao cấp cần ngoại ngữ + giao tiếp — xong 3 quest giúp người ở Chương 4 + 1 quan hệ thân thiết thì khu này mới mở.",
+    },
+    "Hướng Dẫn Viên": {
+        "id": "huong-dan-vien",
+        "greet": "Dịch vụ cao cấp ở đây chỉ mở khi xong 3 quest giúp người ở Chương 4. Ngoại ngữ và giao tiếp tốt mới làm được dịch vụ cao cấp ở đây.",
+        "hint": "Ngoại ngữ và giao tiếp tốt mới làm được dịch vụ cao cấp — làm quest giúp người ở Chương 4 để mở khu, rồi quay lại.",
+    },
 }
 
 # Bang hotspot slice — PORT TRUC TIEP PXB_Hotspot.js HOTSPOTS (PROVISIONAL, chua chot GDD).
@@ -162,7 +203,7 @@ def transfer_target(ev: dict) -> int:
         for cmd in page.get("list", []):
             if cmd.get("code") == 201:
                 params = cmd.get("parameters", [])
-                assert len(params) >= 2 and int(params[1]) in MAP_IDS + [9], (
+                assert len(params) >= 2 and int(params[1]) in MAP_IDS + [12], (
                     f"TRANSFER dich la {params[1]} nam ngoai MAP_IDS")
                 return int(params[1])
     raise ValueError(f"event cua {ev.get('name')!r} khong co lenh TRANSFER")
