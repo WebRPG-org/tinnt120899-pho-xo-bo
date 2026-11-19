@@ -7,6 +7,57 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 19/11/2026 ~09:05 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **263/263 PASS, exit 0** — tăng từ 253/253: nhóm T26 mới
+  (5 mục, Map003 Khu Công Nhân) + T27 mới (5 mục, PXB_MarketBattle);
+  T14v nay `node --check` 19/19 file JS (thêm PXB_MarketBattle.js);
+  T22b nới `== 16` → `>= 16` plugin (nay 17 plugin).
+- **Map003 — Khu Công Nhân (luồng 1, việc tiếp theo lớn nhất):**
+  `src/nadia/www/data/Map003.json` mới (lưới 12×9, data 648, layer 0
+  108/108, layer 1 28/108, biên nam để trống như mặt tiền mở); event Anh
+  Ba (4,6), Chị Sáu (8,3), transfer về Map002 (5,4) — không hotspot mới,
+  không transfer tới Map004 chưa có. `data/atlas-map003.json` mới, TÁI
+  DÙNG `atlas-map001.png` (không PNG mới). `PXB_Isometric.js` sửa tối
+  thiểu (+13 dòng): `atlasCodeFor` thêm map 3 → "Map003",
+  `loadAtlasBitmap` nay tôn trọng `mapping.atlasPng` khi có (trước đây
+  suy tên PNG từ mapId nên map 3 sẽ 404); map 1–2 không đổi hành vi.
+  PROVISIONAL: code 4 (nhà bắc) dùng tạm làm nhà xưởng, chờ art pass vẽ
+  tile xưởng riêng. Đã xác minh độc lập: JSON hợp lệ, đếm tile
+  648/108/28, SHA atlas-map001.png vẫn khớp §7.
+- **PXB_MarketBattle — Bụi Đời Chợ Cá (luồng 2, song song):**
+  `docs/market-battle-design.md` mới (185 dòng, trạng thái CHƯA CHỐT —
+  chờ chủ duyệt, mọi số PROVISIONAL) + `src/nadia/www/js/plugins/
+  PXB_MarketBattle.js` mới (1.109 dòng, port đúng GDD Mục 11: 3v3/5v5
+  theo lượt, lưới 12×9, trận 180s, 4 vũ khí hài Chảo 12/Cá khô 8/Ghế
+  nhựa 15 + đẩy lùi/Loa 10, 6 vai màu, thắng giữ sạp 7 ngày game trong
+  `$gameSystem.pxbMarketBattle`, buff Tướng Cướp +10% sát thương ở chợ /
+  Cảnh sát +10% Max HP khi thủ sạp, không chết/không mất đồ); `plugins.js`
+  nay 17 plugin (MarketBattle cuối, sau SaveCloud). Smoke test stub core
+  MV (`/tmp/pxb-marketbattle-smoke.js`, không commit): **80/80 PASS**
+  (đã chạy lại độc lập để xác minh); `node --check` PASS. 2 lỗi phát
+  hiện khi test (đã sửa): hòa điểm vai trộn không bao giờ thắng vai gốc
+  → nay ưu tiên vai trộn; `install()` gọi 2 lần bọc hook 2 lần → thêm cờ
+  `installed`. Chưa xong: scene/bản đồ trận MV (`Scene_MarketBattle`),
+  chưa port ngược sang C# (GDD Mục 11 không có code C# gốc).
+- **1 lỗi check trong lần chạy này (đã sửa, chạy lại PASS):** T26c lúc
+  đầu FAIL giả — check tìm chuỗi gọi hàm `"atlasCodeFor(3)"` và tên khu
+  trong file JS, trong khi code thật viết `if (mapId === 3) return
+  "Map003"` và tên khu nằm trong JSON mapping. Đã sửa check theo đúng
+  chuỗi code thật.
+- **Còn lại chưa xong:** chờ chủ bật GitHub Pages → kiểm chứng Map001
+  bằng trình duyệt thật (browser task trước đó BỊ CHẶN ở loopback, tunnel
+  Cloudflare lỗi TLS — xem mục 08:00); Map004–018 chưa có; img/audio còn
+  lại trống; luật MarketBattle chi tiết chờ chủ duyệt. Checklist C1–C9
+  (§6 roles-qc) vẫn giữ cho đường Unity (phương án dự phòng); đường
+  chính nay là Giai đoạn 1–5 của `docs/architecture-nadia.md`. Việc tiếp
+  theo lớn nhất: Map004 (Bến Xe Miền Đông) + scene trận MarketBattle sau
+  khi chủ duyệt luật.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa
+  biên dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test`
+  vẫn kẹt RAM — chạy qua GitHub Actions; Unity chưa có).
+
 ## Lần chạy mới nhất: 19/11/2026 ~08:00 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)

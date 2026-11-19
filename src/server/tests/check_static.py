@@ -677,7 +677,7 @@ main_js = read(NADIA / "js" / "main.js")
 check("T14u", "main.js: PluginManager.setup($plugins) + SceneManager.run(Scene_Boot)",
       "PluginManager.setup($plugins)" in main_js and "SceneManager.run(Scene_Boot)" in main_js)
 
-# T14v: node --check 18 file JS nadia (node v24 có sẵn trên VM).
+# T14v: node --check 19 file JS nadia (node v24 có sẵn trên VM).
 node_files = [NADIA_PLUGINS / "PXB_Balance.js", NADIA_PLUGINS / "PXB_Isometric.js",
               NADIA_PLUGINS / "PXB_Stats.js", NADIA_PLUGINS / "PXB_Time.js",
               NADIA_PLUGINS / "PXB_Hotspot.js", NADIA_PLUGINS / "PXB_Jobs.js",
@@ -687,6 +687,7 @@ node_files = [NADIA_PLUGINS / "PXB_Balance.js", NADIA_PLUGINS / "PXB_Isometric.j
               NADIA_PLUGINS / "PXB_Social.js", NADIA_PLUGINS / "PXB_Titles.js",
               NADIA_PLUGINS / "PXB_Story.js",
               NADIA_PLUGINS / "PXB_Online.js", NADIA_PLUGINS / "PXB_SaveCloud.js",
+              NADIA_PLUGINS / "PXB_MarketBattle.js",
               NADIA / "js" / "plugins.js", NADIA / "js" / "main.js"]
 node_ok, node_detail = True, ""
 try:
@@ -698,7 +699,7 @@ try:
 except FileNotFoundError:
     node_ok = False
     node_detail = "không tìm thấy lệnh node"
-check("T14v", "node --check: 18 file JS nadia qua cú pháp", node_ok, node_detail)
+check("T14v", "node --check: 19 file JS nadia qua cú pháp", node_ok, node_detail)
 
 # T14w–y: Actors/Classes/Items — chéo tham chiếu + giá khớp Items.js.
 actors = json.loads(read(NADIA_DATA / "Actors.json"))
@@ -1180,7 +1181,7 @@ check("T22a", "PXB_Tools.js: đủ 12 câu ToolBehaviour nguyên văn Crafting.c
 # T22b: plugins.js đủ 16 plugin, Crafting trước Tools trước Jobs,
 # Story trước Online trước SaveCloud, cả 16 bật.
 check("T22b", "plugins.js: đủ 16 plugin, Crafting<Tools<Jobs, Story<Online<SaveCloud, cả 16 bật",
-      plugins_js.count('"status": true') == 16
+      plugins_js.count('"status": true') >= 16  # nay 17 plugin (T27c đếm đủ); T22b chỉ khóa ≥ 16 gốc + thứ tự
       and plugins_js.find('"PXB_Crafting"') < plugins_js.find('"PXB_Tools"')
       < plugins_js.find('"PXB_Jobs"')
       and plugins_js.find('"PXB_Story"') < plugins_js.find('"PXB_Online"')
@@ -1350,6 +1351,80 @@ except Exception:  # noqa: BLE001
 check("T25e", "PXB_Isometric v3.1: node --check qua cú pháp + UTF-8",
       _iso_v31_ok and _iso_js == read(NADIA_PLUGINS / "PXB_Isometric.js"))
 
+# ---- Nhóm T26 — Map003 Khu Công Nhân (19/11/2026 ~08:50) ----
+# Map khu 3 theo đúng mẫu Map001/002: lưới 12×9, tile data thật, atlas
+# tái dùng atlas-map001.png (chưa có tile xưởng riêng — code 4 nhà bắc
+# dùng tạm làm nhà xưởng, ghi PROVISIONAL). Không hotspot mới (5 hotspot
+# đã đủ), transfer duy nhất về Map002. Smoke: đếm tile 648/108/28 (xem
+# docs/test-report.md); PXB_Isometric đăng ký map 3 + tôn trọng
+# mapping.atlasPng (trước đây suy tên PNG từ mapId nên map 3 sẽ 404).
+_atlas3 = json.loads(read(NADIA_DATA / "atlas-map003.json"))
+_ok_m3, _d_m3 = _map_data_ok("Map003", _atlas3)
+check("T26a", "Map003: lưới 12×9, data 648, layer0 108/108, layer1 28/108, mã khớp mapping, event không bị tường đè",
+      _ok_m3, _d_m3)
+_atlas1b = json.loads(read(NADIA_DATA / "atlas-map001.json"))
+check("T26b", "atlas-map003.json: scheme atlas-code + TÁI DÙNG atlas-map001.png + tile 1-5 cùng tên atlas-map001",
+      _atlas3.get("scheme") == "atlas-code"
+      and _atlas3.get("atlasPng") == "img/tilesets/atlas-map001.png"
+      and {k: v["name"] for k, v in _atlas3["tiles"].items()}
+      == {k: v["name"] for k, v in _atlas1b["tiles"].items()})
+check("T26c", "PXB_Isometric: đăng ký map 3 + loadAtlasBitmap tôn trọng mapping.atlasPng",
+      'if (mapId === 3) return "Map003"' in _iso_js
+      and "mapping.atlasPng" in _iso_js
+      and "mapping && mapping.atlasPng" in _iso_js)
+_map003_raw = read(NADIA_DATA / "Map003.json")
+_map003 = json.loads(_map003_raw)
+_transfer_ok = any(
+    c.get("code") == 201 and list(c.get("parameters", []))[:2] == [0, 2]
+    for e in _map003.get("events", []) if e
+    for p in e.get("pages", []) for c in p.get("list", []))
+check("T26d", "Map003: không hotspot mới + transfer duy nhất về Map002 (5,4) + code 4 xưởng ghi PROVISIONAL",
+      "hs-" not in _map003_raw and _transfer_ok
+      and "PROVISIONAL" in _map003_raw and "PROVISIONAL" in read(NADIA_DATA / "atlas-map003.json"))
+_mb_v26_ok = True
+try:
+    _r = subprocess.run(["node", "--check", str(NADIA_PLUGINS / "PXB_Isometric.js")],
+                        capture_output=True, text=True, timeout=30)
+    _mb_v26_ok = _r.returncode == 0
+except Exception:  # noqa: BLE001
+    _mb_v26_ok = False
+check("T26e", "Map003: node --check PXB_Isometric.js sau sửa đăng ký map 3 + UTF-8",
+      _mb_v26_ok and _iso_js == read(NADIA_PLUGINS / "PXB_Isometric.js"))
+
+# ---- Nhóm T27 — PXB_MarketBattle: Bụi Đời Chợ Cá (19/11/2026 ~09:00) ----
+# Port GDD Mục 11: 3v3/5v5 theo lượt, lưới 12×9, ~3 phút, 4 vũ khí hài,
+# 6 vai theo màu chỉ số, thắng giữ sạp 1 tuần, buff Tướng Cướp/Cảnh sát,
+# không chết/không mất đồ. Luật chi tiết CHƯA CHỐT — design doc +
+# plugin đều ghi PROVISIONAL, chờ chủ duyệt (xem docs/market-battle-design.md
+# §11). Smoke test stub core MV: /tmp/pxb-marketbattle-smoke.js 80/80 PASS
+# (không commit). Chưa có scene/bản đồ trận MV.
+_mb_js = read(NADIA_PLUGINS / "PXB_MarketBattle.js")
+_mb_design = read(ROOT / "docs" / "market-battle-design.md")
+check("T27a", "PXB_MarketBattle: 6 vai màu + 4 vũ khí hài + lưới 12×9 + trận 180s + giữ sạp 7 ngày + state pxbMarketBattle",
+      "GRID_W = 12" in _mb_js and "GRID_H = 9" in _mb_js
+      and "BATTLE_SECONDS = 180" in _mb_js and "HOLD_DAYS = 7" in _mb_js
+      and '"Chảo"' in _mb_js and '"Cá khô"' in _mb_js and '"Ghế nhựa"' in _mb_js
+      and '"Loa"' in _mb_js and "$gameSystem.pxbMarketBattle" in _mb_js)
+check("T27b", "MarketBattle: không chết/không mất đồ + buff Tướng Cướp/Cảnh sát + chưa có scene (logic lõi)",
+      "không chết" in _mb_js and "không mất đồ" in _mb_js
+      and "KHÔNG có scene" in _mb_js and "Scene_MarketBattle" in _mb_js
+      and "Tướng Cướp" in _mb_js and "Cảnh sát" in _mb_js)
+check("T27c", "plugins.js: đủ 17 plugin, MarketBattle cuối sau SaveCloud, cả 17 bật",
+      plugins_js.count('"status": true') == 17
+      and plugins_js.find('"PXB_SaveCloud"') < plugins_js.find('"PXB_MarketBattle"'))
+check("T27d", "market-battle-design.md: trạng thái CHƯA CHỐT chờ chủ duyệt + mọi số PROVISIONAL",
+      "CHƯA CHỐT" in _mb_design and "PROVISIONAL" in _mb_design
+      and "PROVISIONAL" in _mb_js)
+_mb_v27_ok = True
+try:
+    _r = subprocess.run(["node", "--check", str(NADIA_PLUGINS / "PXB_MarketBattle.js")],
+                        capture_output=True, text=True, timeout=30)
+    _mb_v27_ok = _r.returncode == 0
+except Exception:  # noqa: BLE001
+    _mb_v27_ok = False
+check("T27e", "PXB_MarketBattle: node --check qua cú pháp + UTF-8",
+      _mb_v27_ok and _mb_js == read(NADIA_PLUGINS / "PXB_MarketBattle.js"))
+
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)
 failed = [r for r in results if not r[2]]
@@ -1371,6 +1446,9 @@ print("(smoke 68/68 PASS, trade/đấu giá/guild trả server-chua-co-endpoint)
 print("tile data Map001/002 nay thật (atlas-code, layer 0 108/108 + layer 1")
 print("28/108), atlas PNG đã vào repo img/tilesets/ (SHA khớp §7) +")
 print("PXB_Isometric v3 (atlas mode) đã viết (smoke stub 55/55 PASS) + v3.1")
-print("(atlas PNG lỗi -> rơi về fallback v2, smoke stub 18/18 PASS), nhưng")
+print("(atlas PNG lỗi -> rơi về fallback v2, smoke stub 18/18 PASS), Map003")
+print("Khu Công Nhân đã có tile data thật (648/108/28, tái dùng atlas-map001)")
+print("PXB_MarketBattle đã viết (Bụi Đời Chợ Cá, smoke stub 80/80 PASS, luật")
+print("chi tiết PROVISIONAL chờ chủ duyệt), nhưng")
 print("chưa mở trình duyệt chơi được thật — cần chạy game MV thật với atlas")
 print("để thấy map Xóm Trọ Cũ (xem docs/test-report.md).")

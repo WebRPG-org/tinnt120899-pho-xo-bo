@@ -1,7 +1,7 @@
 // Phố Xô Bồ — PXB_Isometric.js (plugin RPG Maker MV)
 // Render 2.5D isometric trên Pixi — điều kiện để giữ mục chốt 2.5D
 // (GDD Mục 10, docs/architecture-nadia.md §5). Bản v3.1 (Giai đoạn 1):
-// Chế độ atlas (atlas-code) — data map Map001/Map002 là code 1..6,
+// Chế độ atlas (atlas-code) — data map Map001/Map002/Map003 là code 1..6,
 // KHÔNG phải tile ID MV (code 1..6 mà đưa vào luật MV sẽ bị hiểu là
 // autotile A1 — v3 chặn đúng chỗ này: đường atlas bỏ qua hoàn toàn luật
 // MV isAutotile/isVisibleTile/_isHigherTile).
@@ -10,8 +10,11 @@
 //     64×64, 8 cột), PNG ở img/tilesets/atlas-map00X.png.
 //   - IsoTilemap.setAtlas(mapId, mapping, bitmap): Spriteset_Map.
 //     createTilemap tự gắn atlas theo $gameMap.mapId() (1 -> Map001,
-//     2 -> Map002); chưa có mapping thì loadAtlasJson (XMLHttpRequest)
-//     rồi setAtlas + refresh khi scene map đang active.
+//     2 -> Map002, 3 -> Map003); chưa có mapping thì loadAtlasJson
+//     (XMLHttpRequest) rồi setAtlas + refresh khi scene map đang active.
+//     Map003 tái dùng atlas-map001.png: loadAtlasBitmap tôn trọng
+//     mapping.atlasPng khi có (map 1-2 atlasPng khớp tên suy ra từ code
+//     nên hành vi không đổi).
 //   - Vẽ atlas: sprite lấy đúng frame (x,y,w,h) trong atlas PNG, tint
 //     = clamp từng kênh tint*255 về 0..255 thành 0xRRGGBB, không quay
 //     45° (atlas đã là hình thoi sẵn). Sàn (mapping.layer 0) neo
@@ -40,7 +43,8 @@
 //   - Xe máy / dây điện / sạp lá chuối vẫn phải vẽ thêm theo
 //     docs/tileset-plan.md — chưa có trong atlas-map001/002.
 //   - Atlas PNG phải nằm ở img/tilesets/atlas-map00X.png thì bitmap mới
-//     load được và thấy art thật. v3.1 (19/11): PNG thiếu/lỗi (404) ->
+//     load được và thấy art thật (trừ khi mapping.atlasPng chỉ PNG khác
+//     đã có trong img/tilesets/ — Map003 tái dùng atlas-map001.png).
 //     Bitmap.isError() -> atlasModeOn() tắt, updateTransform vẽ lại
 //     1 lần bằng đường fallback v2 (tile MV thường) thay vì sprite
 //     atlas vẽ trắng, map trống; đếm vào stats.atlasFallback. Bitmap
@@ -165,17 +169,18 @@
   };
 
   // ---- Chế độ atlas v3 (atlas-code, data/atlas-map00X.json) ----
-  // Data map Map001/Map002 chứa code 1..6, KHÔNG phải tile ID MV:
+  // Data map Map001/Map002/Map003 chứa code 1..6, KHÔNG phải tile ID MV:
   // code 1..6 mà đi qua luật MV sẽ bị hiểu là autotile A1. Đường atlas
   // tra mapping.tiles[String(code)] để lấy frame/tint/layer, bỏ qua
   // hoàn toàn luật MV (isAutotile/isVisibleTile/_isHigherTile).
   var _atlasRegistry = {}; // mapId (số) -> mapping atlas-code
   var _atlasBitmaps = {}; // mapId (số) -> Bitmap atlas (cache, dùng lại)
 
-  // "Map001"/"Map002" theo mapId; map khác chưa có atlas -> null.
+  // "Map001"/"Map002"/"Map003" theo mapId; map khác chưa có atlas -> null.
   function atlasCodeFor(mapId) {
     if (mapId === 1) return "Map001";
     if (mapId === 2) return "Map002";
+    if (mapId === 3) return "Map003";
     return null;
   }
 
@@ -211,8 +216,16 @@
     var code = atlasCodeFor(mapId);
     if (!code) return null;
     if (_atlasBitmaps[mapId]) return _atlasBitmaps[mapId];
-    var bitmap = ImageManager.loadBitmap(
-      "img/tilesets/", "atlas-" + code.toLowerCase(), 0, true);
+    // v3.1 (Map003): tôn trọng mapping.atlasPng khi có — Map003 tái dùng
+    // atlas-map001.png; map 1-2 atlasPng khớp đúng tên suy ra từ code nên
+    // hành vi không đổi. Không có atlasPng thì suy ra như trước.
+    var pngName = "atlas-" + code.toLowerCase();
+    if (mapping && mapping.atlasPng) {
+      var base = String(mapping.atlasPng).split("/").pop();
+      if (base.slice(-4).toLowerCase() === ".png") base = base.slice(0, -4);
+      if (base) pngName = base;
+    }
+    var bitmap = ImageManager.loadBitmap("img/tilesets/", pngName, 0, true);
     if (bitmap) _atlasBitmaps[mapId] = bitmap;
     return bitmap || null;
   }

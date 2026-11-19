@@ -98,6 +98,12 @@ var $plugins = [
     "status": true,
     "description": "Đồng bộ save kiểu xenvn: tài khoản tùy chọn, localStorage mặc định khi offline; upload/download lên server chưa có endpoint nên trả server-chua-co-endpoint.",
     "parameters": {}
+  },
+  {
+    "name": "PXB_MarketBattle",
+    "status": true,
+    "description": "Bụi Đời Chợ Cá: logic lõi 3v3/5v5 theo lượt, vũ khí hài, giữ sạp 1 tuần (GDD Mục 11; luật chi tiết PROVISIONAL — xem docs/market-battle-design.md; chưa có scene/bản đồ trận).",
+    "parameters": {}
   }
 ];
 
