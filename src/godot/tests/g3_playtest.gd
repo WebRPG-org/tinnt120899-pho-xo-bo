@@ -1,10 +1,13 @@
 extends SceneTree
-## G3 playtest — chay scene Main that headless, mo phong choi that chuoi 1-2-3-4-5:
+## G3 playtest — chay scene Main that headless, mo phong choi that chuoi 1-2-3-4-5-6-7-8:
 ##   godot --headless --path src/godot -s res://tests/g3_playtest.gd
 ## Buoc: Map001 -> cua (5,4) sang Map002 -> cua MOI (5,8) sang Map003 (ADDED_DOORS)
 ## -> noi chuyen Anh Ba -> cua (5,8) sang Map004 -> noi chuyen Bac Tai
-## -> cua (5,8) sang Map005 -> noi chuyen Thay Giao -> cua (5,8) di Map006
-## (chua port) BI CHAN, van o Map005 -> di nguoc ve Map001 qua cac cua (5,4).
+## -> cua (5,8) sang Map005 -> noi chuyen Thay Giao -> cua (5,8) sang Map006
+## -> noi chuyen Cu Dan Chung Cu -> cua (5,8) sang Map007 -> noi chuyen
+## Nhan Vien Van Phong -> cua (5,8) sang Map008 -> noi chuyen Cu Dan Cao Cap
+## -> cua (5,8) di Map009 (chua port) BI CHAN, van o Map008
+## -> di nguoc ve Map001 qua cac cua (5,4).
 
 var _frame := 0
 var _state := 0
@@ -90,12 +93,55 @@ func _on_frame() -> void:
 				_state = 5
 		5:
 			if not _main.player._moving:
-				_check("cua (5,8) Map005 di Map006 chua port: van o Map005",
-					_main.current_map_id == 5)
-				_check("player van o cua (5,8)", _main.player.tile == Vector2i(5, 8))
-				_main._transfer(4)
+				_check("cua (5,8) Map005 -> sang Map006", _main.current_map_id == 6)
+				_check("spawn o cua Map006 (5,4)", _main.player.tile == Vector2i(5, 4))
+				var npc4: Dictionary = _main.iso_map.event_at(Vector2i(3, 6))
+				_check("NPC Cu Dan Chung Cu o (3,6)", String(npc4.get("name", "")) == "Cư Dân Chung Cư")
+				_main._interact(npc4)
+				_check("mo doi thoai Cu Dan Chung Cu", _main.dialogue_open)
+				_main.close_dialogue()
+				_main.player.place(_main.iso_map, Vector2i(5, 7))
+				_step_down_into_door()
 				_state = 6
 		6:
+			if not _main.player._moving:
+				_check("cua (5,8) Map006 -> sang Map007", _main.current_map_id == 7)
+				_check("spawn o cua Map007 (5,4)", _main.player.tile == Vector2i(5, 4))
+				var npc5: Dictionary = _main.iso_map.event_at(Vector2i(3, 3))
+				_check("NPC Nhan Vien Van Phong o (3,3)", String(npc5.get("name", "")) == "Nhân Viên Văn Phòng")
+				_main._interact(npc5)
+				_check("mo doi thoai Nhan Vien Van Phong", _main.dialogue_open)
+				_main.close_dialogue()
+				_main.player.place(_main.iso_map, Vector2i(5, 7))
+				_step_down_into_door()
+				_state = 7
+		7:
+			if not _main.player._moving:
+				_check("cua (5,8) Map007 -> sang Map008", _main.current_map_id == 8)
+				_check("spawn o cua Map008 (5,4)", _main.player.tile == Vector2i(5, 4))
+				var npc6: Dictionary = _main.iso_map.event_at(Vector2i(3, 3))
+				_check("NPC Cu Dan Cao Cap o (3,3)", String(npc6.get("name", "")) == "Cư Dân Cao Cấp")
+				_main._interact(npc6)
+				_check("mo doi thoai Cu Dan Cao Cap", _main.dialogue_open)
+				_main.close_dialogue()
+				_main.player.place(_main.iso_map, Vector2i(5, 7))
+				_step_down_into_door()
+				_state = 8
+		8:
+			if not _main.player._moving:
+				_check("cua (5,8) Map008 di Map009 chua port: van o Map008",
+					_main.current_map_id == 8)
+				_check("player van o cua (5,8)", _main.player.tile == Vector2i(5, 8))
+				_main._transfer(7)
+				_state = 9
+		9:
+			_check("di nguoc ve Map007", _main.current_map_id == 7)
+			_check("spawn o cua Map007 (5,4)", _main.player.tile == Vector2i(5, 4))
+			_main._transfer(6)
+			_check("di nguoc ve Map006", _main.current_map_id == 6)
+			_main._transfer(5)
+			_check("di nguoc ve Map005", _main.current_map_id == 5)
+			_main._transfer(4)
 			_check("di nguoc ve Map004", _main.current_map_id == 4)
 			_check("spawn o cua Map004 (5,4)", _main.player.tile == Vector2i(5, 4))
 			_main._transfer(3)
@@ -106,7 +152,7 @@ func _on_frame() -> void:
 				_main.player.tile == Vector2i(5, 4))
 			_main._transfer(1)
 			_check("di nguoc ve Map001", _main.current_map_id == 1)
-			_state = 7
-		7:
+			_state = 10
+		10:
 			print("G3 PLAYTEST: %d/%d PASS" % [_pass, _pass + _fail])
 			quit(0 if _fail == 0 else 1)

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Port Map001-Map005 tu RPG Maker MV sang Godot (G1 slice parity + G3 buoc 1).
+"""Port Map001-Map008 tu RPG Maker MV sang Godot (G1 slice parity + G3 buoc 1-2).
 
 Doc: python3 tools/godot/convert_maps.py
-Nguon (khong sua):  src/nadia/www/data/Map00{1..5}.json (tile data 12x9, events),
-                    src/nadia/www/data/atlas-map00{1..5}.json (vi tri tile trong atlas PNG),
+Nguon (khong sua):  src/nadia/www/data/Map00{1..8}.json (tile data 12x9, events),
+                    src/nadia/www/data/atlas-map00{1..8}.json (vi tri tile trong atlas PNG),
                     src/nadia/www/data/Actors.js (greet/hint NPC — doc trong file),
                     src/nadia/www/js/plugins/PXB_Hotspot.js (bang hotspot slice),
                     src/nadia/www/data/System.json (diem bat dau 4,5 Map001).
@@ -20,6 +20,11 @@ G3 buoc 1 (20/11): them Map003 Khu Cong Nhan, Map004 Ben Xe Mien Dong,
 Map005 Lang Dai Hoc. Atlas PNG TAI DUNG: Map003/Map005 dung atlas-map001.png,
 Map004 dung atlas-map002.png (theo atlas-map00X.json: truong "atlasPng") —
 converter lay ten PNG tu truong do, khong doan theo so map.
+G3 buoc 2 (20/11): them Map006 Chung Cu Cu, Map007 Pho Van Phong Nho,
+Map008 Khu Chung Cu Cao Cap — ca 3 tai dung atlas-map001.png; do thi MV
+1-2-3-4-5-6-7-8 da thong 2 chieu san (khong can ADDED_DOORS them), cua
+cuoi Map008 -> Map009 chua port (bi chan co bao, nhu Map005 -> Map006 o
+buoc 1). Map006-008 khong co hotspot / Goc Che Tao trong MV.
 """
 import json
 import shutil
@@ -29,7 +34,7 @@ ROOT = Path(__file__).resolve().parents[2]  # ~/workspace/pho-xo-bo
 MV = ROOT / "src/nadia/www/data"
 GODOT = ROOT / "src/godot"
 
-MAP_IDS = [1, 2, 3, 4, 5]  # G3 buoc 1: 1-5 (Map006+ o buoc sau)
+MAP_IDS = [1, 2, 3, 4, 5, 6, 7, 8]  # G3 buoc 2: 1-8 (Map009+ o buoc sau)
 
 # --- Du lieu khong co trong Map JSON, lay tu Actors.js / PXB_Hotspot.js ---
 NPC_TEXT = {
@@ -87,6 +92,40 @@ NPC_TEXT = {
         "greet": "Ngoài giờ học thì nhận việc làm thêm kiếm tiền trang trải. Khoá ngắn hạn 3–7 ngày, 2–10 triệu, +10 một chỉ số phụ, mở nghề phụ — học xong làm được việc ngay.",
         "hint": "Khóa ngắn hạn 3–7 ngày, 2–10 triệu, +10 một chỉ số phụ — học xong làm được việc ngay, mở nghề phụ.",
     },
+    # --- G3 buoc 2 (Map006-008): greet NGUYEN VAN tu lenh Show Text (code 401)
+    # trong Map JSON (nhieu dong 401 noi bang dau cach); hint do port viet moi,
+    # noi dung theo districts.md / GDD (nha tang 2/3, viec van phong, Chuong 3
+    # kiem tra rank) — xem docs/godot-g3.md §1. Chua co trong Actors.js / MV.
+    "Cư Dân Chung Cư": {
+        "id": "cu-dan-chung-cu",
+        "greet": "Chung cư cũ này là nhà ở tầng 2, chi phí vừa. Ở đây lâu rồi, quen hết cả dãy hành lang.",
+        "hint": "Nhà tầng 2 chi phí vừa, ở lâu thì giữ nhà cửa gọn gàng, hàng xóm quý nhau. Muốn lên tầng 3 thì qua Chương 3 kiểm tra rank.",
+    },
+    "Bác Quản Lý": {
+        "id": "bac-quan-ly",
+        "greet": "Nhà ở đây là tầng 2, chi phí vừa — muốn ở lâu thì giữ nhà cửa gọn gàng, hàng xóm quý nhau.",
+        "hint": "Giữ nhà cửa gọn gàng thì ở lâu được, hàng xóm quý nhau. Nhà tầng 3 thì phải qua Chương 3 kiểm tra rank.",
+    },
+    "Nhân Viên Văn Phòng": {
+        "id": "nhan-vien-van-phong",
+        "greet": "Việc văn phòng cấp thấp ở phố này nhiều — làm ổn định, chỉ cần chăm chỉ và đúng giờ. Muốn việc ổn định thì cần Trí 40 hoặc bằng Cao đẳng, Danh vọng 200.",
+        "hint": "Việc văn phòng cần Trí 40 hoặc bằng Cao đẳng, Danh vọng 200 — đúng ngưỡng mở Chương 2. Làm ổn định, chăm chỉ và đúng giờ.",
+    },
+    "Thực Tập Sinh": {
+        "id": "thuc-tap-sinh",
+        "greet": "Em đang thực tập ở công ty nhỏ cuối phố — thực tập xong mới xin được việc văn phòng cấp thấp.",
+        "hint": "Thực tập xong mới xin được việc văn phòng cấp thấp — mở điện thoại mục Việc làm xem nghề nào đang tuyển.",
+    },
+    "Cư Dân Cao Cấp": {
+        "id": "cu-dan-cao-cap",
+        "greet": "Nhà ở đây là nhà ở tầng 3 — khu chung cư cao cấp. Muốn ở được đây thì phải qua Chương 3 — bài kiểm tra rank.",
+        "hint": "Nhà tầng 3 chỉ mở khi qua Chương 3 — bài kiểm tra rank. Qua rồi thì mở điện thoại mục Bản đồ đi nhanh tới đây.",
+    },
+    "Bảo Vệ Chung Cư": {
+        "id": "bao-ve-chung-cu",
+        "greet": "Chung cư cao cấp chỉ mở khi qua bài kiểm tra rank ở Chương 3. Qua được bài kiểm tra rank thì khu này mới mở.",
+        "hint": "Chưa qua bài kiểm tra rank ở Chương 3 thì khu này chưa mở cho mình — học lên bậc, tích Danh vọng rồi quay lại.",
+    },
 }
 
 # Bang hotspot slice — PORT TRUC TIEP PXB_Hotspot.js HOTSPOTS (PROVISIONAL, chua chot GDD).
@@ -123,7 +162,7 @@ def transfer_target(ev: dict) -> int:
         for cmd in page.get("list", []):
             if cmd.get("code") == 201:
                 params = cmd.get("parameters", [])
-                assert len(params) >= 2 and int(params[1]) in MAP_IDS + [6], (
+                assert len(params) >= 2 and int(params[1]) in MAP_IDS + [9], (
                     f"TRANSFER dich la {params[1]} nam ngoai MAP_IDS")
                 return int(params[1])
     raise ValueError(f"event cua {ev.get('name')!r} khong co lenh TRANSFER")
