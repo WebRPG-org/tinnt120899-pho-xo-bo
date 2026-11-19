@@ -733,10 +733,17 @@ check("T14aa", "package.json (NW.js): main = www/index.html",
 # "password=<redacted>" trong comment ví dụ của loader (không phải secret thật),
 # quét chung sẽ FAIL giả. Nguồn upstream được khóa riêng ở T15a–c
 # (header version + node --check + dung lượng).
+# Ngoại lệ 19/11 ~06:55: file NHỊ PHÂN (atlas PNG trong img/tilesets/,
+# sau này thêm audio) KHÔNG phải text — quét read_text sẽ crash
+# UnicodeDecodeError (đã crash thật khi atlas PNG vào repo). Loại khỏi
+# danh sách quét; PNG được khóa riêng ở T24 (magic bytes + kích thước + SHA).
+_BINARY_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".ogg",
+                    ".mp3", ".m4a", ".wav", ".zip"}
 nadia_files = [p for p in sorted(NADIA.rglob("*")) if p.is_file()
                and p.name not in {"rpg_core.js", "rpg_managers.js", "rpg_objects.js",
                                   "rpg_scenes.js", "rpg_sprites.js", "rpg_windows.js"}
-               and "libs" not in p.parts]
+               and "libs" not in p.parts
+               and p.suffix.lower() not in _BINARY_SUFFIXES]
 bad_nadia_secret = [p.name for p in nadia_files if secret_pat.search(read(p))]
 check("T14ab", "Không có secret/token/key trong file nadia (do mình viết)", not bad_nadia_secret,
       f"nghi ngờ ở: {bad_nadia_secret}" if bad_nadia_secret else "")
@@ -1238,6 +1245,84 @@ check("T23e", "PXB_SaveCloud: chưa có endpoint thì upload/download trả serv
       cloud_js.count("server-chua-co-endpoint") >= 3
       and "uploadSave" in cloud_js and "downloadSave" in cloud_js)
 
+# ---- Nhóm T24 — PXB_Isometric v3 (atlas mode) + atlas PNG trong repo (19/11/2026 ~06:55) ----
+# v3 đọc tile data atlas-code (Map001/002) qua mapping JSON + atlas PNG
+# img/tilesets/, thay cho đường tileset MV của v2 (giữ nguyên fallback).
+# Smoke test stub core MV: /tmp/pxb-iso-v3-smoke.js 55/55 PASS (không commit).
+import hashlib as _hashlib
+import struct as _struct
+_iso_js = read(NADIA_PLUGINS / "PXB_Isometric.js")
+_iso_tokens = ["registerAtlas", "atlasFor", "atlasCodeFor", "loadAtlasBitmap",
+               "loadAtlasJson", "tintToHex", "setAtlas", "skippedAtlasUnknown",
+               "atlasModeOn", "img/tilesets/", "atlas-map"]
+_missing_iso = [t for t in _iso_tokens if t not in _iso_js]
+check("T24a", "PXB_Isometric v3: đủ API atlas (register/atlasFor/loadBitmap/loadJson/tintToHex/setAtlas)",
+      not _missing_iso and "require(" not in _iso_js
+      and "isoPos" in _iso_js and "normalTileSource" in _iso_js
+      and "panFromOrigin" in _iso_js,
+      f"thiếu: {_missing_iso}" if _missing_iso else "")
+# T24b: atlas PNG đã vào repo, đúng magic bytes + 512x64 + SHA-256 khớp
+# docs/tileset-plan.md §7 (971faa8d…15940 / d1329a32…80949).
+def _png_ok(name, sha):
+    p = NADIA / "img" / "tilesets" / name
+    if not p.is_file():
+        return False, f"thiếu {name}"
+    raw = p.read_bytes()
+    if raw[:8] != b"\x89PNG\r\n\x1a\n":
+        return False, f"{name} không phải PNG"
+    w, h = _struct.unpack(">II", raw[16:24])
+    if (w, h) != (512, 64):
+        return False, f"{name} kích thước {w}x{h}, cần 512x64"
+    if _hashlib.sha256(raw).hexdigest() != sha:
+        return False, f"{name} SHA-256 lệch §7"
+    return True, ""
+_ok_png1, _d_png1 = _png_ok("atlas-map001.png",
+    "971faa8da7d2410ec288bedb5bf981440ad5c6e35bfd4e0348d4a98a98715940")
+_ok_png2, _d_png2 = _png_ok("atlas-map002.png",
+    "d1329a32bd39d5738708375afa0d9759f0b26ebcdc209bc26b45ce4a39080949")
+check("T24b", "Atlas PNG trong repo: magic bytes + 512x64 + SHA-256 khớp tileset-plan.md §7",
+      _ok_png1 and _ok_png2, _d_png1 or _d_png2)
+# T24c: mapping JSON trỏ đúng PNG đã có + scheme atlas-code + mọi rect
+# nằm trong atlas 512x64; code 3 phân lớp theo mapping (Map001 layer 1
+# tường, Map002 layer 0 đường nhựa) — khóa điểm tinh tế của v3.
+def _atlas_png_ok(fname):
+    try:
+        a = json.loads(read(NADIA_DATA / fname))
+    except Exception as e:  # noqa: BLE001
+        return False, str(e)
+    if a.get("scheme") != "atlas-code":
+        return False, f"{fname} scheme != atlas-code"
+    png_path = NADIA / a.get("atlasPng", "")
+    if not png_path.is_file():
+        return False, f"{fname} atlasPng không có file: {a.get('atlasPng')}"
+    for code, t in a.get("tiles", {}).items():
+        if not (0 <= t["x"] and 0 <= t["y"] and t["x"] + t["w"] <= 512
+                and t["y"] + t["h"] <= 64):
+            return False, f"{fname} tile {code} rect tràn atlas"
+    return True, ""
+_ok_a1, _d_a1 = _atlas_png_ok("atlas-map001.json")
+_ok_a2, _d_a2 = _atlas_png_ok("atlas-map002.json")
+_atlas1 = json.loads(read(NADIA_DATA / "atlas-map001.json"))
+_atlas2 = json.loads(read(NADIA_DATA / "atlas-map002.json"))
+_code3_diff = (_atlas1["tiles"]["3"]["layer"] == 1
+               and _atlas2["tiles"]["3"]["layer"] == 0)
+check("T24c", "Atlas mapping: scheme atlas-code + atlasPng có file + rect trong 512x64 + code 3 khác layer 2 map",
+      _ok_a1 and _ok_a2 and _code3_diff, _d_a1 or _d_a2)
+# T24d: v3 vẽ atlas đúng luật — frame từ mapping, tint qua tintToHex,
+# sàn neo (0.5, 0.5) tại diamondCenter, tường neo (0.5, 1.0) tại isoPos,
+# không quay 45° ở đường atlas; code lạ đếm skippedAtlasUnknown.
+check("T24d", "PXB_Isometric v3: vẽ atlas theo mapping.layer + tintToHex + neo sàn/tường đúng",
+      "mapping.tiles" in _iso_js and "tintToHex(entry.tint)" in _iso_js
+      and "skippedAtlasUnknown++" in _iso_js
+      and _iso_js.count("anchor.y = 1.0") >= 1
+      and "diamondCenter" in _iso_js and "isoPos" in _iso_js)
+# T24e: tile data Map001/002 vẫn khớp mapping sau khi v3 vào (khóa lại
+# bằng hàm _map_data_ok của T21, tránh v3 làm lệch data).
+_ok_m1, _d_m1 = _map_data_ok("Map001", _atlas1)
+_ok_m2, _d_m2 = _map_data_ok("Map002", _atlas2)
+check("T24e", "Tile data Map001/002 vẫn khớp mapping atlas (T21 khóa lại sau v3)",
+      _ok_m1 and _ok_m2, _d_m1 or _d_m2)
+
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)
 failed = [r for r in results if not r[2]]
@@ -1257,6 +1342,7 @@ print("68/68 + 109/109 PASS), Tools đã viết (smoke 140/140 PASS, 12 câu")
 print("ToolBehaviour đúng nguyên văn Crafting.cs), Online/SaveCloud đã viết")
 print("(smoke 68/68 PASS, trade/đấu giá/guild trả server-chua-co-endpoint),")
 print("tile data Map001/002 nay thật (atlas-code, layer 0 108/108 + layer 1")
-print("28/108), nhưng atlas PNG chưa vào repo + PXB_Isometric v3 (atlas")
-print("mode) chưa viết, img/audio trống, nên chưa mở trình duyệt chơi được thật")
-print("(xem docs/test-report.md).")
+print("28/108), atlas PNG đã vào repo img/tilesets/ (SHA khớp §7) +")
+print("PXB_Isometric v3 (atlas mode) đã viết (smoke stub 55/55 PASS), nhưng")
+print("chưa mở trình duyệt chơi được thật — cần chạy game MV thật với atlas")
+print("để thấy map Xóm Trọ Cũ (xem docs/test-report.md).")

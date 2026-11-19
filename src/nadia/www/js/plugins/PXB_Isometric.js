@@ -1,35 +1,53 @@
 // Phố Xô Bồ — PXB_Isometric.js (plugin RPG Maker MV)
 // Render 2.5D isometric trên Pixi — điều kiện để giữ mục chốt 2.5D
-// (GDD Mục 10, docs/architecture-nadia.md §5). Bản v2 (Giai đoạn 1):
-// ĐÃ MÓC vào Tilemap của MV (core MV v1.6.1 đã có trong repo):
-//   - PXB_IsoTilemap kế thừa Tilemap, vẽ tile thường (B–E + A5) thành hình
-//     thoi 64×32 bằng phép quay 45° + co tỉ lệ trên sprite MV (không sửa
-//     core, chỉ alias/hook theo quy ước MV).
-//   - Game_CharacterBase.screenX/screenY chiếu isometric — nhân vật, NPC,
-//     event tự đứng đúng ô thoi; sắp xếp chiều sâu KHÔNG cần hook thêm vì
-//     nhân vật vốn là con của Tilemap (Spriteset_Map.createCharacters,
-//     rpg_sprites.js) và Tilemap._sortChildren xếp theo z rồi y — y nay đã
-//     là y màn hình isometric nên vật ở dưới tự đè vật ở trên.
-//   - Cuộn map: Spriteset_Map.updateTilemap gốc vẫn đặt tilemap.origin theo
-//     displayX/displayY; updateTransform của IsoTilemap đổi origin đó thành
-//     độ dời (pan) isometric của lớp tile.
+// (GDD Mục 10, docs/architecture-nadia.md §5). Bản v3 (Giai đoạn 1):
+// Chế độ atlas (atlas-code) — data map Map001/Map002 là code 1..6,
+// KHÔNG phải tile ID MV (code 1..6 mà đưa vào luật MV sẽ bị hiểu là
+// autotile A1 — v3 chặn đúng chỗ này: đường atlas bỏ qua hoàn toàn luật
+// MV isAutotile/isVisibleTile/_isHigherTile).
+//   - Registry atlas: registerAtlas(mapId, mapping) + atlasFor(mapId);
+//     mapping lấy từ data/atlas-map00X.json (scheme "atlas-code", cell
+//     64×64, 8 cột), PNG ở img/tilesets/atlas-map00X.png.
+//   - IsoTilemap.setAtlas(mapId, mapping, bitmap): Spriteset_Map.
+//     createTilemap tự gắn atlas theo $gameMap.mapId() (1 -> Map001,
+//     2 -> Map002); chưa có mapping thì loadAtlasJson (XMLHttpRequest)
+//     rồi setAtlas + refresh khi scene map đang active.
+//   - Vẽ atlas: sprite lấy đúng frame (x,y,w,h) trong atlas PNG, tint
+//     = clamp từng kênh tint*255 về 0..255 thành 0xRRGGBB, không quay
+//     45° (atlas đã là hình thoi sẵn). Sàn (mapping.layer 0) neo
+//     (0.5, 0.5) tại diamondCenter; tường/sạp (layer 1) neo (0.5, 1.0)
+//     tại isoPos (tâm đáy) để nhà/sạp cao vươn lên trên. Phân lớp theo
+//     mapping.layer (0 -> lower, 1 -> upper), bỏ qua bóng/mép bàn/
+//     overpass của MV (atlas data không có các thứ đó).
+//   - Đường fallback MV (v2) giữ nguyên 100% khi atlas mode tắt
+//     (không mapping hoặc không bitmap): tile thường B–E + A5 vẽ thoi
+//     64×32 bằng quay 45° + co; autotile/bóng/mép bàn vẫn đếm skipped.
+//   - Móc Tilemap của MV (core MV v1.6.1): PXB_IsoTilemap kế thừa
+//     Tilemap; Game_CharacterBase.screenX/screenY chiếu isometric;
+//     cuộn map: updateTransform đổi origin MV thành pan isometric.
 // Công thức: sx = ox + (x − y) × tileW/2, sy = oy + (x + y) × tileH/2,
 // tile 2:1 (64×32); sắp xếp theo x + y (tương đương sort axis (0, 1, −0.26)
 // của Unity, docs/art-style.md §7); màn dọc 9:16, viewport 720×1280.
 // Không dùng require, không dùng API chỉ có trên NW.js.
 //
-// GIỚI HẠN v2 (nói thẳng, chưa giấu):
-//   - Autotile A1–A4 (nước, đất...) CHƯA vẽ — _drawTile đếm vào
-//     stats.skippedAutotile; cần vẽ autotile isometric ở v3.
-//   - Bóng (shadow) + mép bàn (table edge) CHƯA vẽ — đếm vào stats.
-//   - Tile data hiện toàn 0 + chưa có tileset CC0 nên bản v2 chưa vẽ được
-//     gì lên màn hình thật — chỉ móc đúng + tính đúng; cần tileset + data
-//     map thật mới thấy map Xóm Trọ Cũ.
+// GIỚI HẠN v3 (nói thẳng, chưa giấu):
+//   - Autotile A1–A4 MV vẫn chưa vẽ ở đường fallback — _drawTile đếm
+//     vào stats.skippedAutotile; đường atlas không dùng autotile MV.
+//   - Bóng (shadow) + mép bàn (table edge) MV chưa vẽ — đếm vào stats
+//     (đường atlas bỏ qua hẳn vì atlas data không có bóng/mép bàn).
+//   - Culling viewport chưa có — map 12×9 nhỏ nên vẽ hết; map lớn hơn
+//     cần cắt viewport ở v4.
+//   - Xe máy / dây điện / sạp lá chuối vẫn phải vẽ thêm theo
+//     docs/tileset-plan.md — chưa có trong atlas-map001/002.
+//   - Atlas PNG phải nằm ở img/tilesets/atlas-map00X.png thì bitmap mới
+//     load được; nếu thiếu file, ImageManager vẫn trả Bitmap nhưng
+//     không bao giờ ready -> sprite atlas vẽ trắng, map trống (không
+//     tự rơi về fallback). Cần copy PNG vào img/tilesets/ trước khi chơi.
 //   - Cuộn map (displayX/displayY) vẫn theo luật MV gốc (tile 48px):
 //     nhân vật được giữ gần giữa màn hình ở mức gần đúng, chưa chỉnh tâm
-//     cuộn riêng cho isometric — chỉnh ở v3 sau khi chơi thử thật.
+//     cuộn riêng cho isometric — chỉnh sau khi chơi thử thật.
 //   - Luôn dùng IsoTilemap kể cả khi WebGL bật (không dùng ShaderTilemap):
-//     hiệu ứng chỉ có trên shader tilemap không áp dụng ở v2.
+//     hiệu ứng chỉ có trên shader tilemap không áp dụng ở v3.
 (function () {
   "use strict";
 
@@ -138,8 +156,117 @@
     skippedShadow: 0,
     skippedTableEdge: 0,
     skippedInvisible: 0,
-    skippedNoBitmap: 0
+    skippedNoBitmap: 0,
+    skippedAtlasUnknown: 0
   };
+
+  // ---- Chế độ atlas v3 (atlas-code, data/atlas-map00X.json) ----
+  // Data map Map001/Map002 chứa code 1..6, KHÔNG phải tile ID MV:
+  // code 1..6 mà đi qua luật MV sẽ bị hiểu là autotile A1. Đường atlas
+  // tra mapping.tiles[String(code)] để lấy frame/tint/layer, bỏ qua
+  // hoàn toàn luật MV (isAutotile/isVisibleTile/_isHigherTile).
+  var _atlasRegistry = {}; // mapId (số) -> mapping atlas-code
+  var _atlasBitmaps = {}; // mapId (số) -> Bitmap atlas (cache, dùng lại)
+
+  // "Map001"/"Map002" theo mapId; map khác chưa có atlas -> null.
+  function atlasCodeFor(mapId) {
+    if (mapId === 1) return "Map001";
+    if (mapId === 2) return "Map002";
+    return null;
+  }
+
+  // Lưu mapping atlas cho 1 map. Trả false khi thiếu mapId/mapping.
+  function registerAtlas(mapId, mapping) {
+    if (mapId == null || !mapping) return false;
+    _atlasRegistry[mapId] = mapping;
+    return true;
+  }
+
+  // Mapping đã đăng ký cho mapId, hoặc null khi chưa có.
+  function atlasFor(mapId) {
+    return _atlasRegistry[mapId] || null;
+  }
+
+  // Tint nhân tử [r, g, b] (mỗi kênh ~1.0) -> 0xRRGGBB cho PIXI.Sprite.
+  // Kênh > 1 kẹp về 255, kênh thiếu/không có tint -> 0xFFFFFF (không đổi).
+  function tintToHex(tint) {
+    if (!tint || tint.length < 3) return 0xFFFFFF;
+    var r = Math.max(0, Math.min(255, Math.round(tint[0] * 255)));
+    var g = Math.max(0, Math.min(255, Math.round(tint[1] * 255)));
+    var b = Math.max(0, Math.min(255, Math.round(tint[2] * 255)));
+    return (r << 16) | (g << 8) | b;
+  }
+
+  // Load bitmap atlas qua ImageManager MV (chỉ chạy trên trình duyệt).
+  // Trong node / kiểm tra tĩnh (không có ImageManager) trả null, không
+  // crash. Bitmap được cache theo mapId để dùng lại ở mọi lần vẽ.
+  function loadAtlasBitmap(mapId, mapping) {
+    if (typeof ImageManager === "undefined" || !ImageManager) {
+      return null;
+    }
+    var code = atlasCodeFor(mapId);
+    if (!code) return null;
+    if (_atlasBitmaps[mapId]) return _atlasBitmaps[mapId];
+    var bitmap = ImageManager.loadBitmap(
+      "img/tilesets/", "atlas-" + code.toLowerCase(), 0, true);
+    if (bitmap) _atlasBitmaps[mapId] = bitmap;
+    return bitmap || null;
+  }
+
+  // Load mapping JSON qua XMLHttpRequest (async): GET
+  // data/atlas-map00X.json, parse, registerAtlas rồi gọi onDone(mapping).
+  // Lỗi mạng/parse hoặc không có XMLHttpRequest -> onDone(null).
+  function loadAtlasJson(mapId, onDone) {
+    var done = function(mapping) {
+      if (typeof onDone === "function") {
+        try { onDone(mapping); } catch (e) {}
+      }
+    };
+    if (typeof XMLHttpRequest === "undefined") {
+      done(null);
+      return;
+    }
+    var code = atlasCodeFor(mapId);
+    if (!code) {
+      done(null);
+      return;
+    }
+    try {
+      var xhr = new XMLHttpRequest();
+      xhr.open("GET", "data/atlas-" + code.toLowerCase() + ".json", true);
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState !== 4) return;
+        if (xhr.status !== 200 && xhr.status !== 0) {
+          done(null);
+          return;
+        }
+        try {
+          var mapping = JSON.parse(xhr.responseText);
+          registerAtlas(mapId, mapping);
+          done(mapping);
+        } catch (e) {
+          done(null);
+        }
+      };
+      xhr.send();
+    } catch (e) {
+      done(null);
+    }
+  }
+
+  // Atlas mode bật khi tilemap đã có cả mapping lẫn bitmap. Thiếu 1 trong
+  // 2 -> đường fallback MV v2 (giữ nguyên 100% hành vi v2).
+  function atlasModeOn() {
+    return !!(this._atlasMapping && this._atlasBitmap);
+  }
+
+  // Gắn atlas cho 1 tilemap: lưu mapId/mapping/bitmap để isoDrawTile và
+  // isoPaintTiles dùng. mapping/bitmap null -> tắt atlas mode.
+  function isoSetAtlas(mapId, mapping, bitmap) {
+    this._atlasMapId = mapId;
+    this._atlasMapping = mapping || null;
+    this._atlasBitmap = bitmap || null;
+  }
 
   // ---- PXB_IsoTilemap: Tilemap MV vẽ tile thành hình thoi ----
   // Chuỗi prototype chỉ nối trong install() (lúc đó Tilemap mới chắc chắn
@@ -216,6 +343,7 @@
     stats.skippedTableEdge = 0;
     stats.skippedInvisible = 0;
     stats.skippedNoBitmap = 0;
+    stats.skippedAtlasUnknown = 0;
     for (var y = 0; y < this._mapHeight; y++) {
       for (var x = 0; x < this._mapWidth; x++) {
         isoPaintTiles.call(this, startX, startY, x, y);
@@ -226,7 +354,27 @@
   // Gom tile 1 ô theo đúng luật Tilemap._paintTiles gốc (tầng nào cao thì
   // lên lớp trên, overpass đẩy z = 2/3 lên trên), nhưng chỉ vẽ tile thường;
   // bóng + mép bàn + autotile đếm vào stats, chưa vẽ ở v2.
+  // Atlas mode (v3): phân lớp theo mapping.layer (0 -> lower, 1 -> upper),
+  // bỏ qua bóng/mép bàn/overpass và layer 2-5 của MV (atlas data không có
+  // các thứ đó). Code không có trong mapping được đẩy xuống lower để
+  // isoDrawTile đếm 1 lần vào stats.skippedAtlasUnknown.
   function isoPaintTiles(startX, startY, x, y) {
+    if (atlasModeOn.call(this)) {
+      var lowerTiles = [];
+      var upperTiles = [];
+      atlasPushTile.call(this, lowerTiles, upperTiles,
+        this._readMapData(x, y, 0));
+      atlasPushTile.call(this, lowerTiles, upperTiles,
+        this._readMapData(x, y, 1));
+      var i;
+      for (i = 0; i < lowerTiles.length; i++) {
+        isoDrawTile.call(this, this._isoLayer, 0, lowerTiles[i], x, y);
+      }
+      for (i = 0; i < upperTiles.length; i++) {
+        isoDrawTile.call(this, this._isoUpperLayer, 4, upperTiles[i], x, y);
+      }
+      return;
+    }
     var tableEdgeVirtualId = 10000;
     var mx = x;
     var my = y;
@@ -280,9 +428,29 @@
     }
   }
 
+  // Atlas mode: xếp 1 code vào lower/upper theo mapping.layer của nó
+  // (không theo layer data MV — cùng code 3 là tường layer 1 ở Map001
+  // nhưng là đường nhựa layer 0 ở Map002). Code 0 = ô trống, bỏ qua.
+  // Code không có trong mapping -> lower để isoDrawTile đếm unknown.
+  function atlasPushTile(lowerTiles, upperTiles, tileId) {
+    if (tileId <= 0) return;
+    var entry = this._atlasMapping.tiles[String(tileId)];
+    if (entry && entry.layer === 1) {
+      upperTiles.push(tileId);
+    } else {
+      lowerTiles.push(tileId);
+    }
+  }
+
   // Vẽ 1 tile vào lớp: số âm = bóng (chưa vẽ), ≥10000 = mép bàn (chưa vẽ),
   // 0/vô hình thì bỏ, autotile thì đếm chưa vẽ; còn lại vẽ hình thoi.
+  // Atlas mode (v3) rẽ nhánh ngay đầu: mọi tileId > 0 là atlas-code, bỏ
+  // qua hoàn toàn luật MV (kể cả isAutotile — code 1..6 của MV là A1).
   function isoDrawTile(layer, layerZ, tileId, mx, my) {
+    if (atlasModeOn.call(this)) {
+      isoDrawAtlasTile.call(this, layer, layerZ, tileId, mx, my);
+      return;
+    }
     if (tileId < 0) {
       stats.skippedShadow++;
       return;
@@ -300,6 +468,44 @@
       return;
     }
     isoDrawNormalTile.call(this, layer, layerZ, tileId, mx, my);
+  }
+
+  // Vẽ 1 tile atlas-code: tra mapping.tiles[String(tileId)]; không có thì
+  // đếm stats.skippedAtlasUnknown và bỏ qua. Có thì vẽ sprite từ atlas
+  // bitmap với đúng frame (x,y,w,h), tint = tintToHex(entry.tint), KHÔNG
+  // quay 45° (atlas đã là hình thoi sẵn). Sàn (layer 0) neo (0.5, 0.5)
+  // tại diamondCenter; tường/sạp (layer 1) neo (0.5, 1.0) tại isoPos
+  // (tâm đáy) để nhà/sạp cao vươn lên trên. Ô trống (tileId <= 0) bỏ qua
+  // lặng, không đếm (ô trống là bình thường trong data atlas-code).
+  function isoDrawAtlasTile(layer, layerZ, tileId, mx, my) {
+    if (tileId <= 0) {
+      return;
+    }
+    var entry = this._atlasMapping.tiles[String(tileId)];
+    if (!entry) {
+      stats.skippedAtlasUnknown++;
+      return;
+    }
+    var sprite = new Sprite();
+    sprite.bitmap = this._atlasBitmap;
+    sprite.setFrame(entry.x, entry.y, entry.w, entry.h);
+    sprite.tint = tintToHex(entry.tint);
+    if (entry.layer === 1) {
+      sprite.anchor.x = 0.5;
+      sprite.anchor.y = 1.0;
+      var foot = isoPos(mx, my, this._isoOrigin.ox, this._isoOrigin.oy);
+      sprite.x = foot.x;
+      sprite.y = foot.y;
+    } else {
+      sprite.anchor.x = 0.5;
+      sprite.anchor.y = 0.5;
+      var center = diamondCenter(mx, my, this._isoOrigin.ox, this._isoOrigin.oy);
+      sprite.x = center.x;
+      sprite.y = center.y;
+    }
+    sprite.z = layerZ;
+    layer.addChild(sprite);
+    stats.painted++;
   }
 
   // Vẽ tile thường: sprite MV lấy đúng vùng nguồn trong tileset (theo
@@ -372,6 +578,7 @@
     PXB_IsoTilemap.prototype.initialize = isoInitialize;
     PXB_IsoTilemap.prototype._createLayers = isoCreateLayers;
     PXB_IsoTilemap.prototype.setData = isoSetData;
+    PXB_IsoTilemap.prototype.setAtlas = isoSetAtlas;
     PXB_IsoTilemap.prototype.refresh = isoRefresh;
     PXB_IsoTilemap.prototype._paintAllTiles = isoPaintAllTiles;
     PXB_IsoTilemap.prototype._paintTiles = isoPaintTiles;
@@ -403,6 +610,9 @@
 
     // Spriteset_Map: dựng IsoTilemap thay cho Tilemap/ShaderTilemap.
     // Hỏng giữa chừng thì về lại cách dựng gốc, không vỡ scene map.
+    // v3: gắn atlas theo $gameMap.mapId() — mapping đã đăng ký thì
+    // setAtlas ngay; chưa có thì loadAtlasJson rồi setAtlas + refresh
+    // (chỉ refresh khi scene map đang active, bọc try/catch).
     var _origCreateTilemap = Spriteset_Map.prototype.createTilemap;
     Spriteset_Map.prototype.createTilemap = function() {
       try {
@@ -412,6 +622,25 @@
         this._tilemap.setData($gameMap.width(), $gameMap.height(), $gameMap.data());
         this._tilemap.horizontalWrap = $gameMap.isLoopHorizontal();
         this._tilemap.verticalWrap = $gameMap.isLoopVertical();
+        var mapId = $gameMap.mapId();
+        var mapping = atlasFor(mapId);
+        var tilemap = this._tilemap;
+        if (mapping) {
+          tilemap.setAtlas(mapId, mapping, loadAtlasBitmap(mapId, mapping));
+        } else {
+          loadAtlasJson(mapId, function(loaded) {
+            if (!loaded) return;
+            try {
+              tilemap.setAtlas(mapId, loaded,
+                loadAtlasBitmap(mapId, loaded));
+              if (typeof SceneManager !== "undefined" && SceneManager &&
+                  typeof Scene_Map !== "undefined" &&
+                  SceneManager._scene instanceof Scene_Map) {
+                tilemap.refresh();
+              }
+            } catch (e) {}
+          });
+        }
         this.loadTileset();
         this._baseSprite.addChild(this._tilemap);
       } catch (e) {
@@ -441,6 +670,12 @@
     diamondCenter: diamondCenter,
     normalTileSource: normalTileSource,
     panFromOrigin: panFromOrigin,
+    registerAtlas: registerAtlas,
+    atlasFor: atlasFor,
+    atlasCodeFor: atlasCodeFor,
+    loadAtlasBitmap: loadAtlasBitmap,
+    loadAtlasJson: loadAtlasJson,
+    tintToHex: tintToHex,
     stats: stats,
     IsoTilemap: PXB_IsoTilemap,
     install: install,

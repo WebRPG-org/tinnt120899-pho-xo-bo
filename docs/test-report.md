@@ -7,6 +7,61 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 19/11/2026 ~06:55 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **248/248 PASS, exit 0** — tăng từ 243/243: nhóm T24 mới
+  (5 mục, PXB_Isometric v3 atlas mode + atlas PNG trong repo).
+- **PXB_Isometric v3 — ATLAS MODE ĐÃ VIẾT (việc tiếp theo lớn nhất, xong):**
+  `src/nadia/www/js/plugins/PXB_Isometric.js` nay 691 dòng (v2: 456):
+  registry atlas (`registerAtlas`/`atlasFor`/`atlasCodeFor` 1→Map001,
+  2→Map002), `loadAtlasBitmap` qua `ImageManager.loadBitmap('img/tilesets/',
+  'atlas-map001', 0, true)` + cache theo mapId, `loadAtlasJson` qua
+  `XMLHttpRequest` GET `data/atlas-map00X.json` (lỗi → `onDone(null)`),
+  `IsoTilemap.setAtlas(mapId, mapping, bitmap)`; `Spriteset_Map.createTilemap`
+  tự gắn atlas theo `$gameMap.mapId()`, chưa có mapping thì load JSON rồi
+  `setAtlas` + `refresh()` chỉ khi scene map đang active. Vẽ atlas: tra
+  `mapping.tiles[String(code)]`, code lạ đếm `stats.skippedAtlasUnknown`;
+  sprite lấy đúng frame (x,y,w,h), tint = `tintToHex` (kênh >1 kẹp 255),
+  KHÔNG quay 45° (atlas đã là hình thoi sẵn); sàn layer 0 neo (0.5, 0.5)
+  tại `diamondCenter`, tường/sạp layer 1 neo (0.5, 1.0) tại `isoPos`;
+  phân lớp theo `mapping.layer`, bỏ qua bóng/mép bàn/overpass MV.
+  Atlas mode tắt → đường fallback v2 giữ nguyên 100%. Smoke test stub
+  core MV (`/tmp/pxb-iso-v3-smoke.js`, không commit): **55/55 PASS** (đã
+  chạy lại độc lập để xác minh); `node --check` PASS; API v2 giữ nguyên.
+- **Atlas PNG ĐÃ VÀO REPO:** `src/nadia/www/img/tilesets/atlas-map001.png`
+  (17.531 byte) + `atlas-map002.png` (17.124 byte), cả 2 đều 512×64 RGBA,
+  SHA-256 khớp 100% `docs/tileset-plan.md` §7. Tile data khớp hoàn toàn
+  mapping (code + layer + số ô; đường nhựa Map002 đúng 9 ô ở x=5, xuyên
+  qua ô cửa (5,4)). Lưu ý nhỏ: mô tả §7.3 "biên nam y=8 để trống" chưa
+  chính xác tuyệt đối — layer 1 vẫn có 2 ô góc (0,8) và (11,8); chỉ là
+  câu chữ trong doc, không phải lỗi dữ liệu.
+- **1 lỗi script đã sửa trong lần chạy này (không phải code game):**
+  `check_static.py` crash `UnicodeDecodeError` byte 0x89 ở T14ab ngay khi
+  atlas PNG vào repo — `nadia_files` đọc mọi file dưới `src/nadia/` bằng
+  `read_text(utf-8)`. Đã sửa: loại đuôi nhị phân (`.png/.jpg/.ogg/.mp3/
+  .zip`…) khỏi danh sách quét T14ab/ac; PNG được khóa riêng ở T24b (magic
+  bytes + 512×64 + SHA-256). 2 lỗi script mới trong lần chạy này (đã sửa,
+  chạy lại PASS): T24b/T24c lúc đầu FAIL giả — đường dẫn `NADIA/"www"/…`
+  bị nhân đôi vì `NADIA` đã bao gồm `www`.
+- **Giới hạn v3 (nói thẳng, đã ghi trong header plugin):** nếu thiếu file
+  PNG, `ImageManager` vẫn trả Bitmap nhưng không bao giờ ready → sprite
+  atlas vẽ trắng, map trống, KHÔNG tự rơi về fallback (vì `atlasModeOn`
+  chỉ kiểm tra mapping + bitmap non-null). Autotile A1–A4 + bóng + mép
+  bàn ở đường fallback MV vẫn chưa vẽ; chưa culling viewport (map 12×9
+  nhỏ nên vẽ hết); xe máy/dây điện/sạp lá chuối vẫn phải vẽ thêm.
+- **Còn lại chưa xong (Giai đoạn 2–4):** chưa mở trình duyệt chơi được
+  thật — cần chạy game MV thật với atlas để thấy map Xóm Trọ Cũ (VM
+  không chạy được game); PXB_MarketBattle (luật chưa chốt), Map003–018
+  chưa có, img/audio còn lại trống. Checklist C1–C9 (§6 roles-qc) vẫn
+  giữ cho đường Unity (phương án dự phòng); đường chính nay là Giai đoạn
+  1–5 của `docs/architecture-nadia.md`. Việc tiếp theo lớn nhất: chạy
+  thử game MV thật trên trình duyệt (mở Map001 thấy map Xóm Trọ Cũ vẽ
+  bằng atlas), rồi PXB_MarketBattle / Map003–018.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa
+  biên dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test`
+  vẫn kẹt RAM — chạy qua GitHub Actions; Unity chưa có).
+
 ## Lần chạy mới nhất: 19/11/2026 ~06:30 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
