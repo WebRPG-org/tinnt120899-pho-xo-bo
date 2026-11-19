@@ -32,3 +32,8 @@ obj/
 *.key
 *.pem
 secrets/
+
+# Godot (G0 — 19/11/2026): binary + build local, không push lên GitHub
+tools/godot/
+src/godot/.godot/
+src/godot-build/
