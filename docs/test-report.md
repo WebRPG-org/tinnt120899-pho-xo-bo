@@ -7,6 +7,41 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 19/11/2026 ~12:50 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **288/288 PASS, exit 0** — tăng từ 283/283: nhóm T32 mới
+  (5 mục, Map008 Khu Chung Cư Cao Cấp).
+- **Map008 — Khu Chung Cư Cao Cấp (việc tiếp theo lớn nhất, xong):**
+  `src/nadia/www/data/Map008.json` mới (lưới 12×9, data 648, layer 0
+  108/108 — sàn xen kẽ 1/2, không đường nhựa, đúng mẫu Map001/Map003/
+  Map005/Map006/Map007; layer 1 28/108 — biên bắc/tây/đông, biên nam để
+  trống như mặt tiền mở, chỉ 2 ô góc); NPC Cư Dân Cao Cấp (3,3) + Bảo Vệ
+  Chung Cư (8,6), lời thoại chỉ từ `docs/districts.md` khu 8 ("Nhà ở
+  tầng 3.") + `MapInfos.json` khu 8 unlock ("Chương 3 — bài kiểm tra
+  rank.") — không bịa lương/giá; transfer về Map007 (5,4).
+  `data/atlas-map008.json` mới, TÁI DÙNG `atlas-map001.png` (không PNG
+  mới, SHA không đổi). `PXB_Isometric.js` đăng ký map 8 (`atlasCodeFor`
+  + sửa comment header cũ chỉ ghi tới Map007); `loadAtlasBitmap` đã tôn
+  trọng `mapping.atlasPng` từ v3.1 nên không sửa thêm. **Map007 nay có
+  cửa (5,8) đi Map008** — đồ thị map 1-2-3-4-5-6-7-8 đã nối được.
+  PROVISIONAL: code 3/4/5 (nhà trọ) dùng tạm làm khối chung cư cao cấp,
+  chờ art pass vẽ tile chung cư cao cấp riêng. Đã xác minh độc lập:
+  smoke `/tmp/pxb-map008-smoke.js` 23/23 PASS (không commit) — JSON hợp
+  lệ, đếm tile 648/108/28, event không bị tường đè, transfer 2 chiều
+  Map007↔Map008, atlas tái dùng, lời thoại đúng nguồn, không có số
+  giá/lương bịa.
+- **Còn lại chưa xong:** chờ chủ bật GitHub Pages → kiểm chứng Map001
+  bằng trình duyệt thật; Map009–018 chưa có; img/audio còn lại trống;
+  luật MarketBattle chi tiết chờ chủ duyệt (scene trận chưa có).
+  Checklist C1–C9 (§6 roles-qc) vẫn giữ cho đường Unity (phương án
+  dự phòng); đường chính nay là Giai đoạn 1–5 của
+  `docs/architecture-nadia.md`. Việc tiếp theo lớn nhất: Map009 (Phố
+  Thương Mại) + scene trận MarketBattle sau khi chủ duyệt luật.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa
+  biên dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test`
+  vẫn kẹt RAM — chạy qua GitHub Actions; Unity chưa có).
+
 ## Lần chạy mới nhất: 19/11/2026 ~11:50 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)

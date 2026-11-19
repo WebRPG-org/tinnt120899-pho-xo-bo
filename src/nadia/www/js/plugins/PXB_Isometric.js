@@ -176,7 +176,7 @@
   var _atlasRegistry = {}; // mapId (số) -> mapping atlas-code
   var _atlasBitmaps = {}; // mapId (số) -> Bitmap atlas (cache, dùng lại)
 
-  // "Map001"/"Map002"/"Map003"/"Map004"/"Map005"/"Map006"/"Map007" theo
+  // "Map001"/"Map002"/"Map003"/"Map004"/"Map005"/"Map006"/"Map007"/"Map008" theo
   // mapId; map khác chưa có atlas -> null.
   function atlasCodeFor(mapId) {
     if (mapId === 1) return "Map001";
@@ -186,6 +186,7 @@
     if (mapId === 5) return "Map005";
     if (mapId === 6) return "Map006";
     if (mapId === 7) return "Map007";
+    if (mapId === 8) return "Map008";
     return null;
   }
 

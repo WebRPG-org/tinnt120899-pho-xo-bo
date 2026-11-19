@@ -1611,6 +1611,55 @@ except Exception:  # noqa: BLE001
 check("T31e", "Map007: node --check PXB_Isometric.js sau sửa đăng ký map 7 + UTF-8",
       _mb_v31_ok and _iso_js == read(NADIA_PLUGINS / "PXB_Isometric.js"))
 
+# ---- Nhóm T32 — Map008 Khu Chung Cư Cao Cấp (19/11/2026 ~12:50) ----
+# Map khu 8 theo đúng mẫu Map001/003/005/006/007: lưới 12×9, tile data thật,
+# atlas tái dùng atlas-map001.png (chưa có tile chung cư cao cấp riêng —
+# code 3/4/5 nhà trọ dùng tạm làm khối chung cư cao cấp, ghi PROVISIONAL).
+# Không hotspot mới, transfer duy nhất về Map007 (5,4); Map007 nay có cửa
+# (5,8) -> Map008 nên đồ thị map 1-2-3-4-5-6-7-8 đã nối được. NPC + lời
+# thoại chỉ từ docs/districts.md khu 8 ("Nhà ở tầng 3.") + MapInfos[8]
+# unlock ("Chương 3 — bài kiểm tra rank.") — không bịa lương/giá.
+_atlas8 = json.loads(read(NADIA_DATA / "atlas-map008.json"))
+_ok_m8, _d_m8 = _map_data_ok("Map008", _atlas8)
+check("T32a", "Map008: lưới 12×9, data 648, layer0 108/108, layer1 28/108, mã khớp mapping, event không bị tường đè",
+      _ok_m8, _d_m8)
+check("T32b", "atlas-map008.json: scheme atlas-code + TÁI DÙNG atlas-map001.png + tile 1-5 cùng tên atlas-map001",
+      _atlas8.get("scheme") == "atlas-code"
+      and _atlas8.get("atlasPng") == "img/tilesets/atlas-map001.png"
+      and {k: v["name"] for k, v in _atlas8["tiles"].items()}
+      == {k: v["name"] for k, v in _atlas1d["tiles"].items()})
+check("T32c", "PXB_Isometric: đăng ký map 8 + loadAtlasBitmap tôn trọng mapping.atlasPng",
+      'if (mapId === 8) return "Map008"' in _iso_js
+      and "mapping.atlasPng" in _iso_js
+      and "mapping && mapping.atlasPng" in _iso_js)
+_map008_raw = read(NADIA_DATA / "Map008.json")
+_map008 = json.loads(_map008_raw)
+_transfer_m8_ok = any(
+    c.get("code") == 201 and list(c.get("parameters", [])) == [0, 7, 5, 4, 0, 0]
+    for e in _map008.get("events", []) if e
+    for p in e.get("pages", []) for c in p.get("list", []))
+_map007_now = json.loads(read(NADIA_DATA / "Map007.json"))
+_door_m7_m8_ok = any(
+    e and e.get("x") == 5 and e.get("y") == 8
+    and any(c.get("code") == 201 and list(c.get("parameters", [])) == [0, 8, 5, 4, 0, 0]
+            for p in e.get("pages", []) for c in p.get("list", []))
+    for e in _map007_now.get("events", []))
+check("T32d", "Map008: không hotspot mới + transfer duy nhất về Map007 (5,4) + Map007 có cửa (5,8) đi Map008 + khối chung cư cao cấp ghi PROVISIONAL + NPC đúng khu 8",
+      "hs-" not in _map008_raw and _transfer_m8_ok and _door_m7_m8_ok
+      and "PROVISIONAL" in _map008_raw and "PROVISIONAL" in read(NADIA_DATA / "atlas-map008.json")
+      and "Cư Dân Cao Cấp" in _map008_raw and "Bảo Vệ Chung Cư" in _map008_raw
+      and "nhà ở tầng 3" in _map008_raw.lower() and "chương 3" in _map008_raw.lower()
+      and "bài kiểm tra rank" in _map008_raw.lower())
+_mb_v32_ok = True
+try:
+    _r = subprocess.run(["node", "--check", str(NADIA_PLUGINS / "PXB_Isometric.js")],
+                        capture_output=True, text=True, timeout=30)
+    _mb_v32_ok = _r.returncode == 0
+except Exception:  # noqa: BLE001
+    _mb_v32_ok = False
+check("T32e", "Map008: node --check PXB_Isometric.js sau sửa đăng ký map 8 + UTF-8",
+      _mb_v32_ok and _iso_js == read(NADIA_PLUGINS / "PXB_Isometric.js"))
+
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)
 failed = [r for r in results if not r[2]]
