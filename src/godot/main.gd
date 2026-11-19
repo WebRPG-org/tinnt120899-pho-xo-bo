@@ -4,11 +4,11 @@ extends Node2D
 ## He thoi gian kieu C (da chot, TimeSystem.cs / PXB_Time.js): 1 ngay game =
 ## 30 phut that, 3 khung Sang/Chieu/Toi, moi khung 10 phut that, miss khung
 ## khong phat. Phim F (nut "Doi khung") doi khung ngay de test — chi de test.
+## G2: khung + do dai khung lay tu PxbBalance / PxbTime (autoload PXB_Time),
+## khong hardcode so trong file nay nua.
 ## Hotspot: nhan 1 lan/ngay game, chi co do dung khung (PXB_Hotspot.js).
 ## NPC: doi thoai lua chon [Hoi goi y / Tam biet] — goi y lay tu Actors.js.
 
-const FRAMES := ["Sáng", "Chiều", "Tối"]
-const FRAME_SECONDS := 600.0  # 10 phut that / khung
 const MATERIAL_NAMES := {
 	"chai-nhua": "Chai Nhựa", "la-chuoi": "Lá Chuối", "sat-vun": "Sắt Vụn",
 }
@@ -84,7 +84,7 @@ func _transfer(to_map: int) -> void:
 # --- Thoi gian ---
 func _process(delta: float) -> void:
 	_frame_timer += delta
-	if _frame_timer >= FRAME_SECONDS:
+	if _frame_timer >= float(PxbBalance.FRAME_MINUTES) * 60.0:
 		_frame_timer = 0.0
 		_advance_frame()
 	if _toast_timer > 0.0:
@@ -99,7 +99,7 @@ func _advance_frame() -> void:
 		day += 1
 		collected_today.clear()
 	_update_hud()
-	show_toast("Ngày %d • Khung %s" % [day, FRAMES[frame_idx]])
+	show_toast("Ngày %d • Khung %s" % [day, PxbTime.frame_name(float(frame_idx) * float(PxbBalance.FRAME_MINUTES))])
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -164,8 +164,8 @@ func _collect_hotspot(ev: Dictionary) -> void:
 	if collected_today.get(hid, false):
 		show_toast("%s: đã nhặt hôm nay rồi." % String(ev["name"]))
 		return
-	if FRAMES[frame_idx] != want:
-		show_toast("%s: chỉ có đồ vào khung %s — giờ đang %s." % [String(ev["name"]), want, FRAMES[frame_idx]])
+	if PxbBalance.FRAMES[frame_idx] != want:
+		show_toast("%s: chỉ có đồ vào khung %s — giờ đang %s." % [String(ev["name"]), want, PxbBalance.FRAMES[frame_idx]])
 		return
 	var mat := String(ev["material"])
 	inventory[mat] = int(inventory.get(mat, 0)) + int(ev["amount"])
@@ -219,7 +219,7 @@ func _mk_label(parent: Node, f: Font, size: int, pos: Vector2, text: String) -> 
 	return l
 
 func _update_hud() -> void:
-	_hud_day.text = "Ngày %d • Khung %s" % [day, FRAMES[frame_idx]]
+	_hud_day.text = "Ngày %d • Khung %s" % [day, PxbTime.frame_name(float(frame_idx) * float(PxbBalance.FRAME_MINUTES))]
 	var parts: Array[String] = []
 	for k in inventory.keys():
 		if int(inventory[k]) > 0:

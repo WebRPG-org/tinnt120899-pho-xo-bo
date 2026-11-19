@@ -8,9 +8,15 @@ config_version=5
 [application]
 
 config/name="Phố Xô Bồ"
-config/description="Game xã hội 2.5D Việt Nam — Godot 4.7.2 (MIT). G0: khung chạy được."
+config/description="Game xã hội 2.5D Việt Nam — Godot 4.7.2 (MIT). G2: Balance/Stats/Time port sang GDScript."
 run/main_scene="res://Main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
+
+[autoload]
+
+PXB_Balance="*res://scripts/pxb_balance.gd"
+PXB_Stats="*res://scripts/pxb_stats.gd"
+PXB_Time="*res://scripts/pxb_time.gd"
 
 [display]
 
