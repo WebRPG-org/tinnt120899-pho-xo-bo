@@ -14,6 +14,14 @@
 > Còn lại bước 5 phần B: MarketBattle (luật chờ chủ duyệt) →
 > Online/SaveCloud.
 >
+> **Cập nhật 20/11 ~02:45 — UI wiring phần 1 XONG:** Jobs + Hotspot +
+> Crafting + Stats đã nối vào scene thật (`main.gd`): nút "Việc làm"
+> làm ca nhận lương thật, nhặt hotspot qua `PxbHotspot`, chế tạo thật
+> qua `PxbCrafting` (Cô Tư/Anh Hải dạy công thức), HUD ví/chỉ số.
+> Test mới **37/37 PASS**, toàn bộ test cũ vẫn PASS, export web exit 0.
+> Phần 2 tiếp theo: PhoneHub + SaveCloud + Economy/Education +
+> Social/Titles/Story + Tools + Online.
+>
 > G2 bước 5/5 (phần A) XONG trước đó (xem lịch sử file): 3 hệ
 > `PxbSocial` + `PxbTitles` + `PxbStory`, selftest 102/102 PASS.
 >
@@ -380,6 +388,32 @@ nếu cần build sạch thì tạo lại thư mục rồi mới export.
 3. **`$gameSystem` → dict truyền vào:** `build_save_json` nhận dict hệ thống truyền vào, `apply_save` chép field vào dict đích truyền vào; `gameDay` lấy từ `pxb_time.game_day`, rồi `gameDay`, rồi `game_day`, mặc định 1. `accountId` dùng `""` thay cho `null` của JS khi chưa đăng nhập.
 4. **Stderr còn 1 dòng lỗi engine `decompress`** từ đúng 1 check cố tình đưa dữ liệu nén sai định dạng — đã được xử lý, check vẫn PASS; lỗi in ra từ bên trong `PackedByteArray.decompress`, không tránh được.
 
+## 2t. File mới đợt này (G2 UI wiring phần 1 — nối Jobs/Hotspot/Crafting/Stats vào scene, 20/11 ~02:45)
+
+| File | Nội dung |
+|---|---|
+| `main.gd` (sửa) | `_create_systems()`: tạo node con `stats` (ưu tiên autoload `PXB_Stats`, fallback `PxbStats.new()` khi chạy headless `-s` chưa có autoload), `jobs` (gán `stats`, `set_day_number`), `hotspot`, `crafting` (`bind_materials(hotspot.materials)`). `inventory` của Main trỏ tới `hotspot.materials` (cùng Dictionary — nhặt ↔ chế dùng chung túi thật). `_collect_hotspot()` nay gọi `hotspot.explore(id, day, khung)` thay logic G1 (lý do `ok`/`already`/`wrong-frame`/`unknown` giữ nguyên câu toast). `_interact()` craft → `_show_craft_dialogue()` (hiện needs + số đã có, nút "Chế tạo" → `craft_recipe()` trả dict `craft_current()`; chưa học → hiện unlock note). NPC Cô Tư / Anh Hải thêm lựa chọn dạy công thức (`che-xe-day` / `che-den-soi`, đúng unlock note trong Balance). Nút HUD "Việc làm" → `_show_jobs_dialogue()` (liệt kê 3 nghề + lương ca hiện tại + khung tốt + ca còn lại) → `work_job()` trả dict `work_shift()` (khung hiện tại + stats thật). HUD thêm `_hud_gold` ("Ví: …đ • EXP …") + `_hud_stats` ("Thể • Trí • Tâm") + `_fmt_vnd()` (150000 → "150.000"). `_advance_frame()` đồng bộ `jobs.set_day_number(day)`; bỏ `collected_today` (hotspot tự theo dõi lượt theo ngày). Map tên sự kiện craft → recipe_id qua `CRAFT_RECIPE_BY_NAME` (không sửa map data). |
+| `tests/g2_ui_wiring_test.gd` (37 mục) | Chạy scene Main thật headless: HUD ban đầu (ví 0đ, chỉ số 100/100/100, túi trống), `_fmt_vnd` 3 trường hợp, làm ca Bán rong tuần 1 thiếu người 292.500đ + Shipper 270.000đ (Thể 100 ×1,5), quota 14 ca (ca 15 `het-quota`, không cộng tiền), nhặt hotspot (đúng khung / nhặt lại / sai khung), chế Đèn Soi (chưa học → thiếu đồ → đủ đồ chế xong, tool bậc 1, túi trừ đúng, HUD túi chỉ còn Lá Chuối ×2), chế Xe Đẩy chưa học bị chặn. |
+
+## 2u. Verify thật đợt này (20/11 ~02:45)
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `--check-only` main.gd + test mới | PASS, exit 0 |
+| G2 UI wiring selftest | **37/37 PASS** (lần đầu 32/37: test tính sai lương Bán rong — quên tuần 1 nghề thiếu người +30% cung–cầu, lương thật 292.500đ không phải 225.000đ; sửa test, chạy lại PASS hết) |
+| G2 selftest cũ (Balance/Stats/Time) | **87/87 PASS** (không regression) |
+| G2 Jobs / Hotspot / Inventory+Crafting / Economy+Education / Social+Titles+Story / PhoneHub / Tools / Online / SaveCloud selftest | **56/56 + 37/37 + 78/78 + 92/92 + 102/102 + 66/66 + 155/155 + 91/91 + 69/69 PASS** (không regression) |
+| G1 selftest / playtest | **42/42 + 14/14 PASS** (không regression — playtest cũ vẫn qua với `_collect_hotspot` mới) |
+| Scene Main chạy 120 frame | exit 0, không ERROR/warning |
+| Export web | exit 0, ~9s; `index.wasm` 39,5 MB, `index.pck` 1.129.444 byte (`strings index.pck` thấy `pxb_jobs`/`work_job`, 9 lần) |
+| HTTP 200 | `index.html/js/wasm/pck/audio.worklet.js/png` đủ 6 file (cổng 8147); `GODOT_THREADS_ENABLED = false` |
+
+## 2v. Khác biệt / lưu ý đợt này
+
+1. **Stats 2 instance:** autoload `PXB_Stats` tồn tại trong game thật, nhưng Main vẫn tạo fallback `PxbStats.new()` khi chạy test `-s` (autoload chưa đăng ký kịp). Trong game thật Main dùng đúng autoload — không có 2 bộ chỉ số lệch nhau. Khi nối SaveCloud sẽ thống nhất đường lưu duy nhất qua autoload.
+2. **Học công thức tại chỗ:** Cô Tư/Anh Hải dạy ngay trong dialogue NPC (đúng unlock note); quest đầu tiên "làm xong" chưa có hệ quest nên chưa kiểm tra điều kiện quest — PROVISIONAL, khi có PxbStory quest thì thêm điều kiện.
+3. **Tiền chỉ ở PxbJobs:** ví hiển thị = `jobs.gold`; `PxbEconomy` có ví riêng nhưng chưa nối — khi nối Economy (phần 2) sẽ chuyển ví chung về một chỗ (xem §6 bước 2).
+
 ## 6. Bước tiếp theo — G2 xong (chỉ còn MarketBattle chờ chủ duyệt) + nối UI
 
 1. Browser-verify G2 (mở link trên, xem HUD Ngày/Khung vẫn đổi
@@ -392,6 +426,13 @@ nếu cần build sạch thì tạo lại thư mục rồi mới export.
    phím P + CanvasLayer) + dùng công cụ (Tools) + lưu/tải save
    (SaveCloud) + trạng thái online (Online). Đây là việc UI đầu tiên
    của G2 — làm ngay sau khi port xong hết các hệ nền.
+   **Tiến độ 20/11 ~02:45 — phần 1 XONG:** Jobs + Hotspot + Crafting +
+   Stats đã nối (nút "Việc làm", nhặt qua PxbHotspot, chế tạo thật,
+   HUD ví/chỉ số; test mới 37/37). **Phần 2 tiếp theo:** PhoneHub
+   (phím P + panel 9 tab) + SaveCloud (nút Lưu/Tải slot 1) + Economy
+   (cửa hàng/ví chung) + Education (đăng ký học) + Social/Titles/
+   Story (quan hệ/danh hiệu/chương) + Tools (dùng công cụ) + Online
+   (trạng thái online).
 3. G2 còn lại duy nhất: MarketBattle
    (luật chờ chủ duyệt — CHƯA port cho tới khi chủ duyệt luật, xem
    `docs/market-battle-design.md`). Sau đó G3: đủ 18 khu (Map003–014

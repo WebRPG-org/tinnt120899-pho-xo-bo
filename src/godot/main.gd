@@ -1,5 +1,10 @@
 extends Node2D
-## Main.gd — Dieu khien game G1 (slice parity Map001-002 voi ban MV).
+## Main.gd — Dieu khien game G1 (slice parity Map001-002 voi ban MV)
+## + G2 UI wiring phan 1 (20/11 ~02:45): cac he G2 (Jobs / Hotspot /
+## Crafting / Stats) da noi vao scene that — lam ca nhan luong, nhat
+## hotspot qua PxbHotspot, che tao that qua PxbCrafting, HUD hien vi +
+## chi so. PhoneHub / SaveCloud / Economy / Education / Social /
+## Titles / Story noi o phan sau.
 ##
 ## He thoi gian kieu C (da chot, TimeSystem.cs / PXB_Time.js): 1 ngay game =
 ## 30 phut that, 3 khung Sang/Chieu/Toi, moi khung 10 phut that, miss khung
@@ -8,9 +13,24 @@ extends Node2D
 ## khong hardcode so trong file nay nua.
 ## Hotspot: nhan 1 lan/ngay game, chi co do dung khung (PXB_Hotspot.js).
 ## NPC: doi thoai lua chon [Hoi goi y / Tam biet] — goi y lay tu Actors.js.
+## Co Tu day che Xe Day, Anh Hai day che Den Soi (dung unlock note cua
+## PxbBalance.RECIPES).
+## Tui nguyen lieu: MỘT Dictionary duy nhat — hotspot.materials, bind
+## sang crafting (bind_materials) + bien inventory cua Main tro toi
+## cung Dictionary do (gán theo tham chiếu), nen nhat -> che dung chung.
 
 const MATERIAL_NAMES := {
 	"chai-nhua": "Chai Nhựa", "la-chuoi": "Lá Chuối", "sat-vun": "Sắt Vụn",
+	"van-go": "Ván Gỗ", "vai-vun": "Vải Vụn", "khung-sat": "Khung Sắt",
+	"banh-xe": "Bánh Xe",
+}
+
+# Map ten hien thi cua su kien "craft" trong data/maps.json -> recipe_id
+# trong PxbBalance.RECIPES. Ten su kien do map data quyet dinh; recipe_id
+# do Balance quyet dinh — anh xa o day de khong sua map data.
+const CRAFT_RECIPE_BY_NAME := {
+	"Xe Đẩy Hàng": "che-xe-day",
+	"Đèn Soi": "che-den-soi",
 }
 
 var font: Font
@@ -23,13 +43,22 @@ var day := 1
 var frame_idx := 0
 var _frame_timer := 0.0
 var _toast_timer := 0.0
-var inventory := {"chai-nhua": 0, "la-chuoi": 0, "sat-vun": 0}
-var collected_today := {}
+# Tui nguyen lieu — sau _ready() tro toi hotspot.materials (cung
+# Dictionary, gán theo tham chiếu); truoc _ready() la Dictionary rong.
+var inventory := {}
 var dialogue_open := false
+
+# He G2 noi vao scene (tao trong _create_systems, truoc load_map).
+var stats: PxbStats = null
+var jobs: PxbJobs = null
+var hotspot: PxbHotspot = null
+var crafting: PxbCrafting = null
 
 var _hud_map: Label
 var _hud_day: Label
 var _hud_bag: Label
+var _hud_gold: Label
+var _hud_stats: Label
 var _toast: Label
 var _dlg_panel: PanelContainer
 var _dlg_name: Label
@@ -42,8 +71,30 @@ func _ready() -> void:
 	var raw := FileAccess.get_file_as_string("res://data/maps.json")
 	maps_data = JSON.parse_string(raw)
 	_build_ui()
+	_create_systems()
 	load_map(int(maps_data["start"]["map"]),
 		Vector2i(int(maps_data["start"]["x"]), int(maps_data["start"]["y"])))
+
+
+# Tao cac he G2 lam node con cua Main. Stats uu tien dung autoload
+# PXB_Stats (giu 1 bo chi so duy nhat cua nguoi choi); chay headless
+# bang script -s ma autoload chua kip dang ky thi tao node rieng de
+# scene van chay duoc (fallback nay chi dung khi khong co autoload).
+func _create_systems() -> void:
+	stats = get_node_or_null("/root/PXB_Stats") as PxbStats
+	if stats == null:
+		stats = PxbStats.new()
+		add_child(stats)
+	jobs = PxbJobs.new()
+	jobs.stats = stats
+	jobs.set_day_number(day)
+	add_child(jobs)
+	hotspot = PxbHotspot.new()
+	add_child(hotspot)
+	crafting = PxbCrafting.new()
+	crafting.bind_materials(hotspot.materials)
+	add_child(crafting)
+	inventory = hotspot.materials
 
 func _map_by_id(map_id: int) -> Dictionary:
 	for m in maps_data["maps"]:
@@ -97,9 +148,9 @@ func _advance_frame() -> void:
 	if frame_idx >= 3:
 		frame_idx = 0
 		day += 1
-		collected_today.clear()
+		jobs.set_day_number(day)
 	_update_hud()
-	show_toast("Ngày %d • Khung %s" % [day, PxbTime.frame_name(float(frame_idx) * float(PxbBalance.FRAME_MINUTES))])
+	show_toast("Ngày %d • Khung %s" % [day, _frame_name()])
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -145,33 +196,150 @@ func _try_interact() -> void:
 func _interact(ev: Dictionary) -> void:
 	match String(ev.get("kind", "")):
 		"npc":
-			show_dialogue(String(ev["name"]), String(ev["greet"]), [
+			var choices: Array = [
 				["Hỏi gợi ý", func() -> void: show_dialogue(String(ev["name"]), String(ev["hint"]), [["Đóng", close_dialogue]])],
 				["Tạm biệt", close_dialogue],
-			])
+			]
+			# Co Tu day che Xe Day, Anh Hai day che Den Soi — dung unlock
+			# note cua PxbBalance.RECIPES, khong tu dat luat hoc moi.
+			if String(ev.get("id", "")) == "co-tu" and not crafting.has_learned("che-xe-day"):
+				choices.insert(1, ["Nhờ Cô Tư dạy chế Xe Đẩy", func() -> void: _learn_recipe("che-xe-day")])
+			if String(ev.get("id", "")) == "anh-hai" and not crafting.has_learned("che-den-soi"):
+				choices.insert(1, ["Nhờ Anh Hải dạy chế Đèn Soi", func() -> void: _learn_recipe("che-den-soi")])
+			show_dialogue(String(ev["name"]), String(ev["greet"]), choices)
 		"hotspot":
 			_collect_hotspot(ev)
 		"craft":
-			show_dialogue(String(ev["name"]),
-				"Chế %s ở đây. Cần: %s. (Chế tạo đầy đủ sẽ có ở G2.)" % [String(ev["recipe"]), String(ev["needs"])],
-				[["Đóng", close_dialogue]])
+			_show_craft_dialogue(ev)
 		"door":
 			_transfer(int(ev["to_map"]))
 
+
+func _frame_name() -> String:
+	return PxbTime.frame_name(float(frame_idx) * float(PxbBalance.FRAME_MINUTES))
+
+
+func _learn_recipe(recipe_id: String) -> void:
+	if crafting.learn_recipe(recipe_id):
+		var r := PxbCrafting.get_recipe(recipe_id)
+		show_toast("Đã học công thức: %s!" % String(r.get("name", recipe_id)))
+	else:
+		show_toast("Không học được công thức này.")
+	close_dialogue()
+
+
+func _recipe_id_for_craft_name(craft_name: String) -> String:
+	return String(CRAFT_RECIPE_BY_NAME.get(craft_name, ""))
+
+
+func _needs_text(recipe: Dictionary) -> String:
+	var parts: Array[String] = []
+	for mat in (recipe.get("needs", {}) as Dictionary).keys():
+		var have := int(inventory.get(String(mat), 0))
+		var need := int((recipe["needs"] as Dictionary)[mat])
+		parts.append("%s %d/%d" % [String(MATERIAL_NAMES.get(String(mat), String(mat))), have, need])
+	return " • ".join(parts)
+
+
+func _show_craft_dialogue(ev: Dictionary) -> void:
+	var recipe_id := _recipe_id_for_craft_name(String(ev["recipe"]))
+	if recipe_id == "":
+		show_dialogue(String(ev["name"]),
+			"Chế %s ở đây. Cần: %s. (Chưa có công thức này trong Balance.)" % [String(ev["recipe"]), String(ev["needs"])],
+			[["Đóng", close_dialogue]])
+		return
+	var recipe := PxbCrafting.get_recipe(recipe_id)
+	var learned := crafting.has_learned(recipe_id)
+	var text := "%s\nCần: %s" % [String(recipe.get("name", "")), _needs_text(recipe)]
+	if not learned:
+		text += "\nChưa học công thức — %s" % String(recipe.get("unlock", ""))
+	show_dialogue(String(ev["name"]), text, [
+		["Chế tạo", func() -> void: craft_recipe(recipe_id)],
+		["Đóng", close_dialogue],
+	])
+
+
+# Che 1 mon theo cong thuc; tra Dictionary ket qua cua
+# PxbCrafting.craft_current() de test goi truc tiep duoc.
+func craft_recipe(recipe_id: String) -> Dictionary:
+	var res := crafting.craft_current(recipe_id)
+	if bool(res.get("ok", false)):
+		_update_hud()
+		show_toast("Chế xong %s!" % String(res.get("result_name", recipe_id)))
+	else:
+		match String(res.get("reason", "")):
+			"chua-hoc-cong-thuc":
+				show_toast("Chưa học công thức — %s" % String(res.get("unlock_note", "")))
+			"thieu-nguyen-lieu":
+				var miss: Array[String] = []
+				for mat in (res.get("missing", {}) as Dictionary).keys():
+					miss.append("%s ×%d" % [String(MATERIAL_NAMES.get(String(mat), String(mat))), int((res["missing"] as Dictionary)[mat])])
+				show_toast("Thiếu nguyên liệu: %s" % " • ".join(miss))
+			"khong-co-cong-thuc":
+				show_toast("Không có công thức này.")
+			_:
+				show_toast("Không chế được.")
+	close_dialogue()
+	return res
+
+
+# Lam 1 ca nghe job_id o khung hien tai; tra Dictionary ket qua cua
+# PxbJobs.work_shift() de test goi truc tiep duoc.
+func work_job(job_id: String) -> Dictionary:
+	var res := jobs.work_shift(job_id, _frame_name(), stats)
+	if bool(res.get("ok", false)):
+		_update_hud()
+		var job := PxbJobs.get_job(job_id)
+		show_toast("Làm ca %s: +%sđ (còn %d ca/tuần)" % [
+			String(job.get("name", job_id)), _fmt_vnd(int(res.get("pay", 0))),
+			int(res.get("shifts_left", 0))])
+	else:
+		match String(res.get("reason", "")):
+			"het-quota":
+				show_toast("Hết quota tuần của nghề này (14 ca/tuần).")
+			"khong-co-nghe":
+				show_toast("Không có nghề này.")
+			_:
+				show_toast("Không làm được ca này.")
+	close_dialogue()
+	return res
+
+
+func _show_jobs_dialogue() -> void:
+	var lines: Array[String] = []
+	for job in PxbBalance.JOBS:
+		var j := job as Dictionary
+		var jid := String(j["id"])
+		var pay := PxbJobs.pay_per_shift(jid, stats, _frame_name(), jobs.get_demand(jid))
+		lines.append("%s — %sđ/ca (khung tốt: %s, còn %d ca/tuần)" % [
+			String(j["name"]), _fmt_vnd(pay), String(j["good_frame"]),
+			jobs.shifts_left(jid)])
+	show_dialogue("Việc làm", "\n".join(lines), [
+		["Bán rong", func() -> void: work_job("ban-rong")],
+		["Shipper", func() -> void: work_job("shipper")],
+		["Nhân viên quán", func() -> void: work_job("nhan-vien-quan")],
+		["Đóng", close_dialogue],
+	])
+
+
 func _collect_hotspot(ev: Dictionary) -> void:
-	var hid := String(ev["id"])
-	var want := String(ev["best_frame"])
-	if collected_today.get(hid, false):
-		show_toast("%s: đã nhặt hôm nay rồi." % String(ev["name"]))
+	var res := hotspot.explore(String(ev["id"]), day, _frame_name())
+	if bool(res.get("ok", false)):
+		_update_hud()
+		show_toast("Nhặt được %s ×%d!" % [
+			String(MATERIAL_NAMES.get(String(res.get("material_id", "")), String(res.get("material_id", "")))),
+			int(res.get("amount", 0))])
 		return
-	if PxbBalance.FRAMES[frame_idx] != want:
-		show_toast("%s: chỉ có đồ vào khung %s — giờ đang %s." % [String(ev["name"]), want, PxbBalance.FRAMES[frame_idx]])
-		return
-	var mat := String(ev["material"])
-	inventory[mat] = int(inventory.get(mat, 0)) + int(ev["amount"])
-	collected_today[hid] = true
-	_update_hud()
-	show_toast("Nhặt được %s ×%d!" % [String(MATERIAL_NAMES.get(mat, mat)), int(ev["amount"])])
+	match String(res.get("reason", "")):
+		"already":
+			show_toast("%s: đã nhặt hôm nay rồi." % String(ev["name"]))
+		"wrong-frame":
+			var want := String(ev["best_frame"])
+			show_toast("%s: chỉ có đồ vào khung %s — giờ đang %s." % [String(ev["name"]), want, _frame_name()])
+		"unknown":
+			show_toast("%s: hotspot này chưa có trong bảng slice." % String(ev["name"]))
+		_:
+			show_toast("%s: không nhặt được." % String(ev["name"]))
 
 # --- UI ---
 func _build_ui() -> void:
@@ -180,6 +348,8 @@ func _build_ui() -> void:
 	_hud_map = _mk_label(layer, font_bold, 34, Vector2(24, 24), "Phố Xô Bồ")
 	_hud_day = _mk_label(layer, font, 28, Vector2(24, 70), "")
 	_hud_bag = _mk_label(layer, font, 28, Vector2(24, 108), "")
+	_hud_gold = _mk_label(layer, font, 28, Vector2(24, 146), "")
+	_hud_stats = _mk_label(layer, font, 28, Vector2(24, 184), "")
 	var frame_btn := Button.new()
 	frame_btn.text = "Đổi khung (F)"
 	frame_btn.add_theme_font_size_override("font_size", 26)
@@ -188,6 +358,14 @@ func _build_ui() -> void:
 	frame_btn.size = Vector2(200, 56)
 	frame_btn.pressed.connect(func() -> void: _frame_timer = 0.0; _advance_frame())
 	layer.add_child(frame_btn)
+	var jobs_btn := Button.new()
+	jobs_btn.text = "Việc làm"
+	jobs_btn.add_theme_font_size_override("font_size", 26)
+	jobs_btn.add_theme_font_override("font", font)
+	jobs_btn.position = Vector2(720 - 224, 88)
+	jobs_btn.size = Vector2(200, 56)
+	jobs_btn.pressed.connect(_show_jobs_dialogue)
+	layer.add_child(jobs_btn)
 	_toast = _mk_label(layer, font_bold, 30, Vector2(60, 560), "")
 	_toast.size = Vector2(600, 60)
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -218,13 +396,26 @@ func _mk_label(parent: Node, f: Font, size: int, pos: Vector2, text: String) -> 
 	parent.add_child(l)
 	return l
 
+func _fmt_vnd(n: int) -> String:
+	# 150000 -> "150.000". Khong dung locale — dinh dang tay cho chac.
+	var s := str(absi(n))
+	var out := ""
+	while s.length() > 3:
+		out = "." + s.right(3) + out
+		s = s.left(s.length() - 3)
+	out = s + out
+	return ("-" + out) if n < 0 else out
+
+
 func _update_hud() -> void:
-	_hud_day.text = "Ngày %d • Khung %s" % [day, PxbTime.frame_name(float(frame_idx) * float(PxbBalance.FRAME_MINUTES))]
+	_hud_day.text = "Ngày %d • Khung %s" % [day, _frame_name()]
 	var parts: Array[String] = []
 	for k in inventory.keys():
 		if int(inventory[k]) > 0:
 			parts.append("%s ×%d" % [String(MATERIAL_NAMES.get(k, k)), int(inventory[k])])
 	_hud_bag.text = "Túi: " + (" • ".join(parts) if not parts.is_empty() else "trống")
+	_hud_gold.text = "Ví: %sđ • EXP %d" % [_fmt_vnd(jobs.gold), jobs.exp_total]
+	_hud_stats.text = "Thể %d • Trí %d • Tâm %d" % [stats.the, stats.tri, stats.tam]
 
 func show_toast(text: String) -> void:
 	_toast.text = text
