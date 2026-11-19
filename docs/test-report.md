@@ -7,6 +7,80 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 19/11/2026 ~10:50 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **278/278 PASS, exit 0** — tăng từ 273/273: nhóm T30 mới
+  (5 mục, Map006 Chung Cư Cũ).
+- **Map006 — Chung Cư Cũ (việc tiếp theo lớn nhất, xong):**
+  `src/nadia/www/data/Map006.json` mới (lưới 12×9, data 648, layer 0
+  108/108 — sàn xen kẽ 1/2, không đường nhựa, đúng mẫu Map001/Map003;
+  layer 1 28/108 — biên bắc/tây/đông, biên nam để trống như mặt tiền mở,
+  chỉ 2 ô góc như Map003); NPC Cư Dân Chung Cư (3,6) + Bác Quản Lý (8,3),
+  lời thoại lấy từ `docs/districts.md` khu 6 ("Nhà ở tầng 2, chi phí
+  vừa") — không bịa giá thuê/giá nhà (GDD chưa chốt giá chung cư cũ);
+  transfer về Map005 (5,4). `data/atlas-map006.json` mới, TÁI DÙNG
+  `atlas-map001.png` (không PNG mới, SHA không đổi). `PXB_Isometric.js`
+  đăng ký map 6 (`atlasCodeFor`); `loadAtlasBitmap` đã tôn trọng
+  `mapping.atlasPng` từ v3.1 nên không sửa thêm. **Map005 nay có cửa
+  (5,8) đi Map006** — đồ thị map 1-2-3-4-5-6 đã nối được. PROVISIONAL:
+  code 3/4/5 (nhà trọ) dùng tạm làm khối chung cư cũ, chờ art pass vẽ
+  tile chung cư riêng. Đã xác minh độc lập: JSON hợp lệ, đếm tile
+  648/108/28, event không bị tường đè, smoke `/tmp/pxb-map006-smoke.js`
+  19/19 PASS (không commit). Map005 trong cùng đợt: 273/273 PASS
+  (nhóm T29, smoke `/tmp/pxb-map005-smoke.js` 24/24 PASS).
+- **Còn lại chưa xong:** chờ chủ bật GitHub Pages → kiểm chứng Map001
+  bằng trình duyệt thật; Map007–018 chưa có; img/audio còn lại trống;
+  luật MarketBattle chi tiết chờ chủ duyệt (scene trận chưa có).
+  Checklist C1–C9 (§6 roles-qc) vẫn giữ cho đường Unity (phương án
+  dự phòng); đường chính nay là Giai đoạn 1–5 của
+  `docs/architecture-nadia.md`. Việc tiếp theo lớn nhất: Map007 (Phố Văn
+  Phòng Nhỏ) + scene trận MarketBattle sau khi chủ duyệt luật.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa
+  biên dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test`
+  vẫn kẹt RAM — chạy qua GitHub Actions; Unity chưa có).
+
+## Lần chạy mới nhất: 19/11/2026 ~10:45 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **273/273 PASS, exit 0** — tăng từ 268/268: nhóm T29 mới
+  (5 mục, Map005 Làng Đại Học).
+- **Map005 — Làng Đại Học (việc tiếp theo lớn nhất, xong):**
+  `src/nadia/www/data/Map005.json` mới (lưới 12×9, data 648, layer 0
+  108/108 — sàn xen kẽ 2 mã, không đường nhựa, đúng mẫu Map003; layer 1
+  28/108 — biên bắc/tây/đông nhà trọ, biên nam chỉ 2 góc như Map003);
+  NPC Thầy Giáo (3,3) + Sinh Viên Làm Thêm (8,6), lời thoại chỉ từ
+  `docs/districts.md` khu 5 ("Học vấn, khoá ngắn hạn, việc làm thêm")
+  + GDD Mục 5 (5 bậc học đã chốt: THPT Trí 20, Cao đẳng Trí 40, Cử
+  nhân Trí 60, Thạc sĩ Trí 75, Tiến sĩ Trí 90 cần mentor; khoá ngắn
+  hạn 3–7 ngày, +10 một chỉ số phụ, mở nghề phụ) — không bịa học
+  phí/giá/lương mới; transfer về Map004 (5,4).
+  `data/atlas-map005.json` mới, TÁI DÙNG `atlas-map001.png` (không PNG
+  mới, SHA-256 `971faa8d…15940` đã verify khớp tileset-plan.md §7).
+  `PXB_Isometric.js` đăng ký map 5 (`atlasCodeFor` + 1 dòng);
+  `loadAtlasBitmap` đã tôn trọng `mapping.atlasPng` từ v3.1 nên không
+  sửa thêm. **Map004 nay có cửa (5,8) đi Map005** — đồ thị map
+  1-2-3-4-5 đã nối được. PROVISIONAL: code 3/4/5 (nhà trọ) dùng tạm làm
+  giảng đường / ký túc xá, chờ art pass vẽ tile trường riêng. Đã xác
+  minh độc lập: smoke stub `/tmp/pxb-map005-smoke.js` 24/24 PASS
+  (không commit) — JSON hợp lệ, đếm tile 648/108/28, event không bị
+  tường đè, transfer đúng Map004 (5,4), SHA atlas-map001.png khớp §7.
+- **1 lỗi check trong lần chạy này (đã sửa, chạy lại PASS):** smoke lúc
+  đầu FAIL 1 mục — lời thoại Sinh Viên chỉ viết "làm thêm" nên thiếu
+  cụm "việc làm thêm" đúng districts.md khu 5. Đã sửa câu thành "nhận
+  việc làm thêm…" rồi chạy lại 24/24 PASS.
+- **Còn lại chưa xong:** chờ chủ bật GitHub Pages → kiểm chứng Map001
+  bằng trình duyệt thật (browser task trước đó BỊ CHẶN ở loopback, tunnel
+  Cloudflare lỗi TLS — xem mục 08:00); Map006–018 chưa có; img/audio còn
+  lại trống; luật MarketBattle chi tiết chờ chủ duyệt (scene trận chưa
+  có). Checklist C1–C9 (§6 roles-qc) vẫn giữ cho đường Unity (phương án
+  dự phòng); đường chính nay là Giai đoạn 1–5 của
+  `docs/architecture-nadia.md`. Việc tiếp theo lớn nhất: Map006 (Chung
+  Cư Cũ) + scene trận MarketBattle sau khi chủ duyệt luật.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa
+  biên dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test`
+  vẫn kẹt RAM — chạy qua GitHub Actions; Unity chưa có).
+
 ## Lần chạy mới nhất: 19/11/2026 ~09:45 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)

@@ -182,6 +182,8 @@
     if (mapId === 2) return "Map002";
     if (mapId === 3) return "Map003";
     if (mapId === 4) return "Map004";
+    if (mapId === 5) return "Map005";
+    if (mapId === 6) return "Map006";
     return null;
   }
 
