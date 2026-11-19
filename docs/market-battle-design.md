@@ -1,9 +1,9 @@
 # Bụi Đời Chợ Cá — Bản thiết kế luật (ĐỀ XUẤT CHO CHỦ DUYỆT)
 
-> Trạng thái: **CHƯA CHỐT — chờ chủ duyệt.** Mọi số trong file này đều là
-> **PROVISIONAL** (đề xuất) trừ những dòng ghi rõ "ĐÃ CHỐT (GDD Mục 11)".
+> Trạng thái: **ĐÃ CHỐT — chủ duyệt 20/11 06:06 (chat Duyệt task), cả 7 điểm §11.**
+> Mọi số PROVISIONAL trong file này đã thành số chốt từ 20/11 06:06.
 > Nguồn GDD duy nhất: `docs/gdd.md` Mục 11 + `docs/architecture-nadia.md`
-> §4.6, dòng 372 (plugin số 14, Phase 2, "luật chưa chốt").
+> §4.6, dòng 372 (plugin số 14, Phase 2, "luật chưa chốt" — nay đã chốt).
 > Triển khai logic lõi: `src/nadia/www/js/plugins/PXB_MarketBattle.js`
 > (scene/bản đồ trận là việc sau — xem "Ngoài phạm vi" cuối file).
 
@@ -103,7 +103,9 @@ trung bình cộng nên chỉ hòa chứ không vượt vai gốc; chỉ số c�
   đấu sạp B** — phải đợi sạp A hết hạn, hoặc thua trận thủ sạp (xem §8).
 - Sạp đang có đội giữ thì đội khác thách đấu = **trận tranh sạp**: đội
   thách đấu thắng thì cướp sạp (giữ 7 ngày mới từ ngày thắng); đội giữ
-  thắng thì giữ tiếp **đến hết hạn cũ** (không cộng thêm 7 ngày).
+  thắng thì **gia hạn 7 ngày mới từ ngày thắng trận thủ sạp** (chủ chốt
+  20/11 06:25 — sửa theo JS `finishBattle`, trước đây design doc ghi
+  "không gia hạn" là sai).
 - Đội thắng trận **không tranh sạp** (trận giao hữu / luyện tập) thì chỉ
   nhận Danh vọng trận (§9), không giữ sạp.
 - Ghi giữ sạp vào `$gameSystem.pxbMarketBattle.holds` nên **đi theo
@@ -179,7 +181,7 @@ không mất đồ, không trừ Danh vọng.
 1. Lưới 12×9, di chuyển 3 ô, xuất phát 2 đầu — §3.
 2. Passive 6 vai + sát thương/tầm/hiệu ứng 4 vũ khí — §4.
 3. Lượt 10s, trận 180s, tối đa 12 vòng, thắng bằng % HP khi hết giờ, hòa không giữ sạp — §5.
-4. Giữ sạp 7 ngày game: giá sỉ −10%, thuế sạp −20%, Danh vọng +10/ngày; 1 đội 1 sạp; thắng thủ sạp không gia hạn — §6.
+4. Giữ sạp 7 ngày game: giá sỉ −10%, thuế sạp −20%, Danh vọng +10/ngày; 1 đội 1 sạp; thắng thủ sạp **gia hạn 7 ngày mới** (chủ chốt 20/11 06:25) — §6.
 5. Buff Tướng Cướp +10% sát thương ở chợ; Cảnh sát +10% Max HP khi thủ sạp — §7.
 6. Điều kiện mở trận 5 điểm (đủ người, cùng công ty, ở chợ, không giữ sạp khác) — §8.
 7. Danh vọng trận thắng +50 / hòa +20 / thua +10; không tiền thưởng — §9.

@@ -491,7 +491,7 @@ nếu cần build sạch thì tạo lại thư mục rồi mới export.
 1. **`$gameSystem.pxbMarketBattle` → `_state` trong instance** + `data()`/`from_data()` (save thật là việc SaveCloud) — như các hệ G2 khác.
 2. **Danh hiệu:** JS `titlesOf()` đọc `PXB_Titles` toàn cục khi đấu sĩ không có danh sách riêng; Godot không có global đó nên chỉ dùng `fighter["titles"]` (mảng truyền trực tiếp, như JS khi test thuần). Event muốn dùng sổ danh hiệu chung thì truyền titles của người chơi vào lúc `create_fighter`.
 3. **Chia màu trộn dùng `/ 2.0` (float)** thay vì `/ 2` của JS — GDScript chia int ra int (làm tròn xuống), lệch vai khi tổng lẻ; float giữ đúng so sánh của JS.
-4. **TODO — HỎI CHỦ (mâu thuẫn JS vs design doc §6):** JS `finishBattle` ghi đè hold với `startGameDay` = ngày trận khi đội giữ cũ thắng trận thủ sạp — tức gia hạn ngầm 7 ngày từ ngày trận, mâu thuẫn design doc §6 "thắng thủ sạp không gia hạn". Port giữ đúng JS (ghi đè) để không lệch logic đã test. Cần chủ chốt: thủ sạp thắng có gia hạn 7 ngày mới không? Nếu không thì sửa cả JS + GDScript + design doc cùng lúc.
+4. **ĐÃ CHỐT (chủ, 20/11 06:25):** thủ sạp thắng **gia hạn 7 ngày mới** từ ngày trận — đúng JS `finishBattle` và đúng port GDScript; design doc §6 + §11 đã sửa theo (trước đây ghi "không gia hạn" là sai).
 5. **Signal thêm:** `turn_changed` / `battle_finished` cho scene sau nối (JS không có event) — không đổi logic.
 
 ## 6. Bước tiếp theo — G2 HOÀN TẤT 17/17 (20/11 ~06:15) + nối UI
