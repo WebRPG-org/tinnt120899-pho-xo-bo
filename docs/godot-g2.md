@@ -1,6 +1,21 @@
 # Godot G2 — Port 17 plugin PXB → GDScript (19/11/2026)
 
-> **Kết luận: G2 bước 5/5 (phần B, PhoneHub) XONG (mức headless, 20/11 ~00:50).**
+> **Kết luận: G2 HOÀN TẤT 17/17 plugin (20/11 ~06:15).**
+> Plugin cuối `PxbMarketBattle` đã port xong sau khi chủ duyệt cả 7
+> điểm luật lúc 06:06 (docs/market-battle-design.md → ĐÃ CHỐT):
+> lưới 12×9 / di chuyển 3 ô; passive 6 vai + 4 vũ khí; lượt 10s /
+> trận 180s / tối đa 12 vòng / thắng bằng % HP; giữ sạp 7 ngày
+> (giá sỉ −10%, thuế −20%, Danh vọng +10/ngày); buff Tướng Cướp
+> +10% sát thương / Cảnh sát +10% Max HP khi thủ sạp; điều kiện mở
+> trận 5 điểm; Danh vọng thắng +50 / hòa +20 / thua +10. Selftest
+> mới **123/123 PASS**, toàn bộ test cũ vẫn PASS (không
+> regression), scene chạy 120 frame exit 0, export web exit 0 (~8s),
+> http.server 200 đủ 6 file.
+> **Chưa kiểm chứng bằng trình duyệt thật** — như G0/G1/G2 bước 1–5,
+> VM không có Chromium/Firefox. Tổng G2: 17/17 plugin → 17 hệ GDScript.
+> Việc tiếp theo: G3 đủ 18 khu + scene trận MarketBattle (UI).
+>
+> **G2 bước 5/5 (phần B, PhoneHub) XONG (mức headless, 20/11 ~00:50).**
 > Thêm hệ điện thoại: `PxbPhoneHub` (9 tab đúng thứ tự GDD Mục 2,
 > open/close/toggle/select_tab, notify + số chưa đọc, signal
 > tab_changed/open_changed đúng thứ tự + quirk C#/JS, save round-trip
@@ -10,9 +25,10 @@
 > + playtest 14/14 vẫn PASS (không regression), scene chạy 120 frame
 > exit 0, export web exit 0 (~8s), http.server 200 đủ 6 file.
 > **Chưa kiểm chứng bằng trình duyệt thật** — như G0/G1/G2 bước 1–5,
-> VM không có Chromium/Firefox. Tổng G2: 13/17 plugin → 13 hệ GDScript.
+> VM không có Chromium/Firefox. Tổng G2: 13/17 plugin → 13 hệ GDScript
+> (nay đã 17/17 — xem kết luận mới ở đầu file).
 > Còn lại bước 5 phần B: MarketBattle (luật chờ chủ duyệt) →
-> Online/SaveCloud.
+> Online/SaveCloud (cả hai đã xong sau đó — xem §2q/§2z).
 >
 > **Cập nhật 20/11 ~02:45 — UI wiring phần 1 XONG:** Jobs + Hotspot +
 > Crafting + Stats đã nối vào scene thật (`main.gd`): nút "Việc làm"
@@ -48,8 +64,8 @@
 | 3 | `PXB_Education` → Education (5 bậc) | ✅ XONG đợt này (xem §2h) |
 | 4 | `PXB_Social` → Social; `PXB_Titles` / `PXB_Story` → Titles/Story | ✅ XONG đợt này (xem §2k) |
 | 4 | `PXB_PhoneHub` → PhoneHub (CanvasLayer, 9 tab) | ✅ XONG đợt này (xem §2n) |
-| 5 | `PXB_MarketBattle` → MarketBattle (luật chờ chủ duyệt) | ⏳ |
-| 5 | `PXB_Online` / `PXB_SaveCloud` → Online/SaveCloud | ⏳ |
+| 5 | `PXB_MarketBattle` → MarketBattle (luật ĐÃ CHỐT 20/11 06:06) | ✅ XONG đợt này (xem §2z) |
+| 5 | `PXB_Online` / `PXB_SaveCloud` → Online/SaveCloud | ✅ XONG (xem §2q) |
 
 `PXB_Isometric` đã có tương đương Godot ở G1
 (`iso_map.gd`, hotspot trong `main.gd`); `PXB_Tools` là hàm tiện ích,
@@ -444,7 +460,41 @@ nếu cần build sạch thì tạo lại thư mục rồi mới export.
 6. **Upload cloud:** nút đồng bộ chỉ gọi `upload_save()` và báo đúng lý do (`server-chua-co-endpoint` khi đã đăng nhập, `chua-dang-nhap` khi chưa) — không giả vờ đã đồng bộ.
 7. **Load save thay node:** `_replace_system` dùng `queue_free()` (hủy cuối frame) rồi `add_child` node mới ngay — node cũ còn trong cây tới cuối frame nhưng Main đã trỏ sang node mới; không nối signal nào vào các hệ nên không rò rỉ.
 
-## 6. Bước tiếp theo — G2 xong (chỉ còn MarketBattle chờ chủ duyệt) + nối UI
+3. G2 HOÀN TẤT 17/17 (20/11 ~06:15): MarketBattle đã port xong sau
+   khi chủ duyệt cả 7 điểm luật 06:06 (xem §2z). Tiếp theo G3: đủ 18
+   khu (Map003–014 đã có data MV, Map015–018 mới) + scene trận
+   MarketBattle (vẽ lưới isometric qua iso_map.gd, UI trận).
+
+## 2z. File mới đợt này (G2 cuối — MarketBattle, luật ĐÃ CHỐT 20/11 06:06)
+
+| File | Nội dung |
+|---|---|
+| `scripts/pxb_marketbattle.gd` (`PxbMarketBattle`, ~700 dòng) | Port `PXB_MarketBattle.js`: toàn bộ 7 điểm luật ĐÃ CHỐT, không còn số PROVISIONAL — lưới 12×9, HP gốc 100, Tank ×1,5 HP + nhận ×0,8, di chuyển 3 ô (Xanh +1), lượt 10s / trận 180s / tối đa 12 vòng, giữ sạp 7 ngày (sỉ −10%, thuế −20%, Danh vọng +10/ngày), buff Tướng Cướp +10% sát thương / Cảnh sát +10% Max HP khi thủ sạp, Danh vọng thắng +50 / hòa +20 / thua +10; 6 vai (role_from_stats + thứ tự hòa Tím → Cam → Lục → Đỏ → Xanh → Vàng) + 4 vũ khí (Chảo 12/tầm 1, Cá khô 8/tầm 2, Ghế nhựa 15/tầm 1 + đẩy lùi 1 ô, Loa 10/tầm 3); `create_battle` chặn thiếu người / không bằng nhau / cỡ 4; xuất phát 2 đầu + lượt xen kẽ A1 → B1 → A2 → B2; `move_fighter` / `attack` (thứ tự tính sát thương vũ khí → Tím/Cam → Tướng Cướp → floor → Tank; Lục né đòn đầu mỗi vòng) / `support` (Vàng hồi 12, kẹp Max HP) / `end_turn` / `expire_turn` / `tick`; thắng bằng % HP khi hết giờ/vòng (hòa = không giữ sạp); `finish_battle` ghi Danh vọng + giữ sạp + lịch sử, hồi đầy HP; state giữ sạp (`holds`/`history`, tối đa 50) qua `data()`/`from_data()` + `reset_state()`; `can_challenge` chặn giữ sạp khác / đã giữ sạp này; `seed_npc_team` (3/5, cỡ khác → 3); trận hiện tại + wrapper `*_now`; signal `turn_changed` / `battle_finished` cho scene sau nối. |
+| `tests/g2_marketbattle_test.gd` (123 mục) | Kiểm tra headless riêng: hằng chốt đủ 7 điểm; 6 vai (kể cả hòa + cân bằng 3 gốc → Tím); Max HP Tank 150 / Cảnh sát thủ sạp 110 / Tank+Cảnh sát 165; chặn tạo trận 4 lý do; xuất phát + thứ tự lượt; di chuyển (3 ô / Xanh 4 ô / quá tầm / ngoài lưới / ô có người / sai lượt); đánh (Chảo 12, Tank nhận 9, Tím 15, Cam đòn đầu 24 → đòn sau 12, Tướng Cướp 13, Tím+Tướng Cướp 16, Ghế nhựa 15 + đẩy lùi, Loa tầm 3 = 10, Cá khô tầm 2 = 8, Lục né đòn đầu, KO ngã sạp + chặn đánh mục tiêu ngã); hỗ trợ (hồi 12, kẹp Max HP, chặn không phải Vàng / khác đội / xa); hết lượt (bỏ qua đã ngã, hết vòng → vòng 2 + đặt lại né); đồng hồ (tick 30s, tick âm không trừ, hết 180s thắng theo % HP 0.6, hòa khi bằng nhau); kết thúc (thắng +50 / thua +10, hòa +20, hồi đầy HP, giao hữu không giữ sạp); giữ sạp (thắng tranh sạp giữ đến ngày +7, quyền lợi 10/20/10, chặn thách đấu 2 lý do, hết hạn ngày 49 dọn 1 sạp); đội NPC 3/5; save round-trip + bỏ dữ liệu bẩn + lịch sử cắt 50; signal; wrapper trận hiện tại. |
+
+## 2aa. Verify thật đợt này (20/11 ~06:15)
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `--check-only` 2 file (script mới + test) | PASS, exit 0 (lần đầu fail vì gọi nhầm `_record_battle` thay cho `record_battle` static — sửa 1 dòng, pass) |
+| G2 MarketBattle selftest | **123/123 PASS** (lần đầu 116/123: 7 lỗi đều ở phía test — mục tiêu là Tank nên bị ×0,8, đấu sĩ Cam thứ 2 cũng là đòn đầu nên ×2, thứ tự kiểm tra actedThisTurn trước mục tiêu ngã theo đúng JS; sửa test, chạy lại PASS hết — port không đổi) |
+| G2 selftest cũ (Balance/Stats/Time) | **87/87 PASS** (không regression) |
+| G2 Jobs / Hotspot / Inventory+Crafting / Economy+Education / Social+Titles+Story / PhoneHub / Tools / Online / SaveCloud selftest | **56/56 + 37/37 + 78/78 + 92/92 + 102/102 + 66/66 + 155/155 + 91/91 + 69/69 PASS** (không regression) |
+| G2 UI wiring 1 / 2 | **37/37 + 71/71 PASS** (không regression) |
+| G1 selftest / playtest, G3 playtest | **191/191 + 14/14 + 41/41 PASS** (không regression) |
+| Scene Main chạy 120 frame | exit 0, 0 ERROR |
+| Export web | exit 0, ~8s; `index.wasm` 39,5 MB, `index.pck` 1.234.860 byte (`strings index.pck` thấy `pxb_marketbattle`, 5 lần) |
+| HTTP 200 | `index.html/js/wasm/pck/audio.worklet.js/png` đủ 6 file (cổng 8150); `GODOT_THREADS_ENABLED = false` |
+
+## 2ab. Khác biệt port JS → GDScript đợt này + TODO hỏi chủ
+
+1. **`$gameSystem.pxbMarketBattle` → `_state` trong instance** + `data()`/`from_data()` (save thật là việc SaveCloud) — như các hệ G2 khác.
+2. **Danh hiệu:** JS `titlesOf()` đọc `PXB_Titles` toàn cục khi đấu sĩ không có danh sách riêng; Godot không có global đó nên chỉ dùng `fighter["titles"]` (mảng truyền trực tiếp, như JS khi test thuần). Event muốn dùng sổ danh hiệu chung thì truyền titles của người chơi vào lúc `create_fighter`.
+3. **Chia màu trộn dùng `/ 2.0` (float)** thay vì `/ 2` của JS — GDScript chia int ra int (làm tròn xuống), lệch vai khi tổng lẻ; float giữ đúng so sánh của JS.
+4. **TODO — HỎI CHỦ (mâu thuẫn JS vs design doc §6):** JS `finishBattle` ghi đè hold với `startGameDay` = ngày trận khi đội giữ cũ thắng trận thủ sạp — tức gia hạn ngầm 7 ngày từ ngày trận, mâu thuẫn design doc §6 "thắng thủ sạp không gia hạn". Port giữ đúng JS (ghi đè) để không lệch logic đã test. Cần chủ chốt: thủ sạp thắng có gia hạn 7 ngày mới không? Nếu không thì sửa cả JS + GDScript + design doc cùng lúc.
+5. **Signal thêm:** `turn_changed` / `battle_finished` cho scene sau nối (JS không có event) — không đổi logic.
+
+## 6. Bước tiếp theo — G2 HOÀN TẤT 17/17 (20/11 ~06:15) + nối UI
 
 1. Browser-verify G2 (mở link trên, xem HUD Ngày/Khung vẫn đổi
    đúng, không lỗi console).
