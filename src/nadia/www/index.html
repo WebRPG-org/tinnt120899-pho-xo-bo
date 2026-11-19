@@ -30,6 +30,10 @@
   <script type="text/javascript" src="js/rpg_scenes.js"></script>
   <script type="text/javascript" src="js/rpg_sprites.js"></script>
   <script type="text/javascript" src="js/rpg_windows.js"></script>
+  <!-- Asset nhúng base64 (atlas PNG + ảnh hệ thống placeholder): phải load
+       TRƯỚC plugins và main để hook ImageManager kịp trước Scene_Boot.
+       Sinh bằng tools/tiles/embed_assets.py — xem docs/link-choi-that.md. -->
+  <script type="text/javascript" src="js/pxb-embedded.js"></script>
   <script type="text/javascript" src="js/plugins.js"></script>
   <script type="text/javascript" src="js/main.js"></script>
   <style>
