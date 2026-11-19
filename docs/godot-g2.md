@@ -1,20 +1,21 @@
 # Godot G2 — Port 17 plugin PXB → GDScript (19/11/2026)
 
-> **Kết luận: G2 bước 5/5 (phần A) XONG (mức headless, 19/11 ~23:50).**
-> Thêm 3 hệ gameplay: `PxbSocial` (quan hệ, thân thiết, bỏ bê 7 ngày,
-> stage HenHo/DinhHon/Cuoi, giới hạn 3 quan hệ sâu, hỗ trợ +20% EXP,
-> solo −40%, tan nhóm, ly hôn) + `PxbTitles` (bảng chặn 7 dòng 2 chiều,
-> phe Chính/Tà/Trung lập, quest "Cải tà quy chính", quirk Kẻ Lừa Đảo)
-> + `PxbStory` (mở 5 chương, thứ tự ưu tiên ending cứng, rank có thể
-> tụt chương 3). Selftest mới **102/102 PASS**, G2 cũ 87/87 +
+> **Kết luận: G2 bước 5/5 (phần B, PhoneHub) XONG (mức headless, 20/11 ~00:50).**
+> Thêm hệ điện thoại: `PxbPhoneHub` (9 tab đúng thứ tự GDD Mục 2,
+> open/close/toggle/select_tab, notify + số chưa đọc, signal
+> tab_changed/open_changed đúng thứ tự + quirk C#/JS, save round-trip
+> + bỏ dữ liệu bẩn). Selftest mới **66/66 PASS**, G2 cũ 87/87 +
 > Jobs 56/56 + Hotspot 37/37 + Inventory/Crafting 78/78 +
-> Economy/Education 92/92 + G1 42/42 + playtest 14/14 vẫn PASS
-> (không regression), scene chạy 120 frame exit 0, export web exit 0
-> (~8s), http.server 200 đủ 6 file.
-> **Chưa kiểm chứng bằng trình duyệt thật** — như G0/G1/G2 bước 1–4, VM
-> không có Chromium/Firefox. Tổng G2: 12/17 plugin → 12 hệ GDScript.
-> Còn lại bước 5 phần B: PhoneHub → MarketBattle (luật chờ chủ duyệt)
-> → Online/SaveCloud.
+> Economy/Education 92/92 + Social/Titles/Story 102/102 + G1 42/42
+> + playtest 14/14 vẫn PASS (không regression), scene chạy 120 frame
+> exit 0, export web exit 0 (~8s), http.server 200 đủ 6 file.
+> **Chưa kiểm chứng bằng trình duyệt thật** — như G0/G1/G2 bước 1–5,
+> VM không có Chromium/Firefox. Tổng G2: 13/17 plugin → 13 hệ GDScript.
+> Còn lại bước 5 phần B: MarketBattle (luật chờ chủ duyệt) →
+> Online/SaveCloud.
+>
+> G2 bước 5/5 (phần A) XONG trước đó (xem lịch sử file): 3 hệ
+> `PxbSocial` + `PxbTitles` + `PxbStory`, selftest 102/102 PASS.
 >
 > G2 bước 4/5 XONG trước đó (xem lịch sử file): 2 hệ `PxbEconomy` +
 > `PxbEducation`, selftest 92/92 PASS.
@@ -38,7 +39,7 @@
 | 3 | `PXB_Economy` → Economy (lãi 0,5%, phí 5%, 4 hành vi cấm) | ✅ XONG đợt này (xem §2h) |
 | 3 | `PXB_Education` → Education (5 bậc) | ✅ XONG đợt này (xem §2h) |
 | 4 | `PXB_Social` → Social; `PXB_Titles` / `PXB_Story` → Titles/Story | ✅ XONG đợt này (xem §2k) |
-| 4 | `PXB_PhoneHub` → PhoneHub (CanvasLayer, 9 tab) | ⏳ |
+| 4 | `PXB_PhoneHub` → PhoneHub (CanvasLayer, 9 tab) | ✅ XONG đợt này (xem §2n) |
 | 5 | `PXB_MarketBattle` → MarketBattle (luật chờ chủ duyệt) | ⏳ |
 | 5 | `PXB_Online` / `PXB_SaveCloud` → Online/SaveCloud | ⏳ |
 
@@ -306,17 +307,48 @@ nếu cần build sạch thì tạo lại thư mục rồi mới export.
 2. **Không có `$gameSystem` / PlayerProgress:** như Social — state trong instance + `data()`/`from_data()`; chỉ số người chơi (Trí/Danh vọng/tài sản/An Yên) truyền vào làm tham số, event lấy từ `PxbStats`/`PxbEconomy` khi nối UI.
 3. **Lệch C# so với GDD giữ đúng C#** (xem header file): ch.2 không có đường riêng bằng Cao đẳng; ch.5 Học giả không kiểm bằng Tiến sĩ; ch.5 Gia đình không kiểm rank Trung lưu.
 
-## 6. Bước tiếp theo — G2 bước 5 phần B (PhoneHub/MarketBattle/Online/SaveCloud)
+## 2n. File mới đợt này (G2 bước 5 phần B — PhoneHub, 20/11 ~00:50)
 
-1. Browser-verify G2 bước 5 phần A (mở link trên, xem HUD Ngày/Khung vẫn đổi
+| File | Nội dung |
+|---|---|
+| `scripts/pxb_phonehub.gd` (`PxbPhoneHub`, ~250 dòng) | Port `PXB_PhoneHub.js` / `PhoneHub.cs`: 9 tab đúng thứ tự GDD Mục 2 (id kebab-case + tên có dấu đầy đủ: Danh bạ / Tin nhắn, Ngân hàng, Bản đồ, Việc làm, Chợ, Học tập, Sức khỏe, Xã hội, Cài đặt), `open(tab)` / `close()` / `toggle()` / `select_tab(tab)` (mở tab thì đánh dấu đã đọc), `notify(tab)` / `unread_count(tab)` / `total_unread()` (chấm đỏ), signal `tab_changed(tab_id)` / `open_changed(is_open)` thay cho event C# (UI kết nối lại sau mỗi lần load), `PHONE_KEY_CODE = KEY_P` để lớp UI dùng (file này không tự bắt phím — đúng ranh giới PhoneHub.cs), `data()`/`from_data()` (bỏ tab lạ, kẹp số âm về 0, current_tab lạ → mặc định). Không dùng PxbBalance, không có số PROVISIONAL nào (PhoneHub.cs không có số cấu hình). |
+| `tests/g2_phonehub_test.gd` (66 mục) | Kiểm tra headless riêng: 9 tab + thứ tự + tên có dấu + tab mặc định + PHONE_KEY_CODE, tab_list trả bản sao; open/close/toggle (mở ở tab mặc định, mở thẳng tab, close giữ tab, toggle mở lại đúng tab trước khi đóng, close khi đã đóng vẫn phát signal, open tab lạ vẫn mở + phát open_changed nhưng không đổi tab); select_tab (đúng tab hiện tại vẫn phát signal, tab lạ false + không phát); notify (cộng dồn theo tab, đếm cả khi đang đóng, tab lạ false, total); chuỗi signal đúng thứ tự mở → notify → đổi tab → đóng; hub mới có signal riêng; save round-trip + bỏ dữ liệu bẩn + from_data({}) reset. |
+
+## 2o. Verify thật đợt này (20/11 ~00:50)
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `--check-only` 2 file (script mới + test) | PASS, exit 0 (sau `--headless --import` 1 lần để đăng ký class mới) |
+| G2 PhoneHub selftest | **66/66 PASS** (chạy đầu đã pass hết; đã sửa log sạch: free hub cuối test để không còn dòng `resources still in use` lúc thoát) |
+| G2 selftest cũ (Balance/Stats/Time) | **87/87 PASS** (không regression) |
+| G2 Jobs / Hotspot / Inventory+Crafting / Economy+Education / Social+Titles+Story selftest | **56/56 + 37/37 + 78/78 + 92/92 + 102/102 PASS** (không regression) |
+| G1 selftest / playtest | **42/42 + 14/14 PASS** (không regression) |
+| Scene Main chạy 120 frame | exit 0, không ERROR/warning |
+| Export web | exit 0, ~8s; `index.wasm` 39,5 MB, `index.pck` 1.030.332 byte (`strings index.pck` thấy `pxb_phonehub`, 5 lần) |
+| HTTP 200 | `index.html/js/wasm/pck/audio.worklet.js/png` đủ 6 file (cổng 8145); `GODOT_THREADS_ENABLED = false` |
+
+## 2p. Khác biệt port JS/C# → GDScript đợt này
+
+**PhoneHub:**
+1. **Event C# → signal GDScript:** `TabChanged`/`OpenChanged` thành `tab_changed`/`open_changed`; test kết nối Callable và đếm đúng thứ tự phát (open: tab_changed trước, open_changed sau).
+2. **Không có `$gameSystem`:** JS giữ state trong `$gameSystem.pxbPhoneHub` để vào save MV; Godot giữ trong instance `PxbPhoneHub` + `data()`/`from_data()` (save thật là việc SaveCloud, bước 5 phần B sau).
+3. **Phím P không móc ở đây:** JS `install()` gán `Input.keyMapper[80]` + `Scene_Map.update` kiểm tra phím; Godot không có keyMapper — phím P là việc của input map / `main.gd` khi nối UI (xem §6 bước 2). File này chỉ giữ hằng `PHONE_KEY_CODE = KEY_P` để lớp UI dùng.
+4. **Không có số PROVISIONAL:** PhoneHub.cs không có số cấu hình nào nên port không đặt số tạm nào; tên tab "Sức khỏe" theo C# (GDD viết "Sức khoẻ", chỉ khác chính tả).
+5. **Quirk giữ đúng C#/JS:** notify đếm cả khi đóng; select_tab/open luôn phát tab_changed kể cả đúng tab hiện tại; open tab lạ vẫn mở + phát open_changed; close luôn phát open_changed(false) kể cả đã đóng sẵn.
+
+## 6. Bước tiếp theo — G2 bước 5 phần B (MarketBattle/Online/SaveCloud)
+
+1. Browser-verify G2 bước 5 phần B (mở link trên, xem HUD Ngày/Khung vẫn đổi
    đúng, không lỗi console).
 2. Nối gameplay vào `main.gd` để các hệ G2 nhìn thấy được (hiện chỉ có
    logic + test headless): nút "Làm ca" ở khu + "Nhặt" hotspot +
    "Chế tạo" (Jobs/Hotspot/Inventory/Crafting) + cửa hàng / ví /
    "Đăng ký học" (Economy/Education) + quan hệ / danh hiệu / chương
-   (Social/Titles/Story). Đây là việc UI đầu tiên của G2 —
+   (Social/Titles/Story) + nút điện thoại mở hub 9 tab (PhoneHub —
+   phím P + CanvasLayer). Đây là việc UI đầu tiên của G2 —
    làm sau khi port xong hết các hệ nền, hoặc làm ngay bước 5 phần B nếu cần
    demo chơi được.
-3. G2 bước 5 phần B (cuối): PhoneHub → MarketBattle
-   (luật chờ chủ duyệt) → Online/SaveCloud (xem §1). Sau đó G3: đủ 18
-   khu (Map003–014 đã có data MV, Map015–018 mới).
+3. G2 bước 5 phần B (cuối): MarketBattle
+   (luật chờ chủ duyệt — CHƯA port cho tới khi chủ duyệt luật, xem
+   `docs/market-battle-design.md`) → Online/SaveCloud (xem §1).
+   Sau đó G3: đủ 18 khu (Map003–014 đã có data MV, Map015–018 mới).
