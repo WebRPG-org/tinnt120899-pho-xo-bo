@@ -414,6 +414,36 @@ nếu cần build sạch thì tạo lại thư mục rồi mới export.
 2. **Học công thức tại chỗ:** Cô Tư/Anh Hải dạy ngay trong dialogue NPC (đúng unlock note); quest đầu tiên "làm xong" chưa có hệ quest nên chưa kiểm tra điều kiện quest — PROVISIONAL, khi có PxbStory quest thì thêm điều kiện.
 3. **Tiền chỉ ở PxbJobs:** ví hiển thị = `jobs.gold`; `PxbEconomy` có ví riêng nhưng chưa nối — khi nối Economy (phần 2) sẽ chuyển ví chung về một chỗ (xem §6 bước 2).
 
+## 2w. File mới đợt này (G2 UI wiring phần 2 — PhoneHub + SaveCloud + Economy + Education + Social/Titles/Story + Tools + Online, 20/11 ~04:00)
+
+| File | Nội dung |
+|---|---|
+| `main.gd` (sửa) | `_create_systems()` thêm 9 hệ phần 2 (PhoneHub / SaveCloud / Economy / Education / Social + seed_slice "Bạn thân" / Titles / Story / Tools bind túi chung + crafting + hotspot / Online). `fame` (Danh vọng) giữ ở Main vì PxbStats chưa có fame. Ví CHUNG là `jobs.gold`; `economy.money` chỉ là bản đồng bộ tạm trước/sau mỗi giao dịch (`_wallet_to_economy` / `_wallet_from_economy`). `_advance_frame()` sang ngày mới: đồng bộ `education.day_number`, bỏ bê quan hệ 1 lần/ngày, lãi tiết kiệm 0,5% khi sang tháng game (ngày 31/61…), `_check_graduations()` (tốt nghiệp cộng EXP vào `jobs.exp_total` + Danh vọng vào `fame` rồi xóa pending; khóa ngắn chỉ báo + notify vì chỉ số phụ chưa có API áp qua PxbStats). Phím P + nút HUD "Điện thoại (P)" (hiện số chưa đọc) mở panel 9 tab: Danh bạ (trò chuyện +5 thân thiết), Ngân hàng (gửi/rút 100k), Bản đồ (đi nhanh khu đã mở trong maps_data), Việc làm (lương + công cụ: nhận Sổ Tay/Xẻng, nâng cấp), Chợ (4 món rẻ nhất catalog + mua thật), Học tập (đăng ký 5 bậc — học phí tự trừ khỏi ví vì `charged` luôn false — + khóa ngắn mẫu Sáng tạo 3 ngày/2tr), Sức khỏe (luyện Thể/Trí/Tâm đổi nhau +5), Xã hội (chương + ending gợi ý + danh hiệu + lên chương + đổi phe), Cài đặt (lưu/tải slot 1–3, kiểm tra mạng, đồng bộ cloud báo đúng `server-chua-co-endpoint`/`chua-dang-nhap`). Save/Load: `_collect_system_data()` gom đủ 13 hệ + ngày/khung/fame → `savecloud.save_to_local`; load qua `load_from_local` + `_apply_save_data()` (Stats khôi phục tại chỗ qua `set_stat` để không lệch autoload; các hệ khác tạo mới qua `from_data()` tĩnh rồi thay node + bind lại túi/crafting/stats). |
+| `tests/g2_ui_wiring2_test.gd` (71 mục) | Chạy scene Main thật headless: hệ phần 2 đã tạo + seed Bạn thân + Tools chung túi thật (đổi hotspot.materials thì tools thấy ngay); điện thoại mở/đóng/tab mặc định/đổi tab Chợ/notify + nút hiện (1)/mở tab xóa chưa đọc; mua Áo dài 2tr + thuê Phòng trọ 2tr + Xe đạp 0đ + Xe sang chặn thiếu tiền + gửi/rút tiết kiệm + rút vượt chặn; đăng ký THPT (0đ) tốt nghiệp ngày 31 + Cao đẳng 20tr tốt nghiệp ngày 91 (+500 EXP) + khóa ngắn Sáng tạo (+10 pending "sang"); trò chuyện Bạn thân 20→25; lên chương 2 (Trí 100); nhận Sổ Tay bậc 1 + nâng bậc 2 + Xe Đẩy phải chế; lưu slot 1 xuống file → đổi ví 999/ngày 9/Thể 50 → tải lại khôi phục đúng (ngày 1, ví 3tr, Thể 100, chương 2, Sổ Tay bậc 2, bằng Cao đẳng, thân thiết 25, Áo dài, tiết kiệm 500k) + sau load Tools vẫn chung túi; online ban đầu ngoại tuyến + outbox trống + upload chưa đăng nhập → `chua-dang-nhap`. Test tự xóa file save nó tạo. |
+
+## 2x. Verify thật đợt này (20/11 ~04:00)
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `--check-only` main.gd + test mới | PASS, exit 0 (sửa 2 lỗi suy kiểu `:=` ở test: `advance_story_chapter()`/`interact_friend()` trả qua `_main` kiểu Node nên phải ghi rõ `: bool`) |
+| G2 UI wiring2 selftest | **71/71 PASS** (chạy đầu đã pass hết) |
+| G2 selftest cũ (Balance/Stats/Time) | **87/87 PASS** (không regression) |
+| G2 Jobs / Hotspot / Inventory+Crafting / Economy+Education / Social+Titles+Story / PhoneHub / Tools / Online / SaveCloud selftest | **56/56 + 37/37 + 78/78 + 92/92 + 102/102 + 66/66 + 155/155 + 91/91 + 69/69 PASS** (không regression) |
+| G1 selftest / playtest + UI wiring phần 1 | **42/42 + 14/14 + 37/37 PASS** (không regression) |
+| Scene Main chạy 120 frame | exit 0, không ERROR/warning |
+| Export web | exit 0, ~9s; `index.wasm` 39,5 MB, `index.pck` 1.158.900 byte (`strings index.pck` thấy `pxb_phonehub`/`pxb_savecloud`/`pxb_economy`, 15 lần) |
+| HTTP 200 | `index.html/js/wasm/pck/audio.worklet.js/png` đủ 6 file (cổng 8148); `GODOT_THREADS_ENABLED = false` |
+
+## 2y. Khác biệt / lưu ý đợt này
+
+1. **Ví chung = `jobs.gold`:** `PxbEconomy` có ví riêng nhưng Main đồng bộ 2 chiều trước/sau mỗi giao dịch — không có 2 ví lệch nhau. Khi port PlayerProgress thì ví chuyển hẳn về đó (xem §2v).
+2. **Tốt nghiệp khóa ngắn:** `pending_stat_gain` (+10 "sang") CHƯA áp vào đâu — PxbStats chỉ có `set_stat` cho 3 chỉ số gốc (Thể/Trí/Tâm), 4 chỉ số trộn (Kỷ/Dũng/Sáng/An Yên) là hàm tính sẵn, không set được. Cần API áp chỉ số phụ ở bước sau (hoặc GDD chốt cách tính).
+3. **Khóa ngắn mẫu:** UI chỉ có 1 khóa cố định (Sáng tạo, 3 ngày, 2tr) — PROVISIONAL, để chứng minh luồng đăng ký/tốt nghiệp; danh mục khóa ngắn đầy đủ chưa có trong GDD.
+4. **Lãi tiết kiệm tự động:** chỉ cộng khi sang tháng game (ngày 31/61…) với đúng 30 ngày — `apply_monthly_interest(30)`; không cộng dồn sai nếu F/bấm đổi khung nhiều lần trong ngày (chỉ chạy khi ngày đổi).
+5. **Đi nhanh:** chỉ liệt kê khu có trong `maps_data` (hiện 1–2); khu 17/18 đã mở trong `unlocked_districts` nhưng chưa có data map nên không hiện nút đi — tránh `load_map` vào map rỗng.
+6. **Upload cloud:** nút đồng bộ chỉ gọi `upload_save()` và báo đúng lý do (`server-chua-co-endpoint` khi đã đăng nhập, `chua-dang-nhap` khi chưa) — không giả vờ đã đồng bộ.
+7. **Load save thay node:** `_replace_system` dùng `queue_free()` (hủy cuối frame) rồi `add_child` node mới ngay — node cũ còn trong cây tới cuối frame nhưng Main đã trỏ sang node mới; không nối signal nào vào các hệ nên không rò rỉ.
+
 ## 6. Bước tiếp theo — G2 xong (chỉ còn MarketBattle chờ chủ duyệt) + nối UI
 
 1. Browser-verify G2 (mở link trên, xem HUD Ngày/Khung vẫn đổi
@@ -428,11 +458,17 @@ nếu cần build sạch thì tạo lại thư mục rồi mới export.
    của G2 — làm ngay sau khi port xong hết các hệ nền.
    **Tiến độ 20/11 ~02:45 — phần 1 XONG:** Jobs + Hotspot + Crafting +
    Stats đã nối (nút "Việc làm", nhặt qua PxbHotspot, chế tạo thật,
-   HUD ví/chỉ số; test mới 37/37). **Phần 2 tiếp theo:** PhoneHub
-   (phím P + panel 9 tab) + SaveCloud (nút Lưu/Tải slot 1) + Economy
-   (cửa hàng/ví chung) + Education (đăng ký học) + Social/Titles/
-   Story (quan hệ/danh hiệu/chương) + Tools (dùng công cụ) + Online
-   (trạng thái online).
+   HUD ví/chỉ số; test mới 37/37). **Phần 2 XONG 20/11 ~04:00:**
+   PhoneHub (phím P + panel 9 tab, nội dung + nút thật) + SaveCloud
+   (lưu/tải slot 1–3, khôi phục đủ 13 hệ) + Economy (ngân hàng +
+   chợ, ví chung jobs.gold) + Education (đăng ký 5 bậc + khóa ngắn +
+   tốt nghiệp cộng EXP/Danh vọng thật) + Social/Titles/Story (trò
+   chuyện +5, lên chương, ending gợi ý, đổi phe) + Tools (nhận Sổ
+   Tay/Xẻng + nâng cấp) + Online (trạng thái + kiểm tra mạng +
+   upload báo đúng lý do); test mới 71/71, toàn bộ test cũ PASS,
+   export web exit 0. **Phần 3 tiếp theo (nếu cần trước G3):** áp
+   `pending_stat_gain` khóa ngắn vào chỉ số phụ (cần API PxbStats)
+   + danh mục khóa ngắn đầy đủ + mở khu 17/18 khi có data map.
 3. G2 còn lại duy nhất: MarketBattle
    (luật chờ chủ duyệt — CHƯA port cho tới khi chủ duyệt luật, xem
    `docs/market-battle-design.md`). Sau đó G3: đủ 18 khu (Map003–014

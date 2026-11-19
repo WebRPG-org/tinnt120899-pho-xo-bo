@@ -1,10 +1,16 @@
 extends Node2D
 ## Main.gd — Dieu khien game G1 (slice parity Map001-002 voi ban MV)
-## + G2 UI wiring phan 1 (20/11 ~02:45): cac he G2 (Jobs / Hotspot /
-## Crafting / Stats) da noi vao scene that — lam ca nhan luong, nhat
-## hotspot qua PxbHotspot, che tao that qua PxbCrafting, HUD hien vi +
-## chi so. PhoneHub / SaveCloud / Economy / Education / Social /
-## Titles / Story noi o phan sau.
+## + G2 UI wiring phan 1 (20/11 ~02:45): Jobs / Hotspot / Crafting /
+## Stats da noi vao scene that.
+## + G2 UI wiring phan 2 (20/11 ~04:00): PhoneHub (phim P + panel 9
+## tab) + SaveCloud (luu/tai slot 1-3) + Economy (ngan hang + cho) +
+## Education (dang ky hoc) + Social / Titles / Story (hien thi + len
+## chuong) + Tools (xem bac + nang cap trong tab Viec lam) + Online
+## (trang thai + kiem tra mang trong tab Cai dat).
+## Vi: MỘT vi duy nhat la jobs.gold; economy.money chi la ban dong bo
+## tam truoc moi giao dich mua/gui/rut (xem _wallet_to_economy).
+## Danh vong: bien fame cua Main (PxbStats chua co fame); tot nghiep
+## cong EXP vao jobs.exp_total + Danh vong vao fame, roi xoa pending.
 ##
 ## He thoi gian kieu C (da chot, TimeSystem.cs / PXB_Time.js): 1 ngay game =
 ## 30 phut that, 3 khung Sang/Chieu/Toi, moi khung 10 phut that, miss khung
@@ -53,6 +59,20 @@ var stats: PxbStats = null
 var jobs: PxbJobs = null
 var hotspot: PxbHotspot = null
 var crafting: PxbCrafting = null
+# He G2 phan 2 (PhoneHub / SaveCloud / Economy / Education / Social /
+# Titles / Story / Tools / Online).
+var phonehub: PxbPhoneHub = null
+var savecloud: PxbSaveCloud = null
+var economy: PxbEconomy = null
+var education: PxbEducation = null
+var social: PxbSocial = null
+var titles: PxbTitles = null
+var story: PxbStory = null
+var tools: PxbTools = null
+var online: PxbOnline = null
+# Danh vong (PxbStats chua co fame) + trang thai dien thoai.
+var fame := 0
+var phone_open := false
 
 var _hud_map: Label
 var _hud_day: Label
@@ -64,6 +84,13 @@ var _dlg_panel: PanelContainer
 var _dlg_name: Label
 var _dlg_text: Label
 var _dlg_choices: VBoxContainer
+# UI dien thoai (phan 2).
+var _phone_btn: Button
+var _phone_panel: PanelContainer
+var _phone_title: Label
+var _phone_content: Label
+var _phone_actions: VBoxContainer
+var _phone_tab_buttons := {}
 
 func _ready() -> void:
 	font = load("res://DejaVuSans.ttf")
@@ -95,6 +122,29 @@ func _create_systems() -> void:
 	crafting.bind_materials(hotspot.materials)
 	add_child(crafting)
 	inventory = hotspot.materials
+	phonehub = PxbPhoneHub.new()
+	add_child(phonehub)
+	savecloud = PxbSaveCloud.new()
+	add_child(savecloud)
+	economy = PxbEconomy.new()
+	add_child(economy)
+	education = PxbEducation.new()
+	education.day_number = day
+	add_child(education)
+	social = PxbSocial.new()
+	social.seed_slice(1)
+	add_child(social)
+	titles = PxbTitles.new()
+	add_child(titles)
+	story = PxbStory.new()
+	add_child(story)
+	tools = PxbTools.new()
+	tools.bind_materials(hotspot.materials)
+	tools.bind_crafting(crafting)
+	tools.bind_hotspot(hotspot)
+	add_child(tools)
+	online = PxbOnline.new()
+	add_child(online)
 
 func _map_by_id(map_id: int) -> Dictionary:
 	for m in maps_data["maps"]:
@@ -149,12 +199,48 @@ func _advance_frame() -> void:
 		frame_idx = 0
 		day += 1
 		jobs.set_day_number(day)
+		education.day_number = day
+		social.apply_neglect_all(day)
+		if day > 1 and (day - 1) % 30 == 0:
+			# Sang thang game moi: lai 0,5% tren so tiet kiem hien co.
+			var interest := economy.apply_monthly_interest(30)
+			if interest > 0:
+				show_toast("Lãi tiết kiệm tháng mới: +%sđ" % _fmt_vnd(interest))
 	_update_hud()
 	show_toast("Ngày %d • Khung %s" % [day, _frame_name()])
+	# Tot nghiep / khoa ngan han kiem tra sau toast ngay de toast
+	# tot nghiep khong bi toast ngay de mat.
+	if frame_idx == 0 and day > 1:
+		_check_graduations()
+
+
+# Kiem tra tot nghiep moi ngay game moi (goi 1 lan/ngay): tot nghiep
+# bang chinh cong EXP vao jobs.exp_total + Danh vong vao fame roi xoa
+# pending (dung hop dong PxbEducation: event tu ap pending); khoa
+# ngan han chi bao + notify (chi so phu chua co API ap qua PxbStats).
+func _check_graduations() -> void:
+	var g := education.check_graduation()
+	if bool(g.get("graduated", false)):
+		jobs.exp_total += int(g.get("exp", 0))
+		fame += int(g.get("fame", 0))
+		education.pending_exp = 0
+		education.pending_fame = 0
+		phonehub.notify(PxbPhoneHub.TAB_HOC_TAP)
+		show_toast("Tốt nghiệp %s! +%d EXP, +%d Danh vọng" % [
+			String((g.get("degree", {}) as Dictionary).get("name", "")),
+			int(g.get("exp", 0)), int(g.get("fame", 0))])
+	var sc := education.check_short_course_graduation()
+	if bool(sc.get("graduated", false)):
+		phonehub.notify(PxbPhoneHub.TAB_HOC_TAP)
+		show_toast("Xong khóa ngắn hạn: +%d %s (chờ áp vào chỉ số phụ)" % [
+			int(sc.get("gain", 0)), String(sc.get("sub_stat", ""))])
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_F:
+		if event.keycode == PxbPhoneHub.PHONE_KEY_CODE:
+			if not dialogue_open:
+				_toggle_phone()
+		elif event.keycode == KEY_F:
 			_frame_timer = 0.0
 			_advance_frame()
 		elif event.keycode == KEY_E:
@@ -165,7 +251,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		click_pos = event.position
 	elif event is InputEventScreenTouch and event.pressed:
 		click_pos = event.position
-	if click_pos == Vector2.INF or dialogue_open or iso_map == null:
+	if click_pos == Vector2.INF or dialogue_open or phone_open or iso_map == null:
 		return
 	var tile := iso_map.world_to_tile(click_pos)
 	if not iso_map.in_bounds(tile):
@@ -341,6 +427,633 @@ func _collect_hotspot(ev: Dictionary) -> void:
 		_:
 			show_toast("%s: không nhặt được." % String(ev["name"]))
 
+# --- G2 UI wiring phan 2: vi chung, dien thoai, cho, hoc, save ---
+
+# Vi chung: jobs.gold la nguon su that duy nhat. Truoc moi giao dich
+# dung economy (mua / gui / rut) thi dong bo tien vao economy.money;
+# xong thi dong bo nguoc ve jobs.gold + cap nhat HUD.
+func _wallet_to_economy() -> void:
+	economy.money = jobs.gold
+
+
+func _wallet_from_economy() -> void:
+	jobs.gold = economy.money
+	_update_hud()
+
+
+# --- Dien thoai (PxbPhoneHub: 9 tab, mo bang phim P / nut) ---
+
+func _toggle_phone() -> void:
+	if phonehub.is_open:
+		_close_phone()
+	else:
+		_open_phone(phonehub.current_tab)
+
+
+func _open_phone(tab_id: String = "") -> void:
+	phonehub.open(tab_id if tab_id != "" else PxbPhoneHub.DEFAULT_TAB)
+	phone_open = true
+	if player != null:
+		player.input_blocked = true
+	_phone_panel.visible = true
+	_refresh_phone()
+	_update_hud()
+
+
+func _close_phone() -> void:
+	phonehub.close()
+	phone_open = false
+	if player != null:
+		player.input_blocked = false
+	_phone_panel.visible = false
+	_update_hud()
+
+
+func _phone_action(text: String, call: Callable) -> void:
+	var b := Button.new()
+	b.text = text
+	b.add_theme_font_size_override("font_size", 24)
+	b.add_theme_font_override("font", font)
+	b.custom_minimum_size = Vector2(580, 52)
+	b.pressed.connect(call)
+	_phone_actions.add_child(b)
+
+
+func _clear_phone_actions() -> void:
+	for c in _phone_actions.get_children():
+		c.queue_free()
+
+
+func _refresh_phone() -> void:
+	if not phone_open:
+		return
+	for tab_id in _phone_tab_buttons:
+		var unread := phonehub.unread_count(String(tab_id))
+		var base := PxbPhoneHub.tab_name(String(tab_id))
+		(_phone_tab_buttons[tab_id] as Button).text = \
+			("%s (%d)" % [base, unread]) if unread > 0 else base
+	_phone_title.text = "Điện thoại — " + PxbPhoneHub.tab_name(phonehub.current_tab)
+	_clear_phone_actions()
+	match phonehub.current_tab:
+		PxbPhoneHub.TAB_DANH_BA_TIN_NHAN:
+			_phone_content.text = _social_text()
+			for rel in social.all_relations():
+				var pid := String((rel as Dictionary).get("person_id", ""))
+				var label := "Trò chuyện: %s" % String((rel as Dictionary).get("display_name", pid))
+				_phone_action(label, _on_interact_pressed.bind(pid))
+		PxbPhoneHub.TAB_NGAN_HANG:
+			_wallet_to_economy()
+			_phone_content.text = "Tiền mặt: %sđ\nTiết kiệm: %sđ (lãi 0,5%%/tháng game)\nĐiểm tín dụng: %d" % [
+				_fmt_vnd(economy.money), _fmt_vnd(economy.savings), economy.credit_score]
+			_phone_action("Gửi tiết kiệm 100.000đ", _on_deposit_pressed.bind(100000))
+			_phone_action("Rút tiết kiệm 100.000đ", _on_withdraw_pressed.bind(100000))
+		PxbPhoneHub.TAB_BAN_DO:
+			var lines: Array[String] = ["Khu đã mở (chạm để đi nhanh):"]
+			for m in maps_data["maps"]:
+				var mid := int((m as Dictionary)["id"])
+				if hotspot.can_fast_travel(mid):
+					lines.append("• %s" % String((m as Dictionary)["name"]))
+					_phone_action("Về %s" % String((m as Dictionary)["name"]), _on_travel_pressed.bind(mid))
+			_phone_content.text = "\n".join(lines)
+		PxbPhoneHub.TAB_VIEC_LAM:
+			_phone_content.text = _jobs_text() + "\n\n" + _tools_text()
+			_phone_action("Mở bảng việc làm", _on_open_jobs_pressed)
+			for tool_id in PxbTools.TOOL_IDS:
+				var tier := tools.tool_tier(String(tool_id))
+				if tier == 0 and (String(tool_id) == "SoTay" or String(tool_id) == "Xeng"):
+					_phone_action("Nhận %s (bậc 1)" % PxbTools.tool_name(String(tool_id)),
+						_on_tool_acquire_pressed.bind(String(tool_id)))
+				elif tier >= 1 and tier < 3:
+					_phone_action("Nâng %s lên bậc %d" % [
+						PxbTools.tool_name(String(tool_id)), tier + 1],
+						_on_tool_upgrade_pressed.bind(String(tool_id)))
+		PxbPhoneHub.TAB_CHO:
+			_phone_content.text = "Chợ — mua bằng ví (tiền mặt %sđ).\nĐã sở hữu: %s" % [
+				_fmt_vnd(jobs.gold), _owned_text()]
+			for it in _cheapest_shop_items(4):
+				var iid := String((it as Dictionary)["id"])
+				_phone_action("Mua %s — %sđ" % [
+					String((it as Dictionary)["name"]), _fmt_vnd(int((it as Dictionary)["price_vnd"]))],
+					_on_buy_pressed.bind(iid))
+		PxbPhoneHub.TAB_HOC_TAP:
+			_phone_content.text = _education_text()
+			for i in PxbEducation.degree_list().size():
+				var d := PxbEducation.get_degree(i)
+				_phone_action("Đăng ký %s — %sđ, %d ngày" % [
+					String(d["name"]), _fmt_vnd(int(d["fee_vnd"])), int(d["days"])],
+					_on_enroll_pressed.bind(i))
+			_phone_action("Khóa ngắn: Sáng tạo 3 ngày — 2.000.000đ",
+				_on_enroll_short_pressed)
+		PxbPhoneHub.TAB_SUC_KHOE:
+			_phone_content.text = "Thể %d • Trí %d • Tâm %d (tổng %d, trần %d)\nLuyện tập đổi chỉ số (tổng không đổi):" % [
+				stats.the, stats.tri, stats.tam, stats.total(), PxbBalance.TOTAL_STAT_CAP]
+			_phone_action("Luyện Thể +5 (Trí −5)", _on_train_pressed.bind(["the", "tri"]))
+			_phone_action("Luyện Trí +5 (Thể −5)", _on_train_pressed.bind(["tri", "the"]))
+			_phone_action("Luyện Tâm +5 (Thể −5)", _on_train_pressed.bind(["tam", "the"]))
+		PxbPhoneHub.TAB_XA_HOI:
+			_phone_content.text = _story_text()
+			_phone_action("Lên chương tiếp", _on_advance_chapter_pressed)
+			if titles.can_redeem():
+				_phone_action("Đổi phe: bỏ danh hiệu phe Tà", _on_redeem_pressed)
+		PxbPhoneHub.TAB_CAI_DAT:
+			_phone_content.text = "Cài đặt — %s" % _online_text()
+			for slot in [1, 2, 3]:
+				_phone_action("Lưu vào slot %d" % slot, _on_save_pressed.bind(slot))
+				_phone_action("Tải slot %d" % slot, _on_load_pressed.bind(slot))
+			_phone_action("Kiểm tra mạng (server local)", _on_check_online_pressed)
+			_phone_action("Đồng bộ slot 1 lên server", _on_upload_pressed.bind(1))
+		_:
+			_phone_content.text = "Tab này chưa có nội dung."
+	_phone_action("Đóng điện thoại", _close_phone)
+
+
+func _social_text() -> String:
+	var lines: Array[String] = ["Danh bạ — trò chuyện tăng thân thiết (+5/lần):"]
+	for rel in social.all_relations():
+		var r := rel as Dictionary
+		lines.append("• %s — %s, thân thiết %d/100 (%s)" % [
+			String(r.get("display_name", "")), String(r.get("kind", "")),
+			int(r.get("closeness", 0)), String(r.get("stage", ""))])
+	if social.all_relations().is_empty():
+		lines.append("(chưa có quan hệ nào)")
+	return "\n".join(lines)
+
+
+func _jobs_text() -> String:
+	var lines: Array[String] = ["Việc làm — lương ca hiện tại:"]
+	for job in PxbBalance.JOBS:
+		var j := job as Dictionary
+		var jid := String(j["id"])
+		lines.append("• %s: %sđ/ca (còn %d ca/tuần)" % [
+			String(j["name"]),
+			_fmt_vnd(PxbJobs.pay_per_shift(jid, stats, _frame_name(), jobs.get_demand(jid))),
+			jobs.shifts_left(jid)])
+	return "\n".join(lines)
+
+
+func _tools_text() -> String:
+	var lines: Array[String] = ["Công cụ:"]
+	for tool_id in PxbTools.TOOL_IDS:
+		var tier := tools.tool_tier(String(tool_id))
+		lines.append("• %s: %s" % [PxbTools.tool_name(String(tool_id)),
+			("chưa có" if tier == 0 else "bậc %d (%s)" % [tier, String(PxbTools.TIER_NAMES[tier])])])
+		if tier >= 1:
+			lines.append("  %s" % tools.tool_behaviour_current(String(tool_id)))
+	return "\n".join(lines)
+
+
+func _owned_text() -> String:
+	if economy.owned.is_empty():
+		return "chưa có"
+	var names: Array[String] = []
+	for oid in economy.owned:
+		var it := PxbEconomy.get_item(String(oid))
+		names.append(String(it.get("name", oid)) if not it.is_empty() else String(oid))
+	return " • ".join(names)
+
+
+func _cheapest_shop_items(count: int) -> Array:
+	var all: Array = []
+	for group in [PxbEconomy.houses(), PxbEconomy.cars(), PxbEconomy.phones(), PxbEconomy.clothes()]:
+		all.append_array(group)
+	all.sort_custom(func(a, b) -> bool: return int(a["price_vnd"]) < int(b["price_vnd"]))
+	return all.slice(0, mini(count, all.size()))
+
+
+func _education_text() -> String:
+	var lines: Array[String] = ["Học tập — 5 bậc (học phí trả 1 lần lúc đăng ký):"]
+	for i in PxbEducation.degree_list().size():
+		var d := PxbEducation.get_degree(i)
+		var owned := "✓ đã có" if education.has_degree_or_higher(i) else ""
+		lines.append("• %s: %sđ, %d ngày, Trí ≥ %d, +%d EXP %s" % [
+			String(d["name"]), _fmt_vnd(int(d["fee_vnd"])), int(d["days"]),
+			int(d["tri"]), int(d["exp"]), owned])
+	var prog := education.study_progress()
+	if not (prog["enrolled"] as Dictionary).is_empty():
+		var e := prog["enrolled"] as Dictionary
+		lines.append("Đang học: %s, còn %d ngày (tốt nghiệp ngày %d)" % [
+			String(PxbEducation.get_degree(int(e["degree_index"]))["name"]),
+			int(prog["days_left"]), int(e["end_day"])])
+	if education.pending_exp > 0 or education.pending_fame > 0:
+		lines.append("Chờ nhận: +%d EXP, +%d Danh vọng" % [education.pending_exp, education.pending_fame])
+	return "\n".join(lines)
+
+
+func _story_text() -> String:
+	_wallet_to_economy()
+	var assets := economy.total_assets()
+	var ending := PxbStory.suggest_ending(assets, stats.tri, fame, stats.an_yen(), social.is_married_to("ban-than"))
+	var lines: Array[String] = [
+		"Chương %d: %s" % [story.chapter, story.chapter_name()],
+		"Danh vọng: %d • Tài sản: %sđ • An Yên: %d" % [fame, _fmt_vnd(assets), stats.an_yen()],
+		"Ending gợi ý hiện tại: %s" % ending,
+		"Danh hiệu (%s): %s" % [titles.alignment,
+			(" • ".join(titles.all_titles()) if not titles.all_titles().is_empty() else "chưa có")],
+		"Quest giúp NPC: %d/3 (cần cho chương 4)" % story.help_quests_done,
+	]
+	return "\n".join(lines)
+
+
+func _online_text() -> String:
+	var st := savecloud.sync_status()
+	return "Online: %s • Đồng bộ: %s (%s)" % [
+		("có mạng" if online.is_online() else "ngoại tuyến"),
+		String(st["status"]), String(st["detail"])]
+
+
+# --- Hanh dong tu dien thoai (tra Dictionary de test goi truc tiep) ---
+
+func buy_item(item_id: String) -> Dictionary:
+	_wallet_to_economy()
+	var res := economy.buy(item_id)
+	if bool(res.get("ok", false)):
+		fame += int(res.get("fame_gained", 0))
+		_wallet_from_economy()
+		show_toast("Đã mua %s." % String(PxbEconomy.get_item(item_id).get("name", item_id)))
+	else:
+		match String(res.get("reason", "")):
+			"khong-du-tien":
+				show_toast("Không đủ tiền mua món này.")
+			"khong-co-mon":
+				show_toast("Không có món này trong chợ.")
+			_:
+				show_toast("Không mua được.")
+	_refresh_phone()
+	return res
+
+
+func deposit_savings(amount: int) -> bool:
+	_wallet_to_economy()
+	var ok := economy.deposit_savings(amount)
+	_wallet_from_economy()
+	show_toast("Đã gửi tiết kiệm %sđ." % _fmt_vnd(amount) if ok else "Không gửi được (vượt tiền mặt).")
+	_refresh_phone()
+	return ok
+
+
+func withdraw_savings(amount: int) -> bool:
+	_wallet_to_economy()
+	var ok := economy.withdraw_savings(amount)
+	_wallet_from_economy()
+	show_toast("Đã rút tiết kiệm %sđ." % _fmt_vnd(amount) if ok else "Không rút được (vượt tiết kiệm).")
+	_refresh_phone()
+	return ok
+
+
+func enroll_degree(idx: int) -> Dictionary:
+	var res := education.enroll(idx, stats.tri, -1, jobs.gold)
+	if bool(res.get("ok", false)):
+		var fee := int(res.get("fee_paid", 0))
+		if fee > 0:
+			jobs.gold -= fee
+			_wallet_to_economy()
+		_update_hud()
+		show_toast("Đã đăng ký %s — tốt nghiệp ngày %d." % [
+			String(PxbEducation.get_degree(idx).get("name", "")),
+			int(res.get("end_day", 0))])
+	else:
+		match String(res.get("reason", "")):
+			"khong-du-tien":
+				show_toast("Không đủ tiền đóng học phí.")
+			"chua-du-tri":
+				show_toast("Chưa đủ Trí để đăng ký bậc này.")
+			"can-mentor":
+				show_toast("Bậc này cần người hướng dẫn (mentor).")
+			"dang-hoc":
+				show_toast("Đang học một bằng khác rồi.")
+			"da-co-bang":
+				show_toast("Đã có bằng này hoặc cao hơn.")
+			_:
+				show_toast("Không đăng ký được.")
+	_refresh_phone()
+	return res
+
+
+# Khoa ngan han mau cua UI (PROVISIONAL): Sang tao, 3 ngay, 2 trieu.
+func enroll_short_course() -> Dictionary:
+	var res := education.enroll_short_course("sang", 3, 2000000, jobs.gold)
+	if bool(res.get("ok", false)):
+		var fee := int(res.get("fee_paid", 0))
+		if fee > 0:
+			jobs.gold -= fee
+			_wallet_to_economy()
+		_update_hud()
+		show_toast("Đã đăng ký khóa ngắn Sáng tạo — xong ngày %d." % int(res.get("end_day", 0)))
+	else:
+		match String(res.get("reason", "")):
+			"khong-du-tien":
+				show_toast("Không đủ tiền đóng phí khóa ngắn.")
+			"dang-hoc-khoa-ngan":
+				show_toast("Đang học một khóa ngắn khác rồi.")
+			_:
+				show_toast("Không đăng ký được khóa ngắn.")
+	_refresh_phone()
+	return res
+
+
+func train_stat(up: String, down: String) -> bool:
+	var ok := stats.train(up, down, 5)
+	if ok:
+		_update_hud()
+		show_toast("Luyện tập: %s +5, %s −5." % [up, down])
+	else:
+		show_toast("Không luyện được (chỉ số đã chạm trần/sàn).")
+	_refresh_phone()
+	return ok
+
+
+func interact_friend(person_id: String) -> bool:
+	var rel := social.get_rel(person_id)
+	if rel.is_empty():
+		show_toast("Không tìm thấy người này.")
+		return false
+	var ok := PxbSocial.interact(rel, day)
+	if ok:
+		_update_hud()
+		show_toast("Trò chuyện xong — thân thiết %d/100." % int(rel.get("closeness", 0)))
+	_refresh_phone()
+	return ok
+
+
+func travel_to(map_id: int) -> bool:
+	if not hotspot.can_fast_travel(map_id):
+		show_toast("Khu này chưa mở.")
+		return false
+	var dest := _map_by_id(map_id)
+	if dest.is_empty():
+		show_toast("Chưa có dữ liệu map cho khu này.")
+		return false
+	_close_phone()
+	var door_tile := Vector2i(5, 4)
+	for e in dest["events"]:
+		if String(e.get("kind", "")) == "door":
+			door_tile = Vector2i(e["tile"][0], e["tile"][1])
+	load_map(map_id, door_tile)
+	show_toast("Đã về " + String(dest["name"]))
+	return true
+
+
+func advance_story_chapter() -> bool:
+	_wallet_to_economy()
+	var ok := story.advance_chapter(stats.tri, fame, economy.total_assets(),
+		social.has_supporter())
+	if ok:
+		_update_hud()
+		show_toast("Lên chương %d: %s!" % [story.chapter, story.chapter_name()])
+	else:
+		show_toast("Chưa đủ điều kiện lên chương tiếp (xem yêu cầu ở tab Xã hội).")
+	_refresh_phone()
+	return ok
+
+
+func redeem_titles() -> bool:
+	var ok := titles.redeem()
+	show_toast("Đã bỏ danh hiệu phe Tà." if ok else "Chỉ đổi phe được khi đang ở phe Tà.")
+	_refresh_phone()
+	return ok
+
+
+func upgrade_tool(tool_id: String) -> Dictionary:
+	var res := tools.upgrade(tool_id)
+	if bool(res.get("ok", false)):
+		_update_hud()
+		show_toast("%s lên bậc %d!" % [PxbTools.tool_name(tool_id), int(res.get("to_tier", 0))])
+	else:
+		match String(res.get("reason", "")):
+			"thieu-nguyen-lieu":
+				show_toast("Thiếu nguyên liệu để nâng cấp.")
+			"da-max":
+				show_toast("Công cụ đã bậc tối đa.")
+			"chua-co-cong-cu":
+				show_toast("Chưa có công cụ này.")
+			_:
+				show_toast("Không nâng cấp được.")
+	_refresh_phone()
+	return res
+
+
+func acquire_tool(tool_id: String) -> Dictionary:
+	var res := tools.acquire(tool_id)
+	if bool(res.get("ok", false)):
+		_update_hud()
+		show_toast("Đã nhận %s (bậc 1)!" % PxbTools.tool_name(tool_id))
+	else:
+		match String(res.get("reason", "")):
+			"thieu-nguyen-lieu":
+				show_toast("Thiếu nguyên liệu để nhận công cụ.")
+			"dung-che-tao":
+				show_toast("Công cụ này phải chế tạo, không nhận trực tiếp.")
+			_:
+				show_toast("Không nhận được công cụ.")
+	_refresh_phone()
+	return res
+
+
+# --- Save / Load (PxbSaveCloud, slot 1-3, file user://) ---
+
+func _collect_system_data() -> Dictionary:
+	return {
+		"game_day": day, "day": day, "frame": frame_idx, "fame": fame,
+		"pxb_time": {"game_day": day},
+		"pxb_stats": stats.data(), "pxb_jobs": jobs.data(),
+		"pxb_hotspot": hotspot.data(), "pxb_crafting": crafting.data(),
+		"pxb_economy": economy.data(), "pxb_education": education.data(),
+		"pxb_social": social.data(), "pxb_titles": titles.data(),
+		"pxb_story": story.data(), "pxb_tools": tools.data(),
+		"pxb_phonehub": phonehub.data(), "pxb_savecloud": savecloud.data(),
+		"pxb_online": online.data(),
+	}
+
+
+func save_game(slot: int) -> Dictionary:
+	var res := savecloud.save_to_local(slot, _collect_system_data())
+	if bool(res.get("ok", false)):
+		show_toast("Đã lưu vào slot %d (%s)." % [slot, String(res.get("where", ""))])
+	else:
+		show_toast("Lưu thất bại: %s" % String(res.get("reason", "")))
+	_refresh_phone()
+	return res
+
+
+func load_game(slot: int) -> Dictionary:
+	var res := savecloud.load_from_local(slot)
+	if not bool(res.get("ok", false)):
+		show_toast("Không tải được: %s" % String(res.get("reason", "")))
+		_refresh_phone()
+		return res
+	var save: Dictionary = res.get("save", {})
+	_apply_save_data(save.get("gameSystem", {}))
+	_update_hud()
+	_refresh_phone()
+	show_toast("Đã tải save slot %d." % slot)
+	return {"ok": true, "slot": slot}
+
+
+# Khoi phuc toan bo state tu dict gameSystem cua save. Stats khoi phuc
+# tai cho (autoload-safe); cac he khac tao moi qua from_data() tinh roi
+# thay node cu + bind lai (tui chung / crafting / stats).
+func _apply_save_data(gs: Dictionary) -> void:
+	if gs.is_empty():
+		return
+	day = maxi(int(gs.get("day", gs.get("game_day", 1))), 1)
+	frame_idx = clampi(int(gs.get("frame", 0)), 0, 2)
+	fame = maxi(int(gs.get("fame", 0)), 0)
+	var sd: Dictionary = gs.get("pxb_stats", {})
+	if not sd.is_empty():
+		stats.set_stat("the", int(sd.get("the", stats.the)))
+		stats.set_stat("tri", int(sd.get("tri", stats.tri)))
+		stats.set_stat("tam", int(sd.get("tam", stats.tam)))
+	_replace_system("jobs", PxbJobs.from_data(gs.get("pxb_jobs", {})))
+	jobs.stats = stats
+	jobs.set_day_number(day)
+	_replace_system("hotspot", PxbHotspot.from_data(gs.get("pxb_hotspot", {})))
+	_replace_system("crafting", PxbCrafting.from_data(gs.get("pxb_crafting", {})))
+	crafting.bind_materials(hotspot.materials)
+	inventory = hotspot.materials
+	_replace_system("economy", PxbEconomy.from_data(gs.get("pxb_economy", {})))
+	_replace_system("education", PxbEducation.from_data(gs.get("pxb_education", {})))
+	education.day_number = day
+	_replace_system("social", PxbSocial.from_data(gs.get("pxb_social", {})))
+	_replace_system("titles", PxbTitles.from_data(gs.get("pxb_titles", {})))
+	_replace_system("story", PxbStory.from_data(gs.get("pxb_story", {})))
+	_replace_system("tools", PxbTools.from_data(gs.get("pxb_tools", {})))
+	tools.bind_materials(hotspot.materials)
+	tools.bind_crafting(crafting)
+	tools.bind_hotspot(hotspot)
+	phonehub.from_data(gs.get("pxb_phonehub", {}))
+	savecloud.from_data(gs.get("pxb_savecloud", {}))
+	online.from_data(gs.get("pxb_online", {}))
+	_wallet_to_economy()
+
+
+func _replace_system(kind: String, node: Node) -> void:
+	match kind:
+		"jobs":
+			jobs.queue_free()
+			jobs = node as PxbJobs
+		"hotspot":
+			hotspot.queue_free()
+			hotspot = node as PxbHotspot
+		"crafting":
+			crafting.queue_free()
+			crafting = node as PxbCrafting
+		"economy":
+			economy.queue_free()
+			economy = node as PxbEconomy
+		"education":
+			education.queue_free()
+			education = node as PxbEducation
+		"social":
+			social.queue_free()
+			social = node as PxbSocial
+		"titles":
+			titles.queue_free()
+			titles = node as PxbTitles
+		"story":
+			story.queue_free()
+			story = node as PxbStory
+		"tools":
+			tools.queue_free()
+			tools = node as PxbTools
+	add_child(node)
+
+
+# Kiem tra mang (PxbOnline la async — can await; chay nen, ket qua
+# hien lai khi mo tab Cai dat). Server .NET chua chay tren VM nen
+# du kien offline — bao dung that, khong gia vo online.
+func _check_online() -> void:
+	var res: Dictionary = await online.health_check()
+	phonehub.notify(PxbPhoneHub.TAB_CAI_DAT)
+	if bool(res.get("ok", false)):
+		show_toast("Đã nối server: %s" % String(res.get("status", "")))
+	else:
+		show_toast("Không tới được server (%s) — chơi ngoại tuyến." % String(res.get("reason", "")))
+	_refresh_phone()
+
+
+# --- Nut bam cua panel dien thoai (goi ham tren, de test goi truc tiep) ---
+
+func _on_phone_tab_pressed(tab_id: String) -> void:
+	phonehub.select_tab(tab_id)
+	_refresh_phone()
+
+
+func _on_buy_pressed(item_id: String) -> void:
+	buy_item(item_id)
+
+
+func _on_deposit_pressed(amount: int) -> void:
+	deposit_savings(amount)
+
+
+func _on_withdraw_pressed(amount: int) -> void:
+	withdraw_savings(amount)
+
+
+func _on_enroll_pressed(idx: int) -> void:
+	enroll_degree(idx)
+
+
+func _on_enroll_short_pressed() -> void:
+	enroll_short_course()
+
+
+func _on_train_pressed(pair: Array) -> void:
+	train_stat(String(pair[0]), String(pair[1]))
+
+
+func _on_interact_pressed(person_id: String) -> void:
+	interact_friend(person_id)
+
+
+func _on_travel_pressed(map_id: int) -> void:
+	travel_to(map_id)
+
+
+func _on_advance_chapter_pressed() -> void:
+	advance_story_chapter()
+
+
+func _on_redeem_pressed() -> void:
+	redeem_titles()
+
+
+func _on_tool_upgrade_pressed(tool_id: String) -> void:
+	upgrade_tool(tool_id)
+
+
+func _on_tool_acquire_pressed(tool_id: String) -> void:
+	acquire_tool(tool_id)
+
+
+func _on_save_pressed(slot: int) -> void:
+	save_game(slot)
+
+
+func _on_load_pressed(slot: int) -> void:
+	load_game(slot)
+
+
+func _on_check_online_pressed() -> void:
+	_check_online()
+
+
+func _on_upload_pressed(slot: int) -> void:
+	var res := savecloud.upload_save(slot)
+	match String(res.get("reason", "")):
+		"server-chua-co-endpoint":
+			show_toast("Server chưa có endpoint save — chưa đồng bộ lên cloud.")
+		"chua-dang-nhap":
+			show_toast("Chưa đăng nhập nên chưa đồng bộ được.")
+		_:
+			show_toast("Đồng bộ: %s" % String(res.get("reason", "")))
+	_refresh_phone()
+
+
+func _on_open_jobs_pressed() -> void:
+	_close_phone()
+	_show_jobs_dialogue()
+
 # --- UI ---
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
@@ -366,6 +1079,48 @@ func _build_ui() -> void:
 	jobs_btn.size = Vector2(200, 56)
 	jobs_btn.pressed.connect(_show_jobs_dialogue)
 	layer.add_child(jobs_btn)
+	_phone_btn = Button.new()
+	_phone_btn.text = "Điện thoại (P)"
+	_phone_btn.add_theme_font_size_override("font_size", 26)
+	_phone_btn.add_theme_font_override("font", font)
+	_phone_btn.position = Vector2(720 - 224, 152)
+	_phone_btn.size = Vector2(200, 56)
+	_phone_btn.pressed.connect(_toggle_phone)
+	layer.add_child(_phone_btn)
+	# Panel dien thoai: tieu de + luoi 9 tab + noi dung + nut hanh dong
+	# (cuon duoc). An mac dinh, mo bang phim P / nut "Dien thoai".
+	_phone_panel = PanelContainer.new()
+	_phone_panel.position = Vector2(40, 110)
+	_phone_panel.size = Vector2(640, 1060)
+	_phone_panel.visible = false
+	layer.add_child(_phone_panel)
+	var pvb := VBoxContainer.new()
+	pvb.add_theme_constant_override("separation", 10)
+	_phone_panel.add_child(pvb)
+	_phone_title = _mk_label(pvb, font_bold, 30, Vector2.ZERO, "Điện thoại")
+	var tab_grid := GridContainer.new()
+	tab_grid.columns = 3
+	tab_grid.add_theme_constant_override("h_separation", 8)
+	tab_grid.add_theme_constant_override("v_separation", 8)
+	pvb.add_child(tab_grid)
+	for t in PxbPhoneHub.tab_list():
+		var tb := Button.new()
+		tb.text = String(t["name"])
+		tb.add_theme_font_size_override("font_size", 22)
+		tb.add_theme_font_override("font", font)
+		tb.custom_minimum_size = Vector2(196, 48)
+		tb.pressed.connect(_on_phone_tab_pressed.bind(String(t["id"])))
+		tab_grid.add_child(tb)
+		_phone_tab_buttons[String(t["id"])] = tb
+	_phone_content = _mk_label(pvb, font, 26, Vector2.ZERO, "")
+	_phone_content.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_phone_content.size = Vector2(600, 260)
+	var act_scroll := ScrollContainer.new()
+	act_scroll.custom_minimum_size = Vector2(600, 560)
+	pvb.add_child(act_scroll)
+	_phone_actions = VBoxContainer.new()
+	_phone_actions.add_theme_constant_override("separation", 8)
+	act_scroll.add_child(_phone_actions)
 	_toast = _mk_label(layer, font_bold, 30, Vector2(60, 560), "")
 	_toast.size = Vector2(600, 60)
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -416,6 +1171,8 @@ func _update_hud() -> void:
 	_hud_bag.text = "Túi: " + (" • ".join(parts) if not parts.is_empty() else "trống")
 	_hud_gold.text = "Ví: %sđ • EXP %d" % [_fmt_vnd(jobs.gold), jobs.exp_total]
 	_hud_stats.text = "Thể %d • Trí %d • Tâm %d" % [stats.the, stats.tri, stats.tam]
+	var unread := phonehub.total_unread() if phonehub != null else 0
+	_phone_btn.text = ("Điện thoại (%d)" % unread) if unread > 0 else "Điện thoại (P)"
 
 func show_toast(text: String) -> void:
 	_toast.text = text
