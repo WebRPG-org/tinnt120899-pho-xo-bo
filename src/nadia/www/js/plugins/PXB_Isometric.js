@@ -1,7 +1,7 @@
 // Phố Xô Bồ — PXB_Isometric.js (plugin RPG Maker MV)
 // Render 2.5D isometric trên Pixi — điều kiện để giữ mục chốt 2.5D
 // (GDD Mục 10, docs/architecture-nadia.md §5). Bản v3.1 (Giai đoạn 1):
-// Chế độ atlas (atlas-code) — data map Map001/Map002/Map003/Map004 là code 1..6,
+// Chế độ atlas (atlas-code) — data map Map001–Map009 là code 1..6,
 // KHÔNG phải tile ID MV (code 1..6 mà đưa vào luật MV sẽ bị hiểu là
 // autotile A1 — v3 chặn đúng chỗ này: đường atlas bỏ qua hoàn toàn luật
 // MV isAutotile/isVisibleTile/_isHigherTile).
@@ -10,9 +10,10 @@
 //     64×64, 8 cột), PNG ở img/tilesets/atlas-map00X.png.
 //   - IsoTilemap.setAtlas(mapId, mapping, bitmap): Spriteset_Map.
 //     createTilemap tự gắn atlas theo $gameMap.mapId() (1 -> Map001,
-//     2 -> Map002, 3 -> Map003, 4 -> Map004); chưa có mapping thì loadAtlasJson
+//     2 -> Map002, 3 -> Map003, 4 -> Map004, …, 9 -> Map009); chưa có
+//     mapping thì loadAtlasJson
 //     (XMLHttpRequest) rồi setAtlas + refresh khi scene map đang active.
-//     Map003 tái dùng atlas-map001.png, Map004 tái dùng atlas-map002.png:
+//     Map003/Map005–Map009 tái dùng atlas-map001.png, Map004 tái dùng atlas-map002.png:
 //     loadAtlasBitmap tôn trọng mapping.atlasPng khi có (map 1-2 atlasPng
 //     khớp tên suy ra từ code nên hành vi không đổi).
 //   - Vẽ atlas: sprite lấy đúng frame (x,y,w,h) trong atlas PNG, tint
@@ -187,6 +188,7 @@
     if (mapId === 6) return "Map006";
     if (mapId === 7) return "Map007";
     if (mapId === 8) return "Map008";
+    if (mapId === 9) return "Map009";
     return null;
   }
 
