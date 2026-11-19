@@ -175,10 +175,18 @@ func _on_player_moved_to(tile: Vector2i) -> void:
 
 func _transfer(to_map: int) -> void:
 	var dest := _map_by_id(to_map)
+	if dest.is_empty():
+		# G3 port theo tung buoc: cua di khu chua co data (vd Map005 -> Map006)
+		# thi bao chu chua crash — nguoi choi dung yen o cua.
+		show_toast("Khu này chưa mở trong bản Godot — đang làm (G3).")
+		return
 	var door_tile := Vector2i(5, 4)
 	for e in dest["events"]:
 		if String(e.get("kind", "")) == "door":
 			door_tile = Vector2i(e["tile"][0], e["tile"][1])
+			break  # Cua VE (5,4) la cua dau tien — dung break, neu khong
+			# vong lap se lay cua CUOI (5,8) lam diem spawn (loi lo ra khi
+			# Map002 co them cua di Map003 o G3 buoc 1).
 	load_map(to_map, door_tile)
 	show_toast("Đã sang " + String(dest["name"]))
 
@@ -788,6 +796,7 @@ func travel_to(map_id: int) -> bool:
 	for e in dest["events"]:
 		if String(e.get("kind", "")) == "door":
 			door_tile = Vector2i(e["tile"][0], e["tile"][1])
+			break  # Lay cua dau tien (cua ve (5,4)) — xem ghi chu o _transfer.
 	load_map(map_id, door_tile)
 	show_toast("Đã về " + String(dest["name"]))
 	return true

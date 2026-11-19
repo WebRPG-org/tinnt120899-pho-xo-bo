@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Port Map001/Map002 tu RPG Maker MV sang Godot (G1 slice parity).
+"""Port Map001-Map005 tu RPG Maker MV sang Godot (G1 slice parity + G3 buoc 1).
 
 Doc: python3 tools/godot/convert_maps.py
-Nguon (khong sua):  src/nadia/www/data/Map00{1,2}.json (tile data 12x9, events),
-                    src/nadia/www/data/atlas-map00{1,2}.json (vi tri tile trong atlas PNG),
+Nguon (khong sua):  src/nadia/www/data/Map00{1..5}.json (tile data 12x9, events),
+                    src/nadia/www/data/atlas-map00{1..5}.json (vi tri tile trong atlas PNG),
                     src/nadia/www/data/Actors.js (greet/hint NPC — doc trong file),
                     src/nadia/www/js/plugins/PXB_Hotspot.js (bang hotspot slice),
                     src/nadia/www/data/System.json (diem bat dau 4,5 Map001).
@@ -14,7 +14,12 @@ Quy uoc event (tu Map JSON):
   NPC     -> {kind:"npc", id, name, tile, greet, hint}
   Hotspot -> {kind:"hotspot", id, name, tile, best_frame, material, amount}
   Craft   -> {kind:"craft", name, tile, recipe}
-  Door    -> {kind:"door", name, tile, to_map}
+  Door    -> {kind:"door", name, tile, to_map} (to_map doc tu lenh TRANSFER code 201)
+
+G3 buoc 1 (20/11): them Map003 Khu Cong Nhan, Map004 Ben Xe Mien Dong,
+Map005 Lang Dai Hoc. Atlas PNG TAI DUNG: Map003/Map005 dung atlas-map001.png,
+Map004 dung atlas-map002.png (theo atlas-map00X.json: truong "atlasPng") —
+converter lay ten PNG tu truong do, khong doan theo so map.
 """
 import json
 import shutil
@@ -23,6 +28,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]  # ~/workspace/pho-xo-bo
 MV = ROOT / "src/nadia/www/data"
 GODOT = ROOT / "src/godot"
+
+MAP_IDS = [1, 2, 3, 4, 5]  # G3 buoc 1: 1-5 (Map006+ o buoc sau)
 
 # --- Du lieu khong co trong Map JSON, lay tu Actors.js / PXB_Hotspot.js ---
 NPC_TEXT = {
@@ -46,6 +53,40 @@ NPC_TEXT = {
         "greet": "Shipper thì chạy nhiều, biết đường là tiền về. Tối chạy đơn nhiều hơn, mà phải có đèn soi đường.",
         "hint": "Đơn buổi tối trả cao hơn. Mày mà chế được Đèn Soi thì chạy tối khỏi lo hẻm tối.",
     },
+    # --- G3 buoc 1 (Map003-005): greet NGUYEN VAN tu lenh Show Text (code 401)
+    # trong Map JSON (bo dau khoang trang thua); hint do port viet moi, noi
+    # dung theo districts.md / GDD (ca kip, ben xe, bac hoc, khoa ngan han) —
+    # xem docs/godot-g3.md §1. Chua co trong Actors.js / MV.
+    "Anh Ba": {
+        "id": "anh-ba",
+        "greet": "Ca ở xưởng này quen rồi thì khỏe. Mới vào thì theo ca của tổ mình, có gì chưa biết cứ hỏi anh em trong xưởng.",
+        "hint": "Ca kíp ở xưởng theo tổ — làm đủ ca thì lương ổn định. Muốn đổi nghề thì qua bến xe hỏi việc shipper, bốc vác.",
+    },
+    "Chị Sáu": {
+        "id": "chi-sau",
+        "greet": "Khu này toàn người đi làm ca, sáng ra đông lắm. Tan ca thì ra chợ mua đồ, về trọ nghỉ sớm mai đi làm tiếp.",
+        "hint": "Sáng ra chợ sớm, tan ca về trọ nghỉ sớm — giữ sức mai đi làm tiếp. Lá chuối gói hàng thì để dành cho chị Lệ.",
+    },
+    "Bác Tài": {
+        "id": "bac-tai",
+        "greet": "Bến này xe đi khắp các khu trong An Bình. Muốn đi đâu thì lên xe, vé tính theo chặng. Shipper chạy tuyến này thì đông khách lắm.",
+        "hint": "Xe đi khắp các khu trong An Bình, vé tính theo chặng. Shipper chạy tuyến bến này thì đông khách, đơn nhiều.",
+    },
+    "Anh Bốc Vác": {
+        "id": "anh-boc-vac",
+        "greet": "Bốc vác ở bến này việc nhiều, trả theo chuyến. Mới vào thì theo ca của tổ, có gì chưa biết cứ hỏi anh em trong bến.",
+        "hint": "Bốc vác trả theo chuyến, việc nhiều nhất lúc xe về bến. Mới vào thì theo ca của tổ mà làm.",
+    },
+    "Thầy Giáo": {
+        "id": "thay-giao",
+        "greet": "Làng này học vấn là chính. Muốn lên bậc thì xem đủ Trí chưa: THPT Trí 20, Cao đẳng Trí 40, Cử nhân Trí 60, Thạc sĩ Trí 75, Tiến sĩ Trí 90 — Tiến sĩ cần mentor. Học phí tăng gần gấp đôi mỗi bậc.",
+        "hint": "Muốn lên bậc thì mở điện thoại xem mục Học tập — đăng ký đúng bậc đủ Trí, học phí tăng gần gấp đôi mỗi bậc.",
+    },
+    "Sinh Viên Làm Thêm": {
+        "id": "sinh-vien-lam-them",
+        "greet": "Ngoài giờ học thì nhận việc làm thêm kiếm tiền trang trải. Khoá ngắn hạn 3–7 ngày, 2–10 triệu, +10 một chỉ số phụ, mở nghề phụ — học xong làm được việc ngay.",
+        "hint": "Khóa ngắn hạn 3–7 ngày, 2–10 triệu, +10 một chỉ số phụ — học xong làm được việc ngay, mở nghề phụ.",
+    },
 }
 
 # Bang hotspot slice — PORT TRUC TIEP PXB_Hotspot.js HOTSPOTS (PROVISIONAL, chua chot GDD).
@@ -61,8 +102,31 @@ CRAFT = {
     2: {"recipe": "Đèn Soi", "needs": "Pin + Bóng Đèn + Vỏ Nhựa"},
 }
 
-DOORS = {1: 2, 2: 1}  # Map001 <-> Map002 (event "Cửa ra..." / "Cửa về...")
+DOORS = {}  # Khong dung nua: to_map doc tu lenh TRANSFER (code 201) cua event.
+
+# Cua THEM o port (khong co trong MV — xem docs/godot-g3.md §1):
+# Map002 trong MV chi co 1 event cua (ve Map001); khong co cua nao di
+# Map003 nen do thi MV chi noi 1 chieu (Map003 co cua ve Map002 nhung
+# khong co duong di nguoc lai). Them cua (5,8) tren Map002 di Map003
+# de chuoi 1-2-3-4-5 thong 2 chieu nhu cac map 3-5 (cua ve (5,4) +
+# cua di (5,8)). O (5,8) tren Map002 trong (lop 1 = 0, khong event).
+ADDED_DOORS = {
+    2: [{"kind": "door", "name": "Cửa đi Khu Công Nhân", "tile": [5, 8], "to_map": 3}],
+}
 START = {"map": 1, "x": 4, "y": 5}  # System.json startMapId/startX/startY
+
+
+def transfer_target(ev: dict) -> int:
+    """Doc map dich tu lenh TRANSFER (code 201) trong event MV:
+    parameters = [mode, mapId, x, y, direction, fade]."""
+    for page in ev.get("pages", []):
+        for cmd in page.get("list", []):
+            if cmd.get("code") == 201:
+                params = cmd.get("parameters", [])
+                assert len(params) >= 2 and int(params[1]) in MAP_IDS + [6], (
+                    f"TRANSFER dich la {params[1]} nam ngoai MAP_IDS")
+                return int(params[1])
+    raise ValueError(f"event cua {ev.get('name')!r} khong co lenh TRANSFER")
 
 
 def convert(map_id: int) -> dict:
@@ -95,16 +159,20 @@ def convert(map_id: int) -> dict:
                            "recipe": c["recipe"], "needs": c["needs"]})
         elif "Cửa" in name:
             events.append({"kind": "door", "name": name, "tile": tile,
-                           "to_map": DOORS[map_id]})
+                           "to_map": transfer_target(ev)})
         else:
             raise ValueError(f"{tag}: event chua biet cach port: {name!r}")
+    events.extend(ADDED_DOORS.get(map_id, []))
 
+    # Ten PNG lay tu atlas-map00X.json (truong "atlasPng"): Map003/Map005
+    # tai dung atlas-map001.png, Map004 tai dung atlas-map002.png.
+    png_name = str(atlas["atlasPng"]).split("/")[-1]
     return {
         "id": map_id,
         "name": atlas["mapName"],
         "width": 12, "height": 9,
         "tile_w": 64, "tile_h": 32,
-        "atlas_png": f"res://tiles/atlas-map{tag[3:]}.png",
+        "atlas_png": f"res://tiles/{png_name}",
         "atlas_tiles": atlas["tiles"],  # id(str) -> {name,x,y,w,h,layer}
         "layers": layers,
         "events": events,
@@ -112,7 +180,7 @@ def convert(map_id: int) -> dict:
 
 
 def main() -> None:
-    out = {"start": START, "maps": [convert(1), convert(2)]}
+    out = {"start": START, "maps": [convert(n) for n in MAP_IDS]}
     dest = GODOT / "data" / "maps.json"
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
