@@ -1,13 +1,16 @@
 # Godot G2 — Port 17 plugin PXB → GDScript (19/11/2026)
 
-> **Kết luận: G2 bước 1/5 XONG (mức headless).** 3 hệ nền đã port:
-> `PxbBalance` (hằng số chốt) → `PxbStats` (chỉ số) → `PxbTime`
-> (thời gian kiểu C), đăng ký autoload `PXB_Balance` / `PXB_Stats` /
-> `PXB_Time`, `main.gd` đã bỏ hardcode khung và dùng `PxbBalance` /
-> `PxbTime`. Selftest **87/87 PASS**, G1 selftest 42/42 + playtest 14/14
-> vẫn PASS (không regression), scene chạy 120 frame exit 0, export web
-> exit 0 (~8s), http.server 200 đủ 6 file. **Chưa kiểm chứng bằng trình
-> duyệt thật** — như G0/G1, VM không có Chromium/Firefox.
+> **Kết luận: G2 bước 2/5 XONG (mức headless).** Thêm 2 hệ gameplay:
+> `PxbJobs` (làm ca, lương, quota tuần, thi chứng chỉ) +
+> `PxbHotspot` (nhặt 1 lần/ngày đúng khung, di chuyển nhanh, gợi ý).
+> Selftest mới **56/56 (Jobs) + 37/37 (Hotspot) PASS**, G2 cũ 87/87 +
+> G1 42/42 + playtest 14/14 vẫn PASS (không regression), scene chạy
+> 120 frame exit 0, export web exit 0 (~9s), http.server 200 đủ 4 file.
+> **Chưa kiểm chứng bằng trình duyệt thật** — như G0/G1/G2 bước 1, VM
+> không có Chromium/Firefox. Tổng G2: 5/17 plugin → 5 hệ GDScript.
+>
+> G2 bước 1/5 XONG trước đó (xem lịch sử file): 3 hệ nền `PxbBalance` →
+> `PxbStats` → `PxbTime`, selftest 87/87 PASS.
 
 ## 1. Thứ tự port (docs/opensource-engine.md §4)
 
@@ -16,8 +19,9 @@
 | 1 | `PXB_Balance` → `PxbBalance` | ✅ XONG đợt này |
 | 1 | `PXB_Stats` → `PxbStats` | ✅ XONG đợt này |
 | 1 | `PXB_Time` → `PxbTime` | ✅ XONG đợt này |
-| 2 | `PXB_Jobs` → Jobs (làm ca, lương, quota) | ⏳ tiếp theo |
-| 2 | `PXB_Inventory` / `PXB_Crafting` → Inventory/Crafting | ⏳ sau Jobs |
+| 2 | `PXB_Jobs` → Jobs (làm ca, lương, quota) | ✅ XONG đợt này |
+| 2 | `PXB_Hotspot` → Hotspot (nhặt 1 lần/ngày đúng khung) | ✅ XONG đợt này (port đầy đủ, thay ghi chú cũ "đã có tương đương ở G1") |
+| 2 | `PXB_Inventory` / `PXB_Crafting` → Inventory/Crafting | ⏳ tiếp theo |
 | 3 | `PXB_Economy` → Economy (lãi 0,5%, phí 5%, 4 hành vi cấm) | ⏳ |
 | 3 | `PXB_Education` → Education (5 bậc) | ⏳ |
 | 4 | `PXB_Social` → Social; `PXB_Titles` / `PXB_Story` → Titles/Story | ⏳ |
@@ -25,9 +29,66 @@
 | 5 | `PXB_MarketBattle` → MarketBattle (luật chờ chủ duyệt) | ⏳ |
 | 5 | `PXB_Online` / `PXB_SaveCloud` → Online/SaveCloud | ⏳ |
 
-`PXB_Isometric` và `PXB_Hotspot` đã có tương đương Godot ở G1
+`PXB_Isometric` đã có tương đương Godot ở G1
 (`iso_map.gd`, hotspot trong `main.gd`); `PXB_Tools` là hàm tiện ích,
 port rải rác khi cần. Tổng 17 plugin MV → 14 hệ GDScript + 2 đã xong ở G1.
+
+## 2b. File mới đợt này (G2 bước 2, 19/11 ~20:45)
+
+| File | Nội dung |
+|---|---|
+| `scripts/pxb_jobs.gd` (`PxbJobs`, 358 dòng) | Port `PXB_Jobs.js` / `Jobs.cs`: `pay_per_shift` (cơ bản × hệ số chỉ số chính max(0,5; 1,0+(stat−50)×0,01) × khung tốt × cung–cầu, floor), `work_shift`, `shifts_left`/`can_take_shift` (quota tuần 14), `roll_supply_demand`/`get_demand`/`set_demand`, `reset_week`/`ensure_week`, `take_exam`/`grant_extra_attempt`/`has_cert`, `data()`/`from_data()`. Số lấy từ `PxbBalance` — không hardcode lại. |
+| `scripts/pxb_hotspot.gd` (`PxbHotspot`, ~360 dòng) | Port `PXB_Hotspot.js` / `Exploration.cs`: bảng 5 hotspot slice (khu 1/2/17/18, theo `Exploration.cs`), `explore()` trả `{ok, reason, material_id, amount}` (`ok`/`wrong-frame`/`already`), reset sang ngày mới, `has_visited_today`, `can_fast_travel` (chỉ khu đã mở, 1..18), `guide_hint` theo khu + mục tiêu, sparkle (màu/độ sáng/scale, minTouchPt 44), `data()`/`from_data()`. |
+| `tests/g2_jobs_test.gd` (233 dòng) | Kiểm tra headless riêng 56 mục: lương 3 nghề, khung tốt +25% (187.500/225.000), hệ số chỉ số (100→1,5×, 0→sàn 0,5×), thiếu +30%/bão hòa −15%, kết hợp 365.625, quota 14 (ca 15 chặn `het-quota`, ví/EXP không đổi), EXP +10/ca, vòng xoay cung–cầu tuần 1–4, `reset_week` giữ chứng chỉ, thi (phí/không đủ tiền/hết lượt/mua thêm/trượt mất phí/đậu cấp chứng chỉ), `data()`/`from_data()`. |
+| `tests/g2_hotspot_test.gd` | Kiểm tra headless riêng 37 mục: nhặt đúng khung ok + cộng vật liệu, sai khung `wrong-frame` (không cộng đồ, nhặt lại đúng khung vẫn được), lần 2 cùng ngày `already`, sang ngày mới nhặt lại được, `has_visited_today`, `can_fast_travel` chặn khu chưa mở + ngoài 1..18, `guide_hint` đúng NPC theo khu, sparkle (màu #E0A800, độ sáng 0,25/1,5/0,8, scale, minTouchPt 44), `data()`/`from_data()` round-trip + bỏ hotspot lạ. |
+
+## 2c. Verify thật đợt này (19/11 ~20:45)
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `--check-only` 2 script mới | PASS, exit 0 (lần đầu fail vì class mới chưa có trong global class cache — chạy `--headless --import` 1 lần để đăng ký `.uid` rồi pass; `.uid` không push theo quy ước cũ) |
+| G2 Jobs selftest | **56/56 PASS** |
+| G2 Hotspot selftest | **37/37 PASS** |
+| G2 selftest cũ (Balance/Stats/Time) | **87/87 PASS** (không regression) |
+| G1 selftest / playtest | **42/42 + 14/14 PASS** (không regression) |
+| Scene Main chạy 120 frame | exit 0 |
+| Export web | exit 0, ~9s; `index.wasm` 39,5 MB, `index.pck` 937 KB (`strings index.pck` thấy `pxb_jobs`/`pxb_hotspot`) |
+| HTTP 200 | `index.html/js/wasm/pck` đủ 4 file (cổng 8141) |
+
+**Lỗi đã gặp và sửa trong đợt này:** `reset_week(2)` khi `day_number`
+còn ở tuần 1 bị `ensure_week()` reset ngược về tuần 1 — sửa
+`reset_week()` đồng bộ `day_number` về đầu tuần khi tuần yêu cầu khác
+tuần hiện tại, rồi pass hết.
+
+## 2d. Khác biệt port JS → GDScript đợt này (PROVISIONAL, cần GDD chốt)
+
+**Jobs:**
+1. **EXP/ca: cả JS lẫn C# đều KHÔNG định nghĩa.** `EXP_PER_SHIFT = 10`
+   là số tạm do bước này đặt — CHƯA CHỐT, cần GDD chốt sau; test chỉ
+   kiểm tra cơ chế cộng dồn.
+2. **Không có giới hạn ca/ngày ở nguồn nào** — chỉ có quota TUẦN 14
+   ca/nghề; port đúng quota tuần, không bịa thêm cap ngày.
+3. Vòng xoay cung–cầu theo tuần chỉ có trong JS (PROVISIONAL); C# không
+   có logic chọn nghề thiếu/bão hòa. Thi chứng chỉ chỉ có trong
+   JS/GDD; C# không có.
+4. Ví tiền: Godot chưa có PlayerProgress/`$gameParty` nên `gold` +
+   `exp_total` tạm giữ trong `PxbJobs`, `paid` luôn true.
+5. Số lương khớp tuyệt đối JS↔C#: 150k/180k/150k, quota 14,
+   +25%/+30%/−15%, công thức hệ số — không lệch số nào.
+
+**Hotspot:**
+1. Chặn sai khung: JS `explore()` trả `wrong-frame`; C# `Explore()`
+   KHÔNG kiểm tra khung (chỉ dùng BestFrame để sắp xếp + sáng hơn).
+   Port theo JS (architecture-nadia §6: "chỉ có đồ đúng khung").
+2. Reset sang ngày: C# chỉ reset khi `_currentDay` đã có giá trị (lần
+   explore đầu sau load save thì giữ lượt đã lưu); JS reset bất cứ khi
+   nào `game_day` khác. Port theo JS.
+3. Rarity: C# không có trường hiếm; JS thêm `rarity: "thuong"` cho cả 5
+   + màu cam hiếm #E07800 PROVISIONAL (chưa dùng).
+4. Trả về: C# trả bool; JS trả `{ok, reason, material_id, amount}` —
+   port theo JS.
+5. `CanFastTravel`: C# kiểm tra khu trong `Districts.All`, JS kiểm tra
+   1..18 — cùng kết quả.
 
 ## 2. File mới / đổi đợt này
 
@@ -98,15 +159,16 @@ thời gian làm cờ trạng thái.
 3. **Chưa có save:** `PxbStats.data()` / `from_data()` đã sẵn sàng cho
    bước SaveCloud, nhưng chưa có nơi nào lưu/load thật.
 
-## 6. Bước tiếp theo — G2 bước 2 (Jobs)
+## 6. Bước tiếp theo — G2 bước 3 (Inventory/Crafting)
 
-1. Browser-verify G2 bước 1 (mở link trên, xem HUD Ngày/Khung vẫn đổi
+1. Browser-verify G2 bước 2 (mở link trên, xem HUD Ngày/Khung vẫn đổi
    đúng, không lỗi console).
-2. Port `PXB_Jobs.js` → `scripts/pxb_jobs.gd`: làm ca (chọn nghề, đúng
-   khung tốt +25%, trừ quota tuần), lương về túi, tích hợp `PxbStats`
-   (nghề dùng chỉ số chính) + `PxbTime` (khung hiện tại). Thêm nút
-   "Làm ca" ở khu + test headless `g2_jobs_selftest` (số khớp
-   `GameBalance.cs` / `PXB_Balance.js`: lương 150k/180k/150k, quota 14).
-3. Sau Jobs: Inventory/Crafting (dùng nguyên liệu hotspot G1 đã nhặt),
-   rồi Economy → Education → Social → Titles/Story → PhoneHub →
-   MarketBattle → Online/SaveCloud (xem §1).
+2. Port `PXB_Inventory` + `PXB_Crafting` → `scripts/pxb_inventory.gd` /
+   `pxb_crafting.gd`: túi đồ (stackable/all-or-nothing theo
+   `Inventory.cs`), công thức chế tạo dùng nguyên liệu hotspot G1/G2 đã
+   nhặt, `learnRecipe` (mặc định chưa học — xem lệch đã ghi ở
+   roles-qc.md 19/11 01:50). Thêm nút "Làm ca" ở khu + "Nhặt" hotspot
+   vào `main.gd` để Jobs/Hotspot nhìn thấy được (hiện chỉ có logic +
+   test headless). Test headless riêng như bước 2.
+3. Sau Inventory/Crafting: Economy → Education → Social → Titles/Story
+   → PhoneHub → MarketBattle → Online/SaveCloud (xem §1).
