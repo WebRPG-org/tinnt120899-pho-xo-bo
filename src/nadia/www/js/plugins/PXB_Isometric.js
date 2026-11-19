@@ -1,6 +1,6 @@
 // Phố Xô Bồ — PXB_Isometric.js (plugin RPG Maker MV)
 // Render 2.5D isometric trên Pixi — điều kiện để giữ mục chốt 2.5D
-// (GDD Mục 10, docs/architecture-nadia.md §5). Bản v3 (Giai đoạn 1):
+// (GDD Mục 10, docs/architecture-nadia.md §5). Bản v3.1 (Giai đoạn 1):
 // Chế độ atlas (atlas-code) — data map Map001/Map002 là code 1..6,
 // KHÔNG phải tile ID MV (code 1..6 mà đưa vào luật MV sẽ bị hiểu là
 // autotile A1 — v3 chặn đúng chỗ này: đường atlas bỏ qua hoàn toàn luật
@@ -40,9 +40,12 @@
 //   - Xe máy / dây điện / sạp lá chuối vẫn phải vẽ thêm theo
 //     docs/tileset-plan.md — chưa có trong atlas-map001/002.
 //   - Atlas PNG phải nằm ở img/tilesets/atlas-map00X.png thì bitmap mới
-//     load được; nếu thiếu file, ImageManager vẫn trả Bitmap nhưng
-//     không bao giờ ready -> sprite atlas vẽ trắng, map trống (không
-//     tự rơi về fallback). Cần copy PNG vào img/tilesets/ trước khi chơi.
+//     load được và thấy art thật. v3.1 (19/11): PNG thiếu/lỗi (404) ->
+//     Bitmap.isError() -> atlasModeOn() tắt, updateTransform vẽ lại
+//     1 lần bằng đường fallback v2 (tile MV thường) thay vì sprite
+//     atlas vẽ trắng, map trống; đếm vào stats.atlasFallback. Bitmap
+//     đang load (chưa ready, chưa lỗi) vẫn giữ atlas mode — sprite MV
+//     tự hiện khi bitmap load xong.
 //   - Cuộn map (displayX/displayY) vẫn theo luật MV gốc (tile 48px):
 //     nhân vật được giữ gần giữa màn hình ở mức gần đúng, chưa chỉnh tâm
 //     cuộn riêng cho isometric — chỉnh sau khi chơi thử thật.
@@ -157,7 +160,8 @@
     skippedTableEdge: 0,
     skippedInvisible: 0,
     skippedNoBitmap: 0,
-    skippedAtlasUnknown: 0
+    skippedAtlasUnknown: 0,
+    atlasFallback: 0
   };
 
   // ---- Chế độ atlas v3 (atlas-code, data/atlas-map00X.json) ----
@@ -256,16 +260,26 @@
 
   // Atlas mode bật khi tilemap đã có cả mapping lẫn bitmap. Thiếu 1 trong
   // 2 -> đường fallback MV v2 (giữ nguyên 100% hành vi v2).
+  // v3.1: bitmap lỗi (PNG thiếu/404, Bitmap.isError()) cũng tắt atlas
+  // mode — sprite atlas vẽ trắng nếu cứ giữ. Bitmap đang load (chưa
+  // ready, chưa lỗi) vẫn giữ atlas mode: sprite MV tự hiện khi load xong.
   function atlasModeOn() {
-    return !!(this._atlasMapping && this._atlasBitmap);
+    if (!this._atlasMapping || !this._atlasBitmap) return false;
+    if (typeof this._atlasBitmap.isError === "function" &&
+        this._atlasBitmap.isError()) {
+      return false;
+    }
+    return true;
   }
 
   // Gắn atlas cho 1 tilemap: lưu mapId/mapping/bitmap để isoDrawTile và
-  // isoPaintTiles dùng. mapping/bitmap null -> tắt atlas mode.
+  // isoPaintTiles dùng. mapping/bitmap null -> tắt atlas mode. Gắn atlas
+  // mới thì reset cờ đã vẽ lại do lỗi bitmap (map khác có bitmap khác).
   function isoSetAtlas(mapId, mapping, bitmap) {
     this._atlasMapId = mapId;
     this._atlasMapping = mapping || null;
     this._atlasBitmap = bitmap || null;
+    this._atlasBitmapErrorRepainted = false;
   }
 
   // ---- PXB_IsoTilemap: Tilemap MV vẽ tile thành hình thoi ----
@@ -548,6 +562,19 @@
     if (this._isoUpperLayer) {
       this._isoUpperLayer.x = pan.x;
       this._isoUpperLayer.y = pan.y;
+    }
+    // v3.1: atlas bitmap lỗi SAU lần vẽ đầu (lỗi 404 đến muộn, lúc vẽ
+    // bitmap còn đang load nên atlas mode vẫn bật) -> vẽ lại 1 lần bằng
+    // fallback v2; atlasModeOn() sau đó vẫn false nên không vẽ lại nữa.
+    // Bitmap lỗi TRƯỚC lần vẽ đầu thì atlasModeOn() đã false ngay từ
+    // đầu, lần vẽ đầu đã là fallback nên cờ này không bật thêm lần nữa.
+    if (this._atlasMapping && this._atlasBitmap &&
+        !this._atlasBitmapErrorRepainted &&
+        typeof this._atlasBitmap.isError === "function" &&
+        this._atlasBitmap.isError()) {
+      this._atlasBitmapErrorRepainted = true;
+      stats.atlasFallback = (stats.atlasFallback || 0) + 1;
+      this._needsRepaint = true;
     }
     if (this._needsRepaint) {
       isoPaintAllTiles.call(this, 0, 0);

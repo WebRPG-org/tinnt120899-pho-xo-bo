@@ -7,6 +7,55 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 19/11/2026 ~08:00 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **253/253 PASS, exit 0** — tăng từ 248/248: nhóm T25 mới
+  (5 mục, PXB_Isometric v3.1 atlas-fallback).
+- **PXB_Isometric v3.1 — SỬA GIỚI HẠN v3 (việc tiếp theo lớn nhất, xong):**
+  atlas PNG thiếu/lỗi (404) nay rơi về fallback v2 thay vì sprite vẽ
+  trắng, map trống: `atlasModeOn()` tắt khi `Bitmap.isError()`; bitmap
+  đang load (chưa ready, chưa lỗi) vẫn giữ atlas mode — sprite MV tự
+  hiện khi load xong; `isoUpdateTransform` phát hiện bitmap lỗi sau lần
+  vẽ đầu thì vẽ lại 1 lần bằng fallback v2 (đếm `stats.atlasFallback`),
+  không vẽ lại nữa; `setAtlas` mới reset cờ. Smoke test stub core MV
+  (`/tmp/pxb-iso-v31-smoke.js`, không commit): **18/18 PASS** (bitmap
+  OK vẽ atlas đủ 112 tile; loading vẫn atlas; lỗi trước vẽ → fallback
+  đủ tile + đếm 1; lỗi sau vẽ → vẽ lại 1 lần + không đếm thêm; setAtlas
+  reset cờ; không mapping → fallback cũ; bitmap thiếu `isError` không
+  crash). `node --check` PASS. Header plugin đã sửa: không còn câu
+  "không tự rơi về fallback".
+- **Ghi nhận — đợt link-chơi-thật đã push xong:** 9 file data JSON còn
+  thiếu (`Skills/Weapons/Armors/Enemies/Troops/States/Animations/
+  Tilesets/CommonEvents.json`), `tools/tiles/embed_assets.py`,
+  `src/nadia/www/js/pxb-embedded.js` (~52 KB, 13 asset base64),
+  `.nojekyll`, `docs/link-choi-that.md` đã lên GitHub ở commit
+  `4b277edb998b` (đối chiếu sync record — ghi chú "chưa push" trong
+  `docs/link-choi-that.md` đã cũ). Chờ duy nhất chủ bật GitHub Pages
+  (Settings → Pages → Deploy from a branch → main, root) để có link
+  `https://tinnt120899.github.io/pho-xo-bo/src/nadia/www/`.
+- **Còn lại chưa xong — KIỂM CHỨNG TRÌNH DUYỆT BỊ CHẶN (kết quả browser
+  task browser-task:4a3735e2, đã trả về trong đợt này):** trình duyệt
+  (VM riêng) từ chối mọi địa chỉ loopback (`invalid_request` với
+  127.0.0.1/localhost, http/https, `/` và `/index.html`) nên không mở
+  được `http://127.0.0.1:8137/` dù server local chạy tốt (curl 200).
+  Đã thử tunnel Cloudflare làm URL công khai: tải cloudflared 2026.11.1
+  (`~/workspace/tools/cloudflared`, ngoài repo) và chạy 2 lần, cả 2 đều
+  lỗi `tls: first record does not look like a TLS handshake` khi gọi
+  `api.trycloudflare.com` — egress proxy của VM trả 403 cho domain này
+  nên không lập được tunnel; ngrok cũng không có (cần tài khoản/token).
+  Không tự bật Pages bằng API thay chủ. Kết luận: game CHƯA kiểm chứng
+  được bằng trình duyệt thật; chờ chủ bật GitHub Pages rồi chạy lại
+  browser task với link Pages. PXB_MarketBattle (luật chưa chốt),
+  Map003–018 chưa có, img/audio còn lại trống. Checklist C1–C9 (§6
+  roles-qc) vẫn giữ cho đường Unity (phương án dự phòng); đường chính
+  nay là Giai đoạn 1–5 của `docs/architecture-nadia.md`. Việc tiếp theo
+  lớn nhất: chủ bật Pages → kiểm chứng Map001, rồi PXB_MarketBattle /
+  Map003–018.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa
+  biên dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test`
+  vẫn kẹt RAM — chạy qua GitHub Actions; Unity chưa có).
+
 ## Lần chạy mới nhất: 19/11/2026 ~06:55 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)

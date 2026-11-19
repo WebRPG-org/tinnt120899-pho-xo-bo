@@ -1323,6 +1323,33 @@ _ok_m2, _d_m2 = _map_data_ok("Map002", _atlas2)
 check("T24e", "Tile data Map001/002 vẫn khớp mapping atlas (T21 khóa lại sau v3)",
       _ok_m1 and _ok_m2, _d_m1 or _d_m2)
 
+# ---- Nhóm T25 — PXB_Isometric v3.1: atlas PNG lỗi -> rơi về fallback v2 (19/11/2026 ~07:50) ----
+# Sửa giới hạn v3 đã ghi trong header plugin: PNG thiếu/404 thì Bitmap
+# lỗi (isError) -> atlasModeOn() tắt, updateTransform vẽ lại 1 lần bằng
+# đường fallback v2 thay vì sprite atlas vẽ trắng, map trống.
+# Smoke test stub core MV: /tmp/pxb-iso-v31-smoke.js 18/18 PASS (không commit).
+check("T25a", "PXB_Isometric v3.1: atlasModeOn() tắt khi bitmap lỗi (isError)",
+      "this._atlasBitmap.isError()" in _iso_js
+      and "typeof this._atlasBitmap.isError" in _iso_js)
+check("T25b", "PXB_Isometric v3.1: updateTransform vẽ lại 1 lần khi bitmap lỗi, đếm atlasFallback",
+      "_atlasBitmapErrorRepainted" in _iso_js
+      and "stats.atlasFallback" in _iso_js
+      and "atlasFallback: 0" in _iso_js)
+check("T25c", "PXB_Isometric v3.1: setAtlas mới reset cờ vẽ lại do lỗi bitmap",
+      "_atlasBitmapErrorRepainted = false" in _iso_js)
+check("T25d", "PXB_Isometric v3.1: header ghi rõ v3.1 + không còn 'không tự rơi về fallback'",
+      "v3.1" in _iso_js and "không tự rơi về fallback" not in _iso_js
+      and "isError()" in _iso_js)
+_iso_v31_ok = True
+try:
+    _r = subprocess.run(["node", "--check", str(NADIA_PLUGINS / "PXB_Isometric.js")],
+                        capture_output=True, text=True, timeout=30)
+    _iso_v31_ok = _r.returncode == 0
+except Exception:  # noqa: BLE001
+    _iso_v31_ok = False
+check("T25e", "PXB_Isometric v3.1: node --check qua cú pháp + UTF-8",
+      _iso_v31_ok and _iso_js == read(NADIA_PLUGINS / "PXB_Isometric.js"))
+
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)
 failed = [r for r in results if not r[2]]
@@ -1343,6 +1370,7 @@ print("ToolBehaviour đúng nguyên văn Crafting.cs), Online/SaveCloud đã vi�
 print("(smoke 68/68 PASS, trade/đấu giá/guild trả server-chua-co-endpoint),")
 print("tile data Map001/002 nay thật (atlas-code, layer 0 108/108 + layer 1")
 print("28/108), atlas PNG đã vào repo img/tilesets/ (SHA khớp §7) +")
-print("PXB_Isometric v3 (atlas mode) đã viết (smoke stub 55/55 PASS), nhưng")
+print("PXB_Isometric v3 (atlas mode) đã viết (smoke stub 55/55 PASS) + v3.1")
+print("(atlas PNG lỗi -> rơi về fallback v2, smoke stub 18/18 PASS), nhưng")
 print("chưa mở trình duyệt chơi được thật — cần chạy game MV thật với atlas")
 print("để thấy map Xóm Trọ Cũ (xem docs/test-report.md).")
