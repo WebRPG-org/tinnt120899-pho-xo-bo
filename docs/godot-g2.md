@@ -336,19 +336,63 @@ nếu cần build sạch thì tạo lại thư mục rồi mới export.
 4. **Không có số PROVISIONAL:** PhoneHub.cs không có số cấu hình nào nên port không đặt số tạm nào; tên tab "Sức khỏe" theo C# (GDD viết "Sức khoẻ", chỉ khác chính tả).
 5. **Quirk giữ đúng C#/JS:** notify đếm cả khi đóng; select_tab/open luôn phát tab_changed kể cả đúng tab hiện tại; open tab lạ vẫn mở + phát open_changed; close luôn phát open_changed(false) kể cả đã đóng sẵn.
 
-## 6. Bước tiếp theo — G2 bước 5 phần B (MarketBattle/Online/SaveCloud)
+## 2q. File mới đợt này (G2 bước 5 phần B cuối — Tools/Online/SaveCloud, 20/11 ~02:05)
 
-1. Browser-verify G2 bước 5 phần B (mở link trên, xem HUD Ngày/Khung vẫn đổi
+| File | Nội dung |
+|---|---|
+| `scripts/pxb_tools.gd` (`PxbTools`, 845 dòng) | Port `PXB_Tools.js`: 4 công cụ × 3 bậc (Xe Đẩy sức chở 5/10/20 + bậc 3 đi đường mưa; Đèn Soi bậc 2 thấy ẩn gần, bậc 3 thấy mọi hotspot + hiếm 1 khung/ngày; Sổ Tay gợi ý 3 mức chi tiết; Xẻng nhặt nhanh 1,0/0,75/0,5 + bonus 25% bậc 2 + hiếm 10% "da-quy" bậc 3); 12 câu ToolBehaviour đúng nguyên văn Crafting.cs; 8 công thức nâng cấp + 2 công thức nhận bậc 1 Sổ Tay/Xẻng (PROVISIONAL, quy tắc ×N); `can_upgrade`/`upgrade`/`can_acquire`/`acquire` trả reason rõ, thất bại không trừ đồ; đồng bộ 2 chiều + mirror với PxbCrafting, ủy quyền gợi ý cho PxbCrafting/PxbHotspot/PxbTime qua `bind_*()`; `data()`/`from_data()` (bỏ dữ liệu bẩn), `reset_state()` (giữ nguyên túi, đúng JS), signal `tool_changed`. |
+| `scripts/pxb_online.gd` (`PxbOnline`, 566 dòng) | Port `PXB_Online.js`: hằng PROVISIONAL (base URL `http://localhost:5000`, timeout 5000 ms, outbox tối đa 50, key đã gửi tối đa 200, cache số dư 60 giây); `health_check()` / `balance_of()` qua endpoint thật `/health`, `/ledger/balance/{id}`; `gift()` qua `/ledger/gift` + IdempotencyKey (trùng key → `trung-idempotency-key`, offline → outbox + `offline-da-luu-outbox`, 409 → coi như xong, outbox đầy → `outbox-day`); `flush_outbox()` trả {sent, kept, failed}; trade/đấu giá/công ty=guild LUÔN trả `server-chua-co-endpoint` (8 hàm); signal `online_changed` / `outbox_changed`; `data()`/`from_data()` (bỏ dữ liệu bẩn, cắt outbox >50 và key >200). HTTP qua HTTPRequest thật (bất đồng bộ, timeout 5s), property `http_transport: Callable` để test chích stub. |
+| `scripts/pxb_savecloud.gd` (`PxbSaveCloud`, 488 dòng) | Port `PXB_SaveCloud.js`: hằng PROVISIONAL (tối đa 3 slot, SAVE_VERSION "0.1.0-skeleton", endpoint dự kiến `/save/upload` + `/save/download` — server chưa có); login/logout (tài khoản tùy chọn, chưa có auth thật); `build_save_json` / `encode_save` / `decode_save` (nén DEFLATE + base64, tiền tố `pxb1:` + 4 byte kích thước gốc; không nén được → JSON thô, `compressed:false`); save/load local slot 1–3 qua file `user://pxb_savecloud_<slot>.save` (ghi lỗi → fallback bộ nhớ, `where:"memory"`; slot trống → `slot-trong`, save hỏng → `save-hong`); upload/download LUÔN trả `server-chua-co-endpoint` (chưa login → `chua-dang-nhap` trước); `sync_status()`; `data()`/`from_data()`, `reset_state()`. |
+| `tests/g2_tools_test.gd` (155 mục) | Kiểm tra headless riêng: đủ 4 công cụ × 3 bậc, hành vi từng bậc khác nhau thật, nâng cấp đúng/sai điều kiện, 12 câu so chuỗi chính xác, gợi ý Sổ Tay 3 mức + ủy quyền, nhặt Xẻng theo roll cố định, đồng bộ/mirror/chung túi với PxbCrafting, save round-trip + dữ liệu bẩn, reset_state, signal. |
+| `tests/g2_online_test.gd` (91 mục) | Kiểm tra headless riêng qua stub HTTP: hằng PROVISIONAL, base_url/set_base_url, health_check (ok + fail), balance_of + cache 60s, gift hợp lệ/không hợp lệ/thiếu id/trùng key/offline vào outbox/outbox đầy 50, flush_outbox (gửi được + 409 coi như xong + lỗi mạng giữ lại), 8 hàm no-endpoint, data()/from_data() round-trip + bỏ dữ liệu bẩn, reset_state. |
+| `tests/g2_savecloud_test.gd` (69 mục) | Kiểm tra headless riêng: hằng PROVISIONAL, login/logout/thiếu account-id, build_save_json (game_day từ pxb_time), encode/decode round-trip (nén + thô + save hỏng + thiếu dữ liệu), save/load local slot 1–3 (round-trip giữ nguyên game_system, slot 0/4 → slot-khong-hop-le, slot trống → slot-trong, list_local_slots), apply_save, upload/download (chưa login → chua-dang-nhap; đã login → server-chua-co-endpoint + sync_status loi), sync_status sau save local, data()/from_data() + bỏ dữ liệu bẩn, reset_state. Test dọn file `user://` nó tạo sau khi xong. |
+
+## 2r. Verify thật đợt này (20/11 ~02:05)
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `--check-only` 6 file mới (3 script + 3 test) | PASS, exit 0 (chạy với `--path src/godot` để nạp global class cache; check-only đơn file báo thiếu class là giả) |
+| G2 Tools selftest | **155/155 PASS** (vượt mục tiêu ≥40; chạy lại lần 2 vẫn 0 FAIL) |
+| G2 Online selftest | **91/91 PASS** (lần đầu 89/91 do 2 lỗi test — key camelCase + round-trip sau gift offline — đã sửa test, chạy lại PASS hết) |
+| G2 SaveCloud selftest | **69/69 PASS** (chạy lại lần 2 vẫn 69/69; không còn file save sót trong app_userdata) |
+| G2 selftest cũ (Balance/Stats/Time) | **87/87 PASS** (không regression) |
+| G2 Jobs / Hotspot / Inventory+Crafting / Economy+Education / Social+Titles+Story / PhoneHub selftest | **56/56 + 37/37 + 78/78 + 92/92 + 102/102 + 66/66 PASS** (không regression) |
+| G1 selftest / playtest | **42/42 + 14/14 PASS** (không regression) |
+| Scene Main chạy 120 frame | exit 0, không ERROR/warning |
+| Export web | exit 0, ~10s; `index.wasm` 39,5 MB, `index.pck` 1.119.672 byte (chứa `pxb_online`, `pxb_savecloud`, `pxb_tools`, mỗi cái 5 lần) |
+| HTTP 200 | `index.html/js/wasm/pck/audio.worklet.js/png` đủ 6 file (cổng 8146); `GODOT_THREADS_ENABLED = false` |
+
+## 2s. Khác biệt port JS → GDScript đợt này
+
+**Tools:**
+1. **Không lệch số nào:** 12 câu ToolBehaviour trong JS khớp từng chữ với `Crafting.cs`; chi phí nâng cấp JS khớp đúng quy tắc ×N trên cơ số C# (che-xe-day khung-sat 1 + banh-xe 2 + van-go 2 → bậc 2: 2/4/4, bậc 3: 3/6/6; che-den-soi sat-vun 2 + chai-nhua 2 → 4/4, 6/6). Giữ nguyên theo JS, không sửa số.
+2. **Chỉ khác chính tả:** JS `TIER_NAMES` viết không dấu ("Tho"/"Kha"/"Tot"), bản GDScript dùng có dấu ("Thô"/"Khá"/"Tốt") theo quy ước `pxb_crafting.gd` + luật chữ trên màn hình đủ dấu — không đổi nghĩa.
+3. **Ủy quyền plugin toàn cục JS → `bind_*()` tùy chọn:** JS gọi trực tiếp `PXB_Crafting`/`PXB_Hotspot`/`PXB_Time` toàn cục; GDScript dùng `bind_crafting()`/`bind_hotspot()`/`bind_time()` (không bind thì gợi ý/nhặt dùng fallback nội bộ, không crash).
+
+**Online:**
+1. **HTTP fetch (Promise) → HTTPRequest + `http_transport` chích được:** JS dùng `fetch` + Promise; GDScript dùng HTTPRequest bất đồng bộ (timeout 5s). Để test headless được, thêm property `http_transport: Callable` (mặc định rỗng = đường thật); test gán stub trả Dictionary đồng bộ, `await` hoàn thành ngay trong frame — không hardcode kết quả giả.
+2. **Tên:** GDScript cấm trùng tên biến và hàm nên `base_url` là thuộc tính đọc trực tiếp (`node.base_url`), `set_base_url()` / `is_online()` là hàm.
+3. **Quirk flush:** JS ghi chú flush "dừng gửi các món sau" khi lỗi mạng nhưng chuỗi Promise thật ra không kiểm tra cờ dừng; bản GDScript dừng thật (`break`) — kết quả {sent, kept, failed} giống hệt nhau, chỉ bớt lần gọi HTTP vô ích.
+
+**SaveCloud:**
+1. **localStorage → file `user://`:** Godot không có localStorage; save local ghi file `user://pxb_savecloud_<slot>.save` chứa phong bì JSON `{"compressed", "data"}`. Ghi file lỗi → fallback bộ nhớ trong, trả `where:"memory"` rõ ràng.
+2. **LZString → DEFLATE + base64:** `encode_save` dùng `PackedByteArray.compress` (DEFLATE) + base64, tiền tố `"pxb1:"` + 4 byte little-endian kích thước gốc. Dữ liệu nén không có tiền tố `pxb1:` (vd save LZString bên JS) → `"thieu-lzstring"` rõ ràng, không giả vờ giải được.
+3. **`$gameSystem` → dict truyền vào:** `build_save_json` nhận dict hệ thống truyền vào, `apply_save` chép field vào dict đích truyền vào; `gameDay` lấy từ `pxb_time.game_day`, rồi `gameDay`, rồi `game_day`, mặc định 1. `accountId` dùng `""` thay cho `null` của JS khi chưa đăng nhập.
+4. **Stderr còn 1 dòng lỗi engine `decompress`** từ đúng 1 check cố tình đưa dữ liệu nén sai định dạng — đã được xử lý, check vẫn PASS; lỗi in ra từ bên trong `PackedByteArray.decompress`, không tránh được.
+
+## 6. Bước tiếp theo — G2 xong (chỉ còn MarketBattle chờ chủ duyệt) + nối UI
+
+1. Browser-verify G2 (mở link trên, xem HUD Ngày/Khung vẫn đổi
    đúng, không lỗi console).
 2. Nối gameplay vào `main.gd` để các hệ G2 nhìn thấy được (hiện chỉ có
    logic + test headless): nút "Làm ca" ở khu + "Nhặt" hotspot +
    "Chế tạo" (Jobs/Hotspot/Inventory/Crafting) + cửa hàng / ví /
    "Đăng ký học" (Economy/Education) + quan hệ / danh hiệu / chương
    (Social/Titles/Story) + nút điện thoại mở hub 9 tab (PhoneHub —
-   phím P + CanvasLayer). Đây là việc UI đầu tiên của G2 —
-   làm sau khi port xong hết các hệ nền, hoặc làm ngay bước 5 phần B nếu cần
-   demo chơi được.
-3. G2 bước 5 phần B (cuối): MarketBattle
+   phím P + CanvasLayer) + dùng công cụ (Tools) + lưu/tải save
+   (SaveCloud) + trạng thái online (Online). Đây là việc UI đầu tiên
+   của G2 — làm ngay sau khi port xong hết các hệ nền.
+3. G2 còn lại duy nhất: MarketBattle
    (luật chờ chủ duyệt — CHƯA port cho tới khi chủ duyệt luật, xem
-   `docs/market-battle-design.md`) → Online/SaveCloud (xem §1).
-   Sau đó G3: đủ 18 khu (Map003–014 đã có data MV, Map015–018 mới).
+   `docs/market-battle-design.md`). Sau đó G3: đủ 18 khu (Map003–014
+   đã có data MV, Map015–018 mới).
