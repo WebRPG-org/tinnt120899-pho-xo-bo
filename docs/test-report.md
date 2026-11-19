@@ -7,6 +7,49 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 19/11/2026 ~15:50 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **303/303 PASS, exit 0** — tăng từ 298/298: nhóm T35 mới
+  (5 mục, Map011 Phố Tây).
+- **Map011 — Phố Tây (việc tiếp theo lớn nhất, xong):**
+  `src/nadia/www/data/Map011.json` mới (lưới 12×9, data 648, layer 0
+  108/108 — sàn xen kẽ 1/2, không đường nhựa, đúng mẫu Map001/Map003/
+  Map005/Map006/Map007/Map008/Map009/Map010; layer 1 28/108 — biên
+  bắc/tây/đông, biên nam để trống như mặt tiền mở, chỉ 2 ô góc); NPC
+  Nhân Viên Lễ Tân (3,3) + Hướng Dẫn Viên (8,6), lời thoại chỉ từ
+  `docs/districts.md` khu 11 ("Dịch vụ cao cấp, ngoại ngữ / giao tiếp.")
+  + `MapInfos.json` khu 11 unlock ("Chương 4 — 3 quest giúp người +
+  ≥1 quan hệ thân thiết.") — không bịa lương/giá; transfer về Map010
+  (5,4). `data/atlas-map011.json` mới, TÁI DÙNG `atlas-map001.png`
+  (không PNG mới, SHA không đổi). `PXB_Isometric.js` đăng ký map 11
+  (`atlasCodeFor` + sửa comment header cũ chỉ ghi tới Map010);
+  `loadAtlasBitmap` đã tôn trọng `mapping.atlasPng` từ v3.1 nên không
+  sửa thêm. **Map010 nay có cửa (5,8) đi Map011** — đồ thị map
+  1-2-3-4-5-6-7-8-9-10-11 đã nối được. PROVISIONAL: code 3/4/5 (nhà trọ)
+  dùng tạm làm khối phố Tây, chờ art pass vẽ tile phố Tây riêng. Đã
+  xác minh độc lập: smoke `/tmp/pxb-map011-smoke.js` 26/26 PASS (không
+  commit) — JSON hợp lệ, đếm tile 648/108/28, event không bị tường đè,
+  transfer 2 chiều Map010↔Map011, atlas tái dùng, lời thoại đúng nguồn,
+  không có số giá/lương bịa.
+- **1 lỗi build script trong lần chạy này (đã sửa, không ảnh hưởng
+  dữ liệu):** script tạo map lần đầu dùng `sed` đổi chỉ số event nên cả
+  3 `set_event` dồn vào cùng 1 event (evs[3]) — Map011 ghi ra vẫn giữ
+  tên NPC cũ; đã viết lại script với chỉ số đúng (events MV có null
+  đầu) + clone sâu event khi tách cửa, chạy lại thì Map011/Map010 đúng.
+  Đã verify lại từ đĩa: Map010 giữ đủ 4 event (Lập Trình Viên, Kỹ Sư
+  Phần Mềm, Cửa về Phố Thương Mại, Cửa đi Phố Tây), Map011 đúng 3 event.
+- **Còn lại chưa xong:** chờ chủ bật GitHub Pages → kiểm chứng Map001
+  bằng trình duyệt thật; Map012–018 chưa có; img/audio còn lại trống;
+  luật MarketBattle chi tiết chờ chủ duyệt (scene trận chưa có).
+  Checklist C1–C9 (§6 roles-qc) vẫn giữ cho đường Unity (phương án
+  dự phòng); đường chính nay là Giai đoạn 1–5 của
+  `docs/architecture-nadia.md`. Việc tiếp theo lớn nhất: Map012 (Khu
+  Biệt Thự Ven Sông) + scene trận MarketBattle sau khi chủ duyệt luật.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa
+  biên dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test`
+  vẫn kẹt RAM — chạy qua GitHub Actions; Unity chưa có).
+
 ## Lần chạy mới nhất: 19/11/2026 ~14:45 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
