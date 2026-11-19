@@ -7,6 +7,46 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 19/11/2026 ~18:50 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **318/318 PASS, exit 0** — tăng từ 313/313: nhóm T38 mới
+  (5 mục, Map014 Đảo Thượng Lưu).
+- **Map014 — Đảo Thượng Lưu (việc tiếp theo lớn nhất, xong):**
+  `src/nadia/www/data/Map014.json` mới (lưới 12×9, data 648, layer 0
+  108/108 — sàn xen kẽ 1/2, không đường nhựa, đúng mẫu Map001/Map003/
+  Map005/Map006/Map007/Map008/Map009/Map010/Map011/Map012/Map013; layer 1
+  28/108 — biên bắc/tây/đông, biên nam để trống như mặt tiền mở, chỉ 2
+  ô góc); NPC Quản Gia Đảo (3,3) + Chủ Biệt Thự Đảo (8,6), lời thoại chỉ
+  từ `docs/districts.md` khu 14 ("Chỉ mở khi tài sản ≥ ngưỡng siêu
+  giàu.") + `MapInfos.json` khu 14 unlock ("Chương 5 nhánh Siêu giàu —
+  tài sản ≥ 100 tỉ.") — "100 tỉ" là số đã chốt (GDD Mục 9 / roles-qc Q9:
+  rank Siêu giàu = tài sản 100 tỉ), không bịa lương/giá; transfer về
+  Map013 (5,4). `data/atlas-map014.json` mới, TÁI DÙNG
+  `atlas-map001.png` (không PNG mới, SHA không đổi). `PXB_Isometric.js`
+  đăng ký map 14 (`atlasCodeFor` + sửa comment header cũ chỉ ghi tới
+  Map013); `loadAtlasBitmap` đã tôn trọng `mapping.atlasPng` từ v3.1 nên
+  không sửa thêm. **Map013 nay có cửa (5,8) đi Map014** — đồ thị map
+  1-2-3-4-5-6-7-8-9-10-11-12-13-14 đã nối được. PROVISIONAL: code 3/4/5
+  (nhà trọ) dùng tạm làm khối đảo thượng lưu, chờ art pass vẽ tile đảo
+  riêng. Đã xác minh độc lập: smoke `/tmp/pxb-map014-smoke.js`
+  27/27 PASS (không commit) — JSON hợp lệ, đếm tile 648/108/28, event
+  không bị tường đè, transfer 2 chiều Map013↔Map014, atlas tái dùng,
+  lời thoại đúng nguồn, số trong thoại chỉ là cụm có nguồn (Chương 5 /
+  100 tỉ), không có số giá/lương bịa.
+- **Còn lại chưa xong:** chờ chủ bật GitHub Pages → kiểm chứng Map001
+  bằng trình duyệt thật; Map015–018 chưa có; img/audio còn lại trống;
+  luật MarketBattle chi tiết chờ chủ duyệt (scene trận chưa có).
+  Checklist C1–C9 (§6 roles-qc) vẫn giữ cho đường Unity (phương án
+  dự phòng); đường chính nay là Giai đoạn 1–5 của
+  `docs/architecture-nadia.md`. Việc tiếp theo lớn nhất: Map015 (Phố
+  Đi Bộ – Chợ Đêm) + scene trận MarketBattle sau khi chủ duyệt luật.
+  Godot G1 (slice parity Map001–002) vẫn chờ làm — đường MV giữ song
+  song tới khi Godot đạt parity.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa
+  biên dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test`
+  vẫn kẹt RAM — chạy qua GitHub Actions; Unity chưa có).
+
 ## Lần chạy mới nhất: 19/11/2026 ~17:45 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)

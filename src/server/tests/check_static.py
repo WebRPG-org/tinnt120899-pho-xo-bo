@@ -1913,6 +1913,59 @@ except Exception:  # noqa: BLE001
 check("T37e", "Map013: node --check PXB_Isometric.js sau sửa đăng ký map 13 + UTF-8",
       _mb_v37_ok and _iso_js == read(NADIA_PLUGINS / "PXB_Isometric.js"))
 
+# ---- Nhóm T38 — Map014 Đảo Thượng Lưu (19/11/2026 ~18:50) ----
+# Map khu 14 theo đúng mẫu Map001/003/005/006/007/008/009/010/011/012/013:
+# lưới 12×9, tile data thật, atlas tái dùng atlas-map001.png (chưa có tile
+# đảo riêng — code 3/4/5 nhà trọ dùng tạm làm khối đảo thượng lưu, ghi
+# PROVISIONAL). Không hotspot mới, transfer duy nhất về Map013 (5,4);
+# Map013 nay có cửa (5,8) -> Map014 nên đồ thị map 1-2-3-4-5-6-7-8-9-10-11-
+# 12-13-14 đã nối được. NPC + lời thoại chỉ từ docs/districts.md khu 14
+# ("Chỉ mở khi tài sản ≥ ngưỡng siêu giàu.") + MapInfos[14] unlock
+# ("Chương 5 nhánh Siêu giàu — tài sản ≥ 100 tỉ.") — "100 tỉ" là số đã
+# chốt (GDD Mục 9 / roles-qc Q9: rank Siêu giàu = tài sản 100 tỉ).
+_atlas14 = json.loads(read(NADIA_DATA / "atlas-map014.json"))
+_ok_m14, _d_m14 = _map_data_ok("Map014", _atlas14)
+check("T38a", "Map014: lưới 12×9, data 648, layer0 108/108, layer1 28/108, mã khớp mapping, event không bị tường đè",
+      _ok_m14, _d_m14)
+check("T38b", "atlas-map014.json: scheme atlas-code + TÁI DÙNG atlas-map001.png + tile 1-5 cùng tên atlas-map001",
+      _atlas14.get("scheme") == "atlas-code"
+      and _atlas14.get("atlasPng") == "img/tilesets/atlas-map001.png"
+      and {k: v["name"] for k, v in _atlas14["tiles"].items()}
+      == {k: v["name"] for k, v in _atlas1d["tiles"].items()})
+check("T38c", "PXB_Isometric: đăng ký map 14 + loadAtlasBitmap tôn trọng mapping.atlasPng",
+      'if (mapId === 14) return "Map014"' in _iso_js
+      and "mapping.atlasPng" in _iso_js
+      and "mapping && mapping.atlasPng" in _iso_js)
+_map014_raw = read(NADIA_DATA / "Map014.json")
+_map014 = json.loads(_map014_raw)
+_transfer_m14_ok = any(
+    c.get("code") == 201 and list(c.get("parameters", [])) == [0, 13, 5, 4, 0, 0]
+    for e in _map014.get("events", []) if e
+    for p in e.get("pages", []) for c in p.get("list", []))
+_map013_now = json.loads(read(NADIA_DATA / "Map013.json"))
+_door_m13_m14_ok = any(
+    e and e.get("x") == 5 and e.get("y") == 8
+    and any(c.get("code") == 201 and list(c.get("parameters", [])) == [0, 14, 5, 4, 0, 0]
+            for p in e.get("pages", []) for c in p.get("list", []))
+    for e in _map013_now.get("events", []))
+check("T38d", "Map014: không hotspot mới + transfer duy nhất về Map013 (5,4) + Map013 có cửa (5,8) đi Map014 + khối đảo thượng lưu ghi PROVISIONAL + NPC đúng khu 14",
+      "hs-" not in _map014_raw and _transfer_m14_ok and _door_m13_m14_ok
+      and "PROVISIONAL" in _map014_raw and "PROVISIONAL" in read(NADIA_DATA / "atlas-map014.json")
+      and "Quản Gia Đảo" in _map014_raw and "Chủ Biệt Thự Đảo" in _map014_raw
+      and "đảo thượng lưu" in _map014_raw.lower()
+      and "chỉ mở khi tài sản" in _map014_raw.lower() and "ngưỡng siêu giàu" in _map014_raw.lower()
+      and "chương 5" in _map014_raw.lower() and "siêu giàu" in _map014_raw.lower()
+      and "100 tỉ" in _map014_raw.lower())
+_mb_v38_ok = True
+try:
+    _r = subprocess.run(["node", "--check", str(NADIA_PLUGINS / "PXB_Isometric.js")],
+                        capture_output=True, text=True, timeout=30)
+    _mb_v38_ok = _r.returncode == 0
+except Exception:  # noqa: BLE001
+    _mb_v38_ok = False
+check("T38e", "Map014: node --check PXB_Isometric.js sau sửa đăng ký map 14 + UTF-8",
+      _mb_v38_ok and _iso_js == read(NADIA_PLUGINS / "PXB_Isometric.js"))
+
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)
 failed = [r for r in results if not r[2]]
