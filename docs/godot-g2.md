@@ -1,17 +1,18 @@
 # Godot G2 — Port 17 plugin PXB → GDScript (19/11/2026)
 
-> **Kết luận: G2 bước 3/5 XONG (mức headless).** Thêm 2 hệ gameplay:
-> `PxbInventory` (túi đồ, buff tạm đúng khung catalog) +
-> `PxbCrafting` (3 công thức slice, học qua NPC, tool 4×3 đổi hành vi,
-> túi nguyên liệu chung với Hotspot). Selftest mới **78/78 PASS**,
-> G2 cũ 87/87 + Jobs 56/56 + Hotspot 37/37 + G1 42/42 + playtest 14/14
-> vẫn PASS (không regression), scene chạy 120 frame exit 0, export web
-> exit 0 (~7s), http.server 200 đủ 4 file.
-> **Chưa kiểm chứng bằng trình duyệt thật** — như G0/G1/G2 bước 1–2, VM
-> không có Chromium/Firefox. Tổng G2: 7/17 plugin → 7 hệ GDScript.
+> **Kết luận: G2 bước 4/5 XONG (mức headless).** Thêm 2 hệ gameplay:
+> `PxbEconomy` (ví, tiết kiệm lãi 0,5%/tháng, catalog 17 món, đấu giá
+> phí 5%, đổi đồ, chia tài sản, set bonus, dress-code, 4 hành vi bị
+> chặn) + `PxbEducation` (5 bậc học, khóa ngắn hạn, học bổng, ghế /
+> thứ tự đăng ký, mentor). Selftest mới **92/92 PASS**, G2 cũ 87/87 +
+> Jobs 56/56 + Hotspot 37/37 + Inventory/Crafting 78/78 + G1 42/42 +
+> playtest 14/14 vẫn PASS (không regression), scene chạy 120 frame
+> exit 0, export web exit 0 (~8s), http.server 200 đủ 6 file.
+> **Chưa kiểm chứng bằng trình duyệt thật** — như G0/G1/G2 bước 1–3, VM
+> không có Chromium/Firefox. Tổng G2: 9/17 plugin → 9 hệ GDScript.
 >
-> G2 bước 2/5 XONG trước đó (xem lịch sử file): 2 hệ `PxbJobs` +
-> `PxbHotspot`, selftest 56/56 + 37/37 PASS.
+> G2 bước 3/5 XONG trước đó (xem lịch sử file): 2 hệ `PxbInventory` +
+> `PxbCrafting`, selftest 78/78 PASS.
 >
 > G2 bước 1/5 XONG trước đó (xem lịch sử file): 3 hệ nền `PxbBalance` →
 > `PxbStats` → `PxbTime`, selftest 87/87 PASS.
@@ -26,8 +27,8 @@
 | 2 | `PXB_Jobs` → Jobs (làm ca, lương, quota) | ✅ XONG đợt này |
 | 2 | `PXB_Hotspot` → Hotspot (nhặt 1 lần/ngày đúng khung) | ✅ XONG đợt này (port đầy đủ, thay ghi chú cũ "đã có tương đương ở G1") |
 | 2 | `PXB_Inventory` / `PXB_Crafting` → Inventory/Crafting | ✅ XONG đợt này (xem §2e) |
-| 3 | `PXB_Economy` → Economy (lãi 0,5%, phí 5%, 4 hành vi cấm) | ⏳ tiếp theo |
-| 3 | `PXB_Education` → Education (5 bậc) | ⏳ |
+| 3 | `PXB_Economy` → Economy (lãi 0,5%, phí 5%, 4 hành vi cấm) | ✅ XONG đợt này (xem §2h) |
+| 3 | `PXB_Education` → Education (5 bậc) | ✅ XONG đợt này (xem §2h) |
 | 4 | `PXB_Social` → Social; `PXB_Titles` / `PXB_Story` → Titles/Story | ⏳ |
 | 4 | `PXB_PhoneHub` → PhoneHub (CanvasLayer, 9 tab) | ⏳ |
 | 5 | `PXB_MarketBattle` → MarketBattle (luật chờ chủ duyệt) | ⏳ |
@@ -199,17 +200,73 @@ thời gian làm cờ trạng thái.
 3. **Chưa có save:** `PxbStats.data()` / `from_data()` đã sẵn sàng cho
    bước SaveCloud, nhưng chưa có nơi nào lưu/load thật.
 
-## 6. Bước tiếp theo — G2 bước 4 (Economy/Education)
+## 2h. File mới đợt này (G2 bước 4, 19/11 ~22:50)
 
-1. Browser-verify G2 bước 3 (mở link trên, xem HUD Ngày/Khung vẫn đổi
+| File | Nội dung |
+|---|---|
+| `scripts/pxb_economy.gd` (`PxbEconomy`, ~330 dòng) | Port `Economy.cs` / `PXB_Economy.js`: catalog 17 món (6 nhà / 6 xe / 2 điện thoại / 3 quần áo, 3 dòng chỉ số mỗi món), ví riêng (money/savings/credit_score 100), `total_assets()`, lãi 0,5%/tháng game (30 ngày/tháng), gửi/rút tiết kiệm, `buy()` trả `{ok, fame_gained, reason}` (nhà hoặc xe sang → Danh vọng +50; phòng trọ thuê tháng, fame 0 — nhánh return sớm đúng C#), `auction_seller_receives()` (phí 5%, cắt phần lẻ), `barter()`, `split_assets()` (chia đôi), `set_bonus()` (đủ 3 món/set → +10 Danh vọng/+5 An Yên), `passes_director_dress_code()` (chỉ Clothes set Công sở/Sang trọng — xe Sang trọng KHÔNG tính), 4 hàm bị chặn LUÔN false (`cash_out`/`lend_with_interest`/`gamble`/`buy_with_real_money`), `data()`/`from_data()` (bỏ id món lạ). Giá nhà lấy từ `PxbBalance`; giá + chỉ số xe/điện thoại/quần áo PROVISIONAL theo `Economy.cs` (chưa có trong GameBalance — như JS giữ bảng trong plugin). |
+| `scripts/pxb_education.gd` (`PxbEducation`, ~330 dòng) | Port `PXB_Education.js` (không có C# riêng): 5 bậc học từ `PxbBalance.DEGREES`, `can_enroll()`/`enroll()` (lý do chặn `khong-co-bang`/`da-co-bang`/`dang-hoc`/`chua-du-tri`/`can-mentor`/`khong-du-tien`, đúng thứ tự JS), `study_progress()`/`check_graduation()` (tốt nghiệp cộng EXP + Danh vọng vào `pending_exp`/`pending_fame` để event áp), `enroll_short_course()`/`short_course_progress()`/`check_short_course_graduation()` (4 chỉ số phụ, 3–7 ngày, 2–10 triệu, +10 vào `pending_stat_gain`), `scholarship_eligible()` (Trí ≥ 60 + tiền < 20tr → chỉ xét, không tự miễn phí), `seats_per_course()` (20–30), `register_order()`/`set_mentor()`, `data()`/`from_data()` (bỏ bằng/khóa/chỉ số lạ). Học song song 1 bằng chính + 1 khóa ngắn hạn (2 slot riêng). |
+| `tests/g2_economy_education_test.gd` (92 mục) | Kiểm tra headless riêng: catalog 17 món + giá/chỉ số, ví + gửi/rút + lãi 0,5% (30/60 ngày, 29 ngày = 0, tiết kiệm 0 = 0), mua (món lạ/không đủ tiền/phòng trọ fame 0 + quirk tổng tài sản/chung cư +50/xe sang +50/xe máy cũ +0), đấu giá 1tr → 950k + cắt lẻ 999999 → 949999, barter đổi/thiếu đồ, chia tài sản, set bonus 1 set → 10/5 và 2 set → 20/10, dress-code (áo dài false, xe sang false, bộ công sở true), 4 hành vi bị chặn luôn false + state không đổi, save round-trip + bỏ dữ liệu bẩn; 5 bậc học + tra cứu theo index/tên, 6 lý do chặn đăng ký, đăng ký (ngày 1 → hết ngày 31, phí 0, charged false), tốt nghiệp THPT/Cao đẳng đúng ngày + pending EXP 500, khóa ngắn hạn (5 lý do chặn, học song song, tốt nghiệp +10), học bổng 4 trường hợp, ghế 20–30, register_order tăng dần, save round-trip + bỏ dữ liệu bẩn. |
+
+## 2i. Verify thật đợt này (19/11 ~22:50)
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `--check-only` 3 file (2 script mới + test) | PASS, exit 0 (sau `--headless --import` 1 lần để đăng ký class mới) |
+| G2 Economy+Education selftest | **92/92 PASS** (lúc đầu 90/92: 1 lỗi port — `buy("phong-tro")` rơi vào nhánh tính Danh vọng, thiếu return sớm đúng C#; 1 lỗi test — chia tài sản tính nhầm tổng sau khi gửi tiết kiệm; sửa xong pass hết) |
+| G2 selftest cũ (Balance/Stats/Time) | **87/87 PASS** (không regression) |
+| G2 Jobs / Hotspot / Inventory+Crafting selftest | **56/56 + 37/37 + 78/78 PASS** (không regression) |
+| G1 selftest / playtest | **42/42 + 14/14 PASS** (không regression) |
+| Scene Main chạy 120 frame | exit 0, không ERROR |
+| Export web | exit 0, ~8s; `index.wasm` 39,5 MB, `index.pck` 987 KB (`strings index.pck` thấy `pxb_economy`/`pxb_education`, 10 lần) |
+| HTTP 200 | `index.html/js/wasm/pck/audio.worklet.js/png` đủ 6 file (cổng 8143) |
+
+**Lỗi đã gặp đợt này:** export web FAIL lần đầu vì `rm -rf ../godot-build`
+trước đó — export preset Web KHÔNG tự tạo thư mục đích (báo
+"Project export for preset Web failed"). Sửa: `mkdir -p ../godot-build`
+trước khi export. Bài học: không xóa thư mục build trước khi export;
+nếu cần build sạch thì tạo lại thư mục rồi mới export.
+
+## 2j. Khác biệt port JS/C# → GDScript đợt này (PROVISIONAL, cần GDD chốt)
+
+**Economy:**
+1. **owned lưu id món** (`Array[String]`) thay vì object `OwnedItem`
+   — tra cứu đầy đủ qua `get_item()`; `data()`/`from_data()` gọn và
+   không lệch object khi load save.
+2. **Quirk phòng trọ giữ nguyên:** thuê 2tr/tháng nhưng vẫn cộng 2tr
+   vào tổng tài sản (đúng C#/JS — xem ghi chú đầu file).
+3. **Giá xe/điện thoại/quần áo PROVISIONAL** — chưa có trong
+   GameBalance; khi GDD chốt bảng thì sửa `pxb_economy.gd` (catalog)
+   + `Economy.cs` + JS cùng lúc (không sửa `PxbBalance` vì số này
+   chưa từng nằm ở đó).
+4. **Ví tiền:** Godot chưa có PlayerProgress/`$gameParty` nên ví tạm
+   giữ trong `PxbEconomy` (như `PxbJobs.gold`); khi port
+   PlayerProgress thì ví chuyển sang đó.
+
+**Education:**
+1. **Tiền học phí KHÔNG tự trừ:** JS trừ khỏi `$gameParty` khi có
+   core MV; Godot chưa có ví chung nên `enroll()`/
+   `enroll_short_course()` trả `charged = false` + `fee_paid` để
+   event/caller tự trừ; kiểm tra tiền dùng tham số `gold` (`-1` =
+   bỏ qua kiểm tra, như JS khi chưa có core).
+2. **Tốt nghiệp không tự cộng EXP/Danh vọng/chỉ số phụ** — chỉ ghi
+   vào `pending_exp`/`pending_fame`/`pending_stat_gain` để event áp
+   (như JS; chưa có hệ EXP/Danh vọng chung trong Godot).
+3. **Ngày game:** `day_number` là biến instance (mặc định 1), event/
+   game loop gán khi ngày đổi — JS đọc `$gameSystem.pxbDayNumber`.
+4. **Học lại bằng thấp hơn bị chặn** (PROVISIONAL — GDD chưa chốt có
+   được học nhảy bậc / học lại bằng thấp hơn không).
+
+## 6. Bước tiếp theo — G2 bước 5 (Social/Titles/Story/PhoneHub/MarketBattle/Online/SaveCloud)
+
+1. Browser-verify G2 bước 4 (mở link trên, xem HUD Ngày/Khung vẫn đổi
    đúng, không lỗi console).
-2. Port `PXB_Economy` + `PXB_Education` → `scripts/pxb_economy.gd` /
-   `pxb_education.gd`: Economy (lãi 0,5%/tháng game, phí đấu giá 5%,
-   mua lớn +50 Danh vọng, 4 hành vi cấm — xem `Economy.cs` /
-   `PXB_Economy.js`) + Education (5 bậc học vấn từ `PxbBalance.DEGREES`,
-   khóa ngắn hạn, ghế 20–30 — xem `PXB_Education.js`). Thêm nút "Làm
-   ca" ở khu + "Nhặt" hotspot + "Chế tạo" vào `main.gd` để
-   Jobs/Hotspot/Inventory/Crafting nhìn thấy được (hiện chỉ có logic +
-   test headless). Test headless riêng như bước 2–3.
-3. Sau Economy/Education: Social → Titles/Story → PhoneHub →
-   MarketBattle → Online/SaveCloud (xem §1).
+2. Nối gameplay vào `main.gd` để các hệ G2 nhìn thấy được (hiện chỉ có
+   logic + test headless): nút "Làm ca" ở khu + "Nhặt" hotspot +
+   "Chế tạo" (Jobs/Hotspot/Inventory/Crafting) + cửa hàng / ví /
+   "Đăng ký học" (Economy/Education). Đây là việc UI đầu tiên của G2 —
+   làm sau khi port xong hết các hệ nền, hoặc làm ngay bước 5 nếu cần
+   demo chơi được.
+3. G2 bước 5 (cuối): Social → Titles/Story → PhoneHub → MarketBattle
+   (luật chờ chủ duyệt) → Online/SaveCloud (xem §1). Sau đó G3: đủ 18
+   khu (Map003–014 đã có data MV, Map015–018 mới).
