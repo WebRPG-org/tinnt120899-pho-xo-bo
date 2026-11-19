@@ -1,13 +1,17 @@
 # Godot G2 — Port 17 plugin PXB → GDScript (19/11/2026)
 
-> **Kết luận: G2 bước 2/5 XONG (mức headless).** Thêm 2 hệ gameplay:
-> `PxbJobs` (làm ca, lương, quota tuần, thi chứng chỉ) +
-> `PxbHotspot` (nhặt 1 lần/ngày đúng khung, di chuyển nhanh, gợi ý).
-> Selftest mới **56/56 (Jobs) + 37/37 (Hotspot) PASS**, G2 cũ 87/87 +
-> G1 42/42 + playtest 14/14 vẫn PASS (không regression), scene chạy
-> 120 frame exit 0, export web exit 0 (~9s), http.server 200 đủ 4 file.
-> **Chưa kiểm chứng bằng trình duyệt thật** — như G0/G1/G2 bước 1, VM
-> không có Chromium/Firefox. Tổng G2: 5/17 plugin → 5 hệ GDScript.
+> **Kết luận: G2 bước 3/5 XONG (mức headless).** Thêm 2 hệ gameplay:
+> `PxbInventory` (túi đồ, buff tạm đúng khung catalog) +
+> `PxbCrafting` (3 công thức slice, học qua NPC, tool 4×3 đổi hành vi,
+> túi nguyên liệu chung với Hotspot). Selftest mới **78/78 PASS**,
+> G2 cũ 87/87 + Jobs 56/56 + Hotspot 37/37 + G1 42/42 + playtest 14/14
+> vẫn PASS (không regression), scene chạy 120 frame exit 0, export web
+> exit 0 (~7s), http.server 200 đủ 4 file.
+> **Chưa kiểm chứng bằng trình duyệt thật** — như G0/G1/G2 bước 1–2, VM
+> không có Chromium/Firefox. Tổng G2: 7/17 plugin → 7 hệ GDScript.
+>
+> G2 bước 2/5 XONG trước đó (xem lịch sử file): 2 hệ `PxbJobs` +
+> `PxbHotspot`, selftest 56/56 + 37/37 PASS.
 >
 > G2 bước 1/5 XONG trước đó (xem lịch sử file): 3 hệ nền `PxbBalance` →
 > `PxbStats` → `PxbTime`, selftest 87/87 PASS.
@@ -21,8 +25,8 @@
 | 1 | `PXB_Time` → `PxbTime` | ✅ XONG đợt này |
 | 2 | `PXB_Jobs` → Jobs (làm ca, lương, quota) | ✅ XONG đợt này |
 | 2 | `PXB_Hotspot` → Hotspot (nhặt 1 lần/ngày đúng khung) | ✅ XONG đợt này (port đầy đủ, thay ghi chú cũ "đã có tương đương ở G1") |
-| 2 | `PXB_Inventory` / `PXB_Crafting` → Inventory/Crafting | ⏳ tiếp theo |
-| 3 | `PXB_Economy` → Economy (lãi 0,5%, phí 5%, 4 hành vi cấm) | ⏳ |
+| 2 | `PXB_Inventory` / `PXB_Crafting` → Inventory/Crafting | ✅ XONG đợt này (xem §2e) |
+| 3 | `PXB_Economy` → Economy (lãi 0,5%, phí 5%, 4 hành vi cấm) | ⏳ tiếp theo |
 | 3 | `PXB_Education` → Education (5 bậc) | ⏳ |
 | 4 | `PXB_Social` → Social; `PXB_Titles` / `PXB_Story` → Titles/Story | ⏳ |
 | 4 | `PXB_PhoneHub` → PhoneHub (CanvasLayer, 9 tab) | ⏳ |
@@ -32,6 +36,42 @@
 `PXB_Isometric` đã có tương đương Godot ở G1
 (`iso_map.gd`, hotspot trong `main.gd`); `PXB_Tools` là hàm tiện ích,
 port rải rác khi cần. Tổng 17 plugin MV → 14 hệ GDScript + 2 đã xong ở G1.
+
+## 2e. File mới đợt này (G2 bước 3, 19/11 ~21:50)
+
+| File | Nội dung |
+|---|---|
+| `scripts/pxb_balance.gd` (sửa) | Thêm `ITEMS` (4 vật phẩm slice: Cơm tấm 35k Thể +5 Chiều, Cà phê 25k Trí +5 Sáng, Sách 80k Trí +5 Tối, Áo mưa 120k không xếp chồng, không buff) + `item_by_id()` — theo quy ước JOBS/RECIPES: số chỉ nằm ở Balance, file khác không hardcode lại. |
+| `scripts/pxb_inventory.gd` (`PxbInventory`, ~150 dòng) | Port `Inventory.cs` (không có plugin PXB_Inventory.js ở bản MV — túi đồ MV dùng $gameParty + túi nguyên liệu chung với Hotspot): `add()` stackable / all-or-nothing (đồ không xếp chồng quantity > 1 hoặc đã có → false, không thêm gì), `use()` trừ 1 + buff tạm, `buff_for()` cộng dồn theo chỉ số + khung, `end_frame()` hết khung hết buff, `data()`/`from_data()`. Buff áp đúng khung catalog (cơm tấm dùng lúc Sáng vẫn buff Chiều — bug đã sửa 18/11); C# giữ entry 0 trong túi sau khi dùng hết món cuối nên port giữ nguyên (khác Crafting xóa key 0). Tiền không nằm ở đây (thuộc ví/Economy). |
+| `scripts/pxb_crafting.gd` (`PxbCrafting`, ~280 dòng) | Port `PXB_Crafting.js` / `Crafting.cs`: 3 công thức slice từ `PxbBalance.RECIPES`, `can_craft()`/`craft()` (trừ trực tiếp trên túi truyền vào, về 0 thì XÓA key), `missing_ingredients()`, `learn_recipe()` (mặc định chưa học — Cô Tư dạy "che-xe-day" sau quest đầu), `tool_behaviour()` 4 tool × 3 bậc từng chữ đúng C#, `apply_result()` (tool chỉ tăng bậc, item đếm quà), `craft_current()` trả `{ok, reason}` (`khong-co-cong-thuc`/`chua-hoc-cong-thuc`/`thieu-nguyen-lieu`), `guide_hint_for_recipe()` gợi ý Sổ Tay, `bind_materials()` dùng chung túi với `PxbHotspot` (Dictionary gán theo tham chiếu), `data()`/`from_data()` (bỏ công thức lạ + bậc tool lạ khi khôi phục). |
+| `tests/g2_inventory_crafting_test.gd` (78 mục) | Kiểm tra headless riêng: catalog 4 món + giá/buff, add stackable/all-or-nothing, use trừ 1 + không có đồ chặn, buff đúng khung catalog + cộng dồn + hết khung hết buff (khung khác giữ nguyên), save round-trip; 3 công thức + nguyên liệu đúng C#, học công thức, craft tĩnh (trừ đúng số, xóa key 0, thiếu đồ không trừ), craft_current (chưa học/thiếu/đủ + applied + last_craft), tool 4×3 từng chữ + bậc lạ/chuỗi bậc, apply_result chỉ tăng, hint Sổ Tay, save round-trip + bỏ dữ liệu bẩn, túi chung Hotspot↔Crafting (nhặt hs-cho-sang → la-chuoi 2 → chế quà tặng → cả hai túi cùng trống key). |
+
+## 2f. Verify thật đợt này (19/11 ~21:50)
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `--check-only` 4 file (balance sửa + 2 script mới + test) | PASS, exit 0 (sau `--headless --import` 1 lần để đăng ký class mới) |
+| G2 Inventory+Crafting selftest | **78/78 PASS** |
+| G2 selftest cũ (Balance/Stats/Time) | **87/87 PASS** (không regression) |
+| G2 Jobs / Hotspot selftest | **56/56 + 37/37 PASS** (không regression) |
+| G1 selftest / playtest | **42/42 + 14/14 PASS** (không regression) |
+| Scene Main chạy 120 frame | exit 0, không ERROR/warning |
+| Export web | exit 0, ~7s; `index.wasm` 39,5 MB, `index.pck` 959 KB (`strings index.pck` thấy `pxb_inventory`/`pxb_crafting`) |
+| HTTP 200 | `index.html/js/wasm/pck` đủ 4 file (cổng 8142) |
+
+## 2g. Khác biệt port JS/C# → GDScript đợt này (PROVISIONAL, cần GDD chốt)
+
+**Inventory:**
+1. **Không có plugin PXB_Inventory.js** — nguồn duy nhất là `Inventory.cs`; túi đồ MV dùng `$gameParty` + túi nguyên liệu chung với Hotspot. Port theo C#.
+2. **Entry 0:** C# giữ entry 0 sau khi dùng hết món cuối (`Count` vẫn 0); port giữ nguyên, không xóa key (khác Crafting).
+3. **Buff khung catalog:** `use()` giữ tham số `current_frame` cho API gọi nhưng không dùng để quyết khung buff (bug đã sửa 18/11 trong C#).
+
+**Crafting:**
+1. **Tên sản phẩm:** `PxbBalance.RECIPES` chỉ giữ needs/result/unlock; `result_name()` lấy từ bảng `RESULT_NAMES` trong file này (đúng fallback của JS).
+2. **Túi chung:** JS dùng `$gameSystem.pxbMaterials` chung Hotspot/Crafting; Godot dùng `bind_materials(hotspot.materials)` — cùng một Dictionary theo tham chiếu (test chứng minh nhặt → chế → cả hai túi cùng trống key).
+3. **"item:qua-tang" chưa có Item trong data/Items.json** — chỉ đếm trong `crafted_items`, chưa cộng vào `PxbInventory` (PROVISIONAL, như JS).
+4. **Chỉ có công thức bậc 1** — chưa có công thức chế tool bậc 2/3 (C#/JS cũng vậy); công thức nâng cấp công cụ là việc PXB_Tools / GDD chưa chốt.
+5. **Chế tạo là cổng tiến trình nhưng chưa nối mở khu** — `tools` chỉ ghi nhận; mở khu do PxbStory/PxbHotspot giữ.
 
 ## 2b. File mới đợt này (G2 bước 2, 19/11 ~20:45)
 
@@ -159,16 +199,17 @@ thời gian làm cờ trạng thái.
 3. **Chưa có save:** `PxbStats.data()` / `from_data()` đã sẵn sàng cho
    bước SaveCloud, nhưng chưa có nơi nào lưu/load thật.
 
-## 6. Bước tiếp theo — G2 bước 3 (Inventory/Crafting)
+## 6. Bước tiếp theo — G2 bước 4 (Economy/Education)
 
-1. Browser-verify G2 bước 2 (mở link trên, xem HUD Ngày/Khung vẫn đổi
+1. Browser-verify G2 bước 3 (mở link trên, xem HUD Ngày/Khung vẫn đổi
    đúng, không lỗi console).
-2. Port `PXB_Inventory` + `PXB_Crafting` → `scripts/pxb_inventory.gd` /
-   `pxb_crafting.gd`: túi đồ (stackable/all-or-nothing theo
-   `Inventory.cs`), công thức chế tạo dùng nguyên liệu hotspot G1/G2 đã
-   nhặt, `learnRecipe` (mặc định chưa học — xem lệch đã ghi ở
-   roles-qc.md 19/11 01:50). Thêm nút "Làm ca" ở khu + "Nhặt" hotspot
-   vào `main.gd` để Jobs/Hotspot nhìn thấy được (hiện chỉ có logic +
-   test headless). Test headless riêng như bước 2.
-3. Sau Inventory/Crafting: Economy → Education → Social → Titles/Story
-   → PhoneHub → MarketBattle → Online/SaveCloud (xem §1).
+2. Port `PXB_Economy` + `PXB_Education` → `scripts/pxb_economy.gd` /
+   `pxb_education.gd`: Economy (lãi 0,5%/tháng game, phí đấu giá 5%,
+   mua lớn +50 Danh vọng, 4 hành vi cấm — xem `Economy.cs` /
+   `PXB_Economy.js`) + Education (5 bậc học vấn từ `PxbBalance.DEGREES`,
+   khóa ngắn hạn, ghế 20–30 — xem `PXB_Education.js`). Thêm nút "Làm
+   ca" ở khu + "Nhặt" hotspot + "Chế tạo" vào `main.gd` để
+   Jobs/Hotspot/Inventory/Crafting nhìn thấy được (hiện chỉ có logic +
+   test headless). Test headless riêng như bước 2–3.
+3. Sau Economy/Education: Social → Titles/Story → PhoneHub →
+   MarketBattle → Online/SaveCloud (xem §1).

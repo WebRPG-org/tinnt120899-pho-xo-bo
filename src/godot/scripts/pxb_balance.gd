@@ -96,6 +96,19 @@ const RECIPES := [
 	{"id": "che-qua-tang", "name": "Quà Tặng Thủ Công", "needs": {"la-chuoi": 2, "vai-vun": 1}, "result": "item:qua-tang", "unlock": "Học từ bạn thân NPC — tặng NPC để tăng thân thiết, mở quest (GDD Mục 8/9)."},
 ]
 
+# Bảng vật phẩm slice (Inventory.cs ItemCatalog — PROVISIONAL, chưa chốt
+# GDD: giá + buff là số ví dụ của slice). Vật phẩm tiêu hao chỉ cho
+# BUFF TẠM trong 1 khung, KHÔNG đổi chỉ số vĩnh viễn.
+# id, name, price_vnd, stackable, effect_stat ("the"/"tri"/"tam", "" =
+# không buff), effect_amount, effect_frame ("Sáng"/"Chiều"/"Tối", "" =
+# không buff), unlock_note.
+const ITEMS := [
+	{"id": "com-tam", "name": "Cơm tấm", "price_vnd": 35000, "stackable": true, "effect_stat": "the", "effect_amount": 5, "effect_frame": "Chiều", "unlock_note": ""},
+	{"id": "ca-phe", "name": "Cà phê", "price_vnd": 25000, "stackable": true, "effect_stat": "tri", "effect_amount": 5, "effect_frame": "Sáng", "unlock_note": ""},
+	{"id": "sach", "name": "Sách", "price_vnd": 80000, "stackable": true, "effect_stat": "tri", "effect_amount": 5, "effect_frame": "Tối", "unlock_note": ""},
+	{"id": "ao-mua", "name": "Áo mưa", "price_vnd": 120000, "stackable": false, "effect_stat": "", "effect_amount": 0, "effect_frame": "", "unlock_note": "Làm được ca mưa, không bị ướt"},
+]
+
 
 static func degree(index: int) -> Dictionary:
 	if index < 0 or index >= DEGREES.size():
@@ -114,4 +127,11 @@ static func recipe_by_id(recipe_id: String) -> Dictionary:
 	for r in RECIPES:
 		if String(r["id"]) == recipe_id:
 			return r
+	return {}
+
+
+static func item_by_id(item_id: String) -> Dictionary:
+	for it in ITEMS:
+		if String(it["id"]) == item_id:
+			return it
 	return {}
