@@ -1,0 +1,89 @@
+{
+ "atlasPng": "img/tilesets/atlas-map001.png",
+ "cellH": 64,
+ "cellW": 64,
+ "cols": 8,
+ "map": "Map013",
+ "mapName": "Quận Tài Chính",
+ "note": "TÁI DÙNG atlas-map001.png (không tạo PNG mới, SHA đã khóa) — PROVISIONAL: code 3/4/5 (nhà trọ) dùng tạm làm khối quận tài chính, chờ art pass vẽ tile biệt thự riêng rồi mới tách atlas-map012.png.",
+ "scheme": "atlas-code",
+ "tileH": 32,
+ "tileW": 64,
+ "tiles": {
+  "1": {
+   "h": 32,
+   "layer": 0,
+   "name": "san-hem-xam",
+   "note": "PROVISIONAL: tái dùng tạm tile nhà trọ làm khối quận tài chính, chờ art pass vẽ tile quận tài chính riêng.",
+   "source": "sbs-floor-small-128x64/Small 128x64/Interior/1 Floor - Tiled 128x64.png cell=(1,0)",
+   "tint": [
+    1.06,
+    0.97,
+    0.82
+   ],
+   "w": 64,
+   "x": 0,
+   "y": 32
+  },
+  "2": {
+   "h": 32,
+   "layer": 0,
+   "name": "san-hem-kem",
+   "note": "PROVISIONAL: tái dùng tạm tile nhà trọ làm khối quận tài chính, chờ art pass vẽ tile quận tài chính riêng.",
+   "source": "sbs-floor-small-128x64/Small 128x64/Interior/1 Floor - Tiled 128x64.png cell=(1,1)",
+   "tint": [
+    1.06,
+    0.97,
+    0.82
+   ],
+   "w": 64,
+   "x": 64,
+   "y": 32
+  },
+  "3": {
+   "h": 62,
+   "layer": 1,
+   "name": "nha-tro-cua",
+   "note": "PROVISIONAL: tái dùng tạm tile nhà trọ làm khối quận tài chính, chờ art pass vẽ tile quận tài chính riêng.",
+   "source": "kenney-isometric-tiles-buildings/PNG/buildingTiles_014.png",
+   "tint": [
+    1.08,
+    0.95,
+    0.6
+   ],
+   "w": 64,
+   "x": 128,
+   "y": 2
+  },
+  "4": {
+   "h": 62,
+   "layer": 1,
+   "name": "nha-tro-bac",
+   "note": "PROVISIONAL: tái dùng tạm tile nhà trọ làm khối quận tài chính, chờ art pass vẽ tile quận tài chính riêng.",
+   "source": "kenney-isometric-tiles-buildings/PNG/buildingTiles_021.png",
+   "tint": [
+    1.08,
+    0.95,
+    0.6
+   ],
+   "w": 64,
+   "x": 192,
+   "y": 2
+  },
+  "5": {
+   "h": 55,
+   "layer": 1,
+   "name": "nha-nho-cua-xanh",
+   "note": "PROVISIONAL: tái dùng tạm tile nhà trọ làm khối quận tài chính, chờ art pass vẽ tile quận tài chính riêng.",
+   "source": "kenney-isometric-tiles-buildings/PNG/buildingTiles_000.png",
+   "tint": [
+    1.08,
+    0.95,
+    0.6
+   ],
+   "w": 64,
+   "x": 256,
+   "y": 9
+  }
+ }
+}

@@ -7,6 +7,49 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 19/11/2026 ~17:45 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **313/313 PASS, exit 0** — tăng từ 308/308: nhóm T37 mới
+  (5 mục, Map013 Quận Tài Chính).
+- **Map013 — Quận Tài Chính (việc tiếp theo lớn nhất, xong):**
+  `src/nadia/www/data/Map013.json` mới (lưới 12×9, data 648, layer 0
+  108/108 — sàn xen kẽ 1/2, không đường nhựa, đúng mẫu Map001/Map003/
+  Map005/Map006/Map007/Map008/Map009/Map010/Map011/Map012; layer 1
+  28/108 — biên bắc/tây/đông, biên nam để trống như mặt tiền mở, chỉ 2
+  ô góc); NPC Nhân Viên Ngân Hàng (3,3) + Môi Giới Chứng Khoán (8,6),
+  lời thoại chỉ từ `docs/districts.md` khu 13 ("Ngân hàng, chứng khoán
+  mô phỏng, công ty lớn.") + `MapInfos.json` khu 13 unlock ("Chương 4 —
+  3 quest giúp người + ≥1 quan hệ thân thiết.") — không bịa lương/giá;
+  transfer về Map012 (5,4). `data/atlas-map013.json` mới, TÁI DÙNG
+  `atlas-map001.png` (không PNG mới, SHA không đổi). `PXB_Isometric.js`
+  đăng ký map 13 (`atlasCodeFor` + sửa comment header cũ chỉ ghi tới
+  Map012); `loadAtlasBitmap` đã tôn trọng `mapping.atlasPng` từ v3.1 nên
+  không sửa thêm. **Map012 nay có cửa (5,8) đi Map013** — đồ thị map
+  1-2-3-4-5-6-7-8-9-10-11-12-13 đã nối được. PROVISIONAL: code 3/4/5
+  (nhà trọ) dùng tạm làm khối quận tài chính, chờ art pass vẽ tile tài
+  chính riêng. Đã xác minh độc lập: smoke `/tmp/pxb-map013-smoke.js`
+  27/27 PASS (không commit) — JSON hợp lệ, đếm tile 648/108/28, event
+  không bị tường đè, transfer 2 chiều Map012↔Map013, atlas tái dùng,
+  lời thoại đúng nguồn, không có số giá/lương bịa. 1 lỗi check trong lần
+  chạy này (đã sửa, chạy lại PASS): smoke lúc đầu FAIL 1 mục giả — check
+  "không số trong thoại" không cho phép cả "tầng 4" (cụm có nguồn từ
+  districts khu 12, dùng trong câu cửa về Map012); đã sửa check chỉ cấm
+  số tiền/lương và chỉ cho số thuộc cụm có nguồn (Chương 4 / 3 quest /
+  tầng 4 / 1 quan hệ).
+- **Còn lại chưa xong:** chờ chủ bật GitHub Pages → kiểm chứng Map001
+  bằng trình duyệt thật; Map014–018 chưa có; img/audio còn lại trống;
+  luật MarketBattle chi tiết chờ chủ duyệt (scene trận chưa có).
+  Checklist C1–C9 (§6 roles-qc) vẫn giữ cho đường Unity (phương án
+  dự phòng); đường chính nay là Giai đoạn 1–5 của
+  `docs/architecture-nadia.md`. Việc tiếp theo lớn nhất: Map014 (Đảo
+  Thượng Lưu) + scene trận MarketBattle sau khi chủ duyệt luật. Godot
+  G1 (slice parity Map001–002) vẫn chờ làm — đường MV giữ song song tới
+  khi Godot đạt parity.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa
+  biên dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test`
+  vẫn kẹt RAM — chạy qua GitHub Actions; Unity chưa có).
+
 ## Lần chạy mới nhất: 19/11/2026 ~16:50 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
