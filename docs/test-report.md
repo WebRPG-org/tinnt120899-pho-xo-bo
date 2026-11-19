@@ -7,6 +7,44 @@
 > ranh giới pháp lý bị chặn trong code. Muốn test chạy được thật phải có
 > máy build (xem `docs/roles-qc.md` §6).
 
+## Lần chạy mới nhất: 19/11/2026 ~09:45 (giờ VN)
+
+- Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)
+- Kết quả: **268/268 PASS, exit 0** — tăng từ 263/263: nhóm T28 mới
+  (5 mục, Map004 Bến Xe Miền Đông); T26d cập nhật (Map003 nay có transfer
+  đi Map004).
+- **Map004 — Bến Xe Miền Đông (việc tiếp theo lớn nhất, xong):**
+  `src/nadia/www/data/Map004.json` mới (lưới 12×9, data 648, layer 0
+  108/108 — sàn 88 + điểm nhấn 11 + đường nhựa dọc x=5 ×9, đúng mẫu
+  Map002; layer 1 28/108 — biên bắc quầy vé 4/5/6 + 2 bên vỉa hè, biên
+  nam chỉ 2 góc như Map003); NPC Bác Tài (3,2) + Anh Bốc Vác (8,6),
+  lời thoại lấy từ `docs/districts.md` khu 4 ("Đi lại liên khu, việc
+  shipper / bốc vác") — không bịa giá vé/lương; transfer về Map003
+  (5,4). `data/atlas-map004.json` mới, TÁI DÙNG `atlas-map002.png`
+  (không PNG mới). `PXB_Isometric.js` đăng ký map 4 (`atlasCodeFor` +
+  comment header); `loadAtlasBitmap` đã tôn trọng `mapping.atlasPng`
+  từ v3.1 nên không sửa thêm. **Map003 nay có cửa (5,8) đi Map004** —
+  đồ thị map 1-2-3-4 đã nối được (trước đây Map003 ghi "không transfer
+  tới Map004 chưa có"). PROVISIONAL: code 4/5 (sạp chợ) dùng tạm làm
+  quầy vé / nhà chờ, code 6 làm vỉa hè bến, chờ art pass vẽ tile bến xe
+  riêng. Đã xác minh độc lập: JSON hợp lệ, đếm tile 648/108/28, event
+  không bị tường đè, SHA atlas-map002.png không đổi.
+- **1 lỗi check trong lần chạy này (đã sửa, chạy lại PASS):** T28d lúc
+  đầu FAIL giả — check tìm "shipper"/"bốc vác" thường trong khi lời
+  thoại NPC viết hoa đầu câu ("Shipper…", "Bốc vác…"). Đã sửa check
+  thành không phân biệt hoa/thường.
+- **Còn lại chưa xong:** chờ chủ bật GitHub Pages → kiểm chứng Map001
+  bằng trình duyệt thật (browser task trước đó BỊ CHẶN ở loopback, tunnel
+  Cloudflare lỗi TLS — xem mục 08:00); Map005–018 chưa có; img/audio còn
+  lại trống; luật MarketBattle chi tiết chờ chủ duyệt (scene trận chưa
+  có). Checklist C1–C9 (§6 roles-qc) vẫn giữ cho đường Unity (phương án
+  dự phòng); đường chính nay là Giai đoạn 1–5 của
+  `docs/architecture-nadia.md`. Việc tiếp theo lớn nhất: Map005 (Làng
+  Đại Học) + scene trận MarketBattle sau khi chủ duyệt luật.
+- **Vẫn chưa chạy được:** xUnit (17 test) và EditMode test (219 test) chưa
+  biên dịch/chạy lần nào (dotnet 8.0.428 có ở `~/.dotnet`, `dotnet test`
+  vẫn kẹt RAM — chạy qua GitHub Actions; Unity chưa có).
+
 ## Lần chạy mới nhất: 19/11/2026 ~09:05 (giờ VN)
 
 - Lệnh: `python3 src/server/tests/check_static.py` (chạy từ gốc repo)

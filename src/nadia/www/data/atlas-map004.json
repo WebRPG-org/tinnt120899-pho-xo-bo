@@ -1,0 +1,98 @@
+{
+  "map": "Map004",
+  "mapName": "Bến Xe Miền Đông",
+  "atlasPng": "img/tilesets/atlas-map002.png",
+  "tileW": 64,
+  "tileH": 32,
+  "cellW": 64,
+  "cellH": 64,
+  "cols": 8,
+  "scheme": "atlas-code",
+  "tiles": {
+    "1": {
+      "name": "san-cho-da-xam",
+      "source": "sbs-floor-small-128x64/Small 128x64/Worldmap/2 Ground - Rocky 128x64.png cell=(1,1)",
+      "x": 0,
+      "y": 32,
+      "w": 64,
+      "h": 32,
+      "tint": [
+        1.0,
+        0.98,
+        0.92
+      ],
+      "layer": 0
+    },
+    "2": {
+      "name": "san-cho-da-dam",
+      "source": "sbs-floor-small-128x64/Small 128x64/Worldmap/2 Ground - Rocky 128x64.png cell=(0,3)",
+      "x": 64,
+      "y": 32,
+      "w": 64,
+      "h": 32,
+      "tint": [
+        1.0,
+        0.98,
+        0.92
+      ],
+      "layer": 0
+    },
+    "3": {
+      "name": "duong-nhua-doc",
+      "source": "kenney-isometric-roads/png/roadNS.png",
+      "x": 128,
+      "y": 22,
+      "w": 64,
+      "h": 42,
+      "tint": [
+        0.95,
+        0.95,
+        0.95
+      ],
+      "layer": 0
+    },
+    "4": {
+      "name": "sap-do",
+      "source": "kenney-isometric-tiles-buildings/PNG/buildingTiles_001.png",
+      "x": 192,
+      "y": 3,
+      "w": 64,
+      "h": 61,
+      "tint": [
+        1.0,
+        0.95,
+        0.85
+      ],
+      "layer": 1
+    },
+    "5": {
+      "name": "sap-do-mai-xanh",
+      "source": "kenney-isometric-tiles-buildings/PNG/buildingTiles_009.png",
+      "x": 256,
+      "y": 2,
+      "w": 64,
+      "h": 62,
+      "tint": [
+        1.0,
+        0.95,
+        0.85
+      ],
+      "layer": 1
+    },
+    "6": {
+      "name": "via-he-xam",
+      "source": "kenney-isometric-tiles-city/PNG/cityTiles_014.png",
+      "x": 320,
+      "y": 15,
+      "w": 64,
+      "h": 49,
+      "tint": [
+        1.0,
+        0.97,
+        0.9
+      ],
+      "layer": 1
+    }
+  },
+  "note": "TÁI DÙNG atlas-map002.png (không tạo PNG mới, SHA đã khóa) — PROVISIONAL: code 4/5 (sạp chợ) dùng tạm làm quầy vé / nhà chờ bến xe, code 6 (vỉa hè) làm vỉa hè bến, code 3 là đường nhựa dọc bến, chờ art pass vẽ tile bến xe riêng rồi mới tách atlas-map004.png."
+}

@@ -1378,8 +1378,12 @@ _transfer_ok = any(
     c.get("code") == 201 and list(c.get("parameters", []))[:2] == [0, 2]
     for e in _map003.get("events", []) if e
     for p in e.get("pages", []) for c in p.get("list", []))
-check("T26d", "Map003: không hotspot mới + transfer duy nhất về Map002 (5,4) + code 4 xưởng ghi PROVISIONAL",
-      "hs-" not in _map003_raw and _transfer_ok
+_transfer_m4_ok = any(
+    c.get("code") == 201 and list(c.get("parameters", []))[:2] == [0, 4]
+    for e in _map003.get("events", []) if e
+    for p in e.get("pages", []) for c in p.get("list", []))
+check("T26d", "Map003: không hotspot mới + transfer về Map002 (5,4) + đi Map004 (5,8) + code 4 xưởng ghi PROVISIONAL",
+      "hs-" not in _map003_raw and _transfer_ok and _transfer_m4_ok
       and "PROVISIONAL" in _map003_raw and "PROVISIONAL" in read(NADIA_DATA / "atlas-map003.json"))
 _mb_v26_ok = True
 try:
@@ -1425,6 +1429,48 @@ except Exception:  # noqa: BLE001
 check("T27e", "PXB_MarketBattle: node --check qua cú pháp + UTF-8",
       _mb_v27_ok and _mb_js == read(NADIA_PLUGINS / "PXB_MarketBattle.js"))
 
+# ---- Nhóm T28 — Map004 Bến Xe Miền Đông (19/11/2026 ~09:45) ----
+# Map khu 4 theo đúng mẫu Map002 (đường nhựa dọc x=5 xuyên qua cửa (5,4),
+# sàn 88/11/9): lưới 12×9, tile data thật, atlas tái dùng atlas-map002.png
+# (có tile đường nhựa + sạp + vỉa hè, đúng bến xe — chưa có tile bến xe
+# riêng, code 4/5 sạp dùng tạm làm quầy vé / nhà chờ, ghi PROVISIONAL).
+# Không hotspot mới, transfer duy nhất về Map003 (5,4); Map003 nay có
+# transfer (5,8) -> Map004 nên đồ thị map 1-2-3-4 đã nối được.
+_atlas4 = json.loads(read(NADIA_DATA / "atlas-map004.json"))
+_ok_m4, _d_m4 = _map_data_ok("Map004", _atlas4)
+check("T28a", "Map004: lưới 12×9, data 648, layer0 108/108, layer1 28/108, mã khớp mapping, event không bị tường đè",
+      _ok_m4, _d_m4)
+_atlas2b = json.loads(read(NADIA_DATA / "atlas-map002.json"))
+check("T28b", "atlas-map004.json: scheme atlas-code + TÁI DÙNG atlas-map002.png + tile 1-6 cùng tên atlas-map002",
+      _atlas4.get("scheme") == "atlas-code"
+      and _atlas4.get("atlasPng") == "img/tilesets/atlas-map002.png"
+      and {k: v["name"] for k, v in _atlas4["tiles"].items()}
+      == {k: v["name"] for k, v in _atlas2b["tiles"].items()})
+check("T28c", "PXB_Isometric: đăng ký map 4 + loadAtlasBitmap tôn trọng mapping.atlasPng",
+      'if (mapId === 4) return "Map004"' in _iso_js
+      and "mapping.atlasPng" in _iso_js
+      and "mapping && mapping.atlasPng" in _iso_js)
+_map004_raw = read(NADIA_DATA / "Map004.json")
+_map004 = json.loads(_map004_raw)
+_transfer_m4_ok = any(
+    c.get("code") == 201 and list(c.get("parameters", []))[:2] == [0, 3]
+    for e in _map004.get("events", []) if e
+    for p in e.get("pages", []) for c in p.get("list", []))
+check("T28d", "Map004: không hotspot mới + transfer duy nhất về Map003 (5,4) + quầy vé/nhà chờ ghi PROVISIONAL + NPC đúng khu 4",
+      "hs-" not in _map004_raw and _transfer_m4_ok
+      and "PROVISIONAL" in _map004_raw and "PROVISIONAL" in read(NADIA_DATA / "atlas-map004.json")
+      and "Bác Tài" in _map004_raw and "Anh Bốc Vác" in _map004_raw
+      and "shipper" in _map004_raw.lower() and "bốc vác" in _map004_raw.lower())
+_mb_v28_ok = True
+try:
+    _r = subprocess.run(["node", "--check", str(NADIA_PLUGINS / "PXB_Isometric.js")],
+                        capture_output=True, text=True, timeout=30)
+    _mb_v28_ok = _r.returncode == 0
+except Exception:  # noqa: BLE001
+    _mb_v28_ok = False
+check("T28e", "Map004: node --check PXB_Isometric.js sau sửa đăng ký map 4 + UTF-8",
+      _mb_v28_ok and _iso_js == read(NADIA_PLUGINS / "PXB_Isometric.js"))
+
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)
 failed = [r for r in results if not r[2]]
@@ -1447,7 +1493,11 @@ print("tile data Map001/002 nay thật (atlas-code, layer 0 108/108 + layer 1")
 print("28/108), atlas PNG đã vào repo img/tilesets/ (SHA khớp §7) +")
 print("PXB_Isometric v3 (atlas mode) đã viết (smoke stub 55/55 PASS) + v3.1")
 print("(atlas PNG lỗi -> rơi về fallback v2, smoke stub 18/18 PASS), Map003")
-print("Khu Công Nhân đã có tile data thật (648/108/28, tái dùng atlas-map001)")
+print("Khu Công Nhân đã có tile data thật (648/108/28, tái dùng atlas-map001),")
+print("Map004 Bến Xe Miền Đông đã có tile data thật (648/108/28, tái dùng")
+print("atlas-map002, đường nhựa dọc x=5, NPC Bác Tài + Anh Bốc Vác, transfer")
+print("về Map003; Map003 nay có cửa (5,8) đi Map004 — đồ thị map 1-2-3-4")
+print("đã nối được), nhưng")
 print("PXB_MarketBattle đã viết (Bụi Đời Chợ Cá, smoke stub 80/80 PASS, luật")
 print("chi tiết PROVISIONAL chờ chủ duyệt), nhưng")
 print("chưa mở trình duyệt chơi được thật — cần chạy game MV thật với atlas")
