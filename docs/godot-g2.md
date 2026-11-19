@@ -1,15 +1,23 @@
 # Godot G2 — Port 17 plugin PXB → GDScript (19/11/2026)
 
-> **Kết luận: G2 bước 4/5 XONG (mức headless).** Thêm 2 hệ gameplay:
-> `PxbEconomy` (ví, tiết kiệm lãi 0,5%/tháng, catalog 17 món, đấu giá
-> phí 5%, đổi đồ, chia tài sản, set bonus, dress-code, 4 hành vi bị
-> chặn) + `PxbEducation` (5 bậc học, khóa ngắn hạn, học bổng, ghế /
-> thứ tự đăng ký, mentor). Selftest mới **92/92 PASS**, G2 cũ 87/87 +
-> Jobs 56/56 + Hotspot 37/37 + Inventory/Crafting 78/78 + G1 42/42 +
-> playtest 14/14 vẫn PASS (không regression), scene chạy 120 frame
-> exit 0, export web exit 0 (~8s), http.server 200 đủ 6 file.
-> **Chưa kiểm chứng bằng trình duyệt thật** — như G0/G1/G2 bước 1–3, VM
-> không có Chromium/Firefox. Tổng G2: 9/17 plugin → 9 hệ GDScript.
+> **Kết luận: G2 bước 5/5 (phần A) XONG (mức headless, 19/11 ~23:50).**
+> Thêm 3 hệ gameplay: `PxbSocial` (quan hệ, thân thiết, bỏ bê 7 ngày,
+> stage HenHo/DinhHon/Cuoi, giới hạn 3 quan hệ sâu, hỗ trợ +20% EXP,
+> solo −40%, tan nhóm, ly hôn) + `PxbTitles` (bảng chặn 7 dòng 2 chiều,
+> phe Chính/Tà/Trung lập, quest "Cải tà quy chính", quirk Kẻ Lừa Đảo)
+> + `PxbStory` (mở 5 chương, thứ tự ưu tiên ending cứng, rank có thể
+> tụt chương 3). Selftest mới **102/102 PASS**, G2 cũ 87/87 +
+> Jobs 56/56 + Hotspot 37/37 + Inventory/Crafting 78/78 +
+> Economy/Education 92/92 + G1 42/42 + playtest 14/14 vẫn PASS
+> (không regression), scene chạy 120 frame exit 0, export web exit 0
+> (~8s), http.server 200 đủ 6 file.
+> **Chưa kiểm chứng bằng trình duyệt thật** — như G0/G1/G2 bước 1–4, VM
+> không có Chromium/Firefox. Tổng G2: 12/17 plugin → 12 hệ GDScript.
+> Còn lại bước 5 phần B: PhoneHub → MarketBattle (luật chờ chủ duyệt)
+> → Online/SaveCloud.
+>
+> G2 bước 4/5 XONG trước đó (xem lịch sử file): 2 hệ `PxbEconomy` +
+> `PxbEducation`, selftest 92/92 PASS.
 >
 > G2 bước 3/5 XONG trước đó (xem lịch sử file): 2 hệ `PxbInventory` +
 > `PxbCrafting`, selftest 78/78 PASS.
@@ -29,7 +37,7 @@
 | 2 | `PXB_Inventory` / `PXB_Crafting` → Inventory/Crafting | ✅ XONG đợt này (xem §2e) |
 | 3 | `PXB_Economy` → Economy (lãi 0,5%, phí 5%, 4 hành vi cấm) | ✅ XONG đợt này (xem §2h) |
 | 3 | `PXB_Education` → Education (5 bậc) | ✅ XONG đợt này (xem §2h) |
-| 4 | `PXB_Social` → Social; `PXB_Titles` / `PXB_Story` → Titles/Story | ⏳ |
+| 4 | `PXB_Social` → Social; `PXB_Titles` / `PXB_Story` → Titles/Story | ✅ XONG đợt này (xem §2k) |
 | 4 | `PXB_PhoneHub` → PhoneHub (CanvasLayer, 9 tab) | ⏳ |
 | 5 | `PXB_MarketBattle` → MarketBattle (luật chờ chủ duyệt) | ⏳ |
 | 5 | `PXB_Online` / `PXB_SaveCloud` → Online/SaveCloud | ⏳ |
@@ -257,16 +265,58 @@ nếu cần build sạch thì tạo lại thư mục rồi mới export.
 4. **Học lại bằng thấp hơn bị chặn** (PROVISIONAL — GDD chưa chốt có
    được học nhảy bậc / học lại bằng thấp hơn không).
 
-## 6. Bước tiếp theo — G2 bước 5 (Social/Titles/Story/PhoneHub/MarketBattle/Online/SaveCloud)
+## 2k. File mới đợt này (G2 bước 5 phần A, 19/11 ~23:50)
 
-1. Browser-verify G2 bước 4 (mở link trên, xem HUD Ngày/Khung vẫn đổi
+| File | Nội dung |
+|---|---|
+| `scripts/pxb_balance.gd` (sửa) | Thêm 9 hằng cốt truyện ĐÃ CHỐT từ `PlayerProgress.cs`: `CHAPTER2_TRI_MIN` 40, `CHAPTER2_FAME_MIN` 200, `CHAPTER4_HELP_QUESTS_MIN` 3, `CHAPTER5_TRI_MIN` 60, `CHAPTER5_FAME_MIN` 500, `ENDING_HOC_GIA_TRI_MIN` 90, `ENDING_HOC_GIA_FAME_MIN` 1500, `RANK_AT_RISK_FAME_MAX` 100, `RANK_AT_RISK_AN_YEN_MAX` 30 (tài sản 10/100 tỉ + An Yên 80 đã có sẵn: `DIRECTOR_ASSETS_VND` / `SUPER_RICH_ASSETS_VND` / `FAMILY_ENDING_AN_YEN`). |
+| `scripts/pxb_social.gd` (`PxbSocial`, ~380 dòng) | Port `PXB_Social.js` / `Social.cs`: 7 kind + 6 stage (string, JSON-safe), `create_relationship()` (thân thiết khởi đầu 20), `is_deep()`, `interact()` (+5, kẹp 0..100), `apply_neglect()` (−10/mỗi 7 ngày, KHÔNG cập nhật ngày — quirk C#), `advance_stage()` (HenHo ≥ 50, DinhHon từ HenHo ≥ 70, Cuoi từ DinhHon ≥ 80, KHÔNG kiểm Kind — quirk C#), `break_up()`, book instance (`relations` + `marriages`): `add_rel()` (trùng/giới hạn 3 sâu/1 bạn thân → false), `deep_count()`, `has_best_friend()`, `has_supporter()` (sâu + thân thiết ≥ 50), `apply_support_bonus()` (+20%), `apply_solo_penalty()` (−40%), `check_group_dissolved()` (7 ngày không họp), `divorce()` (chỉ Spouse + Cuoi), `record_marriage()`/`is_married_to()`, `apply_neglect_all()`, `seed_slice()` (NPC "Bạn thân" tạm), `data()`/`from_data()` (bỏ kind/stage lạ, kẹp thân thiết, bỏ trùng). |
+| `scripts/pxb_titles.gd` (`PxbTitles`, ~230 dòng) | Port `PXB_Titles.js` / `TitleConflict.cs`: `BLOCKED_BY` đúng y 7 dòng C#, `is_blocked()` chặn 2 chiều + không phân biệt hoa/thường + null-safe (quirk Kẻ Lừa Đảo chỉ chặn "Luật Sư Chính Trực", KHÔNG chặn "Luật Sư Bào Chữa"), `alignment_of()` (Tà → "Ta", Chính → "Chinh", cả hai/không có → "TrungLap"), `add_title()`/`remove_title()`/`has_title()`/`can_take_job()`, `can_redeem()`/`redeem()` (chỉ khi phe Tà, xóa mọi danh hiệu phe Tà), `alignment` tự cập nhật sau mỗi thay đổi, `data()`/`from_data()` (bỏ title bẩn/trùng, tính lại alignment). |
+| `scripts/pxb_story.gd` (`PxbStory`, ~230 dòng) | Port `PXB_Story.js` / `PlayerProgress.cs`: 5 chương + tên tiếng Việt, 6 ending, `can_open_chapter()` (ch.2 Trí 40/Danh vọng 200; ch.3 luôn true; ch.4 ≥ 3 quest + quan hệ thân thiết; ch.5 Trí 60/Danh vọng 500/tài sản 10 tỉ; chương lạ → false), `suggest_ending()` thứ tự ưu tiên cứng SieuGiau → GiamDoc → HocGia → GiaDinh → TuDo → ChuaMo, `rank_at_risk()` (Danh vọng < 100 HOẶC An Yên < 30), `advance_chapter()` (chỉ +1, guard ch.3 cần đã qua ch.2), `record_help_quest()`, `pass_chapter3()` (chỉ ở ch.3), `set_ending()` (chỉ 6 giá trị), `suggest_ending_now()` (gợi ý + lưu), `data()`/`from_data()` (kẹp chương 1..5, ending lạ → ChuaMo, unlocked sạch + luôn chứa chương hiện tại). Ngưỡng đọc từ `PxbBalance`, không hardcode lại. |
+| `tests/g2_social_titles_story_test.gd` (102 mục) | Kiểm tra headless riêng: Social (tạo/mặc định, interact +5/kẹp 100, bỏ bê <7 ngày = 0 / 7 ngày −10 / 14 ngày −20 / gọi 2 lần cùng ngày trừ 2 lần / kẹp 0, stage 3 ngưỡng + chuỗi, quirk Spouse đi HenHo→Cuoi, break_up, book: trùng/3 sâu/bạn thân duy nhất/hội bạn không tính sâu, supporter 50 vs 49, bonus 100→120, solo 100→60, tan nhóm 7 ngày, ly hôn 3 trường hợp, hôn nhân, seed_slice, bỏ bê toàn sổ, save round-trip + bỏ dữ liệu bẩn); Titles (chặn xuôi/ngược 7 dòng, không phân biệt hoa/thường, quirk Kẻ Lừa Đảo, không xung đột, null-safe, add/remove/has/can_take_job, alignment 4 trường hợp, redeem chỉ phe Tà + xóa đúng phe Tà, save + bỏ dữ liệu bẩn); Story (mở 5 chương từng ngưỡng + chương lạ, advance cả chuỗi 1→5 + fail từng cửa, pass_chapter3, help quest đếm, thứ tự ưu tiên ending 8 trường hợp, rank_at_risk 4 trường hợp, set_ending, suggest_ending_now lưu state, save + bỏ dữ liệu bẩn). |
+
+## 2l. Verify thật đợt này (19/11 ~23:50)
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `--check-only` 5 file (balance sửa + 3 script mới + test) | PASS, exit 0 (sau `--headless --import` 1 lần để đăng ký class mới) |
+| G2 Social+Titles+Story selftest | **102/102 PASS** (lần đầu đã pass hết; 1 lỗi tính tay trong test đã sửa trước khi chạy: bỏ bê 99 ngày = 14 bước × 10 = 140, không phải 120) |
+| G2 selftest cũ (Balance/Stats/Time) | **87/87 PASS** (không regression) |
+| G2 Jobs / Hotspot / Inventory+Crafting / Economy+Education selftest | **56/56 + 37/37 + 78/78 + 92/92 PASS** (không regression) |
+| G1 selftest / playtest | **42/42 + 14/14 PASS** (không regression) |
+| Scene Main chạy 120 frame | exit 0, không ERROR |
+| Export web | exit 0, ~8s; `index.wasm` 39,5 MB, `index.pck` 1019 KB (`strings index.pck` thấy `pxb_social`/`pxb_titles`/`pxb_story`, 15 lần) |
+| HTTP 200 | `index.html/js/wasm/pck/audio.worklet.js/png` đủ 6 file (cổng 8144) |
+
+## 2m. Khác biệt port JS/C# → GDScript đợt này (PROVISIONAL, cần GDD chốt)
+
+**Social:**
+1. **Hàm tĩnh trên book Dictionary:** JS dùng hàm module nhận book object thuần; GDScript dùng hàm tĩnh `*_in_book(book)` + hàm instance bao quanh book của node — cùng 1 logic, test gọi được cả 2 đường.
+2. **Không có `$gameSystem`:** JS giữ state trong `$gameSystem.pxbSocial` để đi theo save MV; Godot giữ trong instance `PxbSocial` + `data()`/`from_data()` (save thật là việc SaveCloud, bước 5 phần B).
+3. **Số PROVISIONAL giữ nguyên nhãn** (xem header file): thân thiết khởi đầu 20, +5/lần, −10/bước, ngưỡng 50/70/80, supporter ≥ 50, solo 40%, tan nhóm 7 ngày, tối đa 3 sâu — chỉ ngưỡng 7 ngày / +20% / 30–50% là số chốt (đọc từ `PxbBalance`).
+4. **Quirk giữ đúng C#:** `apply_neglect()` không cập nhật ngày; `advance_stage()` không kiểm Kind; `divorce()` chỉ Spouse + Cuoi.
+
+**Titles:**
+1. **Không có `$gameSystem`:** như Social — state trong instance + `data()`/`from_data()`.
+2. **So sánh không phân biệt hoa/thường:** C# dùng `StringComparer.OrdinalIgnoreCase`; GDScript dùng `String.to_lower()` — tiếng Việt có dấu lower đúng (vd "Tướng Cướp" → "tướng cướp").
+3. **Phe Chính/Tà PROVISIONAL** — suy ra từ bảng chặn, GDD chưa liệt kê; `alignment` là bản sao tính sẵn, nguồn sự thật là `titles`.
+
+**Story:**
+1. **Không có số PROVISIONAL:** mọi ngưỡng đều ĐÃ CHỐT; 9 ngưỡng chương/ending chưa từng nằm trong `GameBalance.cs` nên đã thêm vào `PxbBalance` đợt này (xem §2k) thay vì hardcode trong file story.
+2. **Không có `$gameSystem` / PlayerProgress:** như Social — state trong instance + `data()`/`from_data()`; chỉ số người chơi (Trí/Danh vọng/tài sản/An Yên) truyền vào làm tham số, event lấy từ `PxbStats`/`PxbEconomy` khi nối UI.
+3. **Lệch C# so với GDD giữ đúng C#** (xem header file): ch.2 không có đường riêng bằng Cao đẳng; ch.5 Học giả không kiểm bằng Tiến sĩ; ch.5 Gia đình không kiểm rank Trung lưu.
+
+## 6. Bước tiếp theo — G2 bước 5 phần B (PhoneHub/MarketBattle/Online/SaveCloud)
+
+1. Browser-verify G2 bước 5 phần A (mở link trên, xem HUD Ngày/Khung vẫn đổi
    đúng, không lỗi console).
 2. Nối gameplay vào `main.gd` để các hệ G2 nhìn thấy được (hiện chỉ có
    logic + test headless): nút "Làm ca" ở khu + "Nhặt" hotspot +
    "Chế tạo" (Jobs/Hotspot/Inventory/Crafting) + cửa hàng / ví /
-   "Đăng ký học" (Economy/Education). Đây là việc UI đầu tiên của G2 —
-   làm sau khi port xong hết các hệ nền, hoặc làm ngay bước 5 nếu cần
+   "Đăng ký học" (Economy/Education) + quan hệ / danh hiệu / chương
+   (Social/Titles/Story). Đây là việc UI đầu tiên của G2 —
+   làm sau khi port xong hết các hệ nền, hoặc làm ngay bước 5 phần B nếu cần
    demo chơi được.
-3. G2 bước 5 (cuối): Social → Titles/Story → PhoneHub → MarketBattle
+3. G2 bước 5 phần B (cuối): PhoneHub → MarketBattle
    (luật chờ chủ duyệt) → Online/SaveCloud (xem §1). Sau đó G3: đủ 18
    khu (Map003–014 đã có data MV, Map015–018 mới).

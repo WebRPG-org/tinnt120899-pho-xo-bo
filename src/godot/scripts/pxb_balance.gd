@@ -73,6 +73,17 @@ const DIRECTOR_ASSETS_VND := 10000000000
 const SUPER_RICH_ASSETS_VND := 100000000000
 const FAMILY_ENDING_AN_YEN := 80
 
+# Cốt truyện 5 chương + ending (GDD Mục 9, đã chốt — PlayerProgress.cs).
+const CHAPTER2_TRI_MIN := 40
+const CHAPTER2_FAME_MIN := 200
+const CHAPTER4_HELP_QUESTS_MIN := 3
+const CHAPTER5_TRI_MIN := 60
+const CHAPTER5_FAME_MIN := 500
+const ENDING_HOC_GIA_TRI_MIN := 90
+const ENDING_HOC_GIA_FAME_MIN := 1500
+const RANK_AT_RISK_FAME_MAX := 100
+const RANK_AT_RISK_AN_YEN_MAX := 30
+
 # Chỉ số — PROVISIONAL (Stats.cs): GDD chỉ chốt "có trần tổng", chưa chốt số.
 # TOTAL_STAT_CAP 300 + STAT_MAX 100 + ngưỡng cân bằng An Yên ±10 là số ví dụ.
 const TOTAL_STAT_CAP := 300 # PROVISIONAL — cần chủ chốt
