@@ -1810,6 +1810,57 @@ except Exception:  # noqa: BLE001
 check("T35e", "Map011: node --check PXB_Isometric.js sau sửa đăng ký map 11 + UTF-8",
       _mb_v35_ok and _iso_js == read(NADIA_PLUGINS / "PXB_Isometric.js"))
 
+# ---- Nhóm T36 — Map012 Khu Biệt Thự Ven Sông (19/11/2026 ~16:50) ----
+# Map khu 12 theo đúng mẫu Map001/003/005/006/007/008/009/010/011: lưới 12×9, tile data thật,
+# atlas tái dùng atlas-map001.png (chưa có tile biệt thự riêng —
+# code 3/4/5 nhà trọ dùng tạm làm khối biệt thự ven sông, ghi PROVISIONAL).
+# Không hotspot mới, transfer duy nhất về Map011 (5,4); Map011 nay có cửa
+# (5,8) -> Map012 nên đồ thị map 1-2-3-4-5-6-7-8-9-10-11-12 đã nối được. NPC + lời
+# thoại chỉ từ docs/districts.md khu 12 ("Nhà ở tầng 4.")
+# + MapInfos[12] unlock ("Chương 4 — 3 quest giúp người + ≥1 quan hệ thân thiết.")
+# — không bịa giá/lương.
+_atlas12 = json.loads(read(NADIA_DATA / "atlas-map012.json"))
+_ok_m12, _d_m12 = _map_data_ok("Map012", _atlas12)
+check("T36a", "Map012: lưới 12×9, data 648, layer0 108/108, layer1 28/108, mã khớp mapping, event không bị tường đè",
+      _ok_m12, _d_m12)
+check("T36b", "atlas-map012.json: scheme atlas-code + TÁI DÙNG atlas-map001.png + tile 1-5 cùng tên atlas-map001",
+      _atlas12.get("scheme") == "atlas-code"
+      and _atlas12.get("atlasPng") == "img/tilesets/atlas-map001.png"
+      and {k: v["name"] for k, v in _atlas12["tiles"].items()}
+      == {k: v["name"] for k, v in _atlas1d["tiles"].items()})
+check("T36c", "PXB_Isometric: đăng ký map 12 + loadAtlasBitmap tôn trọng mapping.atlasPng",
+      'if (mapId === 12) return "Map012"' in _iso_js
+      and "mapping.atlasPng" in _iso_js
+      and "mapping && mapping.atlasPng" in _iso_js)
+_map012_raw = read(NADIA_DATA / "Map012.json")
+_map012 = json.loads(_map012_raw)
+_transfer_m12_ok = any(
+    c.get("code") == 201 and list(c.get("parameters", [])) == [0, 11, 5, 4, 0, 0]
+    for e in _map012.get("events", []) if e
+    for p in e.get("pages", []) for c in p.get("list", []))
+_map011_now = json.loads(read(NADIA_DATA / "Map011.json"))
+_door_m11_m12_ok = any(
+    e and e.get("x") == 5 and e.get("y") == 8
+    and any(c.get("code") == 201 and list(c.get("parameters", [])) == [0, 12, 5, 4, 0, 0]
+            for p in e.get("pages", []) for c in p.get("list", []))
+    for e in _map011_now.get("events", []))
+check("T36d", "Map012: không hotspot mới + transfer duy nhất về Map011 (5,4) + Map011 có cửa (5,8) đi Map012 + khối biệt thự ven sông ghi PROVISIONAL + NPC đúng khu 12",
+      "hs-" not in _map012_raw and _transfer_m12_ok and _door_m11_m12_ok
+      and "PROVISIONAL" in _map012_raw and "PROVISIONAL" in read(NADIA_DATA / "atlas-map012.json")
+      and "Bảo Vệ Biệt Thự" in _map012_raw and "Người Làm Vườn" in _map012_raw
+      and "nhà ở tầng 4" in _map012_raw.lower()
+      and "chương 4" in _map012_raw.lower() and "3 quest giúp người" in _map012_raw.lower()
+      and "quan hệ thân thiết" in _map012_raw.lower())
+_mb_v36_ok = True
+try:
+    _r = subprocess.run(["node", "--check", str(NADIA_PLUGINS / "PXB_Isometric.js")],
+                        capture_output=True, text=True, timeout=30)
+    _mb_v36_ok = _r.returncode == 0
+except Exception:  # noqa: BLE001
+    _mb_v36_ok = False
+check("T36e", "Map012: node --check PXB_Isometric.js sau sửa đăng ký map 12 + UTF-8",
+      _mb_v36_ok and _iso_js == read(NADIA_PLUGINS / "PXB_Isometric.js"))
+
 # ---- In kết quả ----
 passed = sum(1 for _, _, ok, _ in results if ok)
 failed = [r for r in results if not r[2]]
@@ -1855,7 +1906,10 @@ print("NPC Lập Trình Viên + Kỹ Sư Phần Mềm, transfer về Map009; Map
 print("cửa (5,8) đi Map010 — đồ thị map 1-2-3-4-5-6-7-8-9-10 đã nối được), Map011")
 print("Phố Tây đã có tile data thật (648/108/28, tái dùng atlas-map001, NPC Nhân")
 print("Viên Lễ Tân + Hướng Dẫn Viên, transfer về Map010; Map010 nay có cửa")
-print("(5,8) đi Map011 — đồ thị map 1-2-3-4-5-6-7-8-9-10-11 đã nối được), nhưng")
+print("(5,8) đi Map011 — đồ thị map 1-2-3-4-5-6-7-8-9-10-11 đã nối được), Map012")
+print("Khu Biệt Thự Ven Sông đã có tile data thật (648/108/28, tái dùng atlas-map001,")
+print("NPC Bảo Vệ Biệt Thự + Người Làm Vườn, transfer về Map011; Map011 nay có cửa")
+print("(5,8) đi Map012 — đồ thị map 1-2-3-4-5-6-7-8-9-10-11-12 đã nối được), nhưng")
 print("PXB_MarketBattle đã viết (Bụi Đời Chợ Cá, smoke stub 80/80 PASS, luật")
 print("chi tiết PROVISIONAL chờ chủ duyệt), nhưng")
 print("chưa mở trình duyệt chơi được thật — cần chạy game MV thật với atlas")
