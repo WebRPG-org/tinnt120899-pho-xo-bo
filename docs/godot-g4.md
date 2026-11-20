@@ -1668,6 +1668,27 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
 - Chưa có auth (player_id tự khai) + chưa giới hạn tốc độ
   chat + chưa lưu lịch sử cho client mới vào (ghi từ §17.5).
 
+### 22.6 Verify byte từ live sau bản sửa wasm — ĐÚNG HẾT (20/11 ~18:30)
+
+- Ráp 293 chunk `wasm/fc74679e/` từ site live (lần 1 thiếu
+  46 chunk do 503 thoáng qua ngay sau 13 lần push liên tiếp
+  — Pages đang rebuild; kiểm lại có retry thì 0 chunk lỗi):
+  **39.514.754 byte, SHA `fc74679e3b97f768` = build local**.
+  (Lần ráp tuần tự bị SIGTERM giữa chừng khi chưa in kết
+  quả — không phải lỗi dữ liệu, đã chạy lại song song 16
+  luồng, 293/293 trong ~30s, khớp SHA.)
+- pck live đã khớp từ trước: 6.880.296 byte, SHA
+  `d9e5dc31…`; `index.html` live SHA `1a63018a…` = staging
+  loader mới vòng 9 (có `pxbShowLoadError`); `versions.json`
+  live: pck `d9e5dc31`, wasm `fc74679e`.
+- **Còn lại — kiểm live bằng cloud browser trên URL thật
+  vẫn CHƯA chạy lại sau bản sửa** (parent làm cửa cuối theo
+  §24.5 + luật AGENTS.md 17:55): tải + nút Bắt đầu bật +
+  vào game + điện thoại + nút chat. Byte đã đúng hết nên lỗi
+  kẹt 15% không còn nguyên nhân ở deploy nữa; nếu cloud
+  browser vẫn kẹt thì nguyên nhân nằm ở mạng/proxy của
+  trình duyệt đó, không phải ở file trên Pages.
+
 ## 23. Việc tiếp theo — G4 bước 8
 
 1. ~~**Deploy gh-pages bản bước 7**~~ — ĐÃ XONG (cron 18:01–18:03
@@ -1794,7 +1815,25 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
   wasm `fc74679e` (293 chunk), pck `d9e5dc31` (51 chunk),
   img đủ 3 ảnh, fileSizes khớp, loader có đủ marker cứng.
 - Deploy gh-pages (thứ tự: chunk wasm versioned trước,
-  `index.html` cuối): [ghi sau khi push xong]
+  `index.html` cuối):
+  - **Song song ngoài ý muốn:** trong lúc vòng 9 đang làm,
+    một worker khác (nhiều khả năng cron 24/24) cũng deploy
+    cùng bản sửa — 13 commit 18:14:29–18:16:36
+    ("Deploy fix live ket tai 15%: wasm fc74679e chunk
+    versioned (01/13)…(13/13)", gh-pages `f21bb195` →
+    `33353ad4`). Lô chunk wasm của vòng 9 (8 lô × 37 file)
+    đều **HTTP 413** (transport MCP nhỏ hơn giới hạn 16MiB
+    của CLI — 37 file × 180KB ≈ 6,7MB vẫn quá lớn; vòng 8
+    dùng 17 file/lô ≈ 3,1MB thì được; worker kia dùng ~23
+    file/lô thì được). **LUẬT MỚI: mỗi lô push ≤ 23 file
+    chunk (~4MB), không bao giờ đẩy 37 file/lô nữa.**
+  - `index.html` (loader cứng) của vòng 9 push thành công
+    sau đó — gh-pages head `8091400c` (18:21:38).
+    Trước mỗi lô đều kiểm tra head gh-pages; không đè commit
+    của writer kia (chunk wasm của họ ráp lại đúng SHA
+    `fc74679e…`, xem §24.5 — cùng nội dung, không xung đột).
+  - Main push trước đó: `60fc7712` (build_gh_pages.py +
+    docs §24 + 2 script artpass9).
 - **PHỐI HỢP VỚI LUỒNG G4 BƯỚC 7 (cron 17:45, ghi 18:20):
   chunk wasm versioned ĐÃ ĐẨY XONG, KHÔNG CẦN ĐẨY LẠI** —
   13 lô × 24 file, head gh-pages `33353ad4…` (lô 1
@@ -1827,8 +1866,41 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
   `a9-03`, `a9-04`), tap-to-move, F đổi khung, P điện
   thoại (ảnh `a9-05…a9-07`). Thời gian bật nút trên máy
   người chơi sẽ nhanh hơn (biên dịch wasm trên CPU VM yếu
-  là nút thắt; loader cũ đo cùng setup là 24,8s).
-- Verify từ site live (curl): [ghi sau khi deploy xong]
+  là nút thắt; loader cũ đo cùng setup là 24,8s; lần đo
+  lại với bản icon-inline là 11,5s).
+- Browser-verify trên file tải TRỰC TIẾP TỪ LIVE
+  (354 file, index.html SHA `1a63018a…` = staging, cổng
+  8167): nút bật sau 15,4s; giữ D + 10 tap D đi được tới
+  cuối TẠP HÓA, biển "TẠP HÓA" hiện trọn không cắt; F đổi
+  khung, P mở điện thoại (ảnh `a9-01…a9-07` ghi đè từ lần
+  chạy này); **ERRORS: 1, FAILED REQUESTS: 1 — đều là
+  `index.png` 404** (icon chưa từng được deploy, xem mục
+  icon bên dưới — đã sửa bằng inline data URI sau đó).
+  Lần chạy verify này bị ngắt giữa chừng do service
+  restart (mất /tmp + module playwright — cài lại bằng
+  `pip install --break-system-packages playwright`,
+  browser chromium-1255 trong cache vẫn còn); chạy lại
+  đầy đủ sau đó và PASS.
+- Verify từ site live (curl): `--check-live` OK sau khi CDN
+  hết cache (lần đầu FAIL chỉ vì index.html live còn bản
+  cũ trong cache 10 phút — sau đó khớp staging); ráp lại
+  toàn bộ chunk từ live: wasm 39.514.754 byte SHA
+  `fc74679e3b97f768…` ✓, pck 6.880.296 byte SHA
+  `d9e5dc318664f96a…` ✓; `versions.json` live khớp staging.
+- **Icon 404 (phát hiện thêm lúc verify):** 3 file icon/
+  splash (`index.png` 21KB, `index.icon.png` 5,7KB,
+  `index.apple-touch-icon.png` 11,9KB) chưa bao giờ có trên
+  gh-pages vì snapshot-push không đẩy được file nhị phân —
+  là console error duy nhất còn lại sau khi sửa kẹt tải.
+  Sửa: `build_gh_pages.py` inline cả 3 dạng data URI vào
+  index.html (86.987 byte, vẫn dưới giới hạn 188.416);
+  `verify()` assert đủ 3 data URI + không còn trỏ file
+  riêng. Sau sửa: tải staging mới nút bật sau 11,5s,
+  **FAILED REQUESTS: 0**; 1 console warning còn lại là
+  "GPU stall due to ReadPixels" của swiftshader (đã biết
+  từ vòng 8, chỉ là cảnh báo hiệu năng, không phải lỗi).
+  Deploy icon-inline: index.html mới (gh-pages head sau
+  push — xem sync record), `--check-live` lại sau đó.
 - Ảnh kiểm chứng: `visual-check/artpass9/` (`a9-01…a9-07`,
   `live-title.png` + script `check_live_load.py`,
   `check_artpass9_verify.py`).
