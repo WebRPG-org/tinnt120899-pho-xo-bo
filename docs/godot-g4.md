@@ -1625,7 +1625,38 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
   trên ảnh trình duyệt tin nằm cuối vùng nội dung cần cuộn
   nên chưa thấy trực tiếp — xem hạn chế dưới.)
 
-### 22.4 Hạn chế còn lại (không chặn)
+### 22.5 KIỂM LIVE THẤT BẠI — nguyên nhân gốc: thiếu thư mục wasm versioned (20/11 ~18:05–18:20)
+
+- Kiểm live bằng cloud browser (18:05–18:12, 3 lần tải, ~7
+  phút): trang chào hiện đúng, nhưng nút "BẮT ĐẦU CHƠI" không
+  bao giờ bật — kẹt "Đang tải chậm — mạng yếu…" , thanh tiến
+  trình thoáng qua 15% rồi mất, 0 console/pageerror quan sát
+  được. Không vào được game nên chưa kiểm được điện thoại/nút
+  chat/F — đúng lỗi live 17:55 đã ghi ở AGENTS.md.
+- **Nguyên nhân gốc (đo được, không phải đoán):** loader
+  versioned (§21.3) tải `wasm/fc74679e/part-*.txt`, nhưng trên
+  gh-pages KHÔNG HỀ CÓ thư mục này — 293 chunk wasm chỉ nằm ở
+  đường dẫn cũ KHÔNG version `wasm/part-*.txt`. Bằng chứng:
+  curl live `wasm/fc74679e/part-050/100/150/200/292` → 404,
+  part-000 → 503; API `get_file_contents` ref gh-pages
+  `wasm/fc74679e/part-050.txt` → isError "file does not
+  exist"; cây gh-pages head `a0ce1a35` (API, 710 entry):
+  wasm chỉ có thư mục `wasm/` (293 file cũ), pck có cả `pck/`
+  cũ + `pck/73ae78df` + `pck/d9e5dc31`, img versioned đủ.
+  Vòng 8 đã SAI khi ghi "wasm KHÔNG push lại (đã có trên
+  gh-pages)" — chỉ đúng với img (img versioned đã push đủ),
+  sai với wasm. Kiểm local staging không phát hiện vì staging
+  trên đĩa CÓ `wasm/fc74679e/` đầy đủ. Bài học: sau mỗi deploy
+  versioned, kiểm tra SỰ TỒN TẠI của từng thư mục version trên
+  remote (qua API tree), không suy từ "đã có từ trước".
+- **Sửa:** đẩy đủ `wasm/fc74679e/` (293 chunk) lên gh-pages,
+  13 lô × 24 file (tránh 413 như §21.7), head cuối
+  `33353ad4…` (lô 1 `f21bb195…` … lô 13 `33353ad4…`).
+  Sync record đã ghi đủ 13 lô.
+- **Verify byte từ live (sau sửa):** ráp 293 chunk wasm live
+  → 39.514.754 byte, SHA `fc74679e…` = build local (xem
+  §22.6); pck + index.html + versions.json đã khớp từ trước.
+- Kiểm live lại bằng cloud browser sau khi sửa — xem §22.6.
 
 - Khối chat online nằm CUỐI nội dung tab Tin nhắn (sau danh
   bạ ~38 dòng) — muốn xem tin phải cuộn vùng nội dung; cân
@@ -1639,10 +1670,10 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
 
 ## 23. Việc tiếp theo — G4 bước 8
 
-1. **Deploy gh-pages bản bước 7** (pck `d9e5dc31…`, theo
-   scheme versioned §21.3: push chunk version mới trước,
-   `index.html` cuối cùng; kiểm tra head gh-pages trước mỗi
-   lô để không đè deploy artpass8 nếu còn đang chạy).
+1. ~~**Deploy gh-pages bản bước 7**~~ — ĐÃ XONG (cron 18:01–18:03
+   20/11, gh-pages `a0ce1a35`, pck `d9e5dc31…`). NHƯNG deploy
+   này lặp lại đúng lỗi vòng 9 (§24): không push chunk wasm
+   versioned nên live vẫn kẹt tải cho tới khi vòng 9 deploy bù.
 2. Quyền lợi giữ sạp áp vào Economy (`hold_benefits` đã có,
    Main chưa gọi); animation di chuyển/đánh trận; chọn đội/vũ
    khí trước trận; `can_challenge` ở demo.
@@ -1654,3 +1685,153 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
    giới hạn tốc độ chat, lịch sử cho client mới vào.
 5. Dọn thư mục version pck/wasm cũ trên gh-pages định kỳ
    (mỗi deploy thêm ~7MB).
+
+## 24. Vòng sửa 9 — kẹt tải 15% trên live, gốc ở deploy (20/11 ~18:10–19:30)
+
+### 24.1 Kiểm live — game không vào được
+
+- Live check (browser-task c5ef5035, 17:55–18:02, 1920×999):
+  3 lần thử đều kẹt ở 15% rồi treo ở "Đang tải chậm — mạng
+  yếu, vẫn đang tải…", nút Bắt đầu không bao giờ bật, chờ
+  >3 phút/lần. Điểm kẹt lặp lại giống hệt ở 15% cả 3 lần
+  (kể cả tab mới `?v=8`) — giống một chunk cụ thể bị treo/
+  lỗi tải, không phải mạng chậm ngẫu nhiên. Các bước sau
+  (di chuyển, cửa Sáng/Chiều/Tối, desktop) không kiểm được.
+- Lưu ý: kiểm live vòng 7 (16:52) game VẪN VÀO ĐƯỢC — lỗi
+  xuất hiện sau deploy art pass 8 (chunk versioned +
+  index.html mới).
+
+### 24.2 Tái hiện + tìm gốc — thư mục wasm versioned chưa từng tồn tại
+
+- curl từ VM: `index.html` live 200 (31.021 byte, SHA
+  `7facd2b1…` = staging artpass8 lúc đó);
+  `wasm/fc74679e/part-000.txt` → **404** (lần đầu 503 thoáng
+  qua, thử lại 404), `part-100/292.txt` → 404; trong khi
+  `pck/73ae78df/part-000/050.txt` → 200,
+  `img/title_bg.jpg/260962c1/part-000.txt` → 200.
+  Chunk wasm KHÔNG version cũ (`wasm/part-000/292.txt`) vẫn
+  200 — chỉ thiếu đúng thư mục versioned mới.
+- **Gốc:** vòng 8 đổi sang chunk versioned nhưng chỉ push
+  pck + img + index.html — "wasm `fc74679e` KHÔNG push lại
+  (đã có trên gh-pages)" là SAI: trên gh-pages chỉ có chunk
+  wasm KHÔNG version (`wasm/part-*.txt`), chưa từng có
+  `wasm/fc74679e/`. Docstring của `build_gh_pages.py` đã ghi
+  "wasm chỉ thêm khi wasm đổi" nhưng khi SCHEME đổi thì thư
+  mục version mới vẫn phải push dù nội dung không đổi.
+  Deploy G4 bước 7 (cron, 18:01–18:03, gh-pages `a0ce1a35`,
+  pck `d9e5dc31…`) lặp lại đúng lỗi này — `wasm/fc74679e/`
+  vẫn 404 sau deploy đó.
+- **Cơ chế kẹt 15% (đã chứng minh bằng repro, xem §24.3):**
+  `engine.startGame` = `Promise.all([init(wasm),
+  preloadFile(pck)])`; pck tải có báo tiến độ → 6,86MB /
+  46,4MB = 14,8% ≈ 15%; wasm fetch qua loader → 404 sau
+  3 lần retry → `assemble` reject → engine nuốt rejection
+  (Godot `instantiateWasm` dùng `WebAssembly.
+  instantiateStreaming(Promise.resolve(r))` không có catch
+  nên promise init không bao giờ settle) → `startGame`
+  không resolve/reject → `displayFailureNotice` không chạy,
+  tiến độ đứng yên, watchdog chỉ đổi nhãn thành "Đang tải
+  chậm". Đây là lỗi TREO IM, không phải lỗi mạng.
+- Chromium local KHÔNG mở được URL live thật
+  (`ERR_TUNNEL_CONNECTION_FAILED` — proxy VM chặn github.io
+  với Chromium, kể cả khi truyền proxy có auth; curl thì
+  được 200). Từ nay verify live-URL bằng Chromium local là
+  KHÔNG KHẢ THI trên VM này — dùng curl byte-verify +
+  Chromium trên bản sao byte-identical + kiểm live bằng
+  cloud browser của parent làm cửa cuối.
+
+### 24.3 Repro — mô phỏng đúng trạng thái live, trước và sau sửa
+
+- Script `visual-check/artpass9/check_live_load.py` (poll
+  nút + tiến độ 5s/lần, ghi console/network) và
+  `check_artpass9_verify.py` (verify đầy đủ: nút bật, giữ
+  D, tap D, tap-to-move, F, P).
+- Mô phỏng live: copy staging sang `/tmp/live-sim`, xóa
+  `wasm/fc74679e/`, phục vụ cổng 8163. **Trước sửa:**
+  879 failed request (293 chunk × 3 lần retry, toàn 404),
+  nút kẹt "Đang tải chậm — mạng yếu, vẫn đang tải…" sau
+  45s, không có báo lỗi nào (ảnh `live-title.png` lúc đầu
+  — chụp lại sau sửa, xem dưới). **Sau sửa (loader cứng):**
+  chỉ 48 failed request (16 worker × 3 lần), ngay t+15s
+  nút đã bật với nhãn "⚠ Không tải được game — bấm để tải
+  lại", notice ghi đúng "Không tải được index.wasm: HTTP
+  404 wasm/fc74679e/part-002.txt — hãy kiểm tra mạng rồi
+  bấm để tải lại trang."; tiến độ dừng ở 6880296/46395050
+  (= 14,8%, pck đã tải xong) — cùng điểm 15% nhưng giờ có
+  lỗi thật + nút thử lại thay vì treo im.
+
+### 24.4 Sửa gốc — loader cứng + deploy bù chunk wasm
+
+- `tools/godot/build_gh_pages.py` — loader mới (vòng 9):
+  - `fetchChunk`: timeout thật mỗi lần thử
+    (AbortController 30s) — fetch treo vĩnh viễn trước đây
+    không bao giờ reject nên retry không chạy.
+  - `assemble`: tải giới hạn song song 16 chunk/lần thay
+    vì `Promise.all` 293 fetch cùng lúc (tránh nghẹt kết
+    nối qua proxy/CDN; A/B trên cùng server local: loader
+    cũ 24,8s vs loader mới 27,0s tới lúc nút bật — chênh
+    ~2s trong nhiễu, nút thắt là biên dịch wasm trên CPU
+    VM yếu, không phải giới hạn song song).
+  - `pxbShowLoadError(msg)`: loader TỰ hiện lỗi (không đợi
+    engine) — notice ghi tên file lỗi + nút Bắt đầu bật lại
+    với nhãn "⚠ Không tải được game — bấm để tải lại",
+    bấm thì tải lại trang; áp lại sau 500ms để không bị
+    handler lỗi riêng của engine đè mất.
+  - Watchdog tổng 120s: sau 120s mà nút vẫn chưa bật và
+    chưa có lỗi nào hiện thì báo lỗi thật thay vì treo mãi
+    ở "đang tải chậm". Ảnh lỗi không chặn game (chỉ warn,
+    DOM dùng fallback gradient).
+  - `verify()` assert thêm 5 marker cứng vòng 9
+    (`pxbShowLoadError`, `AbortController`,
+    `CHUNK_TIMEOUT_MS`, `CHUNK_CONCURRENCY`, `120000`).
+  - Thêm `--check-live`: GET `versions.json` + part-000
+    của wasm/pck/từng ảnh trên site live + so index.html
+    live với staging — chạy trước khi tuyên bố deploy xong.
+  - Docstring: ghi bài học vòng 9 + checklist deploy —
+    khi index.html đổi sang đường dẫn version MỚI thì thư
+    mục version đó PHẢI ĐƯỢC PUSH dù nội dung không đổi.
+- Staging build lại: `build_gh_pages.py` VERIFY OK —
+  wasm `fc74679e` (293 chunk), pck `d9e5dc31` (51 chunk),
+  img đủ 3 ảnh, fileSizes khớp, loader có đủ marker cứng.
+- Deploy gh-pages (thứ tự: chunk wasm versioned trước,
+  `index.html` cuối): [ghi sau khi push xong]
+- **PHỐI HỢP VỚI LUỒNG G4 BƯỚC 7 (cron 17:45, ghi 18:20):
+  chunk wasm versioned ĐÃ ĐẨY XONG, KHÔNG CẦN ĐẨY LẠI** —
+  13 lô × 24 file, head gh-pages `33353ad4…` (lô 1
+  `f21bb195…`, lô 13 `33353ad4…`), sync record đã ghi đủ 13
+  lô; byte-verify live đang chạy (ráp 293 chunk → SHA
+  `fc74679e…`, xem §22.6). Vòng 9 chỉ cần đẩy `index.html`
+  loader mới (staging đã build lại, VERIFY OK) — đừng đẩy
+  lại 293 chunk wasm, đừng rebuild staging đè lên nhau.
+
+### 24.5 Verify vòng 9
+
+- Regression Godot (đường `-s`, `--check-only` treo theo
+  §21.6), 0 FAIL: G1 selftest 419/419, G1 playtest 14/14,
+  G2 selftest 87/87, hotspot 37/37, phonehub 66/66, jobs
+  56/56, economy+education 92/92, inventory+crafting
+  78/78, social+titles+story 102/102, tools 155/155,
+  online 91/91, savecloud 69/69, UI wiring 37/37, UI
+  wiring2 71/71, MarketBattle 123/123, G3 playtest 95/95,
+  artpass 60/60, artpass3 24/24, artpass4 19/19, artpass5
+  17/17, artpass7 25/25, artpass8 18/18, battle scene
+  43/43, battle AI 34/34, battle main 15/15, battle save
+  31/31, coord WASD 16/16, polish 18/18, online server
+  37/37, online WS client 49/49, v6 overlay 16/16.
+  (Không đổi code GDScript — chỉ đổi loader JS + docs —
+  nhưng vẫn chạy đủ regression theo luật vòng sửa.)
+- Browser-verify staging mới (Chromium local, 1920×1000,
+  cổng 8164): nút BẮT ĐẦU bật sau 29,4s (lần đầu, gồm biên
+  dịch wasm trên CPU VM), **ERRORS: 0, FAILED REQUESTS: 0**;
+  giữ D 3s + 10 tap D đi được tới cuối TẠP HÓA (ảnh
+  `a9-03`, `a9-04`), tap-to-move, F đổi khung, P điện
+  thoại (ảnh `a9-05…a9-07`). Thời gian bật nút trên máy
+  người chơi sẽ nhanh hơn (biên dịch wasm trên CPU VM yếu
+  là nút thắt; loader cũ đo cùng setup là 24,8s).
+- Verify từ site live (curl): [ghi sau khi deploy xong]
+- Ảnh kiểm chứng: `visual-check/artpass9/` (`a9-01…a9-07`,
+  `live-title.png` + script `check_live_load.py`,
+  `check_artpass9_verify.py`).
+- Caveat cho parent: **chưa kiểm live bằng cloud browser
+  trên URL thật** (Chromium local không mở được github.io)
+  — parent cần chạy kiểm live cuối trước khi báo user.

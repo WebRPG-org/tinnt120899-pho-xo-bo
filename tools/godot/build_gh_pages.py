@@ -23,6 +23,24 @@ them khi wasm doi) — thu muc cu mo coi tren gh-pages, don dinh ky.
 THU TU DEPLOY: push het chunk version moi truoc, verify, roi moi
 push index.html cuoi cung.
 
+Vong 9 (20/11 ~18:15) — KET TAI 15% TREN LIVE, GOC O DEPLOY:
+kiem live 17:55–18:02: game ket o 15% >3 phut, nut "Dang tai
+cham" khong bao gio bat. Goc: thu muc wasm/fc74679e/ CHUA BAO
+GIO duoc push len gh-pages — vong 8 doi sang chunk versioned
+nhung chi push pck + img + index.html ("wasm khong push lai
+(da co tren gh-pages)" — SAI: tren gh-pages chi co chunk CU
+khong version wasm/part-*.txt, chua tung co wasm/fc74679e/).
+Deploy G4 buoc 7 (18:03) lap lai dung loi do. He qua: moi
+chunk wasm 404 → engine nuot rejection → onProgress dung o
+15% (= pck 6,86MB / tong 46,4MB) → watchdog chi doi nhan
+thanh "Dang tai cham". SUA LOADER (vong 9): timeout that
+30s/chunk (AbortController), tai gioi han 16 song song,
+loader TU hien loi that + nut tai lai (khong doi engine),
+watchdog tong 120s. LUU Y DEPLOY (khong tai pham): khi
+index.html doi sang duong dan version MOI thi THU MUC
+VERSION DO PHAI DUOC PUSH — du noi dung khong doi; chay
+`--check-live` truoc khi tuyen bo deploy xong.
+
 Chạy từ repo root:
     python3 tools/godot/build_gh_pages.py [--verify-only]
 
@@ -58,6 +76,53 @@ const WASM_PARTS = [{wasm_parts}];
 const PCK_PARTS = [{pck_parts}];
 const IMG_PARTS = {img_parts_json};
 const IMG_TYPES = {{"title_bg.jpg": "image/jpeg", "char_player.png": "image/png", "char_banthan.png": "image/png"}};
+const CHUNK_TIMEOUT_MS = 30000;
+const CHUNK_CONCURRENCY = 16;
+let pxbLoadFailed = false;
+// Vong 9 — HIEN LOI TAI THAT len man hinh (20/11 17:55: game ket
+// 15% >3 phut, nut khong bao gio bat, khong co bao loi). Goc:
+// thu muc wasm/fc74679e/ chua bao gio duoc push len gh-pages
+// (vong 8 doi sang chunk versioned nhung chi push pck + img +
+// index.html) nen moi chunk wasm 404; engine Godot nuot rejection
+// cua fetch wasm (instantiateStreaming khong co catch — promise
+// init khong bao gio settle) nen displayFailureNotice khong chay,
+// onProgress dung yen o 15% (= pck 6,86MB / tong 46,4MB). SUA:
+// loader TU HIEN LOI (khong doi engine), kem ten file loi + nut
+// tai lai trang. Anh loi thi khong chan game (chi warn).
+function pxbShowLoadError(msg) {{
+  pxbLoadFailed = true;
+  console.error('[pxb-loader] LOAD FAILED:', msg);
+  const apply = () => {{
+    try {{
+      const btn = document.getElementById('start-btn');
+      const notice = document.getElementById('status-notice');
+      const prog = document.getElementById('status-progress');
+      const overlay = document.getElementById('status');
+      if (overlay) overlay.style.visibility = 'visible';
+      if (prog) prog.style.display = 'none';
+      if (notice) {{ notice.style.display = 'block'; notice.textContent = msg; }}
+      if (btn) {{
+        btn.disabled = false;
+        btn.textContent = '⚠ Không tải được game — bấm để tải lại';
+        btn.onclick = () => window.location.reload();
+      }}
+    }} catch (e) {{ console.error('[pxb-loader] khong hien duoc loi:', e); }}
+  }};
+  apply();
+  setTimeout(apply, 500);  // ap lai sau khi engine (neu co) hien loi rieng.
+}}
+// Vong 9 — watchdog tong: sau 120s ma nut van chua bat (engine
+// chua resolve — fetch treo hoac bien dich ket) thi bao loi that
+// thay vi treo mai o "dang tai cham". Bo qua neu engine da hien
+// loi rieng (status-notice dang co chu).
+setTimeout(() => {{
+  if (pxbLoadFailed) return;
+  const btn = document.getElementById('start-btn');
+  const notice = document.getElementById('status-notice');
+  if (btn && btn.disabled && !(notice && notice.style.display !== 'none' && notice.textContent.trim())) {{
+    pxbShowLoadError('Tải game quá lâu (>120 giây) mà chưa xong — có thể mạng yếu hoặc một file tải lỗi. Hãy kiểm tra mạng rồi bấm để tải lại trang.');
+  }}
+}}, 120000);
 async function fetchChunk(u) {{
   // Vong 7: chunk fetch co retry — truoc day 1 chunk loi (404 luc
   // Pages dang rebuild / mang chap chon) la ca wasm/pck/anh chet,
@@ -65,30 +130,48 @@ async function fetchChunk(u) {{
   // Vong 8: chunk nam trong thu muc version theo sha8 cua noi dung
   // (wasm/<sha8>/part-*.txt...) — URL doi theo noi dung nen CDN
   // khong bao gio tra chunk cu tron voi chunk moi nua.
+  // Vong 9: them timeout that moi lan thu (AbortController 30s)
+  // — fetch treo vinh vien (mang chap chon) truoc day khong bao
+  // gio reject nen retry khong chay va game ket mai.
   let lastErr = null;
   for (let attempt = 0; attempt < 3; attempt++) {{
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), CHUNK_TIMEOUT_MS);
     try {{
-      const r = await fetch(u);
+      const r = await fetch(u, {{ signal: ctrl.signal }});
       if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + u);
       const t = await r.text();
       if (!t || !t.trim()) throw new Error('empty chunk ' + u);
       return t;
     }} catch (e) {{
-      lastErr = e;
-      console.warn('[pxb-loader] chunk loi, thu lai ' + (attempt + 1) + '/3:', u, e.message);
+      lastErr = (e && e.name === 'AbortError')
+        ? new Error('timeout ' + CHUNK_TIMEOUT_MS + 'ms ' + u) : e;
+      console.warn('[pxb-loader] chunk loi, thu lai ' + (attempt + 1) + '/3:', u, lastErr.message);
       await new Promise((res) => setTimeout(res, 400 * (attempt + 1)));
+    }} finally {{
+      clearTimeout(timer);
     }}
   }}
   throw lastErr;
 }}
 async function assemble(parts) {{
-  const bufs = await Promise.all(parts.map(async (u) => {{
-    const t = await fetchChunk(u);
-    const bin = atob(t.trim());
-    const b = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
-    return b;
-  }}));
+  // Vong 9: tai gioi han song song (16 chunk/lan) thay vi
+  // Promise.all 293 fetch cung luc — tranh nghet ket noi qua
+  // proxy/CDN va de timeout moi chunk co y nghia.
+  const bufs = new Array(parts.length);
+  let next = 0;
+  async function worker() {{
+    while (true) {{
+      const i = next++;
+      if (i >= parts.length) return;
+      const t = await fetchChunk(parts[i]);
+      const bin = atob(t.trim());
+      const b = new Uint8Array(bin.length);
+      for (let j = 0; j < bin.length; j++) b[j] = bin.charCodeAt(j);
+      bufs[i] = b;
+    }}
+  }}
+  await Promise.all(Array.from({{ length: Math.min(CHUNK_CONCURRENCY, parts.length) }}, () => worker()));
   let total = 0; bufs.forEach((b) => {{ total += b.length; }});
   const out = new Uint8Array(total); let o = 0;
   for (const b of bufs) {{ out.set(b, o); o += b.length; }}
@@ -101,11 +184,22 @@ window.fetch = function (input, init) {{
   const name = url.split('/').pop().split('?')[0];
   if (name === 'index.wasm' || name === 'index.pck') {{
     const parts = name === 'index.wasm' ? WASM_PARTS : PCK_PARTS;
-    if (!EMBEDDED[name]) EMBEDDED[name] = assemble(parts);
+    if (!EMBEDDED[name]) {{
+      EMBEDDED[name] = assemble(parts);
+      // Vong 9: bao loi NGAY khi rap that bai — khong doi engine
+      // (no nuot rejection cua fetch wasm, xem pxbShowLoadError).
+      EMBEDDED[name].catch((e) => {{
+        if (!pxbLoadFailed) pxbShowLoadError('Không tải được ' + name + ': ' + (e && e.message ? e.message : e) + ' — hãy kiểm tra mạng rồi bấm để tải lại trang.');
+      }});
+    }}
     return EMBEDDED[name].then((bytes) => new Response(bytes, {{ headers: {{ 'Content-Type': name === 'index.wasm' ? 'application/wasm' : 'application/octet-stream' }} }}));
   }}
   if (name in IMG_PARTS) {{
-    if (!EMBEDDED[name]) EMBEDDED[name] = assemble(IMG_PARTS[name]);
+    if (!EMBEDDED[name]) {{
+      EMBEDDED[name] = assemble(IMG_PARTS[name]);
+      // Anh loi thi khong chan game — chi warn, DOM dung fallback.
+      EMBEDDED[name].catch((e) => {{ console.warn('[pxb-loader] khong tai duoc anh:', name, e && e.message); }});
+    }}
     return EMBEDDED[name].then((bytes) => new Response(bytes, {{ headers: {{ 'Content-Type': IMG_TYPES[name] }} }}));
   }}
   return _fetch(input, init);
@@ -253,10 +347,73 @@ def verify() -> bool:
         bool(_re.search(r"pck/[0-9a-f]{8}/part-000\.txt", html))
     print("loader dung chunk theo version:", has_ver)
     ok = ok and has_ver
+    # Vong 9 — loader cung: timeout + hien loi that + watchdog tong.
+    for marker in ("pxbShowLoadError", "AbortController", "CHUNK_TIMEOUT_MS",
+                   "CHUNK_CONCURRENCY", "120000"):
+        has = marker in html
+        print(f"loader cung vong 9 [{marker}]:", has)
+        ok = ok and has
+    return ok
+
+
+def check_live() -> bool:
+    """Kiem tra site live co du moi thu muc chunk version ma
+    index.html staging tro toi khong (vong 9: wasm/fc74679e/ thieu
+    tren gh-pages ma khong ai biet cho toi khi kiem live). Chi doc
+    (GET versions.json + part-000 moi asset + index.html), khong
+    push gi. Tra ve True neu tat ca 200 va index.html live khop
+    staging."""
+    import json as _json
+    import urllib.request
+    base = "https://tinnt120899.github.io/pho-xo-bo/"
+    ok = True
+
+    def get(url: str):
+        req = urllib.request.Request(url, headers={"User-Agent": "pxb-check-live"})
+        with urllib.request.urlopen(req, timeout=25) as r:
+            return r.status, r.read()
+
+    try:
+        _s, raw = get(base + "versions.json")
+        vers = _json.loads(raw)
+        print("live versions.json:", vers)
+    except Exception as e:
+        print("live versions.json LOI:", e)
+        return False
+    for kind in ("wasm", "pck"):
+        ver = vers.get(kind)
+        try:
+            s, _b = get(f"{base}{kind}/{ver}/part-000.txt")
+            print(f"live {kind}/{ver}/part-000.txt: HTTP {s}")
+            ok = ok and s == 200
+        except Exception as e:
+            print(f"live {kind}/{ver}/part-000.txt LOI:", e)
+            ok = False
+    for name, ver in (vers.get("img") or {}).items():
+        try:
+            s, _b = get(f"{base}img/{name}/{ver}/part-000.txt")
+            print(f"live img/{name}/{ver}/part-000.txt: HTTP {s}")
+            ok = ok and s == 200
+        except Exception as e:
+            print(f"live img/{name}/{ver}/part-000.txt LOI:", e)
+            ok = False
+    try:
+        _s, live_html = get(base + "index.html")
+        staging_html = (STAGING_DIR / "index.html").read_bytes()
+        match = hashlib.sha256(live_html).hexdigest() == hashlib.sha256(staging_html).hexdigest()
+        print("live index.html khop staging:", match)
+        ok = ok and match
+    except Exception as e:
+        print("live index.html LOI:", e)
+        ok = False
     return ok
 
 
 def main() -> int:
+    if "--check-live" in sys.argv:
+        ok = check_live()
+        print("CHECK-LIVE:", "OK" if ok else "FAIL")
+        return 0 if ok else 1
     if "--verify-only" in sys.argv:
         return 0 if verify() else 1
     info = build()
