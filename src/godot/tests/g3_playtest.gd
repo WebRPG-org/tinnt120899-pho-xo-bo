@@ -1,5 +1,5 @@
 extends SceneTree
-## G3 playtest — chay scene Main that headless, mo phong choi that chuoi 1-2-3-4-5-6-7-8-9-10-11-12-13-14:
+## G3 playtest — chay scene Main that headless, mo phong choi that chuoi 1-2-3-4-5-6-7-8-9-10-11-12-13-14-15-16-17-18:
 ##   godot --headless --path src/godot -s res://tests/g3_playtest.gd
 ## Buoc: Map001 -> cua (5,4) sang Map002 -> cua MOI (5,8) sang Map003 (ADDED_DOORS)
 ## -> noi chuyen Anh Ba -> cua (5,8) sang Map004 -> noi chuyen Bac Tai
@@ -10,10 +10,14 @@ extends SceneTree
 ## Map010 -> noi chuyen Lap Trinh Vien -> cua (5,8) sang Map011 -> noi
 ## chuyen Nhan Vien Le Tan -> cua (5,8) sang Map012 -> noi chuyen
 ## Bao Ve Biet Thu -> cua (5,8) sang Map013 -> noi chuyen Nhan Vien
-## Ngan Hang -> cua (5,8) sang Map014 (map cuoi MV) -> noi chuyen
-## Quan Gia Dao -> Map014 KHONG co cua di tiep: o (5,8) khong co event,
-## buoc xuong van di duoc (o trong, lop 1 trong) nhung KHONG chuyen map,
-## van o Map014 -> di nguoc ve Map001 qua cac cua (5,4).
+## Ngan Hang -> cua (5,8) sang Map014 -> noi chuyen Quan Gia Dao
+## -> cua MOI (5,8) sang Map015 (ADDED_DOORS, G3 buoc 5) -> noi chuyen
+## Quan Ly Penthouse -> cua (5,8) sang Map016 -> noi chuyen Nhan Vien
+## San Golf -> cua (5,8) sang Map017 -> noi chuyen Co Ban Banh
+## -> cua (5,8) sang Map018 (map cuoi chuoi) -> noi chuyen Chu Sap Dem
+## -> Map018 KHONG co cua di tiep: o (5,8) khong co event, buoc xuong van
+## di duoc (o trong, lop 1 trong) nhung KHONG chuyen map, van o Map018
+## -> di nguoc ve Map001 qua cac cua (5,4).
 
 var _frame := 0
 var _state := 0
@@ -202,24 +206,84 @@ func _on_frame() -> void:
 				_main._interact(npc12)
 				_check("mo doi thoai Quan Gia Dao", _main.dialogue_open)
 				_main.close_dialogue()
-				# Map014 la map cuoi MV: chi 1 cua ve Map013, khong co cua di tiep.
-				var back_door: Dictionary = _main.iso_map.event_at(Vector2i(5, 4))
-				_check("cua duy nhat Map014 la cua ve Quan Tai Chinh",
-					String(back_door.get("name", "")) == "Cửa về Quận Tài Chính" and int(back_door.get("to_map", 0)) == 13)
-				_check("o (5,8) Map014 khong co event cua", _main.iso_map.event_at(Vector2i(5, 8)).is_empty())
+				# Map014 nay CO cua di tiep (cua MOI (5,8) them o G3 buoc 5).
+				var fwd_door: Dictionary = _main.iso_map.event_at(Vector2i(5, 8))
+				_check("cua moi Map014 la cua di Khu Penthouse",
+					String(fwd_door.get("name", "")) == "Cửa đi Khu Penthouse" and int(fwd_door.get("to_map", 0)) == 15)
 				_main.player.place(_main.iso_map, Vector2i(5, 7))
 				_step_down_into_door()
 				_state = 14
 		14:
 			if not _main.player._moving:
-				_check("buoc vao (5,8) Map014 khong co cua: van o Map014",
-					_main.current_map_id == 14)
-				_check("player da buoc xuong (5,8)", _main.player.tile == Vector2i(5, 8))
-				_main._transfer(13)
+				_check("cua MOI (5,8) Map014 -> sang Map015", _main.current_map_id == 15)
+				_check("spawn o cua Map015 (5,4)", _main.player.tile == Vector2i(5, 4))
+				var npc13: Dictionary = _main.iso_map.event_at(Vector2i(3, 3))
+				_check("NPC Quan Ly Penthouse o (3,3)", String(npc13.get("name", "")) == "Quản Lý Penthouse")
+				_main._interact(npc13)
+				_check("mo doi thoai Quan Ly Penthouse", _main.dialogue_open)
+				_main.close_dialogue()
+				_main.player.place(_main.iso_map, Vector2i(5, 7))
+				_step_down_into_door()
 				_state = 15
 		15:
+			if not _main.player._moving:
+				_check("cua (5,8) Map015 -> sang Map016", _main.current_map_id == 16)
+				_check("spawn o cua Map016 (5,4)", _main.player.tile == Vector2i(5, 4))
+				var npc14: Dictionary = _main.iso_map.event_at(Vector2i(3, 3))
+				_check("NPC Nhan Vien San Golf o (3,3)", String(npc14.get("name", "")) == "Nhân Viên Sân Golf")
+				_main._interact(npc14)
+				_check("mo doi thoai Nhan Vien San Golf", _main.dialogue_open)
+				_main.close_dialogue()
+				_main.player.place(_main.iso_map, Vector2i(5, 7))
+				_step_down_into_door()
+				_state = 16
+		16:
+			if not _main.player._moving:
+				_check("cua (5,8) Map016 -> sang Map017", _main.current_map_id == 17)
+				_check("spawn o cua Map017 (5,4)", _main.player.tile == Vector2i(5, 4))
+				var npc15: Dictionary = _main.iso_map.event_at(Vector2i(3, 3))
+				_check("NPC Co Ban Banh o (3,3)", String(npc15.get("name", "")) == "Cô Bán Bánh")
+				_main._interact(npc15)
+				_check("mo doi thoai Co Ban Banh", _main.dialogue_open)
+				_main.close_dialogue()
+				_main.player.place(_main.iso_map, Vector2i(5, 7))
+				_step_down_into_door()
+				_state = 17
+		17:
+			if not _main.player._moving:
+				_check("cua (5,8) Map017 -> sang Map018", _main.current_map_id == 18)
+				_check("spawn o cua Map018 (5,4)", _main.player.tile == Vector2i(5, 4))
+				var npc16: Dictionary = _main.iso_map.event_at(Vector2i(3, 3))
+				_check("NPC Chu Sap Dem o (3,3)", String(npc16.get("name", "")) == "Chủ Sạp Đêm")
+				_main._interact(npc16)
+				_check("mo doi thoai Chu Sap Dem", _main.dialogue_open)
+				_main.close_dialogue()
+				# Map018 la map cuoi chuoi: chi 1 cua ve Map017, khong co cua di tiep.
+				var back_door: Dictionary = _main.iso_map.event_at(Vector2i(5, 4))
+				_check("cua duy nhat Map018 la cua ve Cong Vien An Bình",
+					String(back_door.get("name", "")) == "Cửa về Công Viên An Bình" and int(back_door.get("to_map", 0)) == 17)
+				_check("o (5,8) Map018 khong co event cua", _main.iso_map.event_at(Vector2i(5, 8)).is_empty())
+				_main.player.place(_main.iso_map, Vector2i(5, 7))
+				_step_down_into_door()
+				_state = 18
+		18:
+			if not _main.player._moving:
+				_check("buoc vao (5,8) Map018 khong co cua: van o Map018",
+					_main.current_map_id == 18)
+				_check("player da buoc xuong (5,8)", _main.player.tile == Vector2i(5, 8))
+				_main._transfer(17)
+				_state = 19
+		19:
+			_check("di nguoc ve Map017", _main.current_map_id == 17)
+			_check("spawn o cua Map017 (5,4)", _main.player.tile == Vector2i(5, 4))
+			_main._transfer(16)
+			_check("di nguoc ve Map016", _main.current_map_id == 16)
+			_main._transfer(15)
+			_check("di nguoc ve Map015", _main.current_map_id == 15)
+			_main._transfer(14)
+			_check("di nguoc ve Map014", _main.current_map_id == 14)
+			_main._transfer(13)
 			_check("di nguoc ve Map013", _main.current_map_id == 13)
-			_check("spawn o cua Map013 (5,4)", _main.player.tile == Vector2i(5, 4))
 			_main._transfer(12)
 			_check("di nguoc ve Map012", _main.current_map_id == 12)
 			_main._transfer(11)
@@ -231,8 +295,8 @@ func _on_frame() -> void:
 			_main._transfer(8)
 			_check("di nguoc ve Map008", _main.current_map_id == 8)
 			_main._transfer(7)
-			_state = 16
-		16:
+			_state = 20
+		20:
 			_check("di nguoc ve Map007", _main.current_map_id == 7)
 			_check("spawn o cua Map007 (5,4)", _main.player.tile == Vector2i(5, 4))
 			_main._transfer(6)
@@ -250,7 +314,7 @@ func _on_frame() -> void:
 				_main.player.tile == Vector2i(5, 4))
 			_main._transfer(1)
 			_check("di nguoc ve Map001", _main.current_map_id == 1)
-			_state = 17
-		17:
+			_state = 21
+		21:
 			print("G3 PLAYTEST: %d/%d PASS" % [_pass, _pass + _fail])
 			quit(0 if _fail == 0 else 1)

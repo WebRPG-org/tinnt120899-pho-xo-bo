@@ -23,6 +23,17 @@
 > 8152). **Chưa kiểm chứng bằng trình duyệt thật.** Còn lại G3:
 > Map015–018 (viết mới theo `docs/districts.md`).
 
+> **Cập nhật bước 5 (20/11 ~08:45): G3 XONG — ĐỦ 18 KHU (mức headless).**
+> Map015 Khu Penthouse + Map016 Khu Sân Golf & Resort + Map017 Công Viên
+> An Bình + Map018 Phố Đi Bộ – Chợ Đêm đã VIẾT MỚI (hết data MV) theo
+> `docs/districts.md` — chuỗi 1→2→…→18 thông 2 chiều, NPC đối thoại được,
+> Map018 là map cuối chuỗi (chỉ 1 cửa về). G1 selftest **419/419 PASS**,
+> G3 playtest mở rộng **95/95 PASS**, toàn bộ test G2 cũ vẫn PASS (không
+> regression), scene 120 frame exit 0, export web exit 0 (~6s, pck
+> 1.288.892 byte), http.server 200 đủ 6 file (cổng 8153). **Chưa kiểm
+> chứng bằng trình duyệt thật.** Còn lại G3: KHÔNG — chuyển sang G4
+> (online + release) hoặc scene trận MarketBattle (UI).
+
 ## 1. Port dữ liệu — `tools/godot/convert_maps.py` mở rộng
 
 | Nguồn MV (không sửa) | Đích Godot |
@@ -305,3 +316,79 @@ vẫn ở Map014. Chạy lại: G3 playtest **74/74 PASS**.
 | Scene Main chạy 120 frame | exit 0, không ERROR/warning |
 | Export web | Lần đầu FAIL ("Target folder does not exist": `godot-build` chưa có; Godot giải path export tương đối theo project dir, không theo CWD) — tạo thư mục + dùng đường dẫn tuyệt đối thì exit 0, ~8s; `index.wasm` 39,5 MB, `index.pck` 1.269.244 byte (`grep -a` thấy "Khu Biệt Thự Ven Sông" ×3, "Quận Tài Chính" ×6, "Đảo Thượng Lưu" ×4, "Bảo Vệ Biệt Thự"/"Nhân Viên Ngân Hàng"/"Quản Gia Đảo" ×1 trong pck) |
 | HTTP 200 | `index.html/js/wasm/pck/audio.worklet.js/png` đủ 6 file (cổng 8152); `GODOT_THREADS_ENABLED = false` (trong `index.html:115`) |
+
+## 10. G3 bước 5 — Map015–018 viết mới (20/11 ~08:45, G3 XONG — ĐỦ 18 KHU)
+
+### 10.1 Viết mới dữ liệu — `tools/godot/convert_maps.py` thêm `handwritten()`
+
+| Nguồn (viết mới, không có trong MV) | Đích Godot |
+|---|---|
+| `docs/districts.md` (tên + tầng + mở khóa: 15/16 tầng 5, 17/18 khu chung luôn mở) + GDD Chương 5 (nhánh Giám đốc / Học giả / Gia đình / Siêu giàu), sự kiện Chợ Đêm 20:00 thứ 7, Bụi Đời Chợ Cá | `maps.json` Map015–018 (12×9, L0 108 ô + L1 28 ô) |
+| Lớp tile mẫu Map014 (nền 1/2 + vật 3/4/5 vòng biên, atlas-map001) | `layers[0]` + `layers[1]` — L0 biến đổi nhẹ theo map (đổi 1↔2 ở ô `(x + 2*y + map_id) % 7 == 0`); L1 giữ nguyên mẫu |
+| NPC 2/map ở (3,3) + (8,6) như các map 3–14 | `greet` + `hint` **do port viết mới** theo districts.md/GDD (MV không có) |
+| Cửa về (5,4) + cửa đi (5,8); Map018 chỉ cửa về | `to_map` viết tay trong `HANDWRITTEN` (không qua TRANSFER MV) |
+
+NPC mới (2/map, đúng vị trí):
+
+| Map | NPC (ô) | Greet (port viết) | Hint (port viết) |
+|---|---|---|---|
+| 015 Khu Penthouse | Quản Lý Penthouse (3,3), Cư Dân Penthouse (8,6) | Nhà tầng 5, xong Chương 5 theo nhánh Giám đốc / Học giả / Gia đình / Siêu giàu / ở penthouse nhìn xuống cả phố | Nhà tầng 5 chỉ mở khi xong Chương 5 theo nhánh; đi nhanh bằng điện thoại mục Bản đồ |
+| 016 Khu Sân Golf & Resort | Nhân Viên Sân Golf (3,3), Quản Lý Resort (8,6) | Sân golf là chỗ giải trí tầng 5 — đánh golf, gặp gỡ, làm quen / resort phục vụ khách tầng 5 | Muốn quen người tầng 5 thì ra sân golf; làm dịch vụ cao cấp cần ngoại ngữ + giao tiếp + kinh nghiệm |
+| 017 Công Viên An Bình | Cô Bán Bánh (3,3), Ông Lão Tập Thể Dục (8,6) | Công viên ai cũng vào được — gặp gỡ, hẹn hò, đi dạo / tập thể dục, giữ An Yên mới đi xa | Công viên luôn mở — mệt thì ra đây đi dạo, gặp gỡ, ăn bánh cho khuây khỏa |
+| 018 Phố Đi Bộ – Chợ Đêm | Chủ Sạp Đêm (3,3), Người Bán Hàng Rong (8,6) | Chợ đêm mở từ tối, đông nhất 20:00 thứ 7 / bán rong phải biết Bụi Đời Chợ Cá | Chợ đêm đông nhất 20:00 thứ 7 — mở sạp bán đêm; Bụi Đời Chợ Cá = đua doanh thu + phục vụ khách theo mùa |
+
+Map015–018 **không có** hotspot / Góc Chế Tạo (như Map003–014 — đúng
+quy ước port, không bịa thêm).
+
+### 10.2 Khác bước 1–4 — hết data MV, cửa thêm trên Map014
+
+Như bước 1 (không như bước 2–4 đồ thị MV đã thông sẵn): Map014 là map
+cuối MV, chỉ có 1 cửa về Map013, nên phải thêm cửa (5,8) "Cửa đi Khu
+Penthouse" → Map015 (`ADDED_DOORS`, như Map002→Map003 ở bước 1) để chuỗi
+1→…→18 thông 2 chiều. Ô (5,8) trên Map014 trống (lớp 1 = 0, không
+event). Map018 là map cuối chuỗi: chỉ 1 cửa về Map017, không có cửa đi
+tiếp — cơ chế `_transfer()` chặn đích chưa có data vẫn giữ nguyên cho
+tương lai (không còn đích nào chưa port trong 18 khu). Converter có
+assert nội bộ cho map viết tay: L0 đủ 108 ô (chỉ 1/2), L1 đủ 28 ô, ô
+cửa (5,4)/(5,8) + ô NPC (3,3)/(8,6) có L1 = 0.
+
+### 10.3 File mới / đổi đợt này
+
+| File | Nội dung |
+|---|---|
+| `tools/godot/convert_maps.py` (sửa) | `NPC_TEXT` thêm 8 NPC Map015–018; `ADDED_DOORS` thêm Map014→Map015; `HANDWRITTEN` (tên + NPC + tên cửa + đích); `handwritten()` mới (lớp tile mẫu Map014 + biến đổi L0 + assert); `main()` gộp 14 map MV + 4 map viết tay |
+| `src/godot/data/maps.json` (tạo lại) | 18 map: Map001 5 event, Map002 7 event, Map003–017 mỗi map 4 event (2 NPC + 2 cửa), Map018 3 event (2 NPC + 1 cửa) |
+| `src/godot/tests/g1_selftest.gd` (sửa) | Kỳ vọng 18 map; bảng số event từng map (14: door=2, 15–17: door=2, 18: door=1); đồ thị cửa BFS từ Map001 tới đủ 18 map; mỗi cửa có cửa ngược (không còn ngoại lệ cửa cuối); cửa hợp lệ 1..18 |
+| `src/godot/tests/g3_playtest.gd` (sửa) | Chuỗi mở rộng 1→2→…→18 qua cửa (5,8), nói chuyện Quản Lý Penthouse / Nhân Viên Sân Golf / Cô Bán Bánh / Chủ Sạp Đêm, kiểm tra Map018 không có cửa đi tiếp (ô (5,8) không event, bước xuống vẫn ở Map018), đi ngược về Map001 qua các cửa (5,4) |
+| `docs/godot-g3.md` (sửa) | §10 này + khối cập nhật bước 5 ở đầu file |
+
+### 10.4 Verify thật đợt này (20/11 ~08:45)
+
+| Kiểm tra | Kết quả |
+|---|---|
+| Converter chạy lại | Map001–018: L0=108, L1=28, event đúng số lượng từng map |
+| `--check-only` 2 test mới | PASS, exit 0 |
+| G1 selftest | **419/419 PASS** (từ 327/327: thêm ~92 mục cho 4 map mới + đồ thị) |
+| G3 playtest mở rộng | **95/95 PASS** (chạy đầu đã pass hết — không lộ lỗi spawn, vì `break` lấy cửa đầu đã sửa ở bước 1) |
+| G1 playtest | **14/14 PASS** (không regression) |
+| G2 selftest cũ (Balance/Stats/Time) | **87/87 PASS** |
+| G2 Jobs / Hotspot / Inventory+Crafting / Economy+Education / Social+Titles+Story / PhoneHub / Tools / Online / SaveCloud / UI wiring 1+2 / MarketBattle | **56/56 + 37/37 + 78/78 + 92/92 + 102/102 + 66/66 + 155/155 + 91/91 + 69/69 + 37/37 + 71/71 + 123/123 PASS** (không regression) |
+| Scene Main chạy 120 frame | exit 0, không ERROR/warning |
+| Export web | exit 0, ~6s; `index.wasm` 39,5 MB, `index.pck` 1.288.892 byte (`grep -a` thấy "Khu Penthouse" ×2, "Khu Sân Golf & Resort" ×3, "Công Viên An Bình" ×3, "Phố Đi Bộ – Chợ Đêm" ×2, "Quản Lý Penthouse"/"Chủ Sạp Đêm"/"Cửa đi Khu Penthouse" ×1 trong pck) |
+| HTTP 200 | `index.html/js/wasm/pck/audio.worklet.js/png` đủ 6 file (cổng 8153); `GODOT_THREADS_ENABLED = false` |
+
+### 10.5 Bước tiếp theo — G3 XONG, chuyển G4 (online + release)
+
+1. Browser-verify G3 (mở build web, đi chuỗi 1→18, xem tile atlas tái
+   dùng có vẽ đúng không — Map003–018 dùng tile nhà trọ làm
+   xưởng/giảng đường/chung cư/văn phòng/cửa hàng/văn phòng công nghệ/
+   phố dịch vụ/biệt thự/ngân hàng/đảo/penthouse/sân golf/công viên/chợ
+   đêm là PROVISIONAL, chờ art pass vẽ tile riêng).
+2. G4: online thật (server .NET đã có trong `src/server/`, PxbOnline
+   hiện chỉ health/balance/gift qua endpoint thật, trade/đấu giá/công
+   ty vẫn server-chưa-có-endpoint) + release (build web mới ở
+   `src/godot-build/`, đã đồng bộ sang `godot-build/` ở root repo làm
+   bản chơi local; `gh-pages-staging/` chứa bản split cũ — kiểm tra lại
+   trước khi deploy gh-pages).
+3. Scene trận MarketBattle (UI): vẽ lưới isometric qua `iso_map.gd`
+   (luật ĐÃ CHỐT 20/11, xem `docs/market-battle-design.md`).

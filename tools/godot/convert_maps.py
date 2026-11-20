@@ -37,6 +37,16 @@ nen ca 3 tai dung atlas-map001.png + tiles cua no, ten map lay tu
 MapInfos.json. Do thi MV 11-12-13-14 da thong 2 chieu san. Map014
 la map cuoi MV: chi co 1 cua (ve Map013), khong co cua di tiep nen
 khong co truong hop cua bi chan o cuoi chuoi.
+G3 buoc 5 (20/11): viet moi Map015 Khu Penthouse, Map016 Khu San Golf
+& Resort, Map017 Cong Vien An Binh, Map018 Pho Di Bo – Cho Dem (het
+data MV — khong co Map015-018.json trong src/nadia/www/data). Ten +
+mo ta theo docs/districts.md (tang 5: 15/16; khu chung luon mo:
+17/18). Lop tile TAI DUNG mau Map014 (nen 1/2 + vat 3/4/5 o vong
+bien) — PROVISIONAL nhu cac map 3-14 tai dung tile nha tro, cho art
+pass ve tile rieng (penthouse/san golf/cong vien/cho dem). Map014
+them cua (5,8) "Cua di Khu Penthouse" -> Map015 (ADDED_DOORS, nhu
+Map002 -> Map003 o buoc 1) de chuoi 1-...-18 thong 2 chieu; Map018
+la map cuoi chuoi (chi 1 cua ve Map017).
 """
 import json
 import shutil
@@ -209,6 +219,52 @@ NPC_TEXT = {
         "greet": "Đảo Thượng Lưu chỉ mở khi tài sản ≥ ngưỡng siêu giàu. Chương 5 xong, tài sản ≥ 100 tỉ mới được vào đảo này.",
         "hint": "Tài sản ≥ 100 tỉ mới được vào đảo — Chương 5 nhánh Siêu giàu. Tích lũy đủ rồi quay lại, đảo vẫn chờ.",
     },
+    # --- G3 buoc 5 (Map015-018, viet moi): khong co trong MV — greet/hint
+    # do port viet moi, noi dung theo districts.md / GDD (nha tang 5 mo theo
+    # Chuong 5 theo nhanh Giam doc / Hoc gia / Gia dinh / Sieu giau; san
+    # golf + resort giai tri / quan he tang 5; cong vien + cho dem la khu
+    # chung, LUON MO cho moi nguoi choi; cho dem su kien 20:00 thu 7 +
+    # Buoi Doi Cho Ca) — xem docs/godot-g3.md §10. Chua co trong Actors.js / MV.
+    "Quản Lý Penthouse": {
+        "id": "quan-ly-penthouse",
+        "greet": "Penthouse ở tầng cao nhất — nhà ở tầng 5. Muốn ở đây phải xong Chương 5, theo nhánh Giám đốc, Học giả, Gia đình hoặc Siêu giàu.",
+        "hint": "Nhà tầng 5 chỉ mở khi xong Chương 5 theo nhánh của mình. Xong rồi thì mở điện thoại mục Bản đồ đi nhanh tới đây.",
+    },
+    "Cư Dân Penthouse": {
+        "id": "cu-dan-penthouse",
+        "greet": "Ở penthouse thì nhìn xuống cả phố An Bình. Tầng 5 là đỉnh của phố này rồi.",
+        "hint": "Tầng 5 là đỉnh của phố — muốn ở lâu thì giữ quan hệ tốt, Danh vọng cao, nhà cửa gọn gàng.",
+    },
+    "Nhân Viên Sân Golf": {
+        "id": "nhan-vien-san-golf",
+        "greet": "Sân golf này là chỗ giải trí của tầng 5 — đánh golf, gặp gỡ, làm quen với người cùng tầng.",
+        "hint": "Muốn quen người tầng 5 thì ra sân golf gặp gỡ, chơi một trận rồi trò chuyện — quan hệ mở từ đây.",
+    },
+    "Quản Lý Resort": {
+        "id": "quan-ly-resort",
+        "greet": "Resort này phục vụ khách tầng 5 — nghỉ dưỡng, hội họp, tiệc tùng. Muốn làm ở đây phải có kinh nghiệm dịch vụ cao cấp.",
+        "hint": "Resort mở cho khách tầng 5 — làm dịch vụ cao cấp ở đây cần ngoại ngữ, giao tiếp tốt và kinh nghiệm.",
+    },
+    "Cô Bán Bánh": {
+        "id": "co-ban-banh",
+        "greet": "Công viên này ai cũng vào được — gặp gỡ, hẹn hò, đi dạo cho khuây khỏa. Bánh cô bán từ sáng tới chiều, ăn cho ấm bụng.",
+        "hint": "Công viên luôn mở cho mọi người — mệt thì ra đây đi dạo, gặp gỡ bạn bè, ăn bánh cho khuây khỏa rồi làm tiếp.",
+    },
+    "Ông Lão Tập Thể Dục": {
+        "id": "ong-lao-tap-the-duc",
+        "greet": "Sáng nào ông cũng ra công viên tập thể dục, hít thở cho khỏe. Phố An Bình này, giữ An Yên thì mới đi xa được.",
+        "hint": "Giữ An Yên thì mới đi xa — sáng ra công viên tập thể dục, gặp gỡ mọi người, đừng để mình kiệt sức.",
+    },
+    "Chủ Sạp Đêm": {
+        "id": "chu-sap-dem",
+        "greet": "Phố đi bộ — chợ đêm này mở từ tối, đông nhất là 20:00 thứ 7. Buôn bán đêm, sạp nào cũng có khách.",
+        "hint": "Chợ đêm đông nhất 20:00 thứ 7 — muốn buôn bán đêm thì ra đây mở sạp, khách đông, bán nhanh.",
+    },
+    "Người Bán Hàng Rong": {
+        "id": "nguoi-ban-hang-rong",
+        "greet": "Bán rong ở chợ đêm thì phải biết Bụi Đời Chợ Cá — đua doanh thu, phục vụ khách theo mùa, không bạo lực.",
+        "hint": "Bụi Đời Chợ Cá là đua doanh thu với phục vụ khách theo mùa — bán rong khéo thì tiền về nhanh, khách quen quay lại.",
+    },
 }
 
 # Bang hotspot slice — PORT TRUC TIEP PXB_Hotspot.js HOTSPOTS (PROVISIONAL, chua chot GDD).
@@ -234,6 +290,29 @@ DOORS = {}  # Khong dung nua: to_map doc tu lenh TRANSFER (code 201) cua event.
 # cua di (5,8)). O (5,8) tren Map002 trong (lop 1 = 0, khong event).
 ADDED_DOORS = {
     2: [{"kind": "door", "name": "Cửa đi Khu Công Nhân", "tile": [5, 8], "to_map": 3}],
+    # G3 buoc 5: Map014 la map cuoi MV (chi 1 cua ve Map013) — them cua
+    # (5,8) di Map015 de chuoi 1-...-18 thong 2 chieu. O (5,8) tren
+    # Map014 trong (lop 1 = 0, khong event) — nhu truong hop Map002 o buoc 1.
+    14: [{"kind": "door", "name": "Cửa đi Khu Penthouse", "tile": [5, 8], "to_map": 15}],
+}
+
+# --- G3 buoc 5: Map015-018 VIET MOI (khong co trong MV) ---
+# Ten dung y docs/districts.md (dau "–" trong "Pho Di Bo – Cho Dem" giu
+# nguyen nhu districts.md). NPC o (3,3) + (8,6) nhu cac map 3-14; cua
+# ve (5,4) + cua di (5,8); Map018 la map cuoi chuoi (chi cua ve).
+HANDWRITTEN = {
+    15: {"name": "Khu Penthouse",
+         "npcs": ["Quản Lý Penthouse", "Cư Dân Penthouse"],
+         "back": "Cửa về Đảo Thượng Lưu", "fwd": "Cửa đi Khu Sân Golf & Resort", "fwd_to": 16},
+    16: {"name": "Khu Sân Golf & Resort",
+         "npcs": ["Nhân Viên Sân Golf", "Quản Lý Resort"],
+         "back": "Cửa về Khu Penthouse", "fwd": "Cửa đi Công Viên An Bình", "fwd_to": 17},
+    17: {"name": "Công Viên An Bình",
+         "npcs": ["Cô Bán Bánh", "Ông Lão Tập Thể Dục"],
+         "back": "Cửa về Khu Sân Golf & Resort", "fwd": "Cửa đi Phố Đi Bộ – Chợ Đêm", "fwd_to": 18},
+    18: {"name": "Phố Đi Bộ – Chợ Đêm",
+         "npcs": ["Chủ Sạp Đêm", "Người Bán Hàng Rong"],
+         "back": "Cửa về Công Viên An Bình", "fwd": None, "fwd_to": None},
 }
 START = {"map": 1, "x": 4, "y": 5}  # System.json startMapId/startX/startY
 
@@ -317,8 +396,55 @@ def convert(map_id: int) -> dict:
     }
 
 
+def handwritten(map_id: int) -> dict:
+    """Viet moi Map015-018 (khong co trong MV).
+    Lop tile TAI DUNG mau Map014: L0 nen (1/2) + L1 vat (3/4/5) o vong
+    bien — PROVISIONAL, cho art pass ve tile rieng. L0 bien doi nhe
+    theo tung map (doi 1<->2 o cac o (x + 2*y + map_id) % 7 == 0) de 4
+    map khong giong het nhau; gia tri van chi 1/2, du 108 o.
+    Kiem tra: L1 du 28 o; o cua (5,4)/(5,8) + o NPC (3,3)/(8,6) co
+    L1 = 0 (di duoc — NPC chan bang marker, nhu cac map port)."""
+    spec = HANDWRITTEN[map_id]
+    atlas = json.loads((MV / "atlas-map001.json").read_text(encoding="utf-8"))
+    template = json.loads((MV / "Map014.json").read_text(encoding="utf-8"))
+    tdata = template["data"]
+    l0 = list(tdata[0:108])
+    l1 = list(tdata[108:216])
+    for y in range(9):
+        for x in range(12):
+            if (x + 2 * y + map_id) % 7 == 0:
+                i = y * 12 + x
+                l0[i] = 2 if l0[i] == 1 else 1
+    assert all(v in (1, 2) for v in l0) and len(l0) == 108
+    assert sum(1 for v in l1 if v) == 28, f"Map{map_id:03d} L1 != 28 o"
+    for tx, ty in ((5, 4), (5, 8), (3, 3), (8, 6)):
+        assert l1[ty * 12 + tx] == 0, f"Map{map_id:03d} o ({tx},{ty}) bi vat chan"
+    events = []
+    for name, tile in zip(spec["npcs"], ([3, 3], [8, 6])):
+        t = NPC_TEXT[name]
+        events.append({"kind": "npc", "id": t["id"], "name": name,
+                       "tile": tile, "greet": t["greet"], "hint": t["hint"]})
+    events.append({"kind": "door", "name": spec["back"], "tile": [5, 4],
+                   "to_map": map_id - 1})
+    if spec["fwd"] is not None:
+        events.append({"kind": "door", "name": spec["fwd"], "tile": [5, 8],
+                       "to_map": spec["fwd_to"]})
+    png_name = str(atlas["atlasPng"]).split("/")[-1]
+    return {
+        "id": map_id,
+        "name": spec["name"],
+        "width": 12, "height": 9,
+        "tile_w": 64, "tile_h": 32,
+        "atlas_png": f"res://tiles/{png_name}",
+        "atlas_tiles": atlas["tiles"],
+        "layers": [l0, l1],
+        "events": events,
+    }
+
+
 def main() -> None:
-    out = {"start": START, "maps": [convert(n) for n in MAP_IDS]}
+    out = {"start": START, "maps": [convert(n) for n in MAP_IDS]
+           + [handwritten(n) for n in (15, 16, 17, 18)]}
     dest = GODOT / "data" / "maps.json"
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
