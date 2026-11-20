@@ -601,14 +601,75 @@ thoại. Đã sửa + xem lại ảnh, 6 điểm hết:
 - Polish còn lại (đã ghi §8.5): Map003 nửa trên nâu trơn, HUD
   cắt tên map dài, nhãn 2 cửa Map002/Map003 chồng nhau ở đáy.
 
-## 9. Việc tiếp theo — G4 bước 4
+## 9. Việc tiếp theo — G4 bước 4 — XONG (20/11 ~14:00–14:30)
 
-1. Polish §8.5: ảnh trời/đất cho Map003+ (hoặc nền mặc định phủ
-   kín màn hình), HUD co chữ/tăng rộng theo tên map, chống chồng
-   nhãn trên mọi map (không chỉ Map001).
-2. G4 online thật: quyết Godot headless dedicated server thay
-   .NET hay chờ máy có dotnet (xem `docs/opensource-engine.md`
-   §3.4).
-3. Lưu giữ sạp + Danh vọng trận MarketBattle vào SaveCloud
+### 9.1 Polish §8.5 — XONG
+
+- **Nền trời mặc định cho Map003+** (`scripts/iso_map.gd`): `sky_band.png`
+  (trước chỉ Map002) + `sky_wide.jpg` (trước chỉ Map001-002) nay dùng cho
+  MỌI map (điều kiện `map_id == 2` → `map_id >= 2`, bỏ điều kiện
+  `map_id == 1 or 2` ở sky_wide); vị trí như Map002 (bg offset+(0,-190),
+  sky_wide offset+(0,-530)) — đáy trời ở offset.y-50, vừa chân mặt
+  tiền/tile hàng trên. Đêm đổi sang `sky_night.jpg` như Map002
+  (`has_night_bg = true` → MUL đêm nhẹ 0.55,0.62,0.9).
+- **HUD co chữ theo tên map** (`main.gd` `_fit_hud_map()`, gọi trong
+  `load_map`): đo bằng `font_bold.get_string_size`, co từ 30 xuống
+  tối thiểu 20 tới khi vừa 412px (panel 452 − 2×18 margin). Đo thật:
+  HUD cũ tràn ở 17/18 map (kể cả tên ngắn: "Xóm Trọ Cũ" 415px ở cỡ
+  30) — chỉ "Phố Tây" vừa cỡ 30; dài nhất "Phố Đi Bộ – Chợ Đêm" về
+  cỡ 20, "Khu Chung Cư Cao Cấp"/"Khu Biệt Thự Ven Sông"/"Khu Sân
+  Golf & Resort" về cỡ 20.
+- **Chống chồng nhãn trên mọi map** (`main.gd` `_deoverlap_labels()`
+  + `marker.gd` `label_shift`): mỗi frame (trong `Main._process`,
+  trước `_process` của marker con) tính lại rect màn hình mọi nhãn
+  hiện, sắp theo y rồi đẩy nhãn chồng xuống dưới (hết chỗ dưới thì
+  đẩy lên trên, kẹp 190..1280-16-h), lệch lưu vào
+  `marker.label_shift` (px màn hình) để `_update_label` áp dụng.
+- **Test mới** `tests/g4_polish_test.gd`: **18/18 PASS** — sky Map003
+  (bg sky_band đúng vị trí, sky_wide đúng vị trí, có ảnh đêm, đêm
+  đổi sky_night), HUD vừa panel + cỡ lớn nhất có thể (Map001/002/018),
+  nhãn Map002 + Map003 không chồng nhau, Map001 giữ composite.
+- **Sửa test cũ lỗi thời** (`tests/g2_ui_wiring_test.gd`, 2 check):
+  `_update_hud` từ vòng HUD gọn 12:30 đã gộp túi vào dòng ngày
+  ("Ngày 1 • Khung Sáng • Túi: trống") và `_hud_bag` ẩn đi không cập
+  nhật text nữa, nhưng test vẫn đọc `_hud_bag.text` nên rớt 2/37 từ
+  vòng 12:30 mà không ai để ý (vòng hồi quy 13:05 không chạy suite
+  này). Nay test đọc `_hud_day.text` ("Túi: trống" / "Túi: 1 loại").
+  **37/37 PASS** trở lại.
+- Hồi quy: artpass 57/57, artpass3 23/23, G1 selftest 419/419,
+  G3 playtest 95/95, G2 selftest 87/87, MarketBattle 123/123,
+  battle scene 43/43, battle main 15/15, battle AI 34/34,
+  G1 playtest 14/14, coord+WASD 16/16, hotspot 37/37, jobs 56/56,
+  inventory+crafting 78/78, economy+education 92/92, phonehub 66/66,
+  savecloud 69/69, social+titles+story 102/102, tools 155/155,
+  online 91/91, ui_wiring2 71/71; scene 120 frame 0 ERROR.
+- Export web exit 0: pck mới **6.872.908 byte, SHA `71c1c358…`**
+  (trước `7e84335…`), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ 4 file (cổng 8165).
+- **Browser-verify thật (Chromium 1255 + swiftshader, 720×1280):**
+  0 console error, 0 pageerror — ảnh
+  `hidden_files/pxb-browser-verify-2026-11-20/23-polish-map1.png`,
+  `28-polish-map2.png`, `29-polish-map3.png` (script tái chạy:
+  `hidden_files/pxb-browser-verify-polish3.py`):
+  Map002 toast "Đã sang Chợ Đầu Mối", 2 nhãn cửa đáy map xếp chồng
+  dọc không đè nhau ("Cửa về Xóm Trọ Cũ" trên, "Cửa đi Khu Công
+  Nhân" dưới, cách nhau ~5px); Map003 toast "Đã sang Khu Công Nhân",
+  HUD "Phố Xô Bồ — Khu Công Nhân" vừa panel, **nửa trên là trời
+  xanh có mây + chim + mặt trời, hết nền nâu trơn**; 2 nhãn cửa
+  Map003 cũng không chồng nhau. Bài học input: `keyboard.press`
+  nhanh bị miss giữa các frame (game ~0.22× thời gian thật); giữ
+  phím 1500ms thì đi 2-3 ô; **giữ 400ms = đúng 1 ô** (đủ ≥1 frame
+  poll thấy phím, thả trước khi bước 0.15s game xong).
+- Phát hiện còn lại (không chặn deploy): Map003 tile vẫn là khối
+  vàng tái dùng (PROVISIONAL, chờ art riêng); toast "Đã sang…"
+  đè lên mặt trời ở góc trái (cosmetic, đã biết từ trước).
+
+## 10. Việc tiếp theo — G4 bước 5
+
+1. G4 online thật: quyết Godot headless dedicated server thay .NET
+   hay chờ máy có dotnet (xem `docs/opensource-engine.md` §3.4).
+2. Lưu giữ sạp + Danh vọng trận MarketBattle vào SaveCloud
    (logic `data()` đã có, Main chưa nối); animation di chuyển/
    đánh; chọn đội/vũ khí trước trận.
+3. Tile riêng Map003–018 (đang PROVISIONAL); camera zoom trận
+   MarketBattle (lưới đang nhỏ giữa màn hình).

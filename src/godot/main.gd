@@ -133,6 +133,7 @@ var _phone_tip: Label
 var _phone_footer: Label
 var _phone_actions: VBoxContainer
 var _phone_act_scroll: ScrollContainer
+var _phone_content_scroll: ScrollContainer  # Vong 4: cao 224 de hien tron dong Chi Le.
 var _phone_today: Label  # Khoi "Hom nay" lap khoang trong dien thoai.
 var _phone_tab_buttons := {}
 
@@ -230,6 +231,7 @@ func load_map(map_id: int, spawn_tile: Vector2i) -> void:
 		_camera.position = player.position + CAMERA_LOOK_UP
 		_camera.reset_smoothing()
 	_hud_map.text = "Phố Xô Bồ — " + String(_map_by_id(map_id)["name"])
+	_fit_hud_map()
 	_update_hud()
 	_update_daynight()  # Ap khung hien tai cho map moi (anh dem/tint/mat troi).
 
@@ -255,11 +257,71 @@ func _transfer(to_map: int) -> void:
 	load_map(to_map, door_tile)
 	show_toast("Đã sang " + String(dest["name"]))
 
+# Ten map dai (vd "Khu Công Nhân", "Phố Đi Bộ – Chợ Đêm") bi cat o mep
+# panel 452px khi co 30 (loi 20/11 13:20): co chu nho dan toi khi vua
+# long panel (412px = 452 - 2x18 content margin), toi thieu 20.
+func _fit_hud_map() -> void:
+	var size := 30
+	while size > 20:
+		var w := font_bold.get_string_size(_hud_map.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+		if w <= 412.0:
+			break
+		size -= 2
+	_hud_map.add_theme_font_size_override("font_size", size)
+
+func _deoverlap_labels() -> void:
+	# Chong chong nhan tren MOI map (khong chi Map001): 2 cua o day
+	# map (vd Map002/Map003: (5,4) + (5,8)) deu bi kep xuong cung dai
+	# y o day man hinh nen nhan de len nhau (loi 20/11 13:20). Moi frame
+	# tinh lai rect man hinh cua moi nhan hien, sap theo y roi day
+	# nhan chong xuong duoi (het cho duoi thi day len tren); lech luu
+	# vao marker.label_shift (px man hinh) de _update_label ap dung.
+	# Chay trong Main._process (truoc _process cua marker con) nen
+	# nhan ve dung vi tri da day ngay trong frame do.
+	if iso_map == null:
+		return
+	for mk in iso_map.markers:
+		mk.label_shift = Vector2.ZERO
+	var items: Array = []
+	for mk in iso_map.markers:
+		var r: Rect2 = mk.label_screen_rect()
+		if r.size != Vector2.ZERO:
+			items.append([mk, r])
+	items.sort_custom(func(a, b): return (a[1] as Rect2).position.y < (b[1] as Rect2).position.y or ((a[1] as Rect2).position.y == (b[1] as Rect2).position.y and (a[1] as Rect2).position.x < (b[1] as Rect2).position.x))
+	var placed: Array[Rect2] = []
+	for item in items:
+		var mk: Marker = item[0]
+		var r: Rect2 = item[1]
+		var guard := 0
+		while guard < 60:
+			guard += 1
+			var hit := Rect2()
+			var found := false
+			for pr in placed:
+				if r.grow(3.0).intersects(pr):
+					hit = pr
+					found = true
+					break
+			if not found:
+				break
+			var down_y := hit.end.y + 6.0
+			if down_y + r.size.y <= 1280.0 - 16.0:
+				r.position.y = down_y
+			else:
+				r.position.y = maxf(hit.position.y - 6.0 - r.size.y, 190.0)
+		placed.append(r)
+		mk.label_shift = r.position - (item[1] as Rect2).position
+
 # --- Thoi gian ---
 func _process(delta: float) -> void:
-	# Camera bam theo nguoi choi (zoom 1.6: map lap day viewport).
+	# Camera bam theo nguoi choi (zoom 1.4: map lap day viewport).
 	if _camera != null and player != null:
 		_camera.position = player.position + CAMERA_LOOK_UP
+	# Chong-chong nhan o khong gian man hinh (vong 4): chay truoc
+	# _process cua Marker (cha chay truoc con) nen override kip dung
+	# ngay trong frame nay.
+	_resolve_label_overlaps()
+	_deoverlap_labels()
 	# Nut DOM "Bat dau" tren web (web_shell.html): nut HTML dat
 	# window.__pxb_start = true; poll 4 lan/giay (khong dung signal
 	# vi JavaScriptBridge chi co eval, khong co callback tu JS).
@@ -798,7 +860,9 @@ func _social_text() -> String:
 			lines.append("• %s — chưa quen (nói chuyện ở ngoài đời để kết bạn)" % String(ev.get("name", pid)))
 	if social.all_relations().is_empty() and seen_npc.is_empty():
 		lines.append("(chưa có quan hệ nào)")
-	return "\n".join(lines)
+	# Dong trong cuoi: khi cuon het xuong, dong that cuoi khong bi
+	# cat doi o mep duoi viewport (loi "Chi Le" 20/11 13:53).
+	return "\n".join(lines) + "\n "
 
 
 func _jobs_text() -> String:
@@ -1358,6 +1422,90 @@ func _daynight_color(f: int) -> Color:
 			return Color(0.42, 0.52, 0.85, 1.0)
 	return Color(1.0, 1.0, 1.0, 1.0)
 
+## Chong-chong nhan (vong 4, 20/11 14:00): nhan tinh theo vi tri neo
+## rieng le thi de len dau nhan vat khac ("Goc Che Tao" de len dau
+## Ban Than, "Co Tu" sat mep "Goc Che Tao", "Hem tro buoi toi" de
+## len than Co Tu — kiem live 13:53). Giai o khong gian man hinh
+## (720x1280) moi frame: nhan nao chong nhan khac hoac dau nhan vat
+## thi dich xuong duoi vat can (neu con cho) hoac dich len tren vat
+## can; ket qua ghi vao Marker.label_override de Marker ve theo.
+func _resolve_label_overlaps() -> void:
+	if iso_map == null:
+		return
+	var ct := get_viewport().get_canvas_transform()
+	var obstacles: Array[Rect2] = []
+	# Dau nhan vat: sprite anh cao 104 world (~146px man hinh o
+	# zoom 1.4), rong ~90px — nhan khong duoc de len vung nay.
+	if player != null:
+		var pp: Vector2 = ct * player.position
+		obstacles.append(Rect2(pp + Vector2(-45, -150), Vector2(90, 160)))
+	for mk in iso_map.markers:
+		if String(mk.event_data.get("kind", "")) == "npc":
+			var mp: Vector2 = ct * mk.global_position
+			obstacles.append(Rect2(mp + Vector2(-45, -150), Vector2(90, 160)))
+	var entries: Array = []
+	for mk in iso_map.markers:
+		var r: Rect2 = mk.label_screen_rect()
+		if r.size != Vector2.ZERO:
+			entries.append({"mk": mk, "rect": r})
+		else:
+			mk.label_override = Rect2()
+	# Nhan NPC truoc (giu tren dau), roi den cac nhan khac; trong
+	# cung loai thi nhan tren truoc.
+	entries.sort_custom(func(a, b):
+		var ka := 0 if String(a["mk"].event_data.get("kind", "")) == "npc" else 1
+		var kb := 0 if String(b["mk"].event_data.get("kind", "")) == "npc" else 1
+		if ka != kb:
+			return ka < kb
+		return a["rect"].position.y < b["rect"].position.y)
+	var placed: Array[Rect2] = []
+	for e in entries:
+		var r: Rect2 = e["rect"]
+		# Giai bang khoang trong: nhung vat can (dau nhan vat + nhan
+		# da dat) chong theo chieu X voi nhan nay se cam cac khoang
+		# doc; chon khoang trong gan vi tri mong muon nhat. (Ban
+		# dich xuong/len lan luot cu dao dong giua 2 vat can khi day
+		# man hinh het cho — vd Goc Che Tao va Cua ra cung roi ve
+		# y=1216 va chong nhau.)
+		var blockers: Array[Rect2] = []
+		for o in obstacles:
+			if o.end.x > r.position.x and o.position.x < r.end.x:
+				blockers.append(o.grow(4.0))
+		for p in placed:
+			if p.end.x > r.position.x and p.position.x < r.end.x:
+				blockers.append(p.grow(6.0))
+		var top_min := 190.0
+		var top_max := 1264.0 - r.size.y
+		var intervals: Array = [[top_min, top_max]]
+		for b in blockers:
+			var next_iv: Array = []
+			for iv in intervals:
+				var lo: float = iv[0]
+				var hi: float = iv[1]
+				var b_lo: float = b.position.y - r.size.y - 6.0
+				var b_hi: float = b.end.y + 6.0
+				if b_hi <= lo or b_lo >= hi:
+					next_iv.append(iv)
+				else:
+					if b_lo > lo:
+						next_iv.append([lo, minf(hi, b_lo)])
+					if b_hi < hi:
+						next_iv.append([maxf(lo, b_hi), hi])
+			intervals = next_iv
+		var best_y := -1.0
+		var best_dist := 1.0e9
+		for iv in intervals:
+			var y := clampf(r.position.y, iv[0], iv[1])
+			var d := absf(y - r.position.y)
+			if d < best_dist:
+				best_dist = d
+				best_y = y
+		if best_y >= 0.0:
+			r.position.y = best_y
+		r.position.x = clampf(r.position.x, 16.0, 704.0 - r.size.x)
+		placed.append(r)
+		e["mk"].label_override = r
+
 func _update_daynight() -> void:
 	if _daynight != null:
 		_daynight.color = _daynight_color(frame_idx)
@@ -1368,15 +1516,17 @@ func _update_daynight() -> void:
 		_update_character_tint()
 
 ## Tint nhan vat theo khung: lop MUL nhan deu ca anh nen nhung anh
-## PNG nhan vat sang hon nen dat nen can toi them 1 nac nua keo
-## khoi "dan" tren nen toi (loi 20/11 12:30: nhan vat sang nhu ban
-## ngay giua khung Toi). Chieu am vang nhe, Toi xanh toi ro.
+## PNG nhan vat van giu do bao hoa cao nen can toi them. Vong 4
+## (20/11 14:00): tint cu (0.72,0.78,0.95) chi ha do sang con ~0.49
+## — nhan vat van trong nhu ban ngay dan len nen toi (kiem live
+## 13:53). Tint moi Toi (0.42,0.48,0.72): do sang con ~0.31, xanh
+## hon, hoa vao canh dem; Chieu am vang dam hon (1.0,0.85,0.62).
 func _update_character_tint() -> void:
 	var tint := Color(1, 1, 1, 1)
 	if frame_idx == 1:
-		tint = Color(1.0, 0.88, 0.7, 1)
+		tint = Color(1.0, 0.85, 0.62, 1)
 	elif frame_idx == 2:
-		tint = Color(0.72, 0.78, 0.95, 1)
+		tint = Color(0.42, 0.48, 0.72, 1)
 	if player != null:
 		player.set_tint(tint)
 	if iso_map != null:
@@ -1487,19 +1637,24 @@ func _build_ui() -> void:
 	# Panel dien thoai GON (680x900, can giua doc) thay vi 680x1100
 	# — noi dung that chi ~720px, panel cu thua ~450px trong
 	# (art pass Nadia 20/11, loi goc 20/11 10:30).
-	# y=190: nam duoi HUD gon (day thuc te ~173) + 16px cach — panel
+	# y=216: duoi day nut "Dien thoai (P)" (nut o y 152-208) + 8px
+	# cach — y=190 cu de len nua duoi nut (kiem live 13:53). Panel
 	# cu o y=156 de len day HUD (loi 20/11 12:30, do min-size day
 	# panel len 157px thay vi 124px dat truoc).
-	_phone_panel.position = Vector2(20, 190)
+	_phone_panel.position = Vector2(20, 216)
 	_phone_panel.size = Vector2(680, 900)
 	_phone_panel.add_theme_stylebox_override("panel", _phone_panel_style())
 	_phone_panel.visible = false
 	layer.add_child(_phone_panel)
 	# Khung dien thoai that: notch tren + thanh home duoi (chi hien
 	# khi mo dien thoai) — thay cho hinh chu nhat tron tron.
-	_phone_notch = _mk_phone_bar(Vector2(300, 183), Vector2(120, 14))
+	# y=216 (khong phai 190): mep tren panel cu cat ngang nut
+	# "Dien thoai (P)" cua HUD (nut o y 152-208, chi thay nua duoi
+	# — kiem live 13:53). Notch o 209 (ngay tren panel), homebar o
+	# 1104 (day panel 1116 tru 12).
+	_phone_notch = _mk_phone_bar(Vector2(300, 209), Vector2(120, 14))
 	layer.add_child(_phone_notch)
-	_phone_homebar = _mk_phone_bar(Vector2(290, 1078), Vector2(140, 10))
+	_phone_homebar = _mk_phone_bar(Vector2(290, 1104), Vector2(140, 10))
 	layer.add_child(_phone_homebar)
 	var pvb := VBoxContainer.new()
 	# Separation 8 (khong phai 10): tong chieu cao toi thieu cua VBox
@@ -1532,13 +1687,18 @@ func _build_ui() -> void:
 	_phone_content.custom_minimum_size = Vector2(580, 0)
 	# Noi dung dai (vd danh ba 16 NPC) phai CUON, khong tran khoi
 	# panel: label trong ScrollContainer, chieu cao tu noi dung.
+	# Cao 224px (khong phai 200): 7 dong x ~31px — hien tron dong
+	# cuoi "Chi Le" o vi tri cuon mac dinh (200px cat doi dong thu
+	# 7, kiem live 13:53). Bu lai bang actions scroll 240 -> 216
+	# de tong chieu cao VBox khong doi.
 	var content_scroll := ScrollContainer.new()
-	content_scroll.custom_minimum_size = Vector2(580, 200)
+	_phone_content_scroll = content_scroll
+	content_scroll.custom_minimum_size = Vector2(580, 224)
 	pvb.add_child(content_scroll)
 	_phone_content.get_parent().remove_child(_phone_content)
 	content_scroll.add_child(_phone_content)
 	_phone_act_scroll = ScrollContainer.new()
-	_phone_act_scroll.custom_minimum_size = Vector2(580, 240)
+	_phone_act_scroll.custom_minimum_size = Vector2(580, 216)
 	pvb.add_child(_phone_act_scroll)
 	_phone_actions = VBoxContainer.new()
 	_phone_actions.add_theme_constant_override("separation", 8)
@@ -1563,10 +1723,12 @@ func _build_ui() -> void:
 	# phan trong o duoi panel (loi 20/11 10:30).
 	_phone_footer = _mk_label(pvb, font, 22, Vector2.ZERO, "")
 	_phone_footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	# Toast doi khung nam ngay duoi HUD gon (y=200, day HUD thuc te
-	# ~173), khong de len nhan vat o giua man hinh (loi "Ngay 1 •
-	# Khung Toi" che mat nguoi, 20/11 10:30).
-	_toast = _mk_label(layer, font_bold, 30, Vector2(60, 200), "")
+	# Toast doi khung o GIUA-DUOI (y=720): y=200 cu de len quang mat
+	# troi/mat trang (mat troi o man hinh ~220-330, trang ~230-330)
+	# trong vai giay sau khi bam F (kiem live 13:53). y=720 nam tren
+	# via he, duoi mat troi/trang, tren nguoi choi (~990) va nhan
+	# cua ra (~1210) — khong de len thu gi quan trong.
+	_toast = _mk_label(layer, font_bold, 30, Vector2(60, 720), "")
 	_toast.size = Vector2(600, 60)
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_toast.add_theme_color_override("font_outline_color", Color(1, 1, 1, 0.95))

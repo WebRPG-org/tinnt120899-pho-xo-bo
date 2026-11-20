@@ -30,10 +30,10 @@ var night_glow: NightGlow = null  # Dom sang cua so khung Toi.
 var nadia_scene: NadiaScene = null  # Canh ve tay kieu Nadia (chi Map001-002).
 var skyfx: SkyEffects = null  # Mat troi + bong dai theo khung.
 var has_night_bg := false  # Map co anh nen dem rieng de doi khi Toi.
-var _bg_sprite: Sprite2D = null  # Anh nen mat tien (Map001) / dai troi (Map002).
+var _bg_sprite: Sprite2D = null  # Anh nen mat tien (Map001) / dai troi (Map002+).
 var _bg_day_tex: Texture2D = null
 var _bg_night_tex: Texture2D = null
-var _sky_ext_sprite: Sprite2D = null  # Dai troi mo rong phia tren anh nen (Map001-002).
+var _sky_ext_sprite: Sprite2D = null  # Dai troi mo rong phia tren anh nen (moi map).
 var _sky_ext_day_tex: Texture2D = null
 var _sky_ext_night_tex: Texture2D = null
 
@@ -186,9 +186,13 @@ func build(data: Dictionary, marker_script: Script, font: Font, p_label_layer: C
 
 	y_sort_enabled = true
 	var map_id := int(data.get("id", 0))
-	# Anh nen ve tay (Map001: troi + mat tien composite; Map002: troi
-	# rieng): Sprite2D con cua IsoMap, dat TRUOC NadiaScene trong cay
-	# nen canh code ve sau de len tren anh — dung he toa do offset
+	# Anh nen ve tay (Map001: troi + mat tien composite; Map002+:
+	# dai troi rieng — sky_band.png la troi chung, khong rieng
+	# Map002, nen Map003+ dung luon lam nen troi mac dinh thay vi
+	# de nua tren man hinh la mau clear nau tron (loi 20/11 13:20):
+	# day anh o offset.y-50, vua chan mat tien/tile hang tren
+	# (~offset.y-48). Sprite2D con cua IsoMap, dat TRUOC NadiaScene
+	# trong cay nen canh code ve sau de len tren anh — dung he toa do offset
 	# (nhu NadiaScene/marker), khong dung toa do tho cua TileMapLayer.
 	# Composite Map001: 1120x630, day o ground row 0 (+20), dinh -610.
 	# Troi Map002: 1120x280, dinh -330, day -50.
@@ -205,7 +209,7 @@ func build(data: Dictionary, marker_script: Script, font: Font, p_label_layer: C
 		_bg_sprite.texture = _bg_day_tex
 		_bg_sprite.position = offset + Vector2(0, -295)
 		add_child(_bg_sprite)
-	elif map_id == 2 and ResourceLoader.exists("res://art/sky_band.png"):
+	elif map_id >= 2 and ResourceLoader.exists("res://art/sky_band.png"):
 		_bg_day_tex = load("res://art/sky_band.png")
 		if ResourceLoader.exists("res://art/sky_night.jpg"):
 			_bg_night_tex = load("res://art/sky_night.jpg")
@@ -217,11 +221,13 @@ func build(data: Dictionary, marker_script: Script, font: Font, p_label_layer: C
 	# Dai troi mo rong (sky_wide.jpg 1120x400): noi tren dinh anh nen
 	# de dai troi cao them 400px — anh goc chi co ~60px troi nen camera
 	# nhin len bao nhieu cung khong thay troi luc spawn (loi 20/11 12:30).
-	# Tam: Map001 offset+(0,-810) (dinh -1010..-610), Map002 offset+(0,-530).
+	# Tam: Map001 offset+(0,-810) (dinh -1010..-610), Map002+ offset+(0,-530).
+	# Map003+ cung co (truoc day chi Map001-002 moi co nen nua tren
+	# Map003 la mau clear nau tron — loi 20/11 13:20).
 	_sky_ext_day_tex = null
 	_sky_ext_night_tex = null
 	_sky_ext_sprite = null
-	if (map_id == 1 or map_id == 2) and ResourceLoader.exists("res://art/sky_wide.jpg"):
+	if ResourceLoader.exists("res://art/sky_wide.jpg"):
 		_sky_ext_day_tex = load("res://art/sky_wide.jpg")
 		if ResourceLoader.exists("res://art/sky_night.jpg"):
 			_sky_ext_night_tex = load("res://art/sky_night.jpg")

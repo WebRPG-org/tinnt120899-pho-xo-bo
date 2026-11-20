@@ -43,7 +43,12 @@ func _on_frame() -> void:
 					_main.inventory == _main.hotspot.materials)
 				_check("HUD vi ban dau 0d", _main._hud_gold.text == "Ví: 0đ • EXP 0")
 				_check("HUD chi so 100/100/100", _main._hud_stats.text == "Thể 100 • Trí 100 • Tâm 100")
-				_check("HUD tui trong", _main._hud_bag.text == "Túi: trống")
+				# HUD gon 4 dong (20/11 12:30): tui gop vao dong ngay
+				# ("Ngày 1 • Khung Sáng • Túi: trống"), dong tui rieng
+				# _hud_bag an di nen khong cap nhat text nua — test
+				# theo dong ngay thay vi _hud_bag (sua 20/11 ~14:00:
+				# test cu van doc _hud_bag nen rot 2/37 tu vong 12:30).
+				_check("HUD tui trong", "Túi: trống" in _main._hud_day.text)
 				_check("fmt_vnd 150000", _main._fmt_vnd(150000) == "150.000")
 				_check("fmt_vnd 1234567", _main._fmt_vnd(1234567) == "1.234.567")
 				_check("fmt_vnd 0", _main._fmt_vnd(0) == "0")
@@ -115,7 +120,9 @@ func _on_frame() -> void:
 			_check("tui tru chai-nhua ve 0", int(_main.inventory.get("chai-nhua", 0)) == 0)
 			_check("tui chung Hotspot<->Crafting: la-chuoi con 2",
 				int(_main.inventory.get("la-chuoi", 0)) == 2)
-			_check("HUD tui chi con la-chuoi", _main._hud_bag.text == "Túi: Lá Chuối ×2")
+			# Tui chi con la-chuoi x2 = 1 loai: dong ngay ghi "Túi: 1 loại"
+			# (HUD gon, xem ghi chu o state 0).
+			_check("HUD tui chi con 1 loai (la-chuoi)", "Túi: 1 loại" in _main._hud_day.text)
 			# Cong thuc khac chua hoc -> chan (khong che chui).
 			var c4: Dictionary = _main.craft_recipe("che-xe-day")
 			_check("che-xe-day chua hoc bi chan",
