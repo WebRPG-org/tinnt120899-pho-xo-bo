@@ -1086,8 +1086,13 @@ sáng/tối ở khu TẠP HÓA). Sửa xong, tự xem ảnh thật cả 3 khung
 
 ## 15. Việc tiếp theo — G4 bước 6 (sau artpass5)
 
-1. **Deploy gh-pages bản artpass5** (build 08:00 `45686e4c…`,
-   wasm `fc74679e…` không đổi — chỉ re-chunk pck).
+1. **Deploy gh-pages bản artpass5 — XONG 20/11 ~16:30** (main
+   `a6899a8c`, gh-pages head `59bb6e25`, 3 lô: `6f413d79` +
+   `a5277a95` + `59bb6e25`; index.html + pck 000/025/050 +
+   wasm 000 khớp byte 5/5 với staging; pck `45686e4c`,
+   wasm `fc74679e` không đổi). Link live:
+   https://tinnt120899.github.io/pho-xo-bo/ (Pages rebuild
+   vài phút sau push).
 2. **G4 online thật — server skeleton** (xem §12.5): Godot
    headless dedicated server + WebSocket, chat relay + presence.
 3. Quyền lợi giữ sạp áp vào Economy (`hold_benefits` đã có,
