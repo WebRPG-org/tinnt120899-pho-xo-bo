@@ -959,3 +959,144 @@ thoại. Đã sửa + xem lại ảnh, 6 điểm hết:
 4. Tile riêng Map003–018 (đang PROVISIONAL); camera zoom trận
    MarketBattle (lưới đang nhỏ giữa màn hình); nhãn tên đấu sĩ
    trong trận còn hơi chồng nhau (ảnh browser-verify 13).
+
+## 14. Art pass 5 — vòng sửa 5 (20/11 ~15:00–16:30, kiểm live 14:34–14:40)
+
+6 điểm từ kiểm live 14:34–14:40, điểm 1 là LỖI GỐC (chia đôi
+sáng/tối ở khu TẠP HÓA). Sửa xong, tự xem ảnh thật cả 3 khung
+ở khu TẠP HÓA (portrait + desktop), deploy lại.
+
+### 14.1 Lỗi gốc: chia đôi sáng/tối — NGUYÊN NHÂN THẬT (không phải overlay 1 tấm)
+
+Điều tra bằng đo pixel (script `/tmp/repro5.py`, staging build):
+- Ảnh đêm `bg_map001_night.jpg` tự nó đã tối đều cả 3 cửa hàng —
+  ảnh đêm không phải nguồn chia đôi.
+- Pixel cùng 1 điểm tường Sáng (131,72,46) → Chiều (131,59,25)
+  = đúng ×(1.0, 0.82, 0.55) màu overlay Chiều → overlay MUL
+  ĐÃ phủ đều cả nền. Không có chuyện overlay chỉ phủ 1 tấm.
+- Nguồn chia đôi thật: **`ground_wide.jpg` có gradient sáng
+  trái→phải** (cột trái ~119, phải ~174 R) + `sky_wide.jpg`
+  gradient xanh→ấm (cố ý, mặt trời) — mắt đọc thành "phải
+  sáng hơn" ở mọi khung, mạnh nhất ở Tối (đất phải sáng hơn
+  trái ~30 đơn vị). Tối ở spawn đo: đất L=70 R=100.
+- **Cách sửa đúng (vẫn là (b) nhưng tận gốc):**
+  1. `ground_wide.jpg`: san phẳng gradient ngang bằng PIL
+     (gain từng cột, clip [0.85, 1.18]) — cột trái/giữa/phải
+     110.6/137.4/141.8 → 129.9/132.2/131.3. Backup gốc
+     `/tmp/ground_wide_orig.jpg`.
+  2. `bg_map001.png`: xóa mặt trời vẽ sẵn trong ảnh (vùng
+     x 855–1045, y 5–175, nội suy ngang + blur 4px) vì mặt
+     trời nay neo camera sẽ vẽ chồng lên. Backup
+     `/tmp/bg_map001_orig.png`. Biển PHỞ BÒ/CÀ PHÊ/TẠP HÓA
+     không động vào.
+  3. `main.gd`: overlay lên **layer 1** (trước là 0), tạo
+     TRƯỚC `_label_layer`/`_ui_layer` (cùng layer 1) nên
+     render trên mọi nội dung canvas mặc định nhưng dưới
+     nhãn/HUD/điện thoại — 1 lớp phủ duy nhất, phủ đều nền +
+     nhân vật + đất.
+- **Kiểm chứng:** đo sáng ở khu TẠP HÓA (click-to-move sang
+  phải, Chromium local, portrait 720×1280): Sáng mặt tiền
+  L=115 R=114, Chiều 107/106, Tối 41/44 (lệch 1–3, trước đây
+  lệch ~30); đất lệch ≤10. Tự xem ảnh: Tối tối đều toàn màn
+  hình, không còn đường chia dọc, không cửa sổ cắt đôi.
+
+### 14.2 Nhân vật Tối không còn bóng đen
+
+- Nguyên nhân: overlay 0.55 × tint riêng 0.42 = 0.23 độ sáng
+  → bóng đen chỉ còn mắt trắng (ảnh r5-05).
+- Sửa: bỏ hẳn `_update_character_tint` (nhân vật luôn trắng,
+  chỉ overlay MUL làm nhiệm vụ tối); overlay đêm nới lên
+  **(0.7, 0.78, 0.95)** khi có ảnh nền đêm, (0.55, 0.62, 0.9)
+  khi không. Ảnh Tối thật: mặt/quần áo đọc được (áo xanh
+  nam, áo xanh lá nữ, bà ba tím Cô Tư), hòa vào nền đêm.
+- Test `artpass_test.gd` đã chờ sẵn giá trị (0.7,0.78,0.95)
+  từ quyết định kiểm live — code nay khớp test.
+
+### 14.3 Nhãn — đường dịch ngang cũng phải giữ khe 12px
+
+- Lỗi test artpass5: "Góc Chế Tạo đè lên đầu/biểu tượng".
+  Probe (`/tmp/probe_labels*.gd`, đã xóa sau khi dùng) cho
+  thấy ở trạng thái ổn định nhãn sạch — lỗi chỉ xuất hiện khi
+  camera đang smoothing: resolver dùng `intersects()` thuần
+  ở đường dịch ngang nên chấp nhận vị trí chỉ cách nhãn Cô Tư
+  4px (muốn x 293 → dịch +160 → x 453, y giữ 919, khe dọc
+  với Cô Tư chỉ 4px).
+- Sửa `main.gd` `_resolve_label_overlaps`: đường dịch ngang
+  kiểm `cand.grow(LABEL_GAP).intersects(...)` (giữ khe 12px
+  cả 2 chiều với vật cản + nhãn đã đặt); không dịch được thì
+  rơi về `best_y` (đã giữ gap). `LABEL_GAP` 4 → **12**,
+  `LABEL_BOTTOM_MAX` 1200 (trước 1264), vật cản đầu
+  (-48,-165, 96×115), thêm vật cản icon 48×48 cho
+  hotspot/craft/door để nhãn không che sao xanh/cửa.
+- Cột đèn lồng NadiaScene dời tile (10,10) → (2,10)
+  (`nadia_scene.gd`, `iso_map.gd` night_glow.lamps) — hết
+  cột đen xuyên nhãn "Cửa ra Chợ Đầu Mối".
+- Sửa test: kiểm neo camera trước đây set trực tiếp
+  `_camera.position` — vô nghĩa vì `Main._process` đặt lại
+  camera theo người chơi mỗi frame (nên kiểm mặt trời chỉ
+  đi +91 thay vì +200). Nay dịch chuyển NGƯỜI CHƠI
+  (`player.place(..., (10,5))` rồi về (4,5)) và so sánh vị
+  trí MÀN HÌNH của mặt trời/trăng (bất biến khi camera neo
+  đúng), chờ camera smoothing ổn định (frame ≥60/90/150).
+
+### 14.4 Mặt trời/trăng neo camera + toast góc dưới + điện thoại
+
+- `scripts/sky_effects.gd`: mặt trời/trăng neo camera qua
+  `_cam_anchor` (màn hình Sáng (170,290), Chiều (330,290),
+  trăng (400,300) — dưới HUD ~190, trên mái); `_process`
+  redraw lại khi camera dịch >2px (trước chỉ khi người chơi
+  di chuyển ở frame 1). Trăng không còn bị cắt nửa ở mép
+  trái khi camera ở TẠP HÓA (ảnh v5c-04: trăng tròn đầy đủ,
+  sao rõ, đèn lồng đỏ sáng, cửa sổ vàng).
+- Toast đổi khung: (24,1216), font 24, 440×40 — góc dưới
+  trái, không che mặt trời/trăng/cửa (ảnh v5-portrait-03).
+- Điện thoại: content scroll 224 → **238** (7 dòng danh bạ
+  × ~34px, "Anh Ba — chưa quen" hiện đủ), actions scroll
+  216 → 192 (tổng chiều cao VBox không đổi). Ảnh v5c-06:
+  đủ 5 dòng, nút "Trò chuyện" không đè dòng cuối, khối
+  "Hôm nay" lấp khoảng trống, panel không còn đè nút HUD.
+
+### 14.5 Kết quả verify vòng 5
+
+- `g4_artpass5_test` **17/17 PASS** (mới: overlay layer/trật
+  tự/MUL/full-screen, toast góc dưới, scroll 238/192, mặt
+  trời/trăng neo camera, nhãn không chồng/khe ≥10/đáy ≤1200).
+- Hồi quy: artpass 60/60, artpass3 24/24, artpass4 19/19,
+  G1 419/419, G2 87/87, G3 95/95, MarketBattle 123/123,
+  battle scene 43/43, coord/WASD 16/16, battle AI 34/34.
+- `--check-only` exit 0; export Web exit 0, pck 6.843.288
+  byte SHA `45686e4c195b`, wasm không đổi `fc74679e3b97`.
+- Chromium local (Playwright, swiftshader), 0 console error,
+  0 page error, 2 viewport: portrait 720×1280 (click-to-move
+  sang phải) + desktop 1920×1080. Ảnh
+  `visual-check/artpass5/v5c-01..06.png` (portrait, TẠP HÓA
+  cả 3 khung + Tối spawn + điện thoại), `v5-*.png` (desktop
+  + portrait đợt đầu), `probe-*.png` (điều tra focus).
+- **Hạn chế harness (không phải lỗi game):** trong Chromium
+  swiftshader của máy ảo, giữ phím WASD không di chuyển
+  (đã kiểm: focus canvas vẫn là `activeElement`, input map
+  đúng physical_keycode 68; F/P qua `_unhandled_input` vẫn
+  chạy, click-to-move chạy). Headless `g4_coord_wasd_test`
+  16/16 PASS + kiểm live bằng browser thật 13:53 đã xác nhận
+  "W/D/A và mũi tên đều đi được" — vòng 5 không động vào
+  `player.gd`/input nên đây là giới hạn của harness đo, không
+  phải hồi quy. Đo sáng desktop trả 0 (drawImage canvas
+  WebGL trống sau frame) — chỉ là lỗi đo, ảnh desktop vẫn
+  hiện game bình thường.
+
+## 15. Việc tiếp theo — G4 bước 6 (sau artpass5)
+
+1. **Deploy gh-pages bản artpass5** (build 08:00 `45686e4c…`,
+   wasm `fc74679e…` không đổi — chỉ re-chunk pck).
+2. **G4 online thật — server skeleton** (xem §12.5): Godot
+   headless dedicated server + WebSocket, chat relay + presence.
+3. Quyền lợi giữ sạp áp vào Economy (`hold_benefits` đã có,
+   Main chưa gọi); animation di chuyển/đánh trận; chọn đội/vũ
+   khí trước trận; `can_challenge` ở demo.
+4. Tile riêng Map003–018 (đang PROVISIONAL); camera zoom trận
+   MarketBattle (lưới đang nhỏ giữa màn hình); nhãn tên đấu sĩ
+   trong trận còn hơi chồng nhau (ảnh browser-verify 13).
+5. Nhãn "Cửa ra/Góc Chế Tạo/Bạn Thân" ở TẠP HÓA xếp chồng dọc
+   giữa mặt tiền cửa hàng (không chồng nhau, có khe — nhưng
+   nhìn như khối nổi trên cửa); cân nhắc neo nhãn gần điểm neo
+   hơn thay vì đẩy lên cao khi va đầu nhân vật.

@@ -41,7 +41,8 @@ func _on_frame() -> void:
 	match _state:
 		0:
 			if _frame >= 3:
-				_check("toast o giua-duoi (y 700-740)", _main._toast.position.y >= 700.0 and _main._toast.position.y <= 740.0)
+				_check("toast o goc duoi-trai (y >= 1200)", _main._toast.position.y >= 1200.0)
+				_check("toast chu nho (24)", _main._toast.get_theme_font_size("font_size") == 24)
 				_check("panel dien thoai y=216 (duoi nut HUD)", _main._phone_panel.position.y == 216.0)
 				_check("notch y=209 (ngay tren panel)", _main._phone_notch.position.y == 209.0)
 				_check("homebar y=1104 (day panel 1116-12)", _main._phone_homebar.position.y == 1104.0)
@@ -52,11 +53,12 @@ func _on_frame() -> void:
 			_main._advance_frame()
 			_main._advance_frame()
 			_check("doi khung -> Toi", _main.frame_idx == 2)
-			# Tint Toi manh: r < 0.6 (cu 0.72 chi ha con ~0.49, van
-			# trong nhu ban ngay), xanh hon do (b > r).
+			# Vong 5: bo tint rieng — overlay MUL thong nhat
+			# (0.7,0.78,0.95) toi ca nhan vat; tint rieng cu
+			# (0.42) nhan doi lam nhan vat thanh bong den.
 			var mod: Color = _main.player._sprite.modulate
-			_check("Toi: tint nhan vat toi ro (r < 0.6)", mod.r < 0.6, str(mod))
-			_check("Toi: tint xanh hon do (b > r)", mod.b > mod.r, str(mod))
+			_check("Toi: khong tint rieng (trang)", mod.r > 0.99, str(mod))
+			_check("Toi: overlay nhe (0.7,0.78,0.95)", _main._daynight.color == Color(0.7, 0.78, 0.95, 1.0), str(_main._daynight.color))
 			_check("Toi: night_glow bat", _main.iso_map.night_glow.visible and _main.iso_map.night_glow.lit)
 			_state = 2
 		2:
@@ -68,7 +70,7 @@ func _on_frame() -> void:
 			# Mo dien thoai: content scroll du cao + dong trong cuoi.
 			_main._open_phone()
 			_check("dien thoai mo", _main.phone_open)
-			_check("content scroll cao 224 (du 7 dong)", _main._phone_content_scroll.custom_minimum_size.y == 224.0)
+			_check("content scroll cao 238 (du 7 dong, Anh Ba tron)", _main._phone_content_scroll.custom_minimum_size.y == 238.0)
 			_check("panel van 680x900 sau khi mo (VBox khong day panel)", _main._phone_panel.size == Vector2(680, 900))
 			var soc: String = _main._social_text()
 			_check("danh ba co dong trong cuoi (khong cat dong Chi Le)", soc.ends_with("\n "))
@@ -94,8 +96,8 @@ func _on_frame() -> void:
 			# tren nhan vat. Vat can dung chung helper cua Main
 			# (_sprite_obstacle_rect: dau + than tren 90x100);
 			# kiem tra intersects() tho (khong grow) vi resolver
-			# chi bao dam cach >= 4px theo doc, dich ngang co the
-			# sat 0px.
+			# chi bao dam cach >= 12px theo doc (vong 5), dich
+			# ngang co the sat 0px.
 			var ct := _main.get_viewport().get_canvas_transform()
 			var obstacles: Array[Rect2] = []
 			obstacles.append(_main._sprite_obstacle_rect(ct * _main.player.position))

@@ -367,7 +367,11 @@ func _draw_props() -> void:
 	_draw_banana_tree(tile_center(Vector2i(9, 11)) + Vector2(0, 8))
 	_draw_food_cart(tile_center(Vector2i(6, 12)) + Vector2(0, 8))
 	_draw_stools(tile_center(Vector2i(3, 13)) + Vector2(0, 6))
-	_draw_lantern(tile_center(Vector2i(10, 10)) + Vector2(0, 6))
+	# Den long o (2,10) thay vi (10,10): cot den o (10,10) dung
+	# ngay duoi nhan "Cua ra Cho Dau Moi" (nhan kep day y~1200) —
+	# cot xuyen qua nhan (kiem live 14:34). Dat o goc trai duoi,
+	# xa moi nhan day map.
+	_draw_lantern(tile_center(Vector2i(2, 10)) + Vector2(0, 6))
 	# Goc duoi-phai truoc day trong — them xe day hang rong + cum chau cay.
 	_draw_pushcart(tile_center(Vector2i(8, 13)) + Vector2(0, 8))
 	_draw_pots(tile_center(Vector2i(11, 12)) + Vector2(0, 6))

@@ -71,7 +71,12 @@ func _on_frame() -> void:
 			_main._advance_frame()
 			_check("doi khung -> Toi", _main.frame_idx == 2)
 			_check("khung Toi: anh nen dem", _main.iso_map._bg_sprite.texture.resource_path.ends_with("bg_map001_night.jpg"))
-			_check("khung Toi: nhan vat toi theo (tint)", _main.player._sprite.modulate.r < 0.9)
+			# Vong 5: bo tint rieng nhan vat — lop overlay MUL
+			# thong nhat toi ca nhan vat; tint rieng nhan doi lam
+			# nhan vat thanh bong den (kiem live 14:34). Kiem tra
+			# overlay Toi toi vua (r < 0.75) + nhan vat trang.
+			_check("khung Toi: overlay toi (r < 0.75)", _main._daynight.color.r < 0.75)
+			_check("khung Toi: nhan vat khong tint rieng (trang)", _main.player._sprite.modulate.r > 0.99)
 			_check("khung Toi: night_glow bat", _main.iso_map.night_glow.visible)
 			_check("khung Toi: trang/sao code tat (anh co san)", _main.iso_map.night_glow.sky_in_image)
 			_state = 2

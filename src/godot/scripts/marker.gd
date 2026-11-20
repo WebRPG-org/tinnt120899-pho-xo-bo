@@ -122,7 +122,9 @@ func label_screen_rect() -> Rect2:
 	var h := 38.0
 	var pos := Vector2(sp.x + (wr.size.x * cam.zoom.x - w) / 2.0, sp.y + (wr.size.y * cam.zoom.y - h) / 2.0)
 	pos.x = clampf(pos.x, 16.0, 720.0 - 16.0 - w)
-	pos.y = clampf(pos.y, HUD_BOTTOM_SCREEN, 1280.0 - 16.0 - h)
+	# Day man hinh toi da y=1200 (truoc 1264): nhan cua ra sat mep
+	# duoi gan bi cat (kiem live 14:34). Resolver kep lai lan nua.
+	pos.y = clampf(pos.y, HUD_BOTTOM_SCREEN, 1200.0 - h)
 	# Vi tri co ban (chua chong-chong); Main tinh label_override
 	# tu rect nay moi frame (xem _resolve_label_overlaps).
 	return Rect2(pos, Vector2(w, h))

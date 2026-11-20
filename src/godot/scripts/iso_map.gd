@@ -284,7 +284,7 @@ func build(data: Dictionary, marker_script: Script, font: Font, p_label_layer: C
 	# trong dai nay, khong roi xuong mat tien nhu truoc (loi: truyen
 	# offset+(-560,-330) la dinh mat tien, sao roi len cua/nen dat).
 	night_glow.set_sky(offset + Vector2(-560, -610))
-	night_glow.lamps = [tile_center(Vector2i(10, 10)) + Vector2(10, -28)]
+	night_glow.lamps = [tile_center(Vector2i(2, 10)) + Vector2(10, -28)]  # Theo cot den long (NadiaScene, doi tu (10,10) vong 5).
 	queue_redraw()
 
 # Nen dat nay la anh ve tay (ground_wide.jpg, Sprite2D cua Main) thay

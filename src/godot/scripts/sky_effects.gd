@@ -19,6 +19,7 @@ var player: Node2D = null  # Main gan sau khi tao player (Node2D thay
 	# IsoMap -> SkyEffects lam parser khong giai quyet duoc member).
 var _npc_positions: Array[Vector2] = []
 var _last_player_pos := Vector2.INF
+var _last_cam := Vector2.INF  # Vi tri camera lan ve gan nhat (neo mat troi/trang).
 
 func setup_npcs(markers: Array) -> void:
 	_npc_positions.clear()
@@ -26,7 +27,28 @@ func setup_npcs(markers: Array) -> void:
 		if String(mk.event_data.get("kind", "")) == "npc":
 			_npc_positions.append(mk.position)
 
+## Mat troi/trang neo theo CAMERA (vi tri man hinh co dinh), khong
+## neo theo map nua: neo map thi camera sang phai (khu TAP HOA)
+## la trang bi cat nua o mep trai, mat troi troi khoi khung
+## (kiem live 14:34). Toa do man hinh: duoi HUD (~190), tren mai
+## nha — mat troi Sang (170,290), Chieu (330,290), trang (400,300).
+func _cam_anchor(screen_pos: Vector2) -> Vector2:
+	var cam := get_viewport().get_camera_2d()
+	if cam == null:
+		return offset + Vector2(0, -140)
+	var vp := get_viewport_rect().size
+	var top_left := cam.get_screen_center_position() - vp / (2.0 * cam.zoom)
+	return top_left + screen_pos / cam.zoom
+
 func _process(_delta: float) -> void:
+	# Ve lai khi camera doi cho (mat troi/trang neo camera) hoac
+	# nguoi choi doi cho o khung Chieu (bong dai).
+	var cam := get_viewport().get_camera_2d()
+	if cam != null:
+		var cp := cam.get_screen_center_position()
+		if cp.distance_to(_last_cam) > 2.0:
+			_last_cam = cp
+			queue_redraw()
 	# Bong dai chi can ve lai khi nguoi choi doi cho (NPC dung yen).
 	if frame_idx == 1 and player != null and player.position.distance_to(_last_player_pos) > 2.0:
 		_last_player_pos = player.position
@@ -34,29 +56,21 @@ func _process(_delta: float) -> void:
 
 func _draw() -> void:
 	if frame_idx == 0:
-		# Mat troi sang: cao, vang dam — nam trong dai troi thay
-		# duoc duoi HUD (the gioi y -140, man hinh ~245 luc spawn).
-		# -195 cu nam sau HUD (man hinh ~168, day HUD 173) + mau
-		# nhat chim trong may trang nen khong thay (loi 20/11 12:30).
-		sun_pos = Vector2(offset.x - 160, -140)
+		# Mat troi sang: cao, vang dam — neo camera (170,290).
+		sun_pos = _cam_anchor(Vector2(170, 290))
 		_draw_sun(sun_pos, 38.0,
 			Color(1.0, 0.88, 0.35, 1), Color(1.0, 0.8, 0.3, 1))
 	elif frame_idx == 1:
-		# Mat troi lan: thap, cam dam, lech trai (tranh cot nut phai).
-		# y -190 cu cung bi HUD che nua tren nhu mat troi sang.
-		sun_pos = Vector2(offset.x - 40, -140)
+		# Mat troi lan: thap, cam dam — neo camera (330,290).
+		sun_pos = _cam_anchor(Vector2(330, 290))
 		_draw_sun(sun_pos, 42.0,
 			Color(1.0, 0.62, 0.28, 1), Color(1.0, 0.55, 0.2, 1))
 		_draw_long_shadows()
 	elif frame_idx == 2:
-		# Trang tron: ve bang code o toa do chinh xac thay vi de
-		# trong anh nen — anh gen khong dat dung vi tri (trang o
-		# (0.65,0.15) nam sau nut HUD phai; (0.87,0.15) nam ngoai
-		# khung hinh luc spawn). Vi tri the gioi (368,-103) = man
-		# hinh (394,297) luc spawn: duoi HUD, tren mai nha, giua
-		# khung hinh. Mau >1.0 (HDR) de con sang sau lop MUL dem
-		# (0.55,0.62,0.9) — anh nen dem da xoa trang (clone troi).
-		moon_pos = Vector2(offset.x + 56, -103)
+		# Trang tron: ve bang code, neo camera (400,300) — duoi
+		# HUD, tren mai nha, giua khung hinh. Mau >1.0 (HDR) de
+		# con sang sau lop MUL dem (0.7,0.78,0.95).
+		moon_pos = _cam_anchor(Vector2(400, 300))
 		_draw_moon(moon_pos)
 
 func _draw_sun(c: Vector2, r: float, core: Color, glow: Color) -> void:
