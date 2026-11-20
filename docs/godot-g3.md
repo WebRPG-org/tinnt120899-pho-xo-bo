@@ -12,16 +12,16 @@
 > VM không có Chromium/Firefox. Còn lại G3: Map006–014 (đã có data MV)
 > + Map015–018 (viết mới).
 
-> **Cập nhật bước 3 (20/11 ~06:50): G3 bước 3 XONG (mức headless).**
-> Map009 Phố Thương Mại + Map010 Khu Công Nghệ + Map011 Phố Tây đã
-> port sang Godot từ dữ liệu MV, chuỗi 1→2→…→11 thông 2 chiều, NPC
-> đối thoại được, cửa cuối Map011→Map012 chưa port bị chặn có báo
-> (không crash). G1 selftest **260/260 PASS**, G3 playtest mở rộng
-> **57/57 PASS**, toàn bộ test G2 cũ vẫn PASS (không regression),
-> scene 120 frame exit 0, export web exit 0 (~10s, pck 1.252.156
-> byte), http.server 200 đủ 6 file (cổng 8151). **Chưa kiểm chứng
-> bằng trình duyệt thật.** Còn lại G3: Map012–014 (đã có data MV)
-> + Map015–018 (viết mới).
+> **Cập nhật bước 4 (20/11 ~08:00): G3 bước 4 XONG (mức headless).**
+> Map012 Khu Biệt Thự Ven Sông + Map013 Quận Tài Chính + Map014 Đảo
+> Thượng Lưu đã port sang Godot từ dữ liệu MV — HẾT data MV (Map015–018
+> viết mới ở bước sau). Chuỗi 1→2→…→14 thông 2 chiều, NPC đối thoại được,
+> Map014 là map cuối MV (chỉ 1 cửa về, không có cửa đi tiếp). G1 selftest
+> **327/327 PASS**, G3 playtest mở rộng **74/74 PASS**, toàn bộ test G2
+> cũ vẫn PASS (không regression), scene 120 frame exit 0, export web
+> exit 0 (~8s, pck 1.269.244 byte), http.server 200 đủ 6 file (cổng
+> 8152). **Chưa kiểm chứng bằng trình duyệt thật.** Còn lại G3:
+> Map015–018 (viết mới theo `docs/districts.md`).
 
 ## 1. Port dữ liệu — `tools/godot/convert_maps.py` mở rộng
 
@@ -97,20 +97,24 @@ dạng tương tự ở `PxbOnline.flush_outbox` (đã sửa ở G2 §2s).
 | Export web | exit 0, ~8s; `index.wasm` 39,5 MB, `index.pck` 1.177.624 byte (`grep -a` thấy "Khu Công Nhân" ×2, "Bến Xe Miền Đông" ×3, "Làng Đại Học" ×2, "Cửa đi Khu Công Nhân" ×1 trong pck) |
 | HTTP 200 | `index.html/js/wasm/pck/audio.worklet.js/png` đủ 6 file (cổng 8149); `GODOT_THREADS_ENABLED = false` |
 
-## 6. Bước tiếp theo — G3 bước 3 (XONG 20/11 ~06:50, xem §8)
+## 6. Bước tiếp theo — G3 bước 5: Map015–018 viết mới (xem §9)
 
-1. Browser-verify G3 bước 1–3 (mở build web, đi chuỗi 1→11, xem tile
+1. Browser-verify G3 bước 1–4 (mở build web, đi chuỗi 1→14, xem tile
    atlas tái dùng có vẽ đúng không — Map003/005/006/007/008/009/010/
-   011 dùng tile nhà trọ làm xưởng/giảng đường/chung cư/văn phòng/
-   cửa hàng/văn phòng công nghệ/phố dịch vụ là PROVISIONAL,
-   chờ art pass vẽ tile riêng).
-2. Port Map012–014 (Khu Biệt Thự Ven Sông, + 2 khu — đã có data MV
-   + atlas mapping, cùng mẫu bước 1–3): thêm vào `MAP_IDS`,
-   chạy converter, mở rộng selftest/playtest theo chuỗi.
-3. Sau Map012–014: Map015–018 viết mới (Phố Đi Bộ – Chợ Đêm, Công
-   Viên An Bình, + 2 khu tầng 5) theo `docs/districts.md`.
-4. MarketBattle đã port xong ở G2 (luật ĐÃ CHỐT 20/11 06:06) — còn
-   scene trận MarketBattle (UI): vẽ lưới isometric qua iso_map.gd.
+   011/012/013/014 dùng tile nhà trọ làm xưởng/giảng đường/chung cư/văn
+   phòng/cửa hàng/văn phòng công nghệ/phố dịch vụ/biệt thự/ngân hàng/đảo
+   là PROVISIONAL, chờ art pass vẽ tile riêng).
+2. Port Map015–018 (viết mới theo `docs/districts.md` — Phố Đi Bộ –
+   Chợ Đêm, Công Viên An Bình, + 2 khu tầng 5): converter cần nhánh
+   tạo map từ data viết tay (không có Map JSON MV), NPC/hint theo GDD,
+   cửa Map014→Map015 là cửa MỚI (không có trong MV).
+3. Sau Map015–018: G3 xong — đồ thị 18 map thông nhau; chuyển sang G4
+   (online + release) hoặc scene trận MarketBattle (UI): vẽ lưới
+   isometric qua iso_map.gd.
+4. Export web: Godot giải đường dẫn export tương đối theo project dir
+   (`src/godot`), không theo CWD — lần này export lần đầu fail vì thư
+   mục `godot-build` chưa tồn tại; tạo thư mục + dùng đường dẫn tuyệt
+   đối thì exit 0. Ghi nhớ cho lần sau.
 
 ## 7. G3 bước 2 — Map006–008 (20/11 ~06:00)
 
@@ -229,3 +233,75 @@ Map010–011 trực tiếp từ data MV, không viết mới. Cần sửa dòng 
 | Scene Main chạy 120 frame | exit 0, không ERROR/warning |
 | Export web | exit 0, ~10s; `index.wasm` 39,5 MB, `index.pck` 1.252.156 byte (`grep -a` thấy "Phố Thương Mại" ×3, "Khu Công Nghệ" ×3, "Phố Tây" ×2, "Chủ Cửa Hàng"/"Lập Trình Viên"/"Nhân Viên Lễ Tân" ×1 trong pck) |
 | HTTP 200 | `index.html/js/wasm/pck/audio.worklet.js/png` đủ 6 file (cổng 8151); `GODOT_THREADS_ENABLED = false` |
+
+## 9. G3 bước 4 — Map012–014 (20/11 ~08:00, HẾT data MV)
+
+### 9.1 Port dữ liệu — `tools/godot/convert_maps.py` mở rộng
+
+| Nguồn MV (không sửa) | Đích Godot |
+|---|---|
+| `Map012/013/014.json` (12×9, data 648, L0 108 ô + L1 28 ô) | `layers[0]` + `layers[1]` trong `maps.json` |
+| MV **không có** `atlas-map012/013/014.json` (chỉ có 001/002) | `_atlas_for()` mới: fallback tái dùng `atlas-map001.json` (tiles) + `atlas-map001.png`; tên map lấy từ `MapInfos.json` (Khu Biệt Thự Ven Sông / Quận Tài Chính / Đảo Thượng Lưu) |
+| Event NPC (Show Text code 401, nhiều dòng nối bằng dấu cách) | `greet` **nguyên văn** MV |
+| Event cửa (TRANSFER code 201) | `to_map` đọc từ lệnh TRANSFER; `transfer_target()` nay cho phép đích tới Map015 (`MAP_IDS + [15]`) |
+| `districts.md` / GDD (nhà tầng 4 mở theo Chương 4, Quận Tài Chính mở theo Chương 4, Đảo Thượng Lưu mở theo Chương 5 nhánh Siêu giàu: tài sản ≥ 100 tỉ) | `hint` NPC mới — **do port viết mới** (MV không có hint cho 6 NPC này) |
+
+NPC mới (2/map, đúng vị trí + lời thoại MV):
+
+| Map | NPC (ô) | Greet (nguyên văn MV) | Hint (port viết) |
+|---|---|---|---|
+| 012 Khu Biệt Thự Ven Sông | Bảo Vệ Biệt Thự (3,3), Người Làm Vườn (8,6) | Nhà tầng 4, chỉ mở khi xong Chương 4: 3 quest giúp người + 1 quan hệ thân thiết / biệt thự ven sông yên tĩnh, nhà tầng 4 | Nhà tầng 4 chỉ mở khi xong Chương 4; xong rồi đi nhanh bằng điện thoại mục Bản đồ |
+| 013 Quận Tài Chính | Nhân Viên Ngân Hàng (3,3), Môi Giới Chứng Khoán (8,6) | Ngân hàng, chứng khoán mô phỏng, công ty lớn — chỉ mở khi xong Chương 4 | Việc ở đây cần xong Chương 4; mở điện thoại mục Việc làm xem nghề đang tuyển |
+| 014 Đảo Thượng Lưu | Quản Gia Đảo (3,3), Chủ Biệt Thự Đảo (8,6) | Chỉ mở khi tài sản ≥ ngưỡng siêu giàu — Chương 5 nhánh Siêu giàu: tài sản ≥ 100 tỉ | Chưa đủ 100 tỉ thì tích lũy, mở cửa hàng, đầu tư rồi quay lại |
+
+Map012–014 **không có** hotspot / Góc Chế Tạo trong MV nên không có
+trong port (đúng nguồn, không bịa thêm).
+
+### 9.2 Khác bước 1–3 — hết data MV, hết cửa bị chặn
+
+Như bước 2–3 (không như bước 1 phải thêm cửa `ADDED_DOORS`): chuỗi
+11→12→13→14 trong MV đã có đủ cửa về (5,4) + cửa đi (5,8) ở mỗi map,
+nên bước 4 **không thêm cửa nào** — converter chỉ mở rộng `MAP_IDS`
+sang 1–14 + thêm `NPC_TEXT` 6 NPC + `_atlas_for()` fallback.
+Map014 là map cuối MV: chỉ có 1 cửa (về Map013), **không có cửa đi
+tiếp** nên không còn trường hợp cửa bị chặn ở cuối chuỗi — cơ chế
+`_transfer()` chặn đích chưa có data vẫn giữ nguyên cho Map015+
+(bước sau). Sửa luôn dòng sai trong `opensource-engine.md` §4
+("Map003–009 đã có data MV, Map010–018 viết mới" → "Map003–014 đã
+có data MV, Map015–018 viết mới") — đã ghi chú từ §8.2.
+
+### 9.3 Lỗi tìm được khi port — kỳ vọng test sai, không phải game sai
+
+Playtest lần đầu 73/74: mục "player van o (5,7)" FAIL — bước xuống
+(5,8) ở Map014 không bị chặn. Nguyên nhân: `is_walkable()` = trong
+biên + lớp 1 trống + không NPC; ô (5,8) ở Map014 (cũng như mọi map)
+có L1 = 0 (hàng y=8 của L1 chỉ có vật ở 2 góc), nên là ô đi được
+bình thường — chỉ khác là không có event cửa nên không chuyển map.
+Sửa test (không sửa game): bước xuống (5,8) thì player ở (5,8) và
+vẫn ở Map014. Chạy lại: G3 playtest **74/74 PASS**.
+
+### 9.4 File mới / đổi đợt này
+
+| File | Nội dung |
+|---|---|
+| `tools/godot/convert_maps.py` (sửa) | `MAP_IDS = [1..14]`; `transfer_target` cho phép đích Map015; `_atlas_for()` fallback atlas-map001 + tên từ MapInfos.json; `NPC_TEXT` thêm 6 NPC Map012–014 |
+| `src/godot/data/maps.json` (tạo lại) | 14 map: Map001 5 event, Map002 7 event, Map003–013 mỗi map 4 event (2 NPC + 2 cửa), Map014 3 event (2 NPC + 1 cửa) |
+| `src/godot/tests/g1_selftest.gd` (sửa) | Kỳ vọng 14 map; bảng số event từng map (12–13 như 3–11, 14: door=1); đồ thị cửa BFS từ Map001 tới đủ 14 map; mỗi cửa có cửa ngược (không còn ngoại lệ cửa cuối); cửa hợp lệ 1..14 |
+| `src/godot/tests/g3_playtest.gd` (sửa) | Chuỗi mở rộng 1→2→…→14 qua cửa (5,8), nói chuyện Bảo Vệ Biệt Thự / Nhân Viên Ngân Hàng / Quản Gia Đảo, kiểm tra Map014 không có cửa đi tiếp (o (5,8) không event, bước xuống vẫn ở Map014), đi ngược về Map001 qua các cửa (5,4) |
+| `docs/opensource-engine.md` (sửa) | §4: "Map003–014 đã có data MV, Map015–018 viết mới" (sửa dòng sai đã ghi chú từ §8.2) |
+| `.gitignore` (sửa) | Thêm `godot-build/` (build web local, binary, không push) |
+
+### 9.5 Verify thật đợt này (20/11 ~08:00)
+
+| Kiểm tra | Kết quả |
+|---|---|
+| Converter chạy lại | Map001–014: L0=108, L1=28, event đúng số lượng từng map |
+| `--check-only` 2 test mới | PASS, exit 0 |
+| G1 selftest | **327/327 PASS** (từ 260/260: thêm ~67 mục cho 3 map mới + đồ thị) |
+| G3 playtest mở rộng | **74/74 PASS** (lần đầu 73/74: 1 mục kỳ vọng sai về ô (5,8) Map014 — sửa test §9.3, chạy lại PASS hết) |
+| G1 playtest | **14/14 PASS** (không regression) |
+| G2 selftest cũ (Balance/Stats/Time) | **87/87 PASS** |
+| G2 Jobs / Hotspot / Inventory+Crafting / Economy+Education / Social+Titles+Story / PhoneHub / Tools / Online / SaveCloud / UI wiring 1+2 / MarketBattle | **56/56 + 37/37 + 78/78 + 92/92 + 102/102 + 66/66 + 155/155 + 91/91 + 69/69 + 37/37 + 71/71 + 123/123 PASS** (không regression) |
+| Scene Main chạy 120 frame | exit 0, không ERROR/warning |
+| Export web | Lần đầu FAIL ("Target folder does not exist": `godot-build` chưa có; Godot giải path export tương đối theo project dir, không theo CWD) — tạo thư mục + dùng đường dẫn tuyệt đối thì exit 0, ~8s; `index.wasm` 39,5 MB, `index.pck` 1.269.244 byte (`grep -a` thấy "Khu Biệt Thự Ven Sông" ×3, "Quận Tài Chính" ×6, "Đảo Thượng Lưu" ×4, "Bảo Vệ Biệt Thự"/"Nhân Viên Ngân Hàng"/"Quản Gia Đảo" ×1 trong pck) |
+| HTTP 200 | `index.html/js/wasm/pck/audio.worklet.js/png` đủ 6 file (cổng 8152); `GODOT_THREADS_ENABLED = false` (trong `index.html:115`) |

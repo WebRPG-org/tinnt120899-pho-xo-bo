@@ -35,5 +35,6 @@ secrets/
 
 # Godot (G0 — 19/11/2026): binary + build local, không push lên GitHub
 tools/godot/
+godot-build/
 src/godot/.godot/
 src/godot-build/

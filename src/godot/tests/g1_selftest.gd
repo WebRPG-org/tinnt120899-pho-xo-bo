@@ -12,6 +12,10 @@ extends SceneTree
 ## G3 buoc 3 (20/11): maps.json nay co 11 map (Map001-011); Map009-011
 ## tai dung atlas-map001.png, khong co hotspot/craft; cua cuoi
 ## Map011 -> Map012 chua port (bi chan co bao).
+## G3 buoc 4 (20/11): maps.json nay co 14 map (Map001-014, het data MV);
+## Map012-014 tai dung atlas-map001.png (MV khong co atlas-map012/013/014),
+## khong co hotspot/craft; Map014 la map cuoi MV — chi 1 cua ve Map013,
+## khong co cua di tiep nen khong con cua bi chan o cuoi chuoi.
 
 var _pass := 0
 var _fail := 0
@@ -29,11 +33,11 @@ func _init() -> void:
 	var raw := FileAccess.get_file_as_string("res://data/maps.json")
 	_check("maps.json doc duoc", raw != "")
 	var data: Dictionary = JSON.parse_string(raw)
-	_check("co 11 map", data["maps"].size() == 11)
+	_check("co 14 map", data["maps"].size() == 14)
 	_check("diem bat dau Map001 (4,5)",
 		int(data["start"]["map"]) == 1 and int(data["start"]["x"]) == 4 and int(data["start"]["y"]) == 5)
 
-	# Do thi cua: tu Map001 di theo cua (chi tinh dich da co data) toi duoc ca 11 map.
+	# Do thi cua: tu Map001 di theo cua (chi tinh dich da co data) toi duoc ca 14 map.
 	var by_id := {}
 	for m in data["maps"]:
 		by_id[int(m["id"])] = m
@@ -47,8 +51,9 @@ func _init() -> void:
 				if by_id.has(dest) and not seen.has(dest):
 					seen[dest] = true
 					queue.append(dest)
-	_check("do thi cua: tu Map001 toi du 11 map", seen.size() == 11, str(seen.keys()))
-	# Moi cua deu co cua nguoc (tru cua cuoi Map011 -> Map012 chua port).
+	_check("do thi cua: tu Map001 toi du 14 map", seen.size() == 14, str(seen.keys()))
+	# Moi cua deu co cua nguoc (Map014 la map cuoi MV, chi 1 cua ve Map013 —
+	# khong con cua cuoi tam thoi nhu buoc 1-3).
 	for m in data["maps"]:
 		for e in (m as Dictionary)["events"]:
 			if String(e.get("kind", "")) != "door":
@@ -59,8 +64,6 @@ func _init() -> void:
 				for e2 in (by_id[dest] as Dictionary)["events"]:
 					if String(e2.get("kind", "")) == "door" and int(e2["to_map"]) == int(m["id"]):
 						back = true
-			elif dest == 12 and int(m["id"]) == 11:
-				back = true  # Cua cuoi tam thoi: dich Map012 chua port (G3 buoc sau).
 			_check("Map%03d cua -> %d co cua nguoc" % [int(m["id"]), dest], back)
 
 	var root_node := Node2D.new()
@@ -106,10 +109,11 @@ func _test_map(m: Dictionary, parent: Node, font: Font) -> void:
 		if String(e.get("kind", "")) == "npc":
 			var t := Vector2i(e["tile"][0], e["tile"][1])
 			_check(tag + ": o NPC " + String(e["name"]) + " bi chan", not iso.is_walkable(t))
-	# Event: so luong theo tung map (G3 buoc 1-3).
+	# Event: so luong theo tung map (G3 buoc 1-4).
 	#   Map001: 2 NPC + 1 hotspot + 1 craft + 1 door
 	#   Map002: 2 NPC + 2 hotspot + 1 craft + 2 door (them cua di Map003)
-	#   Map003-011: 2 NPC + 0 hotspot + 0 craft + 2 door
+	#   Map003-013: 2 NPC + 0 hotspot + 0 craft + 2 door
+	#   Map014: 2 NPC + 0 hotspot + 0 craft + 1 door (map cuoi MV, chi cua ve)
 	var kinds := {}
 	for e in m["events"]:
 		kinds[String(e.get("kind", ""))] = int(kinds.get(String(e.get("kind", "")), 0)) + 1
@@ -124,7 +128,10 @@ func _test_map(m: Dictionary, parent: Node, font: Font) -> void:
 		8: {"npc": 2, "craft": 0, "door": 2, "hotspot": 0},
 		9: {"npc": 2, "craft": 0, "door": 2, "hotspot": 0},
 		10: {"npc": 2, "craft": 0, "door": 2, "hotspot": 0},
-		11: {"npc": 2, "craft": 0, "door": 2, "hotspot": 0}}[mid]
+		11: {"npc": 2, "craft": 0, "door": 2, "hotspot": 0},
+		12: {"npc": 2, "craft": 0, "door": 2, "hotspot": 0},
+		13: {"npc": 2, "craft": 0, "door": 2, "hotspot": 0},
+		14: {"npc": 2, "craft": 0, "door": 1, "hotspot": 0}}[mid]
 	for k in want.keys():
 		_check(tag + ": %s = %d" % [k, int(want[k])],
 			int(kinds.get(k, 0)) == int(want[k]), str(kinds))
@@ -134,13 +141,13 @@ func _test_map(m: Dictionary, parent: Node, font: Font) -> void:
 			_check(tag + ": NPC " + String(e["name"]) + " co greet+hint",
 				String(e.get("greet", "")).length() > 10 and String(e.get("hint", "")).length() > 10)
 	# Atlas PNG ma map dung phai ton tai trong project (Map003/005/006/007/008/
-	# 009/010/011 tai dung 001, Map004 tai dung 002).
+	# 009/010/011/012/013/014 tai dung 001, Map004 tai dung 002).
 	_check(tag + ": atlas PNG ton tai", FileAccess.file_exists(String(m["atlas_png"])), String(m["atlas_png"]))
-	# Door noi sang map hop le (1..12; 12 la dich cua cuoi chua port).
+	# Door noi sang map hop le (1..14; het data MV, khong con dich chua port).
 	for e in m["events"]:
 		if String(e.get("kind", "")) == "door":
 			_check(tag + ": cua noi sang map " + str(int(e["to_map"])) + " hop le",
-				int(e["to_map"]) >= 1 and int(e["to_map"]) <= 12)
+				int(e["to_map"]) >= 1 and int(e["to_map"]) <= 14)
 	# Hotspot co du truong khung/vat/so luong (bang PXB_Hotspot.js).
 	for e in m["events"]:
 		if String(e.get("kind", "")) == "hotspot":

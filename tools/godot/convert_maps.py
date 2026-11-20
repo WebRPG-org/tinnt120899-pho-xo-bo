@@ -30,6 +30,13 @@ Map011 Pho Tay — ca 3 tai dung atlas-map001.png; do thi MV 8-9-10-11
 da thong 2 chieu san (khong can ADDED_DOORS them), cua cuoi Map011 ->
 Map012 chua port (bi chan co bao). Map009-011 khong co hotspot /
 Goc Che Tao trong MV.
+G3 buoc 4 (20/11): them Map012 Khu Biet Thu Ven Song, Map013 Quan Tai
+Chinh, Map014 Dao Thuong Luu — het data MV (Map015-018 viet moi o
+buoc sau). MV KHONG co atlas-map012/013/014.json (chi co 001/002)
+nen ca 3 tai dung atlas-map001.png + tiles cua no, ten map lay tu
+MapInfos.json. Do thi MV 11-12-13-14 da thong 2 chieu san. Map014
+la map cuoi MV: chi co 1 cua (ve Map013), khong co cua di tiep nen
+khong co truong hop cua bi chan o cuoi chuoi.
 """
 import json
 import shutil
@@ -39,7 +46,7 @@ ROOT = Path(__file__).resolve().parents[2]  # ~/workspace/pho-xo-bo
 MV = ROOT / "src/nadia/www/data"
 GODOT = ROOT / "src/godot"
 
-MAP_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]  # G3 buoc 3: 1-11 (Map012+ o buoc sau)
+MAP_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]  # G3 buoc 4: 1-14 (het data MV)
 
 # --- Du lieu khong co trong Map JSON, lay tu Actors.js / PXB_Hotspot.js ---
 NPC_TEXT = {
@@ -167,6 +174,41 @@ NPC_TEXT = {
         "greet": "Dịch vụ cao cấp ở đây chỉ mở khi xong 3 quest giúp người ở Chương 4. Ngoại ngữ và giao tiếp tốt mới làm được dịch vụ cao cấp ở đây.",
         "hint": "Ngoại ngữ và giao tiếp tốt mới làm được dịch vụ cao cấp — làm quest giúp người ở Chương 4 để mở khu, rồi quay lại.",
     },
+    # --- G3 buoc 4 (Map012-014): greet NGUYEN VAN tu lenh Show Text (code 401)
+    # trong Map JSON (nhieu dong 401 noi bang dau cach); hint do port viet moi,
+    # noi dung theo districts.md / GDD (nha tang 4 mo theo Chuong 4, Quan Tai
+    # Chinh mo theo Chuong 4, Dao Thuong Luu mo theo Chuong 5 nhanh Sieu giau:
+    # tai san >= 100 ti) — xem docs/godot-g3.md §1. Chua co trong Actors.js / MV.
+    "Bảo Vệ Biệt Thự": {
+        "id": "bao-ve-biet-thu",
+        "greet": "Khu biệt thự ven sông — nhà ở tầng 4, chỉ mở khi xong Chương 4. Muốn vào khu này phải xong 3 quest giúp người + có 1 quan hệ thân thiết.",
+        "hint": "Nhà tầng 4 chỉ mở khi xong Chương 4 — 3 quest giúp người + 1 quan hệ thân thiết. Xong rồi thì mở điện thoại mục Bản đồ đi nhanh tới đây.",
+    },
+    "Người Làm Vườn": {
+        "id": "nguoi-lam-vuon",
+        "greet": "Biệt thự ven sông yên tĩnh lắm, nhà ở tầng 4. Chương 4 xong 3 quest giúp người mới được vào khu này.",
+        "hint": "Biệt thự ven sông yên tĩnh, nhà tầng 4. Muốn vào thì làm xong 3 quest giúp người ở Chương 4 rồi quay lại.",
+    },
+    "Nhân Viên Ngân Hàng": {
+        "id": "nhan-vien-ngan-hang",
+        "greet": "Quận Tài Chính — ngân hàng, chứng khoán mô phỏng, công ty lớn. Muốn vào khu này phải xong Chương 4: 3 quest giúp người + 1 quan hệ thân thiết.",
+        "hint": "Ngân hàng, chứng khoán mô phỏng, công ty lớn — việc ở đây cần xong Chương 4. Mở điện thoại mục Việc làm xem nghề nào đang tuyển.",
+    },
+    "Môi Giới Chứng Khoán": {
+        "id": "moi-gioi-chung-khoan",
+        "greet": "Ngân hàng, chứng khoán mô phỏng, công ty lớn — ở Quận Tài Chính này. Chương 4 xong 3 quest giúp người mới được vào khu này.",
+        "hint": "Chứng khoán mô phỏng ở Quận Tài Chính — học lên bậc, tích Danh vọng rồi quay lại khi đã qua Chương 4.",
+    },
+    "Quản Gia Đảo": {
+        "id": "quan-gia-dao",
+        "greet": "Đảo Thượng Lưu — chỉ mở khi tài sản ≥ ngưỡng siêu giàu. Muốn vào đảo phải xong Chương 5 nhánh Siêu giàu: tài sản ≥ 100 tỉ.",
+        "hint": "Đảo chỉ mở khi tài sản ≥ 100 tỉ (Chương 5 nhánh Siêu giàu). Chưa đủ thì tích lũy, mở cửa hàng, đầu tư rồi quay lại.",
+    },
+    "Chủ Biệt Thự Đảo": {
+        "id": "chu-biet-thu-dao",
+        "greet": "Đảo Thượng Lưu chỉ mở khi tài sản ≥ ngưỡng siêu giàu. Chương 5 xong, tài sản ≥ 100 tỉ mới được vào đảo này.",
+        "hint": "Tài sản ≥ 100 tỉ mới được vào đảo — Chương 5 nhánh Siêu giàu. Tích lũy đủ rồi quay lại, đảo vẫn chờ.",
+    },
 }
 
 # Bang hotspot slice — PORT TRUC TIEP PXB_Hotspot.js HOTSPOTS (PROVISIONAL, chua chot GDD).
@@ -203,16 +245,31 @@ def transfer_target(ev: dict) -> int:
         for cmd in page.get("list", []):
             if cmd.get("code") == 201:
                 params = cmd.get("parameters", [])
-                assert len(params) >= 2 and int(params[1]) in MAP_IDS + [12], (
+                assert len(params) >= 2 and int(params[1]) in MAP_IDS + [15], (
                     f"TRANSFER dich la {params[1]} nam ngoai MAP_IDS")
                 return int(params[1])
     raise ValueError(f"event cua {ev.get('name')!r} khong co lenh TRANSFER")
 
 
+def _atlas_for(map_id: int) -> tuple[dict, str]:
+    """Tra atlas-map0XX.json + ten map.
+    Map012-014 KHONG co file atlas rieng trong MV (chi co 001/002) nen
+    tai dung atlas-map001.json (tiles + PNG), ten map lay tu MapInfos.json."""
+    tag = f"Map{map_id:03d}"
+    p = MV / f"atlas-map{tag[3:]}.json"
+    if p.exists():
+        a = json.loads(p.read_text(encoding="utf-8"))
+        return a, a["mapName"]
+    infos = json.loads((MV / "MapInfos.json").read_text(encoding="utf-8"))
+    name = next(i["name"] for i in infos if i and i.get("id") == map_id)
+    a = json.loads((MV / "atlas-map001.json").read_text(encoding="utf-8"))
+    return a, name
+
+
 def convert(map_id: int) -> dict:
     tag = f"Map{map_id:03d}"
     m = json.loads((MV / f"{tag}.json").read_text(encoding="utf-8"))
-    atlas = json.loads((MV / f"atlas-map{tag[3:]}.json").read_text(encoding="utf-8"))
+    atlas, map_name = _atlas_for(map_id)
     assert m["width"] == 12 and m["height"] == 9, f"{tag} khong phai 12x9"
     data = m["data"]
     assert len(data) == 648, f"{tag} data len {len(data)} != 648 (6 lop x 108)"
@@ -246,10 +303,11 @@ def convert(map_id: int) -> dict:
 
     # Ten PNG lay tu atlas-map00X.json (truong "atlasPng"): Map003/Map005
     # tai dung atlas-map001.png, Map004 tai dung atlas-map002.png.
+    # Map012-014 khong co file atlas rieng -> _atlas_for tra atlas-map001.
     png_name = str(atlas["atlasPng"]).split("/")[-1]
     return {
         "id": map_id,
-        "name": atlas["mapName"],
+        "name": map_name,
         "width": 12, "height": 9,
         "tile_w": 64, "tile_h": 32,
         "atlas_png": f"res://tiles/{png_name}",
