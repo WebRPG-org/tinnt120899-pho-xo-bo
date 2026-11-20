@@ -178,9 +178,14 @@ kém hay.
   3. **Art tái dùng:** atlas PNG Kenney CC0 + `docs/art-assets.md` +
      `docs/tileset-plan.md` — Godot TileSet ăn trực tiếp PNG atlas,
      không cần vẽ lại. Map 12×9 hiện tại port sang TileMapLayer.
-  4. **Online Phase 2 giữ nguyên server .NET 8** (`EconomyLedger.cs`)
-     hoặc Godot headless dedicated server — quyết sau khi slice Godot
-     chạy, không quyết vội bây giờ.
+  4. **Online Phase 2 — ĐÃ QUYẾT (Bậc 1, 20/11, xem
+     docs/godot-g4.md §12.5 + §16): dùng Godot headless dedicated
+     server + WebSocket** (`src/godot/server/pxb_server.gd`,
+     giao thức JSON v1: hello/welcome/presence/chat; skeleton
+     chat relay + presence đã xong + test 37/37 + verify 2 tiến
+     trình thật 20/11). Server .NET 8 (`EconomyLedger.cs`) giữ
+     lại làm tham chiếu, không phải đường chính. Bước tiếp: nối
+     PxbOnline sang server Godot mới.
 
 ## 4. Lộ trình chuyển từ MV sang Godot (5 giai đoạn)
 
