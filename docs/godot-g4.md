@@ -1515,7 +1515,37 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
     `visual-check/artpass8/taphoa-game-before-after.png`
     (trên = vòng 7, dưới = vòng 8).
 
-### 21.7 Deploy — (ghi sau khi push xong)
+### 21.7 Deploy — XONG (20/11 ~18:00–18:10)
+
+- Main `81bb16d3` (9 file: web_shell, nadia_scene,
+  g4_artpass8_test mới, build_gh_pages versioned,
+  fix_taphoa_day_windows mới, docs §21, 3 script
+  visual-check artpass8). Kiểm tra trước push: head main
+  vẫn `0662f332` (cron 17:45 chưa push); remote-vs-local
+  7 file: 4 file đổi đúng như kỳ vọng, main/player/marker
+  identical nên không push; 5 file mới xác nhận ABSENT
+  (lưu ý: `get_file_contents` trả `ok:true` cả khi file
+  không tồn tại — phải xem `result.isError`).
+- gh-pages head `81d88ba0`, 5 lô (thứ tự: chunk version
+  mới trước, `index.html` CUỐI): `b67eea16` (pck
+  000–016), `855c7e8c` (017–033), `009b536c` (034–050),
+  `c2d635d1` (img versioned 5 file + versions.json),
+  `81d88ba0` (index.html). **Lỗi mới: push 51 chunk pck
+  1 lô 8.8MB bị HTTP 413** (transport MCP nhỏ hơn giới
+  hạn 16MiB của CLI) — chia 3 lô ~17 file/lô như vòng 7.
+  wasm `fc74679e` KHÔNG push lại (đã có trên gh-pages).
+  Trước lô index.html đã verify qua API: 4 mẫu chunk +
+  versions.json khớp staging 4/4.
+- **Verify khớp byte từ site live — ĐÚNG NGAY LẦN ĐẦU,
+  không cần chờ CDN:** index.html live SHA `7facd2b1`
+  = staging; versions.json live khớp; ráp 51 chunk pck
+  live → **6.863.932 byte, SHA `73ae78dff7e2` = build
+  mới**. URL versioned khiến trộn CDN không thể xảy ra
+  (chunk mới có URL mới hoàn toàn) — khác vòng 7 phải
+  tải lại sau vài phút.
+- Link live: https://tinnt120899.github.io/pho-xo-bo/
+  (Pages rebuild vài phút sau push; verify trên đã
+  thấy bản mới ngay).
 
 ### 21.8 Việc tiếp theo
 
