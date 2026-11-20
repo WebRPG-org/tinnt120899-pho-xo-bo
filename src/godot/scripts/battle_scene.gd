@@ -17,6 +17,8 @@ extends Node2D
 ## tiếp được (xem tests/g4_battle_scene_test.gd).
 
 signal close_requested
+## G4 buoc 5: Main nghe de ghi giu sap + Danh vong vao save khi tran xong.
+signal battle_finished(winner: String)
 
 const VIEW_W := 720
 const VIEW_H := 1280
@@ -103,6 +105,7 @@ func _on_turn_changed(_fighter_id: String) -> void:
 func _on_battle_finished(_winner: String) -> void:
 	_last_action = result_text()
 	queue_redraw()
+	battle_finished.emit(_winner)
 
 
 ## --- Toán lưới (cùng công thức IsoMap) ---

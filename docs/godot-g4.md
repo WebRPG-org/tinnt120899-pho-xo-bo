@@ -806,10 +806,156 @@ thoại. Đã sửa + xem lại ảnh, 6 điểm hết:
 3. Tile riêng Map003–018 (đang PROVISIONAL); camera zoom trận
    MarketBattle (lưới đang nhỏ giữa màn hình).
 
-1. G4 online thật: quyết Godot headless dedicated server thay .NET
-   hay chờ máy có dotnet (xem `docs/opensource-engine.md` §3.4).
-2. Lưu giữ sạp + Danh vọng trận MarketBattle vào SaveCloud
-   (logic `data()` đã có, Main chưa nối); animation di chuyển/
-   đánh; chọn đội/vũ khí trước trận.
-3. Tile riêng Map003–018 (đang PROVISIONAL); camera zoom trận
-   MarketBattle (lưới đang nhỏ giữa màn hình).
+## 12. G4 bước 5 — Lưu giữ sạp + Danh vọng trận vào SaveCloud — XONG (20/11 ~14:50–15:05)
+
+### 12.1 Nối Main ↔ PxbMarketBattle ↔ SaveCloud
+
+- `scripts/battle_scene.gd`: thêm `signal battle_finished(winner)`
+  (phát trong `_on_battle_finished`, sau khi `_last_action` cập
+  nhật) — Main nghe để ghi kết quả trận, không sửa luật.
+- `main.gd`:
+  - `battle_state: Dictionary` bền theo phiên + `_battle_saved`
+    (chống ghi 2 lần nếu `_finish_battle` bị gọi lại).
+  - `_start_battle_demo()`: `expire_holds(battle_state, day)` rồi
+    `battle_mb.from_data(battle_state)` — trận demo mới khôi phục
+    giữ sạp + lịch sử từ save trước; nối
+    `battle_scene.battle_finished → _on_battle_finished`.
+  - `_on_battle_finished(winner)`: `battle_state =
+    battle_mb.data()`; Danh vọng đội Bạn lấy từ
+    `battle.result.rewards.teamA.famePerFighter` (thắng +50 /
+    hòa +20 / thua +10, đúng luật) cộng vào `fame` + cập nhật
+    HUD + toast ("Trận kết thúc — Danh vọng +50. Giữ sạp
+    sap-cho-dau-moi đến ngày 8." khi đội Bạn thắng trận tranh sạp).
+  - `_collect_system_data()`: thêm `"pxb_marketbattle": battle_state`
+    (JSON-safe: holds + history đã qua `from_data` lọc).
+  - `_apply_save_data()`: khôi phục qua `PxbMarketBattle` tạm
+    (`from_data` loại hold rác thiếu teamId/ngày + history thiếu
+    `result`), rồi `expire_holds(battle_state, day)` theo ngày
+    vừa tải.
+  - `_advance_frame()`: sang ngày game mới thì
+    `expire_holds(battle_state, day)` — sạp hết hạn tự dọn, không
+    chờ tới lúc mở trận/load save.
+- Chưa làm: quyền lợi giữ sạp chưa áp vào Economy (giá sỉ −10% /
+  thuế −20% / Danh vọng +10/ngày — `hold_benefits()` đã có, Main
+  chưa gọi khi mua bán/ngày mới); animation di chuyển/đánh; chọn
+  đội/vũ khí trước trận; chặn thách đấu khi đã giữ sạp khác
+  (`can_challenge` đã có, demo chưa gọi).
+
+### 12.2 Test mới + hồi quy
+
+- `tests/g4_battle_save_test.gd`: **31/31 PASS** — thắng (giữ
+  sạp đội Bạn đến ngày+7, fame +50, lịch sử 1), save slot 1 →
+  xóa trắng state → load khôi phục đúng giữ sạp + fame 50 +
+  lịch sử; hòa (+20, giữ sạp không đổi chủ, lịch sử 2); thua
+  (+10, đội Chợ giữ sạp thay, lịch sử 3); `is_holding` đúng
+  trước ngày hết / sai đúng ngày hết; `expire_holds` dọn 1 sạp;
+  `from_data` loại hold rác + history thiếu `result`.
+- Hồi quy đầy đủ trên cây gộp (luồng song song sửa vòng 5 cùng
+  lúc — xem §12.4): artpass **60/60** (thêm 2 check mới, xem
+  §12.3), artpass3 23/23, polish 18/18, artpass4 18/18, G1
+  selftest 419/419, G1 playtest 14/14, G2 selftest 87/87, G3
+  playtest 95/95, MarketBattle 123/123, battle scene 43/43,
+  battle main 15/15, battle AI 34/34, coord+WASD 16/16, hotspot
+  37/37, jobs 56/56, inventory+crafting 78/78,
+  economy+education 92/92, phonehub 66/66, savecloud 69/69,
+  social+titles+story 102/102, tools 155/155, online 91/91,
+  ui_wiring 37/37 + 71/71; scene 120 frame exit 0.
+- Export web exit 0: pck **6.846.480 byte, SHA `e05e7ed6…`**
+  (wasm không đổi `fc74679e…`, single-threaded); HTTP 200 đủ 6
+  file. **Lưu ý:** build này đã bị luồng song song xóa khỏi
+  `src/godot-build/` lúc 08:00 (xem §12.4) — bản browser-verify
+  là build 08:00 của luồng kia (`45686e4c…`, cùng cây code đã
+  verify, chỉ khác pck do export lại sau sửa vòng 5).
+
+### 12.3 Hai expectation artpass stale — sửa test, không sửa code
+
+- **Màu overlay Tối:** test đòi `(0.55,0.62,0.9)` nhưng code
+  `_daynight_color(2)` trả `(0.7,0.78,0.95)` khi map có ảnh nền
+  đêm riêng — là quyết định có chủ ý từ live-check 14:34 (ảnh
+  đêm đã tối sẵn ~0.65, MUL 0.7 giữ nhân vật nhìn rõ). Sửa test:
+  đòi `(0.7,0.78,0.95)` + check `has_night_bg` đúng trên Map001.
+- **Vị trí toast:** test đòi y 700–740 (vị trí cũ vòng 4) nhưng
+  code đã dời toast xuống góc dưới-trái (24,1216) theo live-check
+  14:34 (y=720 cũ đè cửa/cửa sổ) — luồng vòng 5 đã sửa test
+  thành `y >= 1200.0`. Cả hai đều là test lỗi thời so với code
+  đã chốt, không phải game sai.
+- Bài học đo được: **chuỗi GDScript trong `.pck` export KHÔNG
+  grep được** (Godot 4.7 lưu script dạng binary token — grep
+  `Trận kết thúc` / `battle_finished` / `Đã sang` đều 0 hit,
+  trong khi chuỗi JSON `Khu Công Nhân` vẫn thấy ×3). Muốn chắc
+  code mới có trong build thì kiểm tra bằng hành vi chạy thật
+  (test headless + browser-verify), không grep pck. Đừng kết
+  luận "code chưa vào build" chỉ vì grep không thấy.
+
+### 12.4 Va chạm luồng song song (ghi 20/11 ~15:00)
+
+- Trong lúc vòng này chạy, một luồng khác làm vòng 5 trên cùng
+  working copy: `main.gd` đổi 07:51:50 (+295 byte, overlay
+  layer 1 + nhãn) và 07:57:44, `iso_map.gd` đổi 07:51:59, chạy
+  `--check-only` toàn project lúc 07:55. Hậu quả đo được:
+  artpass rớt 1 mục ở lần chạy đầu (màu Tối — test stale, xem
+  §12.3), rồi rớt mục toast ở lần sau (code toast đã dời nhưng
+  test chưa sửa — luồng kia sửa sau đó); `src/godot-build/`
+  bị xóa lúc ~08:00 (luồng kia export lại, pck mới `45686e4c…`,
+  6.843.288 byte) làm http.server 8163 trả 404 giữa chừng.
+- Cách xử lý vòng này: KHÔNG sửa đè file luồng kia đang đổi;
+  chỉ sửa test của mình (artpass màu Tối); kiểm tra marker của
+  mình còn nguyên sau mỗi lần file đổi (`battle_state` ×9,
+  `signal battle_finished` còn đủ); chạy lại suite liên quan
+  trên cây HIỆN TẠI (artpass 60/60, battle save 31/31, G1
+  419/419, battle main 15/15, scene 120 frame exit 0) sau khi
+  cây ổn định (không còn Godot nào chạy, mtime đứng yên).
+- **Deploy gh-pages CHƯA làm trong vòng này** (tránh đè deploy
+  của luồng kia như vụ §8.4): staging trên đĩa vẫn là bản
+  artpass4 `101dda2e…`; bản verify trình duyệt là build 08:00
+  `45686e4c…` của luồng kia (cùng cây code đã verify). Vòng sau:
+  export lại từ cây ổn định, rebuild staging, deploy 1 lần.
+- Script `pxb-browser-verify-battle.py` đã sửa theo bài học
+  §8.5: chờ `#start-btn:not([disabled])` + click qua selector +
+  xác nhận `window.__pxb_start === true` (thử lại 3 lần) thay
+  vì click tọa độ (360,665) — lần chạy đầu vòng này click tọa
+  độ trượt, 5 ảnh đều ở title dù engine đã chạy.
+- **Browser-verify thật build 08:00** (Chromium 1255 +
+  swiftshader, 720×1280, `pxb-browser-verify-battle.py` đã sửa):
+  engine-start OK, start-clicked OK, **0 console error, 0
+  pageerror** — ảnh `hidden_files/pxb-browser-verify-2026-11-20/13-battle-open.png`:
+  trận mở đúng (BỤI ĐỜI CHỢ CÁ, Đội Bạn 100% — Đội Chợ Đầu Mối
+  100%, Vòng 1/12, lưới + ô xanh + 2 nút). Phát hiện nhỏ (không
+  chặn): nhãn tên đấu sĩ còn hơi chồng nhau ("Cô Tư"/"Bạn Thân").
+
+### 12.5 QUYẾT ĐỊNH ONLINE — Godot headless dedicated server (Bậc 1, 20/11 ~15:00)
+
+- Quyết (Center, Bậc 1 — điểm `opensource-engine.md` §3.4 mục 4
+  hẹn "quyết sau khi slice Godot chạy", nay slice đã chạy +
+  browser-verify): **online dùng Godot headless dedicated
+  server + WebSocket**, không giữ server .NET 8 làm đường chính.
+- Lý do: (1) Web export bắt buộc WebSocket (trình duyệt không
+  mở được UDP thô) — Godot có `WebSocketMultiplayerPeer` sẵn;
+  (2) VM này không có dotnet SDK nên server .NET 8 không
+  build/chạy/verify được ở đây — viết endpoint mới đều là nợ
+  chưa verify; (3) dedicated server chạy + verify được ngay
+  trên VM bằng cùng binary 4.7.2, dùng chung luật GDScript
+  (PxbMarketBattle, Economy…) thay vì viết lại bằng C#.
+- Server .NET trong `src/server/` giữ lại làm tham chiếu, không
+  xóa; `PxbOnline` giữ nguyên trạng thái báo offline thật cho
+  tới khi server mới có endpoint.
+- Bước tiếp theo (G4 bước 6): server skeleton — `src/godot/server/`
+  chạy headless (`--headless --dedicated-server` hoặc scene
+  server riêng), WebSocket, chat relay + presence 2 người chơi,
+  test headless 2 instance (server + client) đổi được 1 tin
+  nhắn; rồi nối `PxbOnline` sang endpoint mới thay cho .NET.
+
+## 13. Việc tiếp theo — G4 bước 6
+
+1. **Deploy gh-pages bản đã verify** (build 08:00 `45686e4c…`
+   hoặc export lại từ cây ổn định — rebuild staging rồi deploy
+   1 lần, kiểm tra head gh-pages trước khi push từng batch để
+   không đè luồng khác).
+2. **G4 online thật — server skeleton** (xem §12.5): Godot
+   headless dedicated server + WebSocket, chat relay + presence.
+3. Quyền lợi giữ sạp áp vào Economy (`hold_benefits` đã có,
+   Main chưa gọi); animation di chuyển/đánh trận; chọn đội/vũ
+   khí trước trận; `can_challenge` ở demo.
+4. Tile riêng Map003–018 (đang PROVISIONAL); camera zoom trận
+   MarketBattle (lưới đang nhỏ giữa màn hình); nhãn tên đấu sĩ
+   trong trận còn hơi chồng nhau (ảnh browser-verify 13).

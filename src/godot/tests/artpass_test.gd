@@ -127,7 +127,7 @@ func _on_frame() -> void:
 			_check("panel dien thoai hien", _main._phone_panel.visible)
 			_check("lop mo dien thoai hien", _main._phone_dim.visible)
 			_check("dien thoai khung rieng 680x900", _main._phone_panel.size == Vector2(680, 900))
-			_check("dien thoai cach mep 20/190", _main._phone_panel.position == Vector2(20, 190))
+			_check("dien thoai cach mep 20/216 (duoi nut Dien thoai (P))", _main._phone_panel.position == Vector2(20, 216))
 			_check("dien thoai co notch", _main._phone_notch.visible)
 			_check("dien thoai co thanh home", _main._phone_homebar.visible)
 			var txt: String = str(_main._phone_content.text)
@@ -147,21 +147,33 @@ func _on_frame() -> void:
 			_check("lop mo an theo", not _main._phone_dim.visible)
 			_check("notch an theo", not _main._phone_notch.visible)
 			_check("thanh home an theo", not _main._phone_homebar.visible)
-			# Buoi 2: overlay ngay/dem + thu tu layer.
+			# Buoi 2: overlay ngay/dem + thu tu layer. Vong 5: overlay
+			# len CanvasLayer layer 1 (tren canvas mac dinh) nhung
+			# tao TRUOC lop nhan + lop HUD (cung layer 1) -> phu
+			# deu toan bo the gioi, duoi nhan/HUD.
 			_check("overlay ton tai", _main._daynight != null)
-			_check("overlay duoi HUD", _main._overlay_layer.layer < _main._ui_layer.layer)
+			_check("overlay tren canvas mac dinh (layer 1)", _main._overlay_layer.layer == 1)
+			_check("overlay truoc lop nhan (ve duoi nhan)", _main._overlay_layer.get_index() < _main._label_layer.get_index())
+			_check("overlay truoc lop HUD (ve duoi HUD)", _main._overlay_layer.get_index() < _main._ui_layer.get_index())
 			_check("overlay phu kin man hinh", _main._daynight.size == Vector2(720, 1280))
 			_check("overlay khong chan click", _main._daynight.mouse_filter == Control.MOUSE_FILTER_IGNORE)
 			var mat := _main._daynight.material as CanvasItemMaterial
 			_check("overlay che do NHAN", mat != null and mat.blend_mode == CanvasItemMaterial.BLEND_MODE_MUL)
 			_check("khung Sang trang khong doi", _main._daynight.color == Color(1, 1, 1, 1))
-			_check("toast ngay duoi HUD", _main._toast.position.y >= 190 and _main._toast.position.y <= 210)
+			# Toast o GOC DUOI-TRAI (y=1216, chu 24, vong 5): y=720
+			# cu che cua/cua so giua man hinh vai giay sau khi bam
+			# F (kiem live 13:53); goc duoi khong de mat troi/trang.
+			_check("toast goc duoi-trai, khong de mat troi/trang", _main._toast.position.y >= 1200.0)
 			_main._advance_frame()
 			_check("khung Chieu vang cam (nhan)", _main._daynight.color == Color(1.0, 0.82, 0.55, 1.0))
 			_main._advance_frame()
-			# Toi: MUL nhe hon (0.55,0.62,0.9) vi anh nen dem da toi
-			# san — (0.42,0.52,0.85) cu se dap nat anh dem.
-			_check("khung Toi xanh dem dam (nhan)", _main._daynight.color == Color(0.55, 0.62, 0.9, 1.0))
+			# Toi: Map001 co anh nen dem rieng (bg_map001_night.jpg,
+			# da toi san ~0.65) nen MUL nhe (0.7,0.78,0.95) de nhan
+			# vat con ~0.7 do sang, thay ro mat/quan ao — quyet dinh
+			# live-check 20/11 14:34 (khong phai 0.55 nhu test cu ghi:
+			# 0.55 chi dung cho map KHONG co anh nen dem).
+			_check("Map001 co anh nen dem rieng", _main.iso_map.has_night_bg)
+			_check("khung Toi xanh dem dam (nhan)", _main._daynight.color == Color(0.7, 0.78, 0.95, 1.0))
 			_check("Toi: dom sang cua so bat", _main.iso_map.night_glow != null and _main.iso_map.night_glow.visible and _main.iso_map.night_glow.lit)
 			# Map001-002: diem sang cua so nam TRONG anh nen dem
 			# (sky_in_image), khong con spots code nua.
@@ -184,7 +196,7 @@ func _on_frame() -> void:
 				var ok: bool = r.position.x >= 16.0 - 0.5 \
 					and r.end.x <= 720.0 - 16.0 + 0.5 \
 					and r.position.y >= 190.0 - 0.5 \
-					and r.end.y <= 1280.0 - 16.0 + 0.5
+					and r.end.y <= 1200.0 + 0.5
 				if not ok:
 					all_ok = false
 					worst = "%s %s" % [String(mk.event_data.get("name", "?")), str(r)]

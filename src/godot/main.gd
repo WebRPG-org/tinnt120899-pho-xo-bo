@@ -101,6 +101,11 @@ var battle_mb: PxbMarketBattle = null
 var battle_scene: BattleScene = null
 var _battle_layer: CanvasLayer = null
 var battle_open := false
+## G4 buoc 5: giu sap + lich su tran (PxbMarketBattle.data) — song
+## theo save slot, khoi phuc o _apply_save_data, don het han theo
+## ngay game o _advance_frame. Chi ghi khi tran ket thuc that.
+var battle_state: Dictionary = {}
+var _battle_saved := false
 
 var _hud_map: Label
 var _hud_day: Label
@@ -301,6 +306,8 @@ func _advance_frame() -> void:
 	if frame_idx >= 3:
 		frame_idx = 0
 		day += 1
+		# G4 buoc 5: sang ngay moi thi don sap tran da het han giu.
+		PxbMarketBattle.expire_holds(battle_state, day)
 		jobs.set_day_number(day)
 		education.day_number = day
 		social.apply_neglect_all(day)
@@ -569,6 +576,11 @@ func _start_battle_demo() -> void:
 		return
 	battle_mb = PxbMarketBattle.new()
 	add_child(battle_mb)
+	# G4 buoc 5: khoi phuc giu sap + lich su tu save truoc (neu co),
+	# don sap het han theo ngay game hien tai truoc khi nap vao tran.
+	PxbMarketBattle.expire_holds(battle_state, day)
+	battle_mb.from_data(battle_state)
+	_battle_saved = false
 	var team_a := {"id": "doi-ban", "name": "Đội Bạn", "fighters": [
 		PxbMarketBattle.create_fighter("ban-1", "Bạn", "Do", "Chao",
 			{"the": 80, "tri": 40, "tam": 50}, []),
@@ -598,10 +610,37 @@ func _start_battle_demo() -> void:
 	# G4 bước 2: đội Chợ (B) do AI cầm — tự di chuyển/đánh/hỗ trợ.
 	battle_scene.ai_enabled = true
 	battle_scene.close_requested.connect(_close_battle)
+	# G4 buoc 5: tran xong -> ghi giu sap + Danh vong vao save.
+	battle_scene.battle_finished.connect(_on_battle_finished)
 	battle_open = true
 	if player != null:
 		player.input_blocked = true
 	_ui_layer.visible = false
+
+
+## G4 buoc 5: tran ket thuc -> ghi giu sap + lich su vao battle_state
+## (di theo save slot), cong Danh vong doi ban (thang +50 / hoa +20 /
+## thua +10 — dung luat PxbMarketBattle) vao fame. Chi ap 1 lan/tran.
+func _on_battle_finished(_winner: String) -> void:
+	if battle_mb == null or _battle_saved:
+		return
+	_battle_saved = true
+	battle_state = battle_mb.data()
+	var fame_gain := 0
+	var hold: Dictionary = {}
+	if battle_scene != null:
+		var result: Dictionary = battle_scene.battle.get("result", {})
+		var rewards: Dictionary = result.get("rewards", {})
+		var team_a: Dictionary = rewards.get("teamA", {})
+		fame_gain = int(team_a.get("famePerFighter", 0))
+		hold = battle_scene.battle.get("hold", {})
+	if fame_gain > 0:
+		fame += fame_gain
+		_update_hud()
+	var msg := "Trận kết thúc — Danh vọng +%d." % fame_gain
+	if not hold.is_empty() and str(hold.get("teamId", "")) == "doi-ban":
+		msg += " Giữ sạp %s đến ngày %d." % [str(hold.get("stallId", "")), int(hold.get("untilGameDay", 0))]
+	show_toast(msg)
 
 
 func _close_battle() -> void:
@@ -1109,7 +1148,7 @@ func _collect_system_data() -> Dictionary:
 		"pxb_social": social.data(), "pxb_titles": titles.data(),
 		"pxb_story": story.data(), "pxb_tools": tools.data(),
 		"pxb_phonehub": phonehub.data(), "pxb_savecloud": savecloud.data(),
-		"pxb_online": online.data(),
+		"pxb_online": online.data(), "pxb_marketbattle": battle_state,
 	}
 
 
@@ -1172,6 +1211,13 @@ func _apply_save_data(gs: Dictionary) -> void:
 	phonehub.from_data(gs.get("pxb_phonehub", {}))
 	savecloud.from_data(gs.get("pxb_savecloud", {}))
 	online.from_data(gs.get("pxb_online", {}))
+	# G4 buoc 5: khoi phuc giu sap + lich su tran (loc qua from_data
+	# de loai hold rac), don sap het han theo ngay game vua tai.
+	var _mb_tmp := PxbMarketBattle.new()
+	_mb_tmp.from_data(gs.get("pxb_marketbattle", {}))
+	battle_state = _mb_tmp.data()
+	_mb_tmp.free()
+	PxbMarketBattle.expire_holds(battle_state, day)
 	_wallet_to_economy()
 
 
@@ -1364,48 +1410,55 @@ func _style_button(b: Button, font_size: int = 26) -> void:
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 
 # --- Anh sang ngay/dem theo khung (art pass 20/11 buoi 2) ---
-# Overlay mau phu len the gioi (duoi HUD, tren map): Sang trong suot,
-# Chieu vang cam golden-hour, Toi xanh dam. Re (~30 dong) nhung doi
-# cam giac ngay/dem ngay lap tuc — truoc day khung chi la chu tren HUD.
+# Overlay mau phu len the gioi: Sang trong suot, Chieu vang cam
+# golden-hour, Toi xanh dem dam.
+# Vong 5 (20/11 14:40) — LOI GOC: overlay cu o CanvasLayer layer 0
+# (cung lop voi canvas mac dinh): thu tu ve giua lop overlay va
+# IsoMap/player phu thuoc thu tu cay — lop phu chi chac chan ap
+# cho phan them truoc no, phan them sau (nen/nhan vat) co the thoat
+# khoi lop phu -> khung Toi/Chieu chia doi sang/toi theo vung
+# (kiem live 14:34: 1/3 phai TAP HOA van sang). Sua tan goc:
+# overlay vao CanvasLayer layer 1 RIENG, tao TRUOC lop nhan + lop
+# HUD (cung layer 1, ve sau) -> lop phu phu DEU len TOAN BO the
+# gioi (nen + dat + nhan vat + dom sang) duoi HUD, khong con
+# duong chia. Lop phu la nguon duy nhat doi mau theo khung —
+# khong tint rieng nhan vat nua (tint rieng + lop MUL nhan doi
+# lam nhan vat thanh bong den, kiem live 14:34).
 func _daynight_color(f: int) -> Color:
 	# Overlay dung che do NHAN (CanvasItemMaterial BLEND_MODE_MUL):
 	# toi di ca anh nhung giu tuong phan — nha/cua van nhin thay,
 	# khong bi lop alpha dac nuot (loi khung Toi van sang, 20/11 10:30).
-	# Sang = trang (khong doi); Chieu = vang cam; Toi = xanh dem dam.
-	# Map co anh nen dem rieng (1-2): anh dem da toi san (~0.65) nen
-	# MUL nhe hon (0.55 thay 0.42) keo ca anh khong toi den (loi 20/11 12:30).
+	# Sang = trang (khong doi); Chieu = vang cam; Toi = xanh dem.
+	# Toi voi anh nen dem rieng (1-2): anh dem da toi san (~0.65)
+	# nen MUL nhe (0.7 thay 0.55): nhan vat (khong tint rieng nua)
+	# con ~0.7 do sang — thay ro mat/quan ao, hoa vao canh dem
+	# chu khong thanh bong den (loi 20/11 14:34).
 	match f:
 		1:
 			return Color(1.0, 0.82, 0.55, 1.0)
 		2:
 			if iso_map != null and iso_map.has_night_bg:
-				return Color(0.55, 0.62, 0.9, 1.0)
-			return Color(0.42, 0.52, 0.85, 1.0)
+				return Color(0.7, 0.78, 0.95, 1.0)
+			return Color(0.55, 0.62, 0.9, 1.0)
 	return Color(1.0, 1.0, 1.0, 1.0)
 
-## Chong-chong nhan (vong 4, 20/11 14:00, sua lan 2): nhan tinh
-## theo vi tri neo rieng le thi de len dau nhan vat khac ("Goc Che
-## Tao" de len dau Ban Than, "Co Tu" sat mep "Goc Che Tao", "Hem
-## tro buoi toi" de len than Co Tu — kiem live 13:53). Giai o
-## khong gian man hinh (720x1280) moi frame:
-##  * Vat can la dau + than tren cua nhan vat (90x100px, khong
-##    phai toan than 160px — chan/bi che khong sao, mat/nguc moi
-##    quan trong; vat can toan than day nhan xuong tan day man
-##    hinh, roi khoi diem neo).
-##  * Chon khoang doc trong gan vi tri mong muon nhat (cach 4px,
-##    khong cong gap 2 lan — grow() + cong them 6px an het khe
-##    hep giua nhan NPC va dau NPC).
-##  * Neu khoang doc gan nhat xa hon 60px thi dich NGANG (giu y)
-##    thay vi day len/xuong xa khoi diem neo — vd nhan Che Tao
-##    dich phai 120px de thoat dau Ban Than.
-## Ket qua ghi vao Marker.label_override de Marker ve theo.
-const LABEL_GAP := 4.0
+## Chong-chong nhan (vong 4, 20/11 14:00, sua lan 2; vong 5 tang khe
+## ho: LABEL_GAP 4 -> 12, vat can cao hon de nhan khong cham toc
+## nhan vat — kiem live 14:34: "Goc Che Tao" gan cham toc, mep nhan
+## cham mep nhau khong co khe ho).
+const LABEL_GAP := 12.0
 const LABEL_MAX_DRIFT := 60.0
+# Nhan khong xuong qua y=1200 man hinh (truoc 1264): "Cua ra Cho
+# Dau Moi" sat mep duoi gan bi cat (kiem live 14:34); de 80px
+# thoang o day man hinh.
+const LABEL_BOTTOM_MAX := 1200.0
 
 func _sprite_obstacle_rect(screen_pos: Vector2) -> Rect2:
 	# Dau + than tren cua sprite anh cao 104 world (~146px man hinh
-	# o zoom 1.4): tam o chan nhan vat, dau o -150, nguc o -50.
-	return Rect2(screen_pos + Vector2(-45, -150), Vector2(90, 100))
+	# o zoom 1.4): tam o chan nhan vat, toc o -165, nguc o -50.
+	# (Vong 5: -150 cu de nhan cham toc — toc nhon cao hon dinh dau
+	# tinh toan, tang them 15px.)
+	return Rect2(screen_pos + Vector2(-48, -165), Vector2(96, 115))
 
 func _resolve_label_overlaps() -> void:
 	if iso_map == null:
@@ -1415,8 +1468,15 @@ func _resolve_label_overlaps() -> void:
 	if player != null:
 		obstacles.append(_sprite_obstacle_rect(ct * player.position))
 	for mk in iso_map.markers:
+		var sp: Vector2 = ct * mk.global_position
 		if String(mk.event_data.get("kind", "")) == "npc":
-			obstacles.append(_sprite_obstacle_rect(ct * mk.global_position))
+			obstacles.append(_sprite_obstacle_rect(sp))
+		elif String(mk.event_data.get("kind", "")) in ["hotspot", "craft", "door"]:
+			# Bieu tuong sao/ban/cua (~48x48px man hinh): nhan "Hem
+			# tro buoi toi" khong duoc che mui ten xanh / sao
+			# (kiem live 14:34). Vat can nho, chi bao ve tam bieu
+			# tuong, khong day nhan di xa.
+			obstacles.append(Rect2(sp + Vector2(-24, -24), Vector2(48, 48)))
 	var entries: Array = []
 	for mk in iso_map.markers:
 		var r: Rect2 = mk.label_screen_rect()
@@ -1439,7 +1499,12 @@ func _resolve_label_overlaps() -> void:
 		var best_y := _nearest_free_y(r, obstacles, placed)
 		if best_y < 0.0 or absf(best_y - want_y) > LABEL_MAX_DRIFT:
 			# Khoang doc gan nhat qua xa — thu dich ngang giu
-			# nguyen y (uu tien dich phai, roi dich trai).
+			# nguyen y (uu tien dich phai, roi dich trai). Dich
+			# ngang cung phai giu khe LABEL_GAP voi vat can /
+			# nhan da dat (grow 12px roi moi intersects): chi
+			# kiem intersects() tho se chap nhan vi tri chi cach
+			# 4px (vd "Goc Che Tao" sat "Co Tu", kiem live
+			# 14:34) — khong du khe ho nhin.
 			var shifted := false
 			for dx in [40.0, 80.0, 120.0, 160.0, -40.0, -80.0, -120.0, -160.0]:
 				var cand := Rect2(r.position + Vector2(dx, 0), r.size)
@@ -1447,13 +1512,14 @@ func _resolve_label_overlaps() -> void:
 				if cand.position.x == r.position.x:
 					continue
 				var hit := false
+				var grown := cand.grow(LABEL_GAP)
 				for o in obstacles:
-					if cand.intersects(o):
+					if grown.intersects(o):
 						hit = true
 						break
 				if not hit:
 					for p in placed:
-						if cand.intersects(p):
+						if grown.intersects(p):
 							hit = true
 							break
 				if not hit:
@@ -1465,7 +1531,7 @@ func _resolve_label_overlaps() -> void:
 		else:
 			r.position.y = best_y
 		r.position.x = clampf(r.position.x, 16.0, 704.0 - r.size.x)
-		r.position.y = clampf(r.position.y, 190.0, 1264.0 - r.size.y)
+		r.position.y = clampf(r.position.y, 190.0, LABEL_BOTTOM_MAX - r.size.y)
 		placed.append(r)
 		e["mk"].label_override = r
 
@@ -1480,7 +1546,7 @@ func _nearest_free_y(r: Rect2, obstacles: Array[Rect2], placed: Array[Rect2]) ->
 		if p.end.x > r.position.x and p.position.x < r.end.x:
 			blockers.append(p)
 	var top_min := 190.0
-	var top_max := 1264.0 - r.size.y
+	var top_max := LABEL_BOTTOM_MAX - r.size.y
 	var intervals: Array = [[top_min, top_max]]
 	for b in blockers:
 		var next_iv: Array = []
@@ -1516,18 +1582,14 @@ func _update_daynight() -> void:
 		iso_map.set_frame(frame_idx)
 		_update_character_tint()
 
-## Tint nhan vat theo khung: lop MUL nhan deu ca anh nen nhung anh
-## PNG nhan vat van giu do bao hoa cao nen can toi them. Vong 4
-## (20/11 14:00): tint cu (0.72,0.78,0.95) chi ha do sang con ~0.49
-## — nhan vat van trong nhu ban ngay dan len nen toi (kiem live
-## 13:53). Tint moi Toi (0.42,0.48,0.72): do sang con ~0.31, xanh
-## hon, hoa vao canh dem; Chieu am vang dam hon (1.0,0.85,0.62).
+## Tint nhan vat theo khung: Vong 5 BO tint rieng — lop overlay MUL
+## thong nhat (CanvasLayer layer 1, tren toan bo the gioi) da toi
+## nhan vat cung muc voi nen. Tint rieng truoc day nhan them 1 nac
+## (overlay 0.55 x tint 0.42 = 0.23) lam nhan vat thanh bong den
+## chi con mat trang (kiem live 14:34). Giu ham de khong phai sua
+## cac noi goi; tra ve trang o moi khung.
 func _update_character_tint() -> void:
 	var tint := Color(1, 1, 1, 1)
-	if frame_idx == 1:
-		tint = Color(1.0, 0.85, 0.62, 1)
-	elif frame_idx == 2:
-		tint = Color(0.42, 0.48, 0.72, 1)
 	if player != null:
 		player.set_tint(tint)
 	if iso_map != null:
@@ -1557,10 +1619,16 @@ func _build_ui() -> void:
 	_camera.position_smoothing_speed = 10.0
 	add_child(_camera)
 	_camera.make_current()
-	# Lop overlay ngay/dem: CanvasLayer rieng, layer 0 (duoi HUD layer 1),
-	# follow_viewport de luon phu kin man hinh theo camera.
+	# Lop overlay ngay/dem: CanvasLayer RIENG, layer 1, tao TRUOC lop
+	# nhan + lop HUD (cung layer 1, ve sau) — phu DEU len toan bo
+	# the gioi (nen + dat + nhan vat + dom sang), duoi nhan/HUD.
+	# Vong 5 (20/11 14:40): layer 0 cu cung lop voi canvas mac
+	# dinh, thu tu ve phu thuoc thu tu cay -> khung Toi/Chieu chia
+	# doi sang/toi theo vung (1/3 phai TAP HOA van sang, kiem live
+	# 14:34). Layer 1 chac chan o tren canvas mac dinh (lop 0) nen
+	# khong con truong hop nao thoat khoi lop phu.
 	_overlay_layer = CanvasLayer.new()
-	_overlay_layer.layer = 0
+	_overlay_layer.layer = 1
 	_overlay_layer.follow_viewport_enabled = true
 	add_child(_overlay_layer)
 	_daynight = ColorRect.new()
@@ -1688,18 +1756,19 @@ func _build_ui() -> void:
 	_phone_content.custom_minimum_size = Vector2(580, 0)
 	# Noi dung dai (vd danh ba 16 NPC) phai CUON, khong tran khoi
 	# panel: label trong ScrollContainer, chieu cao tu noi dung.
-	# Cao 224px (khong phai 200): 7 dong x ~31px — hien tron dong
-	# cuoi "Chi Le" o vi tri cuon mac dinh (200px cat doi dong thu
-	# 7, kiem live 13:53). Bu lai bang actions scroll 240 -> 216
-	# de tong chieu cao VBox khong doi.
+	# Cao 238px (khong phai 224): 7 dong x ~34px — hien tron dong
+	# cuoi "Anh Ba" o vi tri cuon mac dinh (224px cat doi dong thu
+	# 7, kiem live 14:34: dong cuoi bi cat nua + nut "Tro chuyen"
+	# o ngay duoi trong nhu de len no). Bu lai bang actions scroll
+	# 216 -> 192 de tong chieu cao VBox khong doi.
 	var content_scroll := ScrollContainer.new()
 	_phone_content_scroll = content_scroll
-	content_scroll.custom_minimum_size = Vector2(580, 224)
+	content_scroll.custom_minimum_size = Vector2(580, 238)
 	pvb.add_child(content_scroll)
 	_phone_content.get_parent().remove_child(_phone_content)
 	content_scroll.add_child(_phone_content)
 	_phone_act_scroll = ScrollContainer.new()
-	_phone_act_scroll.custom_minimum_size = Vector2(580, 216)
+	_phone_act_scroll.custom_minimum_size = Vector2(580, 192)
 	pvb.add_child(_phone_act_scroll)
 	_phone_actions = VBoxContainer.new()
 	_phone_actions.add_theme_constant_override("separation", 8)
@@ -1724,13 +1793,13 @@ func _build_ui() -> void:
 	# phan trong o duoi panel (loi 20/11 10:30).
 	_phone_footer = _mk_label(pvb, font, 22, Vector2.ZERO, "")
 	_phone_footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	# Toast doi khung o GIUA-DUOI (y=720): y=200 cu de len quang mat
-	# troi/mat trang (mat troi o man hinh ~220-330, trang ~230-330)
-	# trong vai giay sau khi bam F (kiem live 13:53). y=720 nam tren
-	# via he, duoi mat troi/trang, tren nguoi choi (~990) va nhan
-	# cua ra (~1210) — khong de len thu gi quan trong.
-	_toast = _mk_label(layer, font_bold, 30, Vector2(60, 720), "")
-	_toast.size = Vector2(600, 60)
+	# Toast doi khung o GOC DUOI-TRAI (24,1216), chu nho 24: y=720
+	# cu che cua/cua so giua man hinh vai giay sau khi bam F
+	# (kiem live 13:53); goc duoi khong de mat troi/trang, nhan
+	# cua ra da kep toi da y=1200 nen toast o 1216 khong chong
+	# nhan nao (kiem live 14:34 yeu cau doi xuong goc duoi).
+	_toast = _mk_label(layer, font_bold, 24, Vector2(24, 1216), "")
+	_toast.size = Vector2(440, 40)
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_toast.add_theme_color_override("font_outline_color", Color(1, 1, 1, 0.95))
 	_toast.add_theme_constant_override("outline_size", 8)
