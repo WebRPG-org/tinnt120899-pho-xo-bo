@@ -31,13 +31,13 @@ const MATERIAL_NAMES := {
 	"banh-xe": "Bánh Xe",
 }
 
-# Camera nhin lech len 320 world units + zoom 1.4 (thay -230/1.6):
-# nguoi choi nam o 2/3 duoi man hinh, dai troi (anh mo rong tren
-# mat tien) hien duoc ~60px duoi HUD gon luc spawn (loi 20/11 12:30:
-# troi khong thay duoc luc spawn vi HUD cao 236px + camera -230 chi
-# thay toi dinh anh). Zoom 1.4 mo rong tam nhin doc 457px moi ben
-# (thay 400px) de troi lo them; nhan vat van du lon o 1.4x.
-const CAMERA_LOOK_UP := Vector2(0, -320)
+# Camera nhin lech len 265 world units + zoom 1.25 (vong 7, thay
+# -320/1.4): o 1.4, day map (xe dap/hoa o y 686) nam duoi mep duoi
+# luc spawn (tam nhin doc 914, day hien toi y 599) — desktop bi
+# cat day ~200px. O 1.25 tam nhin doc 1024, tam y 197: thay du tu
+# dinh mat tien (-308) toi day dat + xe dap (702), khong cat day.
+const CAMERA_LOOK_UP := Vector2(0, -265)
+const CAMERA_ZOOM := 1.25
 # Meo dien thoai xoay theo ngay — lap khoang trong duoi panel
 # (art pass Nadia 20/11: panel 1100 cao hon noi dung ~450px).
 const PHONE_TIPS := [
@@ -241,6 +241,7 @@ func load_map(map_id: int, spawn_tile: Vector2i) -> void:
 	_update_daynight()  # Ap khung hien tai cho map moi (anh dem/tint/mat troi).
 
 func _on_player_moved_to(tile: Vector2i) -> void:
+	_refresh_hotspot_player_flags()
 	var ev := iso_map.event_at(tile)
 	if not ev.is_empty() and String(ev.get("kind", "")) == "door":
 		_transfer(int(ev["to_map"]))
@@ -276,7 +277,7 @@ func _fit_hud_map() -> void:
 
 # --- Thoi gian ---
 func _process(delta: float) -> void:
-	# Camera bam theo nguoi choi (zoom 1.4: map lap day viewport).
+	# Camera bam theo nguoi choi (zoom CAMERA_ZOOM: thay het map luc spawn).
 	if _camera != null and player != null:
 		_camera.position = player.position + CAMERA_LOOK_UP
 	# Chong-chong nhan o khong gian man hinh (vong 4): chay truoc
@@ -349,6 +350,18 @@ func _check_graduations() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if title_open:
 		return
+	if event is InputEventKey:
+		# Di chuyen bang EVENT (vong 7): poll Input trong _process
+		# lo phim nhan nhanh o FPS thap; event thi khong lo.
+		# physical_keycode truoc (D hoa = Shift+D van la KEY_D vat
+		# ly; ban phim khac layout van dung), keycode sau.
+		var mdir := _key_to_dir(event)
+		if mdir != Vector2i.ZERO and player != null and not battle_open:
+			if event.pressed and not event.echo:
+				player.press_dir(mdir)
+			elif not event.pressed:
+				player.release_dir(mdir)
+			return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_B and not dialogue_open and not phone_open:
 			if battle_open:
@@ -387,6 +400,25 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _tile_dist(a: Vector2i, b: Vector2i) -> int:
 	return absi(a.x - b.x) + absi(a.y - b.y)
+
+## Phim di chuyen -> huong o (vong 7): physical_keycode truoc
+## (Shift+D van la KEY_D vat ly; mui ten cung co physical), roi
+## keycode (phong khi event chi co keycode). Tra ZERO neu khong
+## phai phim di chuyen.
+func _key_to_dir(event: InputEventKey) -> Vector2i:
+	var k := int(event.physical_keycode)
+	if k == 0:
+		k = int(event.keycode)
+	match k:
+		KEY_W, KEY_UP:
+			return Vector2i(0, -1)
+		KEY_S, KEY_DOWN:
+			return Vector2i(0, 1)
+		KEY_A, KEY_LEFT:
+			return Vector2i(-1, 0)
+		KEY_D, KEY_RIGHT:
+			return Vector2i(1, 0)
+	return Vector2i.ZERO
 
 func _try_interact() -> void:
 	if dialogue_open or iso_map == null:
@@ -1581,6 +1613,31 @@ func _update_daynight() -> void:
 	if iso_map != null:
 		iso_map.set_frame(frame_idx)
 		_update_character_tint()
+		# Nhan hotspot doi tu "buoi" theo khung (vong 7) + bong do
+		# nhan vat theo khung (vong 7).
+		var fname := _frame_name()
+		if player != null and player.has_method("set_frame"):
+			player.set_frame(frame_idx)
+		for mk in iso_map.markers:
+			if mk.has_method("set_frame_name"):
+				mk.set_frame_name(fname)
+			if mk.has_method("set_frame"):
+				mk.set_frame(frame_idx)
+		_refresh_hotspot_player_flags()
+
+## Hotspot nao dang co nguoi choi dung tren o do thi tat quang
+## sang duoi dat (vong 7). Goi khi doi khung, load map, moi buoc di.
+func _refresh_hotspot_player_flags() -> void:
+	if iso_map == null or player == null:
+		return
+	for mk in iso_map.markers:
+		if String(mk.event_data.get("kind", "")) != "hotspot":
+			continue
+		if not mk.has_method("set_player_on"):
+			continue
+		var t: Array = mk.event_data.get("tile", [])
+		var on := t.size() == 2 and Vector2i(int(t[0]), int(t[1])) == player.tile
+		mk.set_player_on(on)
 
 ## Tint nhan vat theo khung: Vong 5 BO tint rieng — lop overlay MUL
 ## thong nhat (CanvasLayer layer 1, tren toan bo the gioi) da toi
@@ -1611,10 +1668,10 @@ func _build_ui() -> void:
 		g.position = Vector2(360, 730)  # Mep tren o y=280, duoi chan mat tien (~322).
 		add_child(g)
 		move_child(g, 0)
-	# Camera bam nguoi choi, zoom 1.4 de map lap day viewport 720x1280
-	# (1.6 cu hep tam nhin doc, khong thay troi luc spawn).
+	# Camera bam nguoi choi, zoom CAMERA_ZOOM de thay het map luc
+	# spawn (dinh mat tien toi day dat + xe dap, vong 7).
 	_camera = Camera2D.new()
-	_camera.zoom = Vector2(1.4, 1.4)
+	_camera.zoom = Vector2(CAMERA_ZOOM, CAMERA_ZOOM)
 	_camera.position_smoothing_enabled = true
 	_camera.position_smoothing_speed = 10.0
 	add_child(_camera)

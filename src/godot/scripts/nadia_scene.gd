@@ -55,6 +55,17 @@ func setup(data: Dictionary, p_font: Font, p_offset: Vector2) -> void:
 	offset = p_offset
 	queue_redraw()
 
+## Khung hien tai (IsoMap.set_frame goi): anh sang mat tien doi
+## theo huong nang — Sang: trai toi dan, phai am nhe (nang tu
+## phai-tren); Chieu: am toan mat + trai toi hon; Toi: khong ve
+## (lop MUL dem lo).
+var frame_idx := 0
+
+func set_frame(f: int) -> void:
+	if frame_idx != f:
+		frame_idx = f
+		queue_redraw()
+
 func _process(delta: float) -> void:
 	# Chi ve lai cho khoi bep (~7 lan/giay) — du de thay khoi bay.
 	_t += delta
@@ -86,6 +97,8 @@ func _draw() -> void:
 	if map_id != 1:
 		_draw_wires()
 	_draw_props()
+	if map_id == 1:
+		_draw_facade_light()
 
 func _draw_sky() -> void:
 	# Anh sang am phia sau mai nha: 3 dai vang mo dan xuong.
@@ -383,6 +396,29 @@ func _draw_props() -> void:
 	# dung via he + chong gio hang.
 	_draw_bicycle(tile_center(Vector2i(12, 11)) + Vector2(0, 6))
 	_draw_baskets(tile_center(Vector2i(13, 10)) + Vector2(0, 6))
+
+func _draw_facade_light() -> void:
+	# Shading mat tien theo huong nang (chi Map001 — anh composite
+	# 1120x630, tam offset+(0,-295)): nang sang tu phai-tren nen
+	# ben trai mat tien toi dan, ben phai am nhe. Alpha thap de
+	# khong thanh vet nho — chi them chieu sau.
+	if frame_idx == 2:
+		return
+	var top := offset + Vector2(-560, -610)
+	var w := 1120.0
+	var h := 630.0
+	var strips := 8
+	var shade_max := 0.10 if frame_idx == 0 else 0.14
+	for i in range(strips):
+		var t := float(i) / float(strips)  # 0 trai -> 1 phai.
+		var x := top.x + w * t / 2.0  # Nua trai: toi dan ve giua.
+		var a := shade_max * (1.0 - t)
+		draw_rect(Rect2(x, top.y, w / 2.0 / strips + 1.0, h),
+			Color(0.10, 0.08, 0.05, a))
+		var xr := top.x + w * (0.5 + 0.5 * t)  # Nua phai: am dan ve giua.
+		var aw := (0.05 if frame_idx == 0 else 0.08) * (1.0 - t)
+		draw_rect(Rect2(xr, top.y, w / 2.0 / strips + 1.0, h),
+			Color(1.0, 0.88, 0.60, aw))
 
 func _draw_shadows() -> void:
 	# Bong do mem tren mat dat — nang sang tu phai-tren (mat troi o

@@ -56,6 +56,8 @@ func set_frame(f: int) -> void:
 	if skyfx != null:
 		skyfx.frame_idx = f
 		skyfx.queue_redraw()
+	if nadia_scene != null:
+		nadia_scene.set_frame(f)
 
 ## Hash xac dinh (khong random moi lan ve): 0..99.
 static func _hash(tx: int, ty: int) -> int:

@@ -25,6 +25,12 @@ var facing := 1  # 1 = phai, -1 = trai
 var is_player := false  # Nguoi choi: vong vang duoi chan de nhan ra.
 var texture: Texture2D = null
 var _tex: Sprite2D = null
+# Bong do theo khung (vong 7): Sang ngan + lech phai (nang tu
+# phai-tren), Chieu dai ve trai (nang thap), Toi mo nhat.
+var _shadow_rx := 14.0
+var _shadow_ry := 4.5
+var _shadow_alpha := 0.30
+var _shadow_off := Vector2(0, 3)
 
 var _t := 0.0
 var _body_style: StyleBoxFlat = null
@@ -34,6 +40,26 @@ var _body_style: StyleBoxFlat = null
 ## anh PNG nhan vat sang hon nen dat nen can toi them 1 nac nua.
 func set_tint(c: Color) -> void:
 	modulate = c
+
+## Bong do theo khung gio (Main goi khi doi khung, qua Marker).
+func set_frame(f: int) -> void:
+	match f:
+		0:  # Sang: bong ngan, lech phai (nang phai-tren).
+			_shadow_rx = 14.0
+			_shadow_ry = 4.5
+			_shadow_alpha = 0.30
+			_shadow_off = Vector2(8, 3)
+		1:  # Chieu: bong dai ve trai (nang thap phia phai).
+			_shadow_rx = 26.0
+			_shadow_ry = 5.0
+			_shadow_alpha = 0.34
+			_shadow_off = Vector2(-22, 3)
+		_:  # Toi: bong mo, gan nhu khong thay.
+			_shadow_rx = 12.0
+			_shadow_ry = 4.0
+			_shadow_alpha = 0.12
+			_shadow_off = Vector2(0, 3)
+	queue_redraw()
 
 func setup(cfg: Dictionary) -> void:
 	shirt = cfg.get("shirt", shirt)
@@ -89,10 +115,12 @@ func _draw() -> void:
 	# Anh ve tay: chi ve bong + vong vang (Sprite2D con ve sau _draw
 	# nen anh nam tren bong); huong mat qua flip_h cua Sprite2D.
 	if _tex != null:
-		_ellipse_shadow(Vector2(0, 3), 14.0, 4.5, 0.30)
+		_ellipse_shadow(_shadow_off, _shadow_rx, _shadow_ry, _shadow_alpha)
 		if is_player:
+			# Vong vang = chi thi "nhan vat dang chon" (nguoi choi):
+			# mong + mo hon truoc (vong 7: vong cu dam nhu UI).
 			draw_set_transform(Vector2(0, 3), 0.0, Vector2(1.0, 0.33))
-			draw_arc(Vector2.ZERO, 46, 0, TAU, 24, Color(1.0, 0.8, 0.2, 0.9), 2.0)
+			draw_arc(Vector2.ZERO, 40, 0, TAU, 24, Color(1.0, 0.8, 0.2, 0.6), 1.5)
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		return
 	# Fallback ve bang code (khong co anh).
@@ -104,10 +132,10 @@ func _draw() -> void:
 	else:
 		bob = -sin(_t * 2.0) * 0.8
 	# Bong mem duoi chan (nho dan khi nhun len).
-	_ellipse_shadow(Vector2(0, 3), 12.0 + bob * 0.4, 4.0, 0.28)
+	_ellipse_shadow(_shadow_off + Vector2(0, bob * 0.4), _shadow_rx + bob * 0.4, _shadow_ry, _shadow_alpha)
 	if is_player:
 		draw_set_transform(Vector2(0, 3), 0.0, Vector2(1.0, 0.33))
-		draw_arc(Vector2.ZERO, 40, 0, TAU, 24, Color(1.0, 0.8, 0.2, 0.9), 2.0)
+		draw_arc(Vector2.ZERO, 36, 0, TAU, 24, Color(1.0, 0.8, 0.2, 0.6), 1.5)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	draw_set_transform(Vector2(0, bob), 0.0, Vector2.ONE)
 	# Chan dai: 2 chan danh nguoc nhau khi di (walk cycle ro).

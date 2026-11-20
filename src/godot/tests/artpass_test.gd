@@ -60,7 +60,7 @@ func _on_frame() -> void:
 				_check("input bi khoa khi title mo", _main.player.input_blocked)
 				_check("camera ton tai", _main._camera != null)
 				_check("camera current", _main._camera.is_current())
-				_check("camera zoom 1.4", _main._camera.zoom == Vector2(1.4, 1.4))
+				_check("camera zoom 1.25", _main._camera.zoom == Vector2(1.25, 1.25))
 				_check("HUD trong panel", _main._hud_gold.get_parent().get_parent() is PanelContainer)
 				var has_sprite := false
 				var has_tex := false
@@ -94,7 +94,7 @@ func _on_frame() -> void:
 				# Nhan cua hotspot ngoai man hinh (hs-tro-toi o (10,3),
 				# camera o spawn) phai AN, hoac neu hien thi phai nam
 				# gon trong man hinh (khong troi ra mep). Tu vong
-				# artpass3 (zoom 1.4 + look-up -320) hotspot nay da
+				# vong 7 (zoom 1.25 + look-up -265) hotspot nay da
 				# vao trong tam nhin luc spawn nen hien la dung.
 				var hs_r := Rect2()
 				for mk in _main.iso_map.markers:

@@ -21,6 +21,12 @@ var _to := Vector2.ZERO
 var _t := 0.0
 var _auto_target := Vector2i(-1, -1)
 var _sprite: CharacterSprite = null
+# Huong dang giu — ghi bang EVENT phim (Main._unhandled_input),
+# khong chi poll Input.is_action_pressed trong _process.
+# GOC LOI (20/11 16:26): o FPS thap (swiftshader ~5fps) phim
+# nhan nhanh lot giua 2 frame nen poll khong thay — F/P chay vi
+# event-driven. Ghi event thi nhan cham cung di duoc ngay.
+var _held_dirs: Dictionary = {}
 
 func _ready() -> void:
 	_sprite = CharacterSprite.new()
@@ -49,6 +55,26 @@ func set_auto_target(t: Vector2i) -> void:
 func set_tint(c: Color) -> void:
 	if _sprite != null:
 		_sprite.set_tint(c)
+
+## Bong do theo khung gio — chuyen tiep xuong CharacterSprite.
+func set_frame(f: int) -> void:
+	if _sprite != null:
+		_sprite.set_frame(f)
+
+## Event phim di chuyen (Main goi tu _unhandled_input): nhan ->
+## ghi huong giu + buoc ngay 1 o (khong cho den frame _process
+## sau — nhan cham o FPS thap van di); nha -> xoa huong giu.
+func press_dir(d: Vector2i) -> void:
+	_held_dirs[d] = true
+	if not _moving and not input_blocked and iso_map != null:
+		_auto_target = Vector2i(-1, -1)
+		_try_step(d)
+
+func release_dir(d: Vector2i) -> void:
+	_held_dirs.erase(d)
+
+func clear_held_dirs() -> void:
+	_held_dirs.clear()
 
 func _try_step(dir: Vector2i) -> bool:
 	var nt := tile + dir
@@ -91,6 +117,13 @@ func _process(delta: float) -> void:
 		_step_toward_auto()
 
 func _held_dir() -> Vector2i:
+	# 1. Huong ghi bang event (uu tien): nhan cham / giu phim o
+	# FPS thap van thay — poll Input co the lo.
+	for d in [Vector2i(0, -1), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(1, 0)]:
+		if _held_dirs.has(d):
+			return d
+	# 2. Fallback: poll Input.is_action_pressed (phim giu truoc
+	# khi focus / event bi lo).
 	# WASD (action move_*, project.godot) + mui ten (ui_* mac dinh):
 	# truoc day chi co ui_* nen phim WASD khong di duoc du hint ghi
 	# "WASD / mui ten" (loi 20/11 12:20).

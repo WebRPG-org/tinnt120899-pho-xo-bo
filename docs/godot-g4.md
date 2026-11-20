@@ -1247,3 +1247,57 @@ sáng/tối ở khu TẠP HÓA). Sửa xong, tự xem ảnh thật cả 3 khung
 
 - Chờ kiểm live trên https://tinnt120899.github.io/pho-xo-bo/ (sau khi Pages rebuild bản deploy vòng 6) rồi mới báo chủ.
 - G4 bước 7 (nối PxbOnline sang server Godot mới) theo §17.
+
+## 19. Art pass 7 — vòng sửa 7 (20/11 ~17:30–18:30, kiểm local Chromium 18:0x)
+
+Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đề đã có tranh — vẫn CHƯA đủ đẹp như Nadia. 6 điểm, làm theo thứ tự.
+
+### 19.1 Điểm 1 — Nhãn kẹt "buổi tối" — NGUYÊN NHÂN GỐC (không phải save/load)
+
+- Nhãn "Hẻm trọ buổi tối" là TÊN TĨNH của hotspot `hs-tro-toi` (best_frame "Tối", port từ `Exploration.cs`): `scripts/pxb_hotspot.gd` HOTSPOTS + `data/maps.json:336`. Nhãn được set 1 lần lúc tạo marker, không cập nhật khi đổi khung.
+- **Sửa (`scripts/marker.gd`):** marker giữ `_base_name` (tên gốc) + `_frame_name` (khung hiện tại); `_display_name()` thay từ "buổi …" trong tên bằng khung hiện tại (`.to_lower()` — "buổi sáng", không "buổi Sáng"); `set_frame_name(f)`; `Main._update_daynight()` gọi `set_frame_name(_frame_name())` cho mọi marker mỗi lần đổi khung. `_base_name` lazy-fallback trong `_display_name()` vì `_ready` không chạy với node thêm trong `SceneTree._init` (test headless). Dữ liệu canonical không đổi.
+- **Caveat thiết kế (chờ quyết):** nhãn động không còn báo best frame nữa (độ sáng sparkle 1.5× + toast nhặt đồ vẫn báo). Nếu muốn giữ tín hiệu best frame, đổi tên hotspot thành trung tính ("Hẻm trọ") thay vì từ "buổi" động.
+- **Verify live local:** Sáng "Hẻm trọ buổi sáng" (a7-02) → Chiều (a7-08) → Tối "Hẻm trọ buổi tối" (a7-09) → Ngày 2 Sáng "Hẻm trọ buổi sáng" (a7-10). Test `tests/g4_artpass7_test.gd` 25/25 (chuỗi Sáng→Chiều→Tối→Sáng + reload, tên NPC/không-khung không đổi).
+
+### 19.2 Điểm 2 — Di chuyển bàn phím không ổn định — NGUYÊN NHÂN GỐC: polling
+
+- `Player._process` poll `Input.is_action_pressed`; ở FPS thấp (swiftshader ~5fps) phím nhấn nhanh lọt giữa 2 frame → mất. F/P chạy vì event-driven trong `_unhandled_input`.
+- **Sửa:** `player.gd` thêm `press_dir()`/`release_dir()`/`clear_held_dirs()` + `_held_dirs` (hướng event-held được kiểm tra trước trong `_held_dir()`, poll Input giữ làm fallback); `main.gd` `_key_to_dir(event)` (physical_keycode trước — Shift+D vẫn là KEY_D vật lý — rồi keycode) hook trong `_unhandled_input` (nhấn bước ngay, nhả xóa); `web_shell.html` focus handler (pointerdown/keydown focus canvas, vì nút DOM "Bắt đầu chơi" giữ focus).
+- **Verify live local (Chromium, ERRORS: 0):** giữ D (a7-03), giữ W (a7-04), Shift+D (a7-05), ArrowRight (a7-06) — camera/người chơi đều di chuyển. Click-to-move ở a7-07 không kết luận được (script click (1400,700) nằm ngoài canvas, trúng panel phải) — không phải lỗi game.
+
+### 19.3 Điểm 3 — Cửa sổ TẠP HÓA sáng cam ở Sáng — NGUYÊN NHÂN: chính ảnh ngày
+
+- `art/bg_map001.png` (1120×630) được gen với cửa sổ sáng ấm. **Sửa:** PIL làm mát/khử bão hòa có chọn lọc riêng phần kính, trong rect đã đo — cửa sổ TẠP HÓA (955,455)–(1045,558), cửa kính TẠP HÓA (800,462)–(892,508), cửa kính đôi CÀ PHÊ (465,465)–(570,540), mask feathered, chỉ pixel cam mạnh (R−B>50, R>150). Ảnh đêm không đụng. Gốc backup `visual-check/artpass7/bg_map001_orig.png` + `ground_wide_orig.jpg` (PNG chỉ sống local + trong pck, không có trong git).
+- **Verify live local:** Sáng cửa TẠP HÓA rèm kem nhạt, không phát sáng cam (a7-07); ảnh đêm vẫn sáng vàng đúng (a7-09).
+
+### 19.4 Điểm 4 — Desktop cắt đáy ~200px + 2 bên be trống
+
+- **Nguyên nhân:** camera zoom 1.4 + look-up −320 chỉ thấy tới world y 599 lúc spawn; xe đạp/hoa ở y 686 nằm dưới mép.
+- **Sửa:** `main.gd` `CAMERA_ZOOM := 1.25` + `CAMERA_LOOK_UP := Vector2(0,-265)` — thấy y −315..709 lúc spawn (đỉnh mặt tiền −308 tới đáy đất + xe đạp ~702). `web_shell.html`: panel 2 bên có nội dung thật (`.keys`: WASD/mũi tên di chuyển, F đổi khung, P điện thoại, E tương tác, B trận; panel phải: chạm + màu hotspot) trên nền tranh tiêu đề mờ.
+- **Verify live local:** đáy spawn thấy đủ xe đạp/chậu cây/xe đẩy (a7-02); panel 2 bên có tranh + chữ (a7-01/a7-02).
+
+### 19.5 Điểm 5 — Mỹ thuật phẳng, thiếu chiều sâu/bóng
+
+- `character_sprite.gd` `set_frame(f)`: bóng đổ ellipse theo khung — Sáng rx 14, lệch (8,3), alpha 0.30; Chiều rx 26, lệch (−22,3), alpha 0.34, bóng dài sang trái; Tối rx 12, alpha 0.12. Vòng vàng người chơi mỏng lại (width 1.5, alpha 0.6, r 40/36).
+- `marker.gd` `set_player_on(b)`: ẩn ellipse sáng mặt đất của hotspot khi người chơi đứng trên ô đó (trước đọc như bóng xanh dưới chân); sao vẫn hiện phía trên.
+- `nadia_scene.gd` `_draw_facade_light()` + `set_frame(f)` (iso_map forward): wash sáng/tối nhẹ trên mặt tiền Map001 theo hướng nắng (alpha ≤0.10 Sáng, ≤0.14 Chiều, bỏ qua ở Tối). `ground_wide.jpg`: PIL làm sâu vũng nước (sáng 25% trên +14, tối 25% dưới −12 — hiệu quả nhẹ khi xem). Lưu ý: `nadia_scene._draw_ground()` là DEAD code (đất là ảnh `ground_wide.jpg`), nên vũng phải sửa bằng ảnh.
+- **Verify live local:** bóng ellipse dưới chân người chơi thấy rõ (a7-03), vũng nước có phản chiếu (a7-06/07), sao hotspot chỉ ở ô hotspot (a7-06).
+
+### 19.6 Điểm 6 — Tải kẹt 15% + ảnh "loading or decoding failed"
+
+- **Nguyên nhân:** chunk loader fetch mỗi chunk base64 đúng 1 lần, không retry, không kiểm tra `r.ok` — 1 chunk lỗi (404 lúc Pages đang rebuild / mạng chập chờn) là cả wasm/pck/ảnh chết, game kẹt 15%.
+- **Sửa (`tools/godot/build_gh_pages.py` LOADER_TEMPLATE):** `fetchChunk(u)` retry 3 lần, backoff 400ms×lần, kiểm tra `r.ok` + non-empty, `console.warn` mỗi lần retry. `web_shell.html` `loadTitleArt` dùng `fetchBlobRetry(url, 3)`, warn thay vì nuốt lỗi im lặng. Watchdog 12s đã có từ vòng 6.
+- **Verify:** retry chưa được kích hoạt bằng lỗi mạng thật trong lần kiểm này (tải local nhanh, không kẹt) — chỉ kiểm code + tải thành công; ghi lại để không nói quá.
+
+### 19.7 Verify vòng 7 (đầy đủ)
+
+- `--check-only` exit 0 cả 7 file sửa/mới (main.gd, player.gd, marker.gd, character_sprite.gd, nadia_scene.gd, iso_map.gd, g4_artpass7_test.gd).
+- Test mới artpass7 25/25; regression: artpass 60/60, G1 selftest 419/419, G1 playtest 14/14, G2 selftest 87/87, G2 hotspot 37/37, G2 phonehub 66/66, G2 MarketBattle 123/123, G3 playtest 95/95, g4_coord_wasd 16/16, artpass3 24/24, artpass4 19/19, artpass5 17/17, v6_overlay 16/16, battle scene 43/43, battle AI 34/34, battle main 15/15, battle save 31/31, polish 18/18 — 0 FAIL. Smoke `--headless --quit-after 120` exit 0, không lỗi.
+- Kỳ vọng test cũ sửa theo tiền lệ §12.3 (sửa test, không sửa code): `tests/artpass_test.gd` zoom 1.4 → 1.25; `tests/g4_artpass3_test.gd` ảnh đêm `.jpg` → `.png` (vòng 6 đổi file) + kiểm nhãn không chồng dùng rect ĐÃ RESOLVE (`label_override` nếu có — ở zoom 1.25 rect gốc "Cô Tư" vs "Góc Chế Tạo" chạm nhau nhưng resolver dời mỗi frame, nên phải assert kết quả trên màn hình).
+- Export web exit 0: pck 6.858.400 byte SHA `5e424b74…`; wasm không đổi `fc74679e…` (39.514.754 byte).
+- Chromium local (script `visual-check/check_artpass7.py`, desktop 1920×1080, server 127.0.0.1:8161): **ERRORS: 0**. Ảnh `visual-check/artpass7/a7-01…a7-11.png` đã xem trực tiếp: tiêu đề có tranh + 2 nhân vật; nhãn đổi đúng Sáng→Chiều→Tối→Sáng; D/W/Shift+D/ArrowRight đều đi; cửa TẠP HÓA Sáng hết sáng cam; đáy đủ; điện thoại 9 tab đầy nội dung.
+- Nit còn lại (nhỏ, không chặn): dải tối ~10px ở mép phải cột game trên desktop (a7-06/07/09/10); toast "Ngày 2 • Khung Sáng" đè nhẹ xe đạp ở đáy (a7-10, tự mờ); nhân vật ở Tối vẫn hơi sáng so với đất (a7-09).
+
+### 19.8 Deploy
+
+- (Ghi sau khi push — main SHA + gh-pages SHA + verify khớp byte.)

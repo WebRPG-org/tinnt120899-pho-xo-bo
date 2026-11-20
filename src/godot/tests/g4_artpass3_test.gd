@@ -38,7 +38,7 @@ func _on_frame() -> void:
 		0:
 			if _frame >= 3:
 				# 1. Anh moi ton tai.
-				_check("co bg_map001_night.jpg", ResourceLoader.exists("res://art/bg_map001_night.jpg"))
+				_check("co bg_map001_night.png", ResourceLoader.exists("res://art/bg_map001_night.png"))
 				_check("co sky_night.jpg", ResourceLoader.exists("res://art/sky_night.jpg"))
 				_check("co ground_wide.jpg", ResourceLoader.exists("res://art/ground_wide.jpg"))
 				_check("co sky_wide.jpg", ResourceLoader.exists("res://art/sky_wide.jpg"))
@@ -70,7 +70,7 @@ func _on_frame() -> void:
 			_main._advance_frame()
 			_main._advance_frame()
 			_check("doi khung -> Toi", _main.frame_idx == 2)
-			_check("khung Toi: anh nen dem", _main.iso_map._bg_sprite.texture.resource_path.ends_with("bg_map001_night.jpg"))
+			_check("khung Toi: anh nen dem", _main.iso_map._bg_sprite.texture.resource_path.ends_with("bg_map001_night.png"))
 			# Vong 5: bo tint rieng nhan vat — lop overlay MUL
 			# thong nhat toi ca nhan vat; tint rieng nhan doi lam
 			# nhan vat thanh bong den (kiem live 14:34). Kiem tra
@@ -97,11 +97,15 @@ func _on_frame() -> void:
 			_check("khoi Hom nay co noi dung", _main._phone_today.text != "")
 			_check("panel dien thoai duoi dong stats HUD",
 				_main._phone_panel.position.y >= _main._hud_map.get_parent().get_parent().size.y + 26.0)
-			# Nhan Map001 khong chong nhau: lay rect man hinh cua
-			# cua ra / hotspot / goc che tao / Ban Than.
+			# Nhan Map001 khong chong nhau: lay rect man hinh DA
+			# RESOLVE cua cua ra / hotspot / goc che tao / Ban Than
+			# (label_override neu co — cai nguoi choi thay that;
+			# rect goc co the chong, resolver doi moi frame se
+			# dich — vong 7: zoom 1.25 lam rect goc "Co Tu" vs
+			# "Goc Che Tao" cham nhau, resolver dich ra).
 			var rects := {}
 			for mk in _main.iso_map.markers:
-				var r: Rect2 = mk.label_screen_rect()
+				var r: Rect2 = (mk.label_override if (mk.label_override as Rect2).size != Vector2.ZERO else mk.label_screen_rect())
 				if r.size != Vector2.ZERO:
 					rects[String(mk.event_data.get("name", ""))] = r
 			var overlap := false

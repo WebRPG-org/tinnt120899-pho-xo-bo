@@ -42,9 +42,29 @@ const WASM_PARTS = [{wasm_parts}];
 const PCK_PARTS = [{pck_parts}];
 const IMG_PARTS = {img_parts_json};
 const IMG_TYPES = {{"title_bg.jpg": "image/jpeg", "char_player.png": "image/png", "char_banthan.png": "image/png"}};
+async function fetchChunk(u) {{
+  // Vong 7: chunk fetch co retry — truoc day 1 chunk loi (404 luc
+  // Pages dang rebuild / mang chap chon) la ca wasm/pck/anh chet,
+  // game ket o 15% ma khong bao loi. Retry 3 lan, backoff tang.
+  let lastErr = null;
+  for (let attempt = 0; attempt < 3; attempt++) {{
+    try {{
+      const r = await fetch(u);
+      if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + u);
+      const t = await r.text();
+      if (!t || !t.trim()) throw new Error('empty chunk ' + u);
+      return t;
+    }} catch (e) {{
+      lastErr = e;
+      console.warn('[pxb-loader] chunk loi, thu lai ' + (attempt + 1) + '/3:', u, e.message);
+      await new Promise((res) => setTimeout(res, 400 * (attempt + 1)));
+    }}
+  }}
+  throw lastErr;
+}}
 async function assemble(parts) {{
   const bufs = await Promise.all(parts.map(async (u) => {{
-    const t = await (await fetch(u)).text();
+    const t = await fetchChunk(u);
     const bin = atob(t.trim());
     const b = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);

@@ -14,6 +14,9 @@ var _pulse := 0.0
 var _sprite: CharacterSprite = null
 var _label_style: StyleBoxFlat = null
 var _label: Label = null  # Nhan Control tren CanvasLayer (neu co).
+var _base_name := ""  # Ten goc tu event_data (vd "Hem tro buoi toi").
+var _frame_name := ""  # Khung hien tai ("Sang"/"Chieu"/"Toi") — Main dat.
+var _player_on := false  # Nguoi choi dang dung tren o hotspot nay.
 var label_override := Rect2()  # Main dat sau khi chong-chong o khong
 	# gian man hinh (vong 4, 20/11 14:00): rong = khong dung, tinh
 	# nhu cu bang label_screen_rect().
@@ -52,13 +55,14 @@ func _ready() -> void:
 		_sprite = CharacterSprite.new()
 		_sprite.setup(cfg)
 		add_child(_sprite)
+	_base_name = String(event_data.get("name", ""))
 	# Nhan tren CanvasLayer rieng (layer 1, duoi HUD): Control o toa do
 	# man hinh, luon nam tren moi Node2D cua the gioi (nhan vat, nha,
 	# troi) — nhan khong bao gio bi nhan vat che nua. Khong co lop
 	# thi fallback ve _draw_name() cu (ve trong _draw cua marker).
-	if label_layer != null and font != null and String(event_data.get("name", "")) != "":
+	if label_layer != null and font != null and _base_name != "":
 		_label = Label.new()
-		_label.text = String(event_data.get("name", ""))
+		_label.text = _display_name()
 		_label.add_theme_font_override("font", font)
 		_label.add_theme_font_size_override("font_size", 32)  # 20 world * zoom 1.6.
 		_label.add_theme_color_override("font_color", Color(0.15, 0.12, 0.08, 1))
@@ -78,6 +82,51 @@ func _on_tree_exited() -> void:
 func set_tint(c: Color) -> void:
 	if _sprite != null:
 		_sprite.set_tint(c)
+
+## Bong do theo khung — chuyen tiep xuong CharacterSprite (NPC).
+func set_frame(f: int) -> void:
+	if _sprite != null:
+		_sprite.set_frame(f)
+
+## Nguoi choi dung tren o hotspot nay: an quang sang duoi dat (no
+## doc nhu bong xanh duoi chan nguoi choi) — sao van hien phia tren.
+func set_player_on(b: bool) -> void:
+	if _player_on != b:
+		_player_on = b
+		queue_redraw()
+
+## Ten hien thi cua nhan.
+## GOC LOI (20/11 16:26, kiem live): nhan hotspot "Hem tro buoi
+## toi" la TEN TINH cua hotspot hs-tro-toi (best_frame Toi, port
+## tu Exploration.cs) — khong phai nhan dong ho bi ket. Nguoi choi
+## thay "buoi toi" luc Sang thi tuong nhan ket. Sua: nhan hotspot
+## doi tu "buoi" theo khung hien tai (buoi sang/chieu/toi) — ten
+## goc trong data giu nguyen, chi text hien thi doi. Khung tot van
+## bao bang do sang lap lanh (1.5x) + toast khi nhat sai khung.
+func _display_name() -> String:
+	# Lazy fallback: event_data co the duoc dat sau _ready (vd test
+	# headless add_child trong SceneTree._init — node chua vao tree
+	# nen _ready chua chay). Trong game that, _ready da set san.
+	if _base_name == "":
+		_base_name = String(event_data.get("name", ""))
+	if _frame_name == "" or String(event_data.get("kind", "")) != "hotspot":
+		return _base_name
+	for w in ["buổi sáng", "buổi chiều", "buổi tối"]:
+		if w in _base_name:
+			# Frame goc viet hoa ("Sáng") — ha xuong cho dung chinh
+			# ta giua cau ("buổi sáng", khong phai "buổi Sáng").
+			return _base_name.replace(w, "buổi " + _frame_name.to_lower())
+	return _base_name
+
+## Main goi khi doi khung (qua _update_daynight) — nhan cap nhat
+## ngay, khong cho den lan tao marker sau.
+func set_frame_name(f: String) -> void:
+	if _frame_name == f:
+		return
+	_frame_name = f
+	if _label != null:
+		_label.text = _display_name()
+	queue_redraw()
 
 func _process(delta: float) -> void:
 	_pulse += delta
@@ -116,7 +165,7 @@ func label_screen_rect() -> Rect2:
 	# nguyen, Y giu nguyen (chi doi don vi) — nhan 32px cao 38px.
 	var ct := get_viewport().get_canvas_transform()
 	var sp: Vector2 = ct * (global_position + wr.position)
-	var text := String(event_data.get("name", ""))
+	var text := _display_name()
 	var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 32).x
 	var w := tw + 20.0
 	var h := 38.0
@@ -148,7 +197,7 @@ func _update_label() -> void:
 func label_rect() -> Rect2:
 	if font == null:
 		return Rect2()
-	var text := String(event_data.get("name", ""))
+	var text := _display_name()
 	if text == "":
 		return Rect2()
 	# Vi tri nhan theo loai (sua 20/11 12:30, kiem live): nhan nam tren
@@ -217,7 +266,7 @@ func _draw_name() -> void:
 		return
 	draw_style_box(_label_style, rect)
 	draw_string(font, Vector2(rect.position.x + 8, rect.position.y + 20),
-		String(event_data.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 20,
+		_display_name(), HORIZONTAL_ALIGNMENT_LEFT, -1, 20,
 		Color(0.15, 0.12, 0.08, 1))
 
 func _mini_sparkle(pos: Vector2, r: float, col: Color) -> void:
@@ -235,11 +284,14 @@ func _draw_hotspot() -> void:
 	var col := Color.html(PxbHotspot.sparkle_color(event_data))
 	var s := 1.0 + 0.18 * sin(_pulse * 3.0)
 	var r := 17.0 * s
-	# Bong sang mem duoi dat + hao quang.
-	draw_set_transform(Vector2(0, 6), 0.0, Vector2(1.0, 0.33))
-	draw_circle(Vector2.ZERO, 20, Color(col.r, col.g, col.b, 0.18))
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	draw_circle(Vector2(0, 0), r + 10.0, Color(col.r, col.g, col.b, 0.15))
+	# Quang sang mem duoi dat — AN khi nguoi choi dung tren o nay
+	# (vong 7: quang xanh nam duoi chan nguoi choi doc nhu bong
+	# xanh UI, khong phai bong tu nhien). Sao van hien phia tren.
+	if not _player_on:
+		draw_set_transform(Vector2(0, 6), 0.0, Vector2(1.0, 0.33))
+		draw_circle(Vector2.ZERO, 20, Color(col.r, col.g, col.b, 0.18))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		draw_circle(Vector2(0, 0), r + 10.0, Color(col.r, col.g, col.b, 0.15))
 	# Sao 4 canh lon (>= 44pt cham duoc tren mobile).
 	_mini_sparkle(Vector2.ZERO, r * 1.5, col)
 	draw_circle(Vector2(0, 0), 4.5, Color(1, 1, 1, 0.95))
