@@ -478,17 +478,40 @@ khác), nhân vật + nền đều dùng ảnh, code chỉ còn fallback.
    `ps` + mtime file; chỉ chạy khi không còn tiến trình Godot
    nào khác.
 
-### 8.4 Export + deploy bản mới (luồng này)
+### 8.4 Deploy gh-pages bản mới — XONG (bản artpass3-fix)
+
+- Luồng này push batch 1/3 (`39276bc6`, index.html + pck 000–018
+  bản 053c5401) 13:42 — bị luồng kia ghi đè ngay sau đó vì luồng
+  kia deploy bản export mới hơn (7e84335). Batch 2/3 của luồng này
+  lỗi `not a fast forward` và đã DỪNG, không push lại (đẩy chunk
+  pck cũ lên loader mới sẽ làm hỏng bản build).
+- Deploy chính thức (luồng kia, 13:43–13:48): **6/6 batch,
+  head `8bed7c2cc0a`** — `f18ba5ef` (1/6: index.html + pck
+  000–008), `6eac413f` (2/6: 009–018), `edcdc17a` (3/6: 019–028),
+  `8a4b5053` (4/6: 029–038), `05479f43` (5/6: 039–048),
+  `8bed7c2cc0a` (6/6: 049–050). pck **6.876.644 byte, SHA
+  `7e84335…`**, 51 chunk; wasm không đổi `fc74679e…`.
+- HTTP 200 đủ 4 file trên build local (cổng 8164). Live site:
+  `https://tinnt120899.github.io/pho-xo-bo/` — kiểm tra lại
+  sau deploy ở §8.6.
+- Push main: **`36e507c2`** (20 file: WASD + DIAMOND_DOWN +
+  artpass3-fix + 3 test mới; artpass3 23/23, artpass 57/57,
+  G1 419/419, G3 95/95).
+- Verify remote khớp byte: **4/4 mẫu** (index.html, pck
+  000/025/050) — blob SHA remote = staging; head gh-pages
+  `8bed7c2c` đứng yên sau deploy, không còn lô nào đè sau.
 
 - Export 13:07 exit 0: pck mới **6.859.624 byte, SHA
   `053c5401…`** (từ 4.210.640 — tăng do nướng 4 ảnh JPG mới);
   wasm không đổi `fc74679e…`. pck chứa `move_up` +
-  `ground_wide`/`sky_wide`.
+  `ground_wide`/`sky_wide`. **Lưu ý: bản export này đã bị thay
+  thế trước khi lên live** — luồng kia export lại 13:25 (pck
+  **6.876.644 byte, SHA `7e84335…`**, art đêm vẽ lại) và deploy
+  bản đó; xem §8.4.
 - `--headless --quit-after 120` exit 0, không ERROR.
-- Staging rebuild: pck **51 chunk** (từ 32), wasm 293 chunk
-  không đổi; `build_gh_pages.py --verify-only` OK (khớp byte).
-- Deploy gh-pages: xem §8.5 (ghi sau khi push xong).
-- HTTP 200 đủ 4 file (cổng 8164).
+- Staging rebuild (bản 053c5401): pck **51 chunk** (từ 32), wasm
+  293 chunk không đổi; `build_gh_pages.py --verify-only` OK
+  (khớp byte).
 
 ### 8.5 Browser-verify WASD thật (Chromium 1255 + swiftshader)
 
