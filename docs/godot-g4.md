@@ -492,8 +492,7 @@ khác), nhân vật + nền đều dùng ảnh, code chỉ còn fallback.
   `8bed7c2cc0a` (6/6: 049–050). pck **6.876.644 byte, SHA
   `7e84335…`**, 51 chunk; wasm không đổi `fc74679e…`.
 - HTTP 200 đủ 4 file trên build local (cổng 8164). Live site:
-  `https://tinnt120899.github.io/pho-xo-bo/` — kiểm tra lại
-  sau deploy ở §8.6.
+  `https://tinnt120899.github.io/pho-xo-bo/` — kiểm tra ở §8.7.
 - Push main: **`36e507c2`** (20 file: WASD + DIAMOND_DOWN +
   artpass3-fix + 3 test mới; artpass3 23/23, artpass 57/57,
   G1 419/419, G3 95/95).
@@ -579,6 +578,28 @@ thoại. Đã sửa + xem lại ảnh, 6 điểm hết:
   (biến này bị `load_map()` ghi đè lúc `_ready`). Lần stage
   đầu sửa nhầm `current_map_id` nên vẫn hiện Map001; sửa đúng
   `maps.json` → Map003 hiện đúng.
+
+### 8.7 Kiểm tra live site sau deploy — XONG (13:50)
+
+- **Byte-level (curl):** `index.html` live 200, liệt kê đủ 51
+  pck part; tải + ráp lại 51 part → **6.876.644 byte, SHA
+  `7e843358520402a1` — khớp đúng từng byte với build local
+  13:25**. Deploy đúng, không lẫn chunk bản cũ.
+- **Trình duyệt thật với đúng bản live:** Chromium không mở được
+  URL live trực tiếp (`ERR_TUNNEL_CONNECTION_FAILED` ×2 — proxy
+  của VM chặn tunnel HTTPS ra ngoài, không phải lỗi site; curl
+  từ shell vẫn tới được). Thay thế bằng cách chạy lại
+  `pxb-browser-verify-wasd.py` trên build local 8164 — lúc này
+  `src/godot-build/` đã là đúng bản live 7e84335 (SHA khớp):
+  start OK, W lên 1 ô, D sang Chợ Đầu Mối, 4×S sang Khu Công
+  Nhân, 0 console error, 0 pageerror, đã xem ảnh thật (18–22).
+  Mặt trời hiện (fix §8.6 có tác dụng), nhãn "Góc Chế Tạo" đã
+  lên trên, không còn đè người chơi lúc spawn.
+- Hạn chế chưa kiểm chứng: tải trang live bằng trình duyệt thật
+  (bị proxy chặn) — cần chủ hoặc máy khác mở
+  `https://tinnt120899.github.io/pho-xo-bo/` kiểm tra 1 lần.
+- Polish còn lại (đã ghi §8.5): Map003 nửa trên nâu trơn, HUD
+  cắt tên map dài, nhãn 2 cửa Map002/Map003 chồng nhau ở đáy.
 
 ## 9. Việc tiếp theo — G4 bước 4
 
