@@ -20,6 +20,12 @@ var _from := Vector2.ZERO
 var _to := Vector2.ZERO
 var _t := 0.0
 var _auto_target := Vector2i(-1, -1)
+# Hang buoc da queue: phim nhan trong luc dang buoc (tween 0.15s) —
+# neu khong ghi lai, keyup den truoc khi tween xong se xoa held
+# va buoc do mat han (nhan nhanh lien tiep chi di duoc 1 o).
+# Keyup KHONG xoa queue (xem release_dir): nhan 1 lan = di 1 o.
+# Hang (toi da 8): 2+ phim nhan trong cung 1 tween van du buoc.
+var _queued_dirs: Array[Vector2i] = []
 var _sprite: CharacterSprite = null
 # Huong dang giu — ghi bang EVENT phim (Main._unhandled_input),
 # khong chi poll Input.is_action_pressed trong _process.
@@ -45,6 +51,7 @@ func place(p_map: IsoMap, p_tile: Vector2i) -> void:
 	position = iso_map.tile_center(tile)
 	_moving = false
 	_auto_target = Vector2i(-1, -1)
+	_queued_dirs.clear()
 	if _sprite != null:
 		_sprite.moving = false
 
@@ -64,14 +71,24 @@ func set_frame(f: int) -> void:
 ## Event phim di chuyen (Main goi tu _unhandled_input): nhan ->
 ## ghi huong giu + buoc ngay 1 o (khong cho den frame _process
 ## sau — nhan cham o FPS thap van di); nha -> xoa huong giu.
+## Nhan 1 lan = di 1 o: neu dang buoc (tween 0.15s) thi QUEUE buoc
+## lai, buoc ngay khi tween xong — keyup khong huy queue (xem
+## release_dir) nen phim nhan-nha nhanh khong bi mat buoc.
 func press_dir(d: Vector2i) -> void:
 	_held_dirs[d] = true
-	if not _moving and not input_blocked and iso_map != null:
-		_auto_target = Vector2i(-1, -1)
-		_try_step(d)
+	if input_blocked or iso_map == null:
+		return
+	_auto_target = Vector2i(-1, -1)
+	if _moving:
+		if _queued_dirs.size() < 8:
+			_queued_dirs.append(d)
+		return
+	_try_step(d)
 
 func release_dir(d: Vector2i) -> void:
 	_held_dirs.erase(d)
+	# Co tinh KHONG xoa _queued_dirs: phim nhan-nha nhanh (down+up
+	# trong 1 tween) van phai di du 1 o — xoa o day se lam mat buoc.
 
 func clear_held_dirs() -> void:
 	_held_dirs.clear()
@@ -103,6 +120,12 @@ func _process(delta: float) -> void:
 			if _sprite != null:
 				_sprite.moving = false
 			moved_to.emit(tile)
+			# Buoc da queue tu phim nhan trong luc tween: buoc ngay
+			# (nhan 1 lan = di 1 o, khong mat buoc khi nhan nhanh).
+			if not _queued_dirs.is_empty():
+				var q: Vector2i = _queued_dirs.pop_front()
+				_auto_target = Vector2i(-1, -1)
+				_try_step(q)
 		else:
 			position = _from.lerp(_to, _t)
 		return

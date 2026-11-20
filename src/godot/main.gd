@@ -310,11 +310,18 @@ func _process(delta: float) -> void:
 
 func _advance_frame() -> void:
 	frame_idx += 1
+	var hold_fame_today := 0
 	if frame_idx >= 3:
 		frame_idx = 0
 		day += 1
 		# G4 buoc 5: sang ngay moi thi don sap tran da het han giu.
 		PxbMarketBattle.expire_holds(battle_state, day)
+		# G4 buoc 8: giu sap thi +Danh vong moi ngay game (sau khi
+		# expire — sap het han ngay hom nay khong cong nua).
+		var ben_day := PxbMarketBattle.hold_benefits(battle_state, "doi-ban", day)
+		if not ben_day.is_empty():
+			hold_fame_today = int(ben_day.get("famePerDay", 0))
+			fame += hold_fame_today
 		jobs.set_day_number(day)
 		education.day_number = day
 		social.apply_neglect_all(day)
@@ -325,7 +332,10 @@ func _advance_frame() -> void:
 				show_toast("Lãi tiết kiệm tháng mới: +%sđ" % _fmt_vnd(interest))
 	_update_hud()
 	_update_daynight()
-	show_toast("Ngày %d • Khung %s" % [day, _frame_name()])
+	var frame_toast := "Ngày %d • Khung %s" % [day, _frame_name()]
+	if hold_fame_today > 0:
+		frame_toast += " • Giữ sạp +%d Danh vọng" % hold_fame_today
+	show_toast(frame_toast)
 	# Tot nghiep / khoa ngan han kiem tra sau toast ngay de toast
 	# tot nghiep khong bi toast ngay de mat.
 	if frame_idx == 0 and day > 1:
@@ -401,8 +411,35 @@ func _unhandled_input(event: InputEvent) -> void:
 	var ev := iso_map.event_at(tile)
 	if not ev.is_empty() and _tile_dist(tile, player.tile) <= 1:
 		_interact(ev)
-	elif iso_map.is_walkable(tile):
-		player.set_auto_target(tile)
+	else:
+		# Tap vao o khong di duoc (tuong bien/mat tien) thi di toi
+		# o di duoc GAN NHAT thay vi dung yen (loi live 22:05
+		# 20/11: tap dat trong phia phai khong nhuc nhich vi diem
+		# cham anh xa toi o bien bi chan).
+		var wt := _nearest_walkable(tile)
+		if wt != Vector2i(-1, -1):
+			player.set_auto_target(wt)
+
+## Tim o di duoc gan nhat tu t (BFS tren luoi 12x9) — dung cho
+## tap-to-move khi diem cham roi vao o bi chan (tuong/mat tien).
+func _nearest_walkable(t: Vector2i) -> Vector2i:
+	if iso_map.is_walkable(t):
+		return t
+	var seen := {t: true}
+	var frontier: Array[Vector2i] = [t]
+	while not frontier.is_empty():
+		var nxt: Array[Vector2i] = []
+		for c: Vector2i in frontier:
+			for d: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var n: Vector2i = c + d
+				if seen.has(n) or not iso_map.in_bounds(n):
+					continue
+				seen[n] = true
+				if iso_map.is_walkable(n):
+					return n
+				nxt.append(n)
+		frontier = nxt
+	return Vector2i(-1, -1)
 
 func _tile_dist(a: Vector2i, b: Vector2i) -> int:
 	return absi(a.x - b.x) + absi(a.y - b.y)
@@ -1000,13 +1037,29 @@ func _online_text() -> String:
 
 # --- Hanh dong tu dien thoai (tra Dictionary de test goi truc tiep) ---
 
+## G4 buoc 8: quyen loi giu sap cua doi-ban hien tai ({} neu khong
+## giu sap nao). Dung chung cho gia si khi mua + Danh vong/ngay.
+func _hold_benefits_now() -> Dictionary:
+	return PxbMarketBattle.hold_benefits(battle_state, "doi-ban", day)
+
+
 func buy_item(item_id: String) -> Dictionary:
 	_wallet_to_economy()
-	var res := economy.buy(item_id)
+	# G4 buoc 8: dang giu sap thi mua gia si -10% (tru tien thue
+	# phong tro thang — khong phai gia si, economy tu bo qua).
+	var ben := _hold_benefits_now()
+	var disc := 0
+	if not ben.is_empty() and item_id != "phong-tro":
+		disc = int(ben.get("wholesaleDiscountPercent", 0))
+	var res := economy.buy(item_id, disc)
 	if bool(res.get("ok", false)):
 		fame += int(res.get("fame_gained", 0))
 		_wallet_from_economy()
-		show_toast("Đã mua %s." % String(PxbEconomy.get_item(item_id).get("name", item_id)))
+		if disc > 0:
+			show_toast("Đã mua %s (giá sỉ −%d%%)." % [
+				String(PxbEconomy.get_item(item_id).get("name", item_id)), disc])
+		else:
+			show_toast("Đã mua %s." % String(PxbEconomy.get_item(item_id).get("name", item_id)))
 	else:
 		match String(res.get("reason", "")):
 			"khong-du-tien":

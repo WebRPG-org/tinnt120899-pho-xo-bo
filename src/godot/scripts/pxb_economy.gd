@@ -203,32 +203,41 @@ func withdraw_savings(amount: int) -> bool:
 #   {ok:false, fame_gained:0, reason:"khong-du-tien"} — không đủ tiền
 # Phòng trọ chỉ trừ tiền thuê tháng và vẫn thêm vào owned (đúng C#,
 # xem quirk đầu file); mua nhà hoặc xe sang → fame_gained = 50.
-func buy(item_id: String) -> Dictionary:
+func buy(item_id: String, discount_percent: int = 0) -> Dictionary:
 	var it := get_item(item_id)
 	if it.is_empty():
-		return {"ok": false, "fame_gained": 0, "reason": "khong-co-mon"}
+		return {"ok": false, "fame_gained": 0, "reason": "khong-co-mon", "price_paid": 0}
+	# G4 buoc 8: gia si -10% khi dang giu sap (Main truyen
+	# wholesaleDiscountPercent tu hold_benefits). Tien thue phong
+	# tro thang KHONG phai gia si nen khong giam.
+	var price := int(it["price_vnd"])
+	if discount_percent > 0 and item_id != "phong-tro":
+		price = price * (100 - discount_percent) / 100
 	if String(it["kind"]) == "House" and item_id == "phong-tro":
 		# Phòng trọ trả thuê tháng, không mua đứt — trả về TRƯỚC khi
 		# tính Danh vọng nên fame_gained = 0 (đúng C#/JS).
-		if money < int(it["price_vnd"]):
-			return {"ok": false, "fame_gained": 0, "reason": "khong-du-tien"}
-		money -= int(it["price_vnd"])
+		if money < price:
+			return {"ok": false, "fame_gained": 0, "reason": "khong-du-tien", "price_paid": 0}
+		money -= price
 		owned.append(item_id)
-		return {"ok": true, "fame_gained": 0, "reason": ""}
-	if money < int(it["price_vnd"]):
-		return {"ok": false, "fame_gained": 0, "reason": "khong-du-tien"}
-	money -= int(it["price_vnd"])
+		return {"ok": true, "fame_gained": 0, "reason": "", "price_paid": price}
+	if money < price:
+		return {"ok": false, "fame_gained": 0, "reason": "khong-du-tien", "price_paid": 0}
+	money -= price
 	owned.append(item_id)
 	var fame_gained := 0
 	if String(it["kind"]) == "House" or item_id == "xe-sang":
 		fame_gained = PxbBalance.BIG_PURCHASE_FAME_BONUS
-	return {"ok": true, "fame_gained": fame_gained, "reason": ""}
+	return {"ok": true, "fame_gained": fame_gained, "reason": "", "price_paid": price}
 
 
 # Sàn đấu giá: người bán nhận giá trừ phí 5% (đã chốt). Làm tròn theo
 # phép chia nguyên như C# (hammer × 95 / 100, cắt phần lẻ).
-static func auction_seller_receives(hammer_price_vnd: int) -> int:
-	return int(hammer_price_vnd) * (100 - PxbBalance.AUCTION_FEE_PERCENT) / 100
+# G4 buoc 8: giu sap giam thue sap (tax_cut_percent, vd 20) -> phi
+# 5% con 4% (5 x 80 / 100), nguoi ban nhan 96%.
+static func auction_seller_receives(hammer_price_vnd: int, tax_cut_percent: int = 0) -> int:
+	var fee_percent := PxbBalance.AUCTION_FEE_PERCENT * (100 - tax_cut_percent) / 100
+	return int(hammer_price_vnd) * (100 - fee_percent) / 100
 
 
 # Đồ đổi đồ (barter): không dùng tiền, không phí. Trả false khi 1 bên
