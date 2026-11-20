@@ -167,7 +167,8 @@ func _on_frame() -> void:
 			_main._advance_frame()
 			_check("khung Chieu vang cam (nhan)", _main._daynight.color == Color(1.0, 0.82, 0.55, 1.0))
 			_main._advance_frame()
-			# Toi: Map001 co anh nen dem rieng (bg_map001_night.jpg,
+			# Toi: Map001 co anh nen dem rieng (bg_map001_night.png,
+			# doi tu .jpg sang .png vong 6 de feather mep duoi),
 			# da toi san ~0.65) nen MUL nhe (0.7,0.78,0.95) de nhan
 			# vat con ~0.7 do sang, thay ro mat/quan ao — quyet dinh
 			# live-check 20/11 14:34 (khong phai 0.55 nhu test cu ghi:

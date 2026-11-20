@@ -373,11 +373,15 @@ func _draw_props() -> void:
 	# xa moi nhan day map.
 	_draw_lantern(tile_center(Vector2i(2, 10)) + Vector2(0, 6))
 	# Goc duoi-phai truoc day trong — them xe day hang rong + cum chau cay.
-	_draw_pushcart(tile_center(Vector2i(8, 13)) + Vector2(0, 8))
+	# Vong 6: xe day (8,13) + xe dap (12,9) nam ngay mep duoi vung
+	# nhin thay luc spawn (the gioi y 654, mep duoi 631) nen bi cat
+	# nua — doi xuong 2 o (y 686/686) de nam han duoi vung nhin thay
+	# luc spawn, hien day du khi nguoi choi di xuong cuoi map.
+	_draw_pushcart(tile_center(Vector2i(8, 15)) + Vector2(0, 8))
 	_draw_pots(tile_center(Vector2i(11, 12)) + Vector2(0, 6))
 	# Vung dat mo rong phia duoi-phai (ngoai map) con trong — xe dap
 	# dung via he + chong gio hang.
-	_draw_bicycle(tile_center(Vector2i(12, 9)) + Vector2(0, 6))
+	_draw_bicycle(tile_center(Vector2i(12, 11)) + Vector2(0, 6))
 	_draw_baskets(tile_center(Vector2i(13, 10)) + Vector2(0, 6))
 
 func _draw_shadows() -> void:
@@ -391,8 +395,8 @@ func _draw_shadows() -> void:
 		_draw_ellipse_shadow(c, 130.0, 10.0, 0.10)
 	_draw_ellipse_shadow(tile_center(Vector2i(9, 11)) + Vector2(-22, 10), 34.0, 8.0, 0.14)
 	_draw_ellipse_shadow(tile_center(Vector2i(2, 11)) + Vector2(-18, 12), 26.0, 7.0, 0.14)
-	_draw_ellipse_shadow(tile_center(Vector2i(8, 13)) + Vector2(-20, 10), 30.0, 7.0, 0.14)
-	_draw_ellipse_shadow(tile_center(Vector2i(12, 9)) + Vector2(-18, 10), 24.0, 6.0, 0.14)
+	_draw_ellipse_shadow(tile_center(Vector2i(8, 15)) + Vector2(-20, 10), 30.0, 7.0, 0.14)
+	_draw_ellipse_shadow(tile_center(Vector2i(12, 11)) + Vector2(-18, 10), 24.0, 6.0, 0.14)
 
 func _draw_ellipse_shadow(c: Vector2, rx: float, ry: float, alpha: float = 0.22) -> void:
 	# Bong mem: ve bang vong tron de phang (scale y nho).

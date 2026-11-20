@@ -1105,3 +1105,144 @@ sáng/tối ở khu TẠP HÓA). Sửa xong, tự xem ảnh thật cả 3 khung
    giữa mặt tiền cửa hàng (không chồng nhau, có khe — nhưng
    nhìn như khối nổi trên cửa); cân nhắc neo nhãn gần điểm neo
    hơn thay vì đẩy lên cao khi va đầu nhân vật.
+
+## 16. G4 bước 6 — Server skeleton online thật — XONG (20/11 ~15:45–16:00)
+
+### 16.1 Code mới (chỉ thêm file, không sửa file cũ)
+
+- `src/godot/server/pxb_server.gd` — `class_name PxbServer`
+  (Node): dedicated server headless + WebSocket, giao thức JSON
+  v1. `start_server(port)` (mặc định 8765), `stop_server()`,
+  `poll()` (gọi từ `_process`; test gọi tay cũng được),
+  presence (`hello` → `welcome` + broadcast `presence`),
+  chat relay (`chat` → broadcast cho mọi client ĐÃ ĐĂNG KÝ),
+  `bye` + mất kết nối → xóa presence + broadcast. Gói sai
+  JSON / type lạ / chat khi chưa hello / text rỗng hoặc >500
+  ký tự / tên >30 ký tự (cắt) / player_id rỗng → bỏ lặng, đếm
+  `dropped_packets`, server không crash. CHƯA có auth
+  (player_id do client tự khai — chỉ dùng nội bộ); server
+  KHÔNG quyết tiền/đồ của ai (chat + presence chỉ là relay).
+- `src/godot/server/server_main.gd` (SceneTree): chạy server
+  thật — `godot --headless --path src/godot
+  -s res://server/server_main.gd -- --port 8765`; log 1 dòng
+  khi có người vào/ra/chat.
+- `src/godot/tests/g4_online_server_test.gd`: test headless
+  socket thật qua loopback (không stub).
+- `src/godot/tests/g4_online_server_probe.gd`: probe client 2
+  tiến trình (`--port/--player-id/--name/--chat/--listen`).
+
+### 16.2 Verify thật đợt này
+
+- `--check-only` exit 0: `pxb_server.gd`, `server_main.gd`,
+  `g4_online_server_test.gd`, `g4_online_server_probe.gd`
+  (lần đầu báo `PxbServer` không khai báo — cache class cũ;
+  chạy `--headless --import` rồi check lại thì hết, đúng bài
+  học §8.3).
+- **Test server 37/37 PASS** (socket WebSocket thật
+  127.0.0.1:18765): mở cổng, cổng trùng/sai thì lỗi, 0 người
+  lúc đầu; A+B nối, welcome peer_id > 0, presence 2 người,
+  chat A → B nhận đúng player_id/tên + A nhận echo; B ngắt →
+  presence về 1 người; C chat khi chưa hello / gói sai JSON /
+  type lạ / chat rỗng đều bị bỏ, không tới A; tên 40 ký tự
+  cắt về 30; cuối trận server vẫn chạy, 2 người, 1 tin chat.
+- **2 tiến trình thật:** server `server_main.gd` chạy riêng
+  cổng 18765 + 2 probe riêng (sender `--chat
+  HELLO-TU-2-PROCESS`, listener `--listen 20`): sender
+  welcome players=2 + echo chat, listener nhận đúng tin chat
+  từ Probe A, server log đủ +vào/ra/chat, cuối 0 người online.
+  Cả 3 tiến trình exit 0, đã kill server sau khi xong.
+- Hồi quy: G2 online 91/91, battle save 31/31, G1 selftest
+  419/419, G2 selftest 87/87, G3 playtest 95/95, MarketBattle
+  123/123, artpass 60/60, artpass5 17/17; scene Main 120 frame
+  exit 0, không ERROR.
+- **2 lỗi log đã sửa trong vòng này:** (1) broadcast target 0
+  gửi cả cho socket vừa ngắt → engine báo `ready_state !=
+  STATE_OPEN` — nay broadcast chỉ gửi từng peer ĐÃ ĐĂNG KÝ;
+  (2) gói sai JSON làm `JSON.parse_string` in ERROR — nay chặn
+  trước bằng kiểm tra chuỗi bắt đầu `{` + kết thúc `}`. Sau
+  sửa, test 37/37 chạy sạch, 0 ERROR.
+- **Quirk check-only (không phải lỗi game):**
+  `--check-only --script res://main.gd` báo lỗi suy kiểu ở
+  `scripts/sky_effects.gd:105` (`var sc`/`var sr` trong
+  `_draw_moon`) rồi kéo theo iso_map/main compile fail — nhưng
+  check-only riêng `sky_effects.gd` exit 0 và scene Main chạy
+  120 frame exit 0 (compile đủ project vẫn đúng). Đây là lỗi
+  suy kiểu giả khi biên dịch main.gd đơn lẻ, KHÔNG sửa code
+  artpass5 vì nó. (Ghi để vòng sau không tưởng game hỏng.)
+
+### 16.3 Va chạm luồng song song (ghi 20/11 ~15:50)
+
+- Trong lúc vòng này chạy, một luồng khác (v6 — file
+  `visual-check/check_v6d_title.py`, `tests/v6_*`) sửa cùng
+  working copy: `main.gd`, `iso_map.gd`, `nadia_scene.gd`,
+  `sky_effects.gd`, `project.godot` đổi ~08:51 UTC;
+  `src/godot-build/` export lại 08:52 (pck 6.849.684 byte,
+  trước đó 6.843.288 byte `45686e4c…`). Vòng này KHÔNG export
+  đè lên build đó và KHÔNG deploy gh-pages (tránh đè deploy
+  của luồng kia, như vụ §8.4). File server của vòng này tạo
+  trước 08:52 nên có thể đã nằm trong pck 08:52 — nhưng chuỗi
+  GDScript trong pck không grep được (§12.3), nên vòng sau
+  export lại từ cây ổn định rồi mới kết luận. Hồi quy chạy sau
+  các sửa của luồng kia vẫn PASS hết.
+- **Export web CHƯA làm trong vòng này** (lý do trên) — vòng
+  sau export lại từ cây ổn định, verify rồi deploy 1 lần.
+- **Deploy gh-pages CHƯA làm** — chờ export vòng sau.
+
+## 17. Việc tiếp theo — G4 bước 7
+
+1. **Export lại từ cây ổn định + deploy gh-pages** (staging
+   hiện là bản artpass5 `45686e4c…`; build trên đĩa đã là bản
+   08:52 của luồng v6 — kiểm tra pck SHA + head gh-pages trước
+   khi push từng batch, không đè luồng khác).
+2. **Nối PxbOnline sang server Godot mới** (thay endpoint .NET):
+   client WebSocket trong game (`PxbOnline` thêm transport WS
+   hoặc client mới dùng chung protocol v1: hello/chat/presence)
+   + hiển thị trạng thái online + chat trong điện thoại (tab
+   Tin nhắn); giữ endpoint HTTP .NET làm fallback cho tới khi
+   WS ổn định.
+3. Quyền lợi giữ sạp áp vào Economy (`hold_benefits` đã có,
+   Main chưa gọi); animation di chuyển/đánh trận; chọn đội/vũ
+   khí trước trận; `can_challenge` ở demo.
+4. Tile riêng Map003–018 (đang PROVISIONAL); camera zoom trận
+   MarketBattle (lưới đang nhỏ giữa màn hình); nhãn tên đấu sĩ
+   trong trận còn hơi chồng nhau (ảnh browser-verify 13).
+5. Server: auth player_id (hiện tự khai), giới hạn tốc độ chat
+   (chống spam), lưu lịch sử chat cho client mới vào (hiện chỉ
+   giữ 100 tin trong RAM).
+
+## 18. Art pass 6 — vòng sửa 6 (20/11 ~16:00–17:30, kiểm live 15:18–15:24)
+
+### 18.1 Lỗi chia đôi sáng/tối — NGUYÊN NHÂN GỐC ĐÃ TÌM RA (không phải ảnh hẹp)
+
+- Live 15:18 báo dải sáng ~10–15% mép phải cuối TẠP HÓA ở Tối/Chiều; vòng 5 đo ở GIỮA khu nên lệch 1–3 là đúng nhưng sai chỗ.
+- Tái hiện bằng click-to-move (giữ phím WASD không di chuyển trong Chromium swiftshader trên máy ảo — đã biết, headless 16/16 PASS; F đổi khung vẫn chạy vì `_unhandled_input` là event-driven, còn `_held_dir()` poll `Input.is_action_pressed` nên phím nhấn nhanh lọt giữa 2 frame ở FPS thấp): 5 click (600,1100) đưa người chơi tới ô (10,1) — cuối map phải.
+- Đo pixel TẠI DẢI ĐÓ (trước sửa): ground Tối nhảy +26 tại đúng x=527 (99.8 → 125.8), Chiều cũng nhảy tại x=527 (103.0 → 125.8). Ranh giới trùng khớp `(720 − camera_x) × 1.4 + 360 = (720−600)×1.4+360 = 528`.
+- **Nguyên nhân gốc: `_overlay_layer.follow_viewport_enabled = true`** (main.gd, thêm ở vòng 5). CanvasLayer follow_viewport bám theo camera nên ColorRect (0,0)–(720,1280) thành hình chữ nhật THẾ GIỚI x 0..720, không phải màn hình. Lúc spawn camera x=280, overlay phủ màn hình −32..976 (đủ) nên không thấy lỗi; camera sang phải cuối map x=600 thì overlay chỉ phủ tới màn hình x=528, phần phải x>528 thoát lớp phủ → sáng như ban ngày. Ảnh nền/đất/overlay đều đủ rộng (geometry probe: mép phải nhìn thấy 857 < mép ảnh 872) — giả thuyết "ảnh đêm hẹp hơn" là SAI.
+- **Sửa:** xóa `follow_viewport_enabled = true` (mặc định false = không gian màn hình, ColorRect 720×1280 phủ kín màn hình bất kể camera). **LUẬT: không bao giờ bật follow_viewport cho lớp overlay toàn màn hình.** Lưới an toàn: `default_clear_color` đổi từ be sáng (0.78,0.70,0.55) sang tối (0.10,0.12,0.18) để mọi khoảng hở tương lai đọc tối, không sáng.
+- **Verify sau sửa (đo đúng mép phải cuối map):** Tối ground phải 101–103 (trước 129), Chiều 106 (trước 129); lệch so với giữa khung <10 mọi dải (sky/facade/ground, cả 3 khung); không còn bước nhảy tại x=527 (cột 500–560 đều 92–100 Tối, 95–103 Chiều). Test `tests/v6_overlay_test.gd` 16/16 PASS (kiểm tra hành vi: đưa camera ra (600,174), `get_global_rect()` của overlay vẫn (0,0)–(720,1280)).
+
+### 18.2 Các điểm còn lại (theo báo cáo live 15:18)
+
+- **Mặt trời/trăng sticker:** `sky_effects.gd` vẽ lại bằng `_draw_soft_disc` — gradient xuyên tâm 14 vòng alpha tăng dần vào trong (không còn đĩa phẳng + quầng cứng), đĩa có độ đậm nhạt ở rìa, vết lõm trăng vẽ mềm 3 vòng; dời lên y=240 màn hình (giữa dải trời, không đè mái/biển ở cả spawn lẫn cuối map). Test kiểm tra vị trí màn hình (170,240) Sáng / (400,240) Tối.
+- **Nền 3 dải cắt thẳng:** feather 50px cuối `bg_map001.png` + `bg_map001_night.jpg` (alpha smoothstep → 0). Ảnh đêm đổi sang PNG (`bg_map001_night.png`, `iso_map.gd` cập nhật đường dẫn, xóa `.jpg` + `.import` cũ + cache `.godot/imported` — `ResourceLoader.exists` vẫn báo có nếu còn `.import`).
+- **Nút bắt đầu kẹt 100%:** `onProgress` tới 100% nhưng `.then()` chỉ chạy sau khi wasm compile xong → nút kẹt ở "Đang tải game… 100%" (disabled). Sửa: đạt 100% đổi nhãn "Đang khởi động game…"; watchdog 12s không tiến độ → "Đang tải chậm — mạng yếu, vẫn đang tải…"; `.then()`/lỗi tắt watchdog.
+- **Nhãn bị cắt ở mép trái khi camera sang phải:** đã kiểm tra — nhãn đã kẹp đúng (x ≥ 16, y ≥ 190) trong ảnh v6c-08, không còn bị cắt; không sửa thêm.
+- **Xe đạp/chậu cây mép dưới cắt nửa:** xe đạp (12,9) + xe đẩy (8,13) nằm ngay mép dưới vùng nhìn thấy lúc spawn (thế giới y 654, mép 631) → dời xuống 2 ô: (12,11) + (8,15) (y 686, nằm hẳn dưới vùng nhìn thấy lúc spawn, hiện đủ khi đi xuống cuối map). Chậu cây (11,12) đã ở y 686 nên giữ nguyên.
+- **Desktop + tiêu đề caro be trống:** `web_shell.html` tải tranh vẽ tay `title_bg.jpg` (nén từ `title_bg.png`, 119KB) làm nền overlay tiêu đề (cover) + nền 2 panel desktop (lớp kem mờ 0.88 để chữ đọc được); thẻ tiêu đề thành panel giấy mờ ở dưới màn hình; 2 nhân vật chibi (char_player.png / char_banthan.png) đứng 2 bên nút. Ảnh phục vụ qua fetch: local có file thật cạnh index.html; gh-pages loader ráp từ chunk (xem §18.3).
+
+### 18.3 Deploy: ảnh tiêu đề chunk như wasm/pck
+
+- `tools/godot/build_gh_pages.py` thêm `IMG_PARTS`: chunk base64 `title_bg.jpg` (1 chunk) + `char_player.png` (2) + `char_banthan.png` (2) vào `staging/img/<tên>/`; loader mở rộng fetch-override phục vụ 3 tên file với đúng Content-Type. Verify ráp lại khớp byte.
+- Export web vòng này: exit 0, pck 6.849.684 byte SHA `6d668deb…`, wasm không đổi `fc74679e…`.
+
+### 18.4 Verify vòng 6 (đầy đủ)
+
+- `--check-only` 5 file sửa/mới exit 0 (main.gd, sky_effects.gd, nadia_scene.gd, iso_map.gd, v6_overlay_test.gd).
+- Test: v6 16/16, artpass 60/60, G1 419/419, G2 87/87, G3 95/95, MarketBattle 123/123 — 0 FAIL.
+- Chromium local (swiftshader, 0 console error): driver click-to-move tới (10,1), đo pixel mép phải 3 khung (xem §18.1); ảnh tiêu đề desktop 1920×1080 (tranh + 2 nhân vật + nút) + trong game desktop (2 panel tranh mờ); ảnh Tối/Sáng cuối map đã xem trực tiếp.
+- Hạn chế harness đã biết (ghi lại, không phải hồi quy): giữ phím WASD không di chuyển trong Chromium swiftshader trên máy ảo; click-to-move + F vẫn chạy; đã dùng click-to-move để lái.
+
+### 18.5 Việc tiếp theo
+
+- Chờ kiểm live trên https://tinnt120899.github.io/pho-xo-bo/ (sau khi Pages rebuild bản deploy vòng 6) rồi mới báo chủ.
+- G4 bước 7 (nối PxbOnline sang server Godot mới) theo §17.

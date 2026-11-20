@@ -37,9 +37,11 @@ SMALL_FILES = [
 ]
 
 LOADER_TEMPLATE = """<script>
-/* Gh-pages build: wasm + pck tách chunk base64, ráp lại qua fetch giả. */
+/* Gh-pages build: wasm + pck + anh tieu de tach chunk base64, rap lai qua fetch gia. */
 const WASM_PARTS = [{wasm_parts}];
 const PCK_PARTS = [{pck_parts}];
+const IMG_PARTS = {img_parts_json};
+const IMG_TYPES = {{"title_bg.jpg": "image/jpeg", "char_player.png": "image/png", "char_banthan.png": "image/png"}};
 async function assemble(parts) {{
   const bufs = await Promise.all(parts.map(async (u) => {{
     const t = await (await fetch(u)).text();
@@ -62,6 +64,10 @@ window.fetch = function (input, init) {{
     const parts = name === 'index.wasm' ? WASM_PARTS : PCK_PARTS;
     if (!EMBEDDED[name]) EMBEDDED[name] = assemble(parts);
     return EMBEDDED[name].then((bytes) => new Response(bytes, {{ headers: {{ 'Content-Type': name === 'index.wasm' ? 'application/wasm' : 'application/octet-stream' }} }}));
+  }}
+  if (name in IMG_PARTS) {{
+    if (!EMBEDDED[name]) EMBEDDED[name] = assemble(IMG_PARTS[name]);
+    return EMBEDDED[name].then((bytes) => new Response(bytes, {{ headers: {{ 'Content-Type': IMG_TYPES[name] }} }}));
   }}
   return _fetch(input, init);
 }};
@@ -97,6 +103,24 @@ def build() -> dict:
     pck = (BUILD_DIR / "index.pck").read_bytes()
     wasm_names = split_chunks(wasm, STAGING_DIR / "wasm", "wasm")
     pck_names = split_chunks(pck, STAGING_DIR / "pck", "pck")
+    # Anh tieu de + nhan vat cho DOM shell (title_bg.jpg + 2 char PNG):
+    # file nhi phan khong push truc tiep duoc qua snapshot-push nen
+    # chunk base64 nhu wasm/pck, loader rap lai qua fetch gia.
+    import json
+    img_parts: dict[str, list[str]] = {}
+    img_srcs = {
+        "title_bg.jpg": BUILD_DIR / "title_bg.jpg",
+        "char_player.png": ROOT / "src" / "godot" / "art" / "char_player.png",
+        "char_banthan.png": ROOT / "src" / "godot" / "art" / "char_banthan.png",
+    }
+    for name, src in img_srcs.items():
+        if not src.exists():
+            print(f"CANH BAO: thieu anh {name} ({src}) — bo qua, DOM dung fallback")
+            continue
+        data = src.read_bytes()
+        names = split_chunks(data, STAGING_DIR / "img" / name, "img")
+        img_parts[name] = [f"img/{name}/{n}" for n in names]
+        print(f"img {name}: {len(data)} byte, {len(names)} chunk")
     for f in SMALL_FILES:
         src = BUILD_DIR / f
         if src.exists():
@@ -105,6 +129,7 @@ def build() -> dict:
     loader = LOADER_TEMPLATE.format(
         wasm_parts=", ".join(f"'wasm/{n}'" for n in wasm_names),
         pck_parts=", ".join(f"'pck/{n}'" for n in pck_names),
+        img_parts_json=json.dumps(img_parts, ensure_ascii=False),
     )
     marker = '<script src="index.js"></script>'
     assert marker in html, "khong tim thay <script src=index.js> trong index.html"
@@ -117,6 +142,7 @@ def build() -> dict:
         "pck_bytes": len(pck),
         "pck_sha": hashlib.sha256(pck).hexdigest(),
         "pck_parts": len(pck_names),
+        "img_parts": {k: len(v) for k, v in img_parts.items()},
     }
 
 
@@ -128,6 +154,21 @@ def verify() -> bool:
         data = reassemble(names, STAGING_DIR / kind)
         match = hashlib.sha256(data).hexdigest() == hashlib.sha256(src.read_bytes()).hexdigest()
         print(f"{kind}: {len(names)} chunk, {len(data)} byte, khop byte: {match}")
+        ok = ok and match
+    # Anh tieu de + nhan vat: rap lai chunk, so voi file goc.
+    for name, src in {
+        "title_bg.jpg": BUILD_DIR / "title_bg.jpg",
+        "char_player.png": ROOT / "src" / "godot" / "art" / "char_player.png",
+        "char_banthan.png": ROOT / "src" / "godot" / "art" / "char_banthan.png",
+    }.items():
+        d = STAGING_DIR / "img" / name
+        if not d.exists() or not src.exists():
+            print(f"img {name}: khong co trong staging/goc — bo qua")
+            continue
+        names = sorted(p.name for p in d.glob("part-*.txt"))
+        data = reassemble(names, d)
+        match = hashlib.sha256(data).hexdigest() == hashlib.sha256(src.read_bytes()).hexdigest()
+        print(f"img {name}: {len(names)} chunk, {len(data)} byte, khop byte: {match}")
         ok = ok and match
     # Loader + fileSizes trong index.html staging phai khop build hien tai.
     html = (STAGING_DIR / "index.html").read_text()

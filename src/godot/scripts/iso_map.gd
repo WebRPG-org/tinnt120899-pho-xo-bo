@@ -203,8 +203,8 @@ func build(data: Dictionary, marker_script: Script, font: Font, p_label_layer: C
 	_bg_sprite = null
 	if map_id == 1 and ResourceLoader.exists("res://art/bg_map001.png"):
 		_bg_day_tex = load("res://art/bg_map001.png")
-		if ResourceLoader.exists("res://art/bg_map001_night.jpg"):
-			_bg_night_tex = load("res://art/bg_map001_night.jpg")
+		if ResourceLoader.exists("res://art/bg_map001_night.png"):
+			_bg_night_tex = load("res://art/bg_map001_night.png")
 		_bg_sprite = Sprite2D.new()
 		_bg_sprite.texture = _bg_day_tex
 		_bg_sprite.position = offset + Vector2(0, -295)

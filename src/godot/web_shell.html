@@ -27,7 +27,10 @@ body {
    Panel la DOM (nen am + hoa tiet + chu) nam TREN canvas WebGL
    (opaque, dai den) — z-index 10, pointer-events none de khong
    chan click vao game. Chu MAU TOI tren nen kem am (khong phai chu
-   sang tren dai den nhu vong 6 cu). */
+   sang tren dai den nhu vong 6 cu). Vong 6: nen panel la tranh ve
+   tay title_bg.jpg (JS set backgroundImage, co lop kem mo de chu
+   doc duoc) thay cho caro be trong — gradient caro chi la fallback
+   truoc khi anh ve. */
 .side-panel {
 	position: fixed;
 	top: 0;
@@ -47,6 +50,7 @@ body {
 		repeating-linear-gradient(45deg, rgba(120, 84, 40, 0.08) 0 2px, transparent 2px 26px),
 		repeating-linear-gradient(-45deg, rgba(120, 84, 40, 0.08) 0 2px, transparent 2px 26px),
 		linear-gradient(180deg, #f7e8c8 0%, #e8d3a8 45%, #c9a86a 100%);
+	background-size: auto, auto, auto;
 	z-index: 10;
 	pointer-events: none;
 }
@@ -71,18 +75,39 @@ body {
    tren desktop (loi 20/11 11:40) — nut HTML lon, o giua man hinh,
    bam la vao game ngay. Overlay phu kin man hinh luc tai game,
    hien tien do tai; engine chay xong nut sang len. Click: dat
-   window.__pxb_start = true (Godot poll 4 lan/giay) + an overlay. */
+   window.__pxb_start = true (Godot poll 4 lan/giay) + an overlay.
+   Vong 6: overlay la tranh ve tay title_bg.jpg (JS set, cover)
+   thay cho caro be trong; the tieu de la panel giay mo o duoi man
+   hinh (doc duoc tren moi nen anh), 2 nhan vat chibi dung 2 ben
+   nut (anh char_player.png / char_banthan.png, JS set src). */
 #start-overlay {
 	position: fixed;
 	inset: 0;
 	z-index: 30;
 	display: flex;
 	justify-content: center;
-	align-items: center;
+	align-items: flex-end;
+	padding-bottom: 6vh;
 	background:
 		repeating-linear-gradient(45deg, rgba(120, 84, 40, 0.07) 0 2px, transparent 2px 26px),
 		repeating-linear-gradient(-45deg, rgba(120, 84, 40, 0.07) 0 2px, transparent 2px 26px),
 		linear-gradient(180deg, #f7e8c8 0%, #e8d3a8 45%, #c9a86a 100%);
+	background-size: auto, auto, auto;
+}
+
+.start-row {
+	display: flex;
+	align-items: flex-end;
+	justify-content: center;
+	gap: 18px;
+	max-width: 96vw;
+}
+
+.title-char {
+	height: 170px;
+	width: auto;
+	filter: drop-shadow(0 6px 6px rgba(43, 33, 24, 0.45));
+	flex: none;
 }
 
 .start-card {
@@ -90,6 +115,11 @@ body {
 	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
 	color: #5a3d1e;
 	max-width: 90vw;
+	background: rgba(255, 247, 230, 0.94);
+	border: 3px solid #8b5a2b;
+	border-radius: 20px;
+	padding: 24px 34px 28px;
+	box-shadow: 0 10px 24px rgba(43, 33, 24, 0.35);
 }
 
 .start-title {
@@ -221,11 +251,15 @@ body {
 		<div class="side-panel left">PHỐ XÔ BỒ<br><span>Game xã hội 2.5D Việt Nam<br>18 khu phố • Làm việc • Buôn bán • Kết bạn</span></div>
 		<div class="side-panel right">CHƠI TRÊN ĐIỆN THOẠI<br><span>Game thiết kế cho màn hình dọc.<br>Trên máy tính, kéo cửa sổ hẹp lại sẽ đẹp hơn.</span></div>
 		<div id="start-overlay">
-			<div class="start-card">
-				<div class="start-title">PHỐ XÔ BỒ</div>
-				<div class="start-sub">Game xã hội 2.5D Việt Nam<br>18 khu phố • Làm việc • Buôn bán • Kết bạn</div>
-				<button id="start-btn" disabled>Đang tải game…</button>
-				<div class="start-note">Bấm nút để vào game — chơi trên điện thoại là đẹp nhất</div>
+			<div class="start-row">
+				<img id="title-char-player" class="title-char" alt="">
+				<div class="start-card">
+					<div class="start-title">PHỐ XÔ BỒ</div>
+					<div class="start-sub">Game xã hội 2.5D Việt Nam<br>18 khu phố • Làm việc • Buôn bán • Kết bạn</div>
+					<button id="start-btn" disabled>Đang tải game…</button>
+					<div class="start-note">Bấm nút để vào game — chơi trên điện thoại là đẹp nhất</div>
+				</div>
+				<img id="title-char-banthan" class="title-char" alt="">
 			</div>
 		</div>
 		<canvas id="canvas">
@@ -272,6 +306,59 @@ const engine = new Engine(GODOT_CONFIG);
 	layoutSidePanels();
 	window.addEventListener('resize', layoutSidePanels);
 
+	// Vong 6 — Anh tieu de ve tay + nhan vat: fetch file anh (local:
+	// file that ben canh index.html; gh-pages: loader chen vao
+	// index.html chan fetch va tra byte rap tu chunk). Loi thi thoi
+	// (gi gradient caro fallback), khong chan game.
+	function loadTitleArt() {
+		fetch('title_bg.jpg').then((r) => {
+			if (!r.ok) throw new Error('no title art');
+			return r.blob();
+		}).then((b) => {
+			const u = URL.createObjectURL(b);
+			startOverlay.style.backgroundImage =
+				'linear-gradient(180deg, rgba(43,33,24,0.10) 0%, rgba(43,33,24,0.0) 45%, rgba(43,33,24,0.55) 100%), url("' + u + '")';
+			startOverlay.style.backgroundSize = 'cover, cover';
+			startOverlay.style.backgroundPosition = 'center, center';
+			for (const p of [leftPanel, rightPanel]) {
+				p.style.backgroundImage =
+					'linear-gradient(180deg, rgba(247,232,200,0.88) 0%, rgba(232,211,168,0.88) 100%), url("' + u + '")';
+				p.style.backgroundSize = 'cover, cover';
+				p.style.backgroundPosition = 'center, center';
+			}
+		}).catch(() => {});
+		for (const [id, file] of [['title-char-player', 'char_player.png'], ['title-char-banthan', 'char_banthan.png']]) {
+			fetch(file).then((r) => {
+				if (!r.ok) throw new Error('no char art');
+				return r.blob();
+			}).then((b) => {
+				const img = document.getElementById(id);
+				if (img) img.src = URL.createObjectURL(b);
+			}).catch(() => {});
+		}
+	}
+	loadTitleArt();
+
+	// Vong 6 — Watchdog nut tai (loi 20/11 15:18): onProgress toi
+	// 100% nhung engine.startGame().then() chi chay sau khi wasm
+	// compile + khoi dong xong, nen nut ket o "Dang tai game… 100%"
+	// (disabled) neu buoc sau cham; lan tai dau ket 15% >20s cung
+	// khong co tin hieu gi. Sua: dat 100% doi nhan thanh
+	// "Dang khoi dong game…", va neu >12s khong co tien do thi bao
+	// "Dang tai cham — mang yeu, van dang tai…" de nguoi choi biet
+	// game chua chet. .then() tat watchdog + doi nhan thanh BAT DAU.
+	let lastProgressAt = Date.now();
+	let stallTimer = null;
+	function armStallWatchdog() {
+		if (stallTimer) return;
+		stallTimer = setInterval(() => {
+			if (!startBtn.disabled) { clearInterval(stallTimer); stallTimer = null; return; }
+			if (Date.now() - lastProgressAt > 12000) {
+				startBtn.textContent = 'Đang tải chậm — mạng yếu, vẫn đang tải…';
+			}
+		}, 3000);
+	}
+
 	startBtn.addEventListener('click', () => {
 		window.__pxb_start = true;
 		document.getElementById('canvas').focus();
@@ -311,6 +398,7 @@ const engine = new Engine(GODOT_CONFIG);
 
 	function displayFailureNotice(err) {
 		console.error(err);
+		if (stallTimer) { clearInterval(stallTimer); stallTimer = null; }
 		if (err instanceof Error) {
 			setStatusNotice(err.message);
 		} else if (typeof err === 'string') {
@@ -361,18 +449,25 @@ const engine = new Engine(GODOT_CONFIG);
 		}
 	} else {
 		setStatusMode('progress');
+		armStallWatchdog();
 		engine.startGame({
 			'onProgress': function (current, total) {
+				lastProgressAt = Date.now();
 				if (current > 0 && total > 0) {
 					statusProgress.value = current;
 					statusProgress.max = total;
-					startBtn.textContent = 'Đang tải game… ' + Math.round(current / total * 100) + '%';
+					if (current >= total) {
+						startBtn.textContent = 'Đang khởi động game…';
+					} else {
+						startBtn.textContent = 'Đang tải game… ' + Math.round(current / total * 100) + '%';
+					}
 				} else {
 					statusProgress.removeAttribute('value');
 					statusProgress.removeAttribute('max');
 				}
 			},
 		}).then(() => {
+			if (stallTimer) { clearInterval(stallTimer); stallTimer = null; }
 			setStatusMode('hidden');
 			startBtn.disabled = false;
 			startBtn.textContent = '▶  BẮT ĐẦU CHƠI';

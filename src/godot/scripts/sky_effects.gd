@@ -31,7 +31,13 @@ func setup_npcs(markers: Array) -> void:
 ## neo theo map nua: neo map thi camera sang phai (khu TAP HOA)
 ## la trang bi cat nua o mep trai, mat troi troi khoi khung
 ## (kiem live 14:34). Toa do man hinh: duoi HUD (~190), tren mai
-## nha — mat troi Sang (170,290), Chieu (330,290), trang (400,300).
+## nha — mat troi Sang (170,240), Chieu (330,240), trang (400,240).
+## Vong 6: mat troi/trang cu la dia trang phang + quang cung, dan de
+## len mai nha/bien hieu nhu sticker (kiem live 15:18). Nay ve
+## shading mem: gradient xuyen tam nhieu vong alpha tang dan vao
+## trong (khong con vong quang cung), dia co do dam nhat o ria,
+## vet lom trang ve mem — dat y=240 (giua dai troi, khong de len
+## mai nha/bien hieu o ca spawn lan cuoi map).
 func _cam_anchor(screen_pos: Vector2) -> Vector2:
 	var cam := get_viewport().get_camera_2d()
 	if cam == null:
@@ -56,37 +62,51 @@ func _process(_delta: float) -> void:
 
 func _draw() -> void:
 	if frame_idx == 0:
-		# Mat troi sang: cao, vang dam — neo camera (170,290).
-		sun_pos = _cam_anchor(Vector2(170, 290))
+		# Mat troi sang: cao, vang dam — neo camera (170,240).
+		sun_pos = _cam_anchor(Vector2(170, 240))
 		_draw_sun(sun_pos, 38.0,
 			Color(1.0, 0.88, 0.35, 1), Color(1.0, 0.8, 0.3, 1))
 	elif frame_idx == 1:
-		# Mat troi lan: thap, cam dam — neo camera (330,290).
-		sun_pos = _cam_anchor(Vector2(330, 290))
+		# Mat troi lan: thap, cam dam — neo camera (330,240).
+		sun_pos = _cam_anchor(Vector2(330, 240))
 		_draw_sun(sun_pos, 42.0,
 			Color(1.0, 0.62, 0.28, 1), Color(1.0, 0.55, 0.2, 1))
 		_draw_long_shadows()
 	elif frame_idx == 2:
-		# Trang tron: ve bang code, neo camera (400,300) — duoi
-		# HUD, tren mai nha, giua khung hinh. Mau >1.0 (HDR) de
-		# con sang sau lop MUL dem (0.7,0.78,0.95).
-		moon_pos = _cam_anchor(Vector2(400, 300))
+		# Trang tron: ve bang code, neo camera (400,240) — duoi
+		# HUD, giua dai troi, khong de mai nha/bien hieu. Mau >1.0
+		# (HDR) de con sang sau lop MUL dem (0.7,0.78,0.95).
+		moon_pos = _cam_anchor(Vector2(400, 240))
 		_draw_moon(moon_pos)
 
-func _draw_sun(c: Vector2, r: float, core: Color, glow: Color) -> void:
-	draw_circle(c, r * 2.6, Color(glow.r, glow.g, glow.b, 0.16))
-	draw_circle(c, r * 1.7, Color(glow.r, glow.g, glow.b, 0.28))
+## Dia mem: quang mo gradient xuyen tam (14 vong, alpha 0.02 ->
+## 0.30) + dia co do dam nhat o ria (vong trong sang dan ra ngoai)
+## thay cho dia phang + quang cung — khong con ve sticker.
+func _draw_soft_disc(c: Vector2, r: float, core: Color, glow: Color) -> void:
+	var steps := 14
+	for i in range(steps, 0, -1):
+		var t := float(i) / float(steps)  # 1.0 o ria ngoai -> gan 0 o tam.
+		var rr := r * (1.0 + 1.6 * t)
+		var a := 0.30 * (1.0 - t) + 0.02
+		draw_circle(c, rr, Color(glow.r, glow.g, glow.b, a))
+	# Dia: tam sang nhat, dam dan ve ria (3 lop).
 	draw_circle(c, r, Color(core.r, core.g, core.b, 0.95))
-	draw_circle(c, r * 0.7, Color(1, 1, 1, 0.9))
+	draw_circle(c, r * 0.82, Color(minf(core.r * 1.05, 1.4), minf(core.g * 1.05, 1.4), minf(core.b * 1.05, 1.4), 0.55))
+	draw_circle(c, r * 0.55, Color(1, 1, 1, 0.5))
+
+func _draw_sun(c: Vector2, r: float, core: Color, glow: Color) -> void:
+	_draw_soft_disc(c, r, core, glow)
 
 func _draw_moon(c: Vector2) -> void:
-	# Trang tron r=40: quang mo + dia sang + 3 vet lom.
-	draw_circle(c, 104.0, Color(1.2, 1.2, 1.0, 0.10))
-	draw_circle(c, 68.0, Color(1.2, 1.2, 1.0, 0.18))
-	draw_circle(c, 40.0, Color(1.3, 1.3, 1.15, 0.95))
-	draw_circle(c + Vector2(-12, -8), 7.0, Color(0.85, 0.85, 0.75, 0.5))
-	draw_circle(c + Vector2(10, 6), 5.0, Color(0.85, 0.85, 0.75, 0.5))
-	draw_circle(c + Vector2(4, -14), 4.0, Color(0.85, 0.85, 0.75, 0.5))
+	# Trang tron r=40: quang mem + dia shading mem + 3 vet lom mem
+	# (moi vet 3 vong alpha giam dan, khong con tron cung).
+	_draw_soft_disc(c, 40.0, Color(1.3, 1.3, 1.15, 1), Color(1.2, 1.2, 1.0, 1))
+	for spot in [Vector2(-12, -8), Vector2(10, 6), Vector2(4, -14)]:
+		var sc: Vector2 = c + spot
+		var sr := 7.0 if spot == Vector2(-12, -8) else (5.0 if spot == Vector2(10, 6) else 4.0)
+		draw_circle(sc, sr, Color(0.85, 0.85, 0.75, 0.18))
+		draw_circle(sc, sr * 0.7, Color(0.85, 0.85, 0.75, 0.30))
+		draw_circle(sc, sr * 0.45, Color(0.85, 0.85, 0.75, 0.42))
 
 func _draw_long_shadows() -> void:
 	# Bong dai do ve trai-duoi (nang chieu tu phai): ellipse mem

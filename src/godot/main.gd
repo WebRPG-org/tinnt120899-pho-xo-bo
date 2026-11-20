@@ -1627,9 +1627,20 @@ func _build_ui() -> void:
 	# doi sang/toi theo vung (1/3 phai TAP HOA van sang, kiem live
 	# 14:34). Layer 1 chac chan o tren canvas mac dinh (lop 0) nen
 	# khong con truong hop nao thoat khoi lop phu.
+	# Vong 6 (20/11 16:xx): LOI GOC THU 2 — follow_viewport_enabled
+	# = true khien lop nay BAM THEO CAMERA: ColorRect (0,0)-(720,1280)
+	# thanh hinh chu nhat THE GIOI x 0..720, khong phai man hinh.
+	# Luc spawn camera x=280, lop phu man hinh -32..976 (du) nen
+	# khong thay loi; camera sang phai cuoi map x=600 thi lop chi
+	# phu toi man hinh x=528, phan phai x>528 thoat lop phu -> dai
+	# doc sang nhu ban ngay, cat doi cua so TAP HOA (do pixel:
+	# ran gioi dung x=527 ca Chieu lan Toi, khop (720-600)*1.4+360).
+	# SUA: follow_viewport PHAI false (mac dinh) — CanvasLayer
+	# khong theo viewport thi o khong gian man hinh, ColorRect
+	# 720x1280 phu kin man hinh bat ke camera o dau. KHONG BAO GIO
+	# bat follow_viewport cho lop overlay toan man hinh.
 	_overlay_layer = CanvasLayer.new()
 	_overlay_layer.layer = 1
-	_overlay_layer.follow_viewport_enabled = true
 	add_child(_overlay_layer)
 	_daynight = ColorRect.new()
 	_daynight.position = Vector2.ZERO
