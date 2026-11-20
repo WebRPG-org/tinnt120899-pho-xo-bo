@@ -55,12 +55,29 @@ body {
 	pointer-events: none;
 }
 
-.side-panel span {
+.side-panel .panel-title {
+	font-size: 28px;
+	font-weight: bold;
+	line-height: 1.4;
+}
+
+.side-panel .panel-sub {
+	display: block;
 	font-size: 18px;
 	font-weight: normal;
 	color: #6b4a26;
 	margin-top: 12px;
 	line-height: 1.5;
+}
+
+/* Vong 8 — vao game thi an chu landing 2 ben (loi live 16:52:
+   choi ma 2 ben van hien nguyen van ban trang dich "PHO XO BO /
+   CHOI TREN DIEN THOAI", game chi la dai hep giua trang landing).
+   Chi an tieu de + phu de; o phim tat (.keys) giu lai lam huong
+   dan choi; nen tranh mo van giu (JS set backgroundImage). */
+body.in-game .side-panel .panel-title,
+body.in-game .side-panel .panel-sub {
+	display: none;
 }
 
 /* Vong 7: panel 2 ben co noi dung that (khong chi be trong) —
@@ -267,8 +284,8 @@ body {
 		$GODOT_HEAD_INCLUDE
 	</head>
 	<body>
-		<div class="side-panel left">PHỐ XÔ BỒ<br><span>Game xã hội 2.5D Việt Nam<br>18 khu phố • Làm việc • Buôn bán • Kết bạn</span><div class="keys"><b>WASD / ←↑↓→</b> — di chuyển<br><b>F</b> — đổi khung Sáng / Chiều / Tối<br><b>P</b> — mở điện thoại<br><b>E</b> — nói chuyện / nhặt đồ<br><b>B</b> — trận giữ sạp</div></div>
-		<div class="side-panel right">CHƠI TRÊN ĐIỆN THOẠI<br><span>Game thiết kế cho màn hình dọc.<br>Trên máy tính, kéo cửa sổ hẹp lại sẽ đẹp hơn.</span><div class="keys"><b>Chạm</b> — đi tới ô đó<br><b>Hotspot xanh</b> — đồ thường<br><b>Hotspot cam</b> — đồ hiếm<br>Nhặt trước khi đổi khung!</div></div>
+		<div class="side-panel left"><div class="panel-title">PHỐ XÔ BỒ</div><span class="panel-sub">Game xã hội 2.5D Việt Nam<br>18 khu phố • Làm việc • Buôn bán • Kết bạn</span><div class="keys"><b>WASD / ←↑↓→</b> — di chuyển<br><b>F</b> — đổi khung Sáng / Chiều / Tối<br><b>P</b> — mở điện thoại<br><b>E</b> — nói chuyện / nhặt đồ<br><b>B</b> — trận giữ sạp</div></div>
+		<div class="side-panel right"><div class="panel-title">CHƠI TRÊN ĐIỆN THOẠI</div><span class="panel-sub">Game thiết kế cho màn hình dọc.<br>Trên máy tính, kéo cửa sổ hẹp lại sẽ đẹp hơn.</span><div class="keys"><b>Chạm</b> — đi tới ô đó<br><b>Hotspot xanh</b> — đồ thường<br><b>Hotspot cam</b> — đồ hiếm<br>Nhặt trước khi đổi khung!</div></div>
 		<div id="start-overlay">
 			<div class="start-row">
 				<img id="title-char-player" class="title-char" alt="">
@@ -391,13 +408,19 @@ const engine = new Engine(GODOT_CONFIG);
 	// "Dang tai cham — mang yeu, van dang tai…" de nguoi choi biet
 	// game chua chet. .then() tat watchdog + doi nhan thanh BAT DAU.
 	let lastProgressAt = Date.now();
+	let lastProgress = 0;  // 0..1 — de watchdog phan biet ket tai / ket bien dich.
 	let stallTimer = null;
 	function armStallWatchdog() {
 		if (stallTimer) return;
 		stallTimer = setInterval(() => {
 			if (!startBtn.disabled) { clearInterval(stallTimer); stallTimer = null; return; }
 			if (Date.now() - lastProgressAt > 12000) {
-				startBtn.textContent = 'Đang tải chậm — mạng yếu, vẫn đang tải…';
+				// Vong 8: tien do da 100% ma van chua khoi dong xong
+				// thi la DANG BIEN DICH wasm (39MB, may yeu 10-30s),
+				// khong phai mang yeu — bao dung ly do, dung do mang.
+				startBtn.textContent = lastProgress >= 1
+					? 'Đang khởi động game… (lần đầu biên dịch hơi lâu, chờ chút)'
+					: 'Đang tải chậm — mạng yếu, vẫn đang tải…';
 			}
 		}, 3000);
 	}
@@ -405,6 +428,9 @@ const engine = new Engine(GODOT_CONFIG);
 	startBtn.addEventListener('click', () => {
 		window.__pxb_start = true;
 		document.getElementById('canvas').focus();
+		// Vong 8: vao game thi an chu landing 2 ben (chi giu o phim
+		// tat + nen tranh mo) — xem CSS body.in-game.
+		document.body.classList.add('in-game');
 		// Cho Godot poll (0.25s) dong title truoc khi an overlay,
 		// tranh chop man hinh title 1 khoanh khac.
 		setTimeout(() => { startOverlay.style.display = 'none'; }, 400);
@@ -497,6 +523,7 @@ const engine = new Engine(GODOT_CONFIG);
 			'onProgress': function (current, total) {
 				lastProgressAt = Date.now();
 				if (current > 0 && total > 0) {
+					lastProgress = current / total;
 					statusProgress.value = current;
 					statusProgress.max = total;
 					if (current >= total) {

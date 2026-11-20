@@ -258,13 +258,28 @@ func _draw_facades() -> void:
 			_draw_gate(c)
 			_draw_window(c + Vector2(14, 0), h)
 
+## Mau kinh cua so theo khung (vong 8): ham tinh de test goi truc
+## tiep duoc — _draw_window dung ham nay.
+static func window_glass_color(f: int) -> Color:
+	if f == 1:
+		return Color(1.0, 0.84, 0.52, 1)
+	if f == 2:
+		return Color(1.0, 0.78, 0.38, 1)
+	return Color(0.78, 0.84, 0.88, 1)
+
 func _draw_window(c: Vector2, h: int) -> void:
-	# Cua so: kinh vang am + khung chu thap + cua chop + chau hoa.
+	# Cua so: kinh + khung chu thap + cua chop + chau hoa.
+	# Vong 8 — kinh DOI THEO KHUNG (loi cua TAP HOA anh ngay sang
+	# cam nhu den toi): Sang = kinh lanh xanh-xam (ban ngay, khong
+	# sang den); Chieu = am nhe (nang chieu); Toi = vang cam sang
+	# den. Map001 khong dung ham nay (anh composite ve cua so) —
+	# cua Map001 sua truc tiep bang PIL tren bg_map001.png.
+	var glass := window_glass_color(frame_idx)
 	var wx := c.x - 11
 	var wy := c.y - 42
 	draw_rect(Rect2(wx - 5, wy, 5, 24), Color(0.30, 0.45, 0.35, 1))
 	draw_rect(Rect2(wx + 22, wy, 5, 24), Color(0.30, 0.45, 0.35, 1))
-	draw_rect(Rect2(wx, wy, 22, 24), Color(1.0, 0.85, 0.45, 1))
+	draw_rect(Rect2(wx, wy, 22, 24), glass)
 	draw_rect(Rect2(wx + 10, wy, 2, 24), Color(0.45, 0.32, 0.20, 1))
 	draw_rect(Rect2(wx, wy + 11, 22, 2), Color(0.45, 0.32, 0.20, 1))
 	draw_rect(Rect2(wx - 5, wy - 3, 32, 3), Color(0.55, 0.38, 0.24, 1))

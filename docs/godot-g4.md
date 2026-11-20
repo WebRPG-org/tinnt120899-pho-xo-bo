@@ -1337,3 +1337,192 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
    giữa mặt tiền cửa hàng (không chồng nhau, có khe — nhưng
    nhìn như khối nổi trên cửa); cân nhắc neo nhãn gần điểm neo
    hơn thay vì đẩy lên cao khi va đầu nhân vật.
+
+## 21. Art pass 8 — vòng sửa 8 (20/11 ~17:10–18:10, kiểm live artpass7 16:52–17:10)
+
+### 21.1 Kiểm live artpass7 — game đứng hình trên trình duyệt thật
+
+- Live check (browser-task f6bc057d, 16:52–17:11, 1920×1000):
+  D (hoa + thường, ~18 lần) + ArrowRight (~16 lần) = nhân vật
+  đứng yên tuyệt đối; tap-to-move 3 điểm phải (kể cả giữ 10,7s)
+  = không nhúc nhích; E gần Cô Tư không mở hội thoại; NPC/lá
+  tĩnh hoàn toàn. F (đổi khung) và P (điện thoại) vẫn chạy.
+  Tải kẹt "Đang khởi động game…" >20s lần đầu; 2 ảnh tiêu đề
+  "loading or decoding failed"; cửa TẠP HÓA Sáng vẫn sáng cam;
+  đáy vẫn cắt ở 1920×1000; văn bản landing vẫn lộ 2 bên khi
+  đang chơi; biển TẠP HÓA cắt nửa chữ Á ở spawn.
+- Trong khi vòng 7 kiểm local Chromium báo D/W/Shift+D/
+  ArrowRight đều đi được — phải tìm ĐIỂM KHÁC BIỆT giữa bản
+  local và bản live, không sửa mù.
+
+### 21.2 Tái hiện — phát hiện: vòng 7 kiểm SAI BẢN (raw export, không phải staging)
+
+- Vòng 7 kiểm local phục vụ `src/godot-build/` (export thô,
+  KHÔNG có chunk loader) — đường loader của gh-pages chưa bao
+  giờ được kiểm local. Script mới
+  `visual-check/check_artpass8_repro.py` phục vụ staging
+  (port 8162) và raw build (8161) song song;
+  `check_artpass8_taps.py` nhấn kiểu tap như kiểm live + tap
+  vào TRONG canvas.
+- Repro trên staging 1920×1000 (~17:20): nút bật ~10s;
+  **di chuyển ĐƯỢC** (giữ D 3s đi phải, 10 tap D tới cuối
+  TẠP HÓA, tap-to-move trong canvas chạy); F đổi khung đúng
+  nhãn + toast; P mở điện thoại; **đáy KHÔNG cắt**; 0 failed
+  request; 1 warning WebGL ReadPixels. Test tap của vòng 7
+  KHÔNG HỢP LỆ: click (1400,700) nằm NGOÀI canvas (canvas
+  x 679–1241 ở 1920 rộng) — cùng lỗi trong script repro đầu
+  tiên, đã sửa thành (1150,750).
+- Live files lúc ~17:15 đã byte-identical với staging (index.html
+  SHA `fbfa8ac4…`, index.js `33c94cb3…`, ráp lại pck live
+  6.858.400 byte SHA `5e424b743c17…` = staging). Lần ráp đầu
+  sai vì tên chunk 10–50 không `%03d` (5.509.020 byte) — đã
+  làm lại đúng.
+- **Chẩn đoán (giả thuyết mạnh, chưa chứng minh bằng live
+  re-check): live lỗi = CDN trộn pck cũ/mới.** Deploy xong
+  ~16:45–16:52; kiểm live chạy 16:52–17:10, đúng trong cửa
+  sổ lan truyền. URL chunk CỐ ĐỊNH (`wasm/part-000.txt`…)
+  nên CDN Pages cache từng chunk riêng (max-age 600s) và
+  trình duyệt ráp pck từ hỗn hợp chunk cũ + mới (chính cron
+  16:45 đã thấy chunk 019–022 lệch ở lần tải đầu). Giải
+  thích mọi triệu chứng live cùng lúc: `main.gd` cũ (zoom
+  1.4 → đáy cắt), `player.gd` cũ (poll-based, lỡ tap ở FPS
+  thấp), `marker.gd` mới (nhãn sửa được — live thấy đúng),
+  ảnh nền cũ (cửa Sáng vẫn cam). Cache đã ổn định lúc
+  17:15 (live = staging).
+
+### 21.3 Sửa gốc — chunk theo phiên bản (versioned chunks)
+
+- `tools/godot/build_gh_pages.py`: version = 8 hex đầu của
+  sha256 nội dung; thư mục chunk `wasm/<sha8>/`,
+  `pck/<sha8>/`, `img/<tên>/<sha8>/`; loader dùng URL có
+  version; ghi `versions.json` vào staging; `verify()` kiểm
+  tra thư mục versioned và assert loader dùng đường dẫn
+  versioned. Thứ tự deploy: push hết thư mục chunk version
+  mới TRƯỚC, verify, push `index.html` CUỐI CÙNG. Mỗi deploy
+  thêm ~7MB thư mục version pck (wasm chỉ khi wasm đổi);
+  thư mục version cũ mồ côi trên gh-pages, dọn định kỳ.
+  Từ nay lỗi trộn CDN không thể xảy ra nữa (URL đổi theo
+  nội dung).
+
+### 21.4 Sửa cửa TẠP HÓA buổi Sáng (2 lớp)
+
+- Lớp ảnh — `tools/godot/fix_taphoa_day_windows.py` (tái
+  lập được): đo trước — ô cửa ngày R-B +104..+142, cửa sổ
+  +48..+147, so với cửa sổ PHỞ BÒ (rèm xanh, không sáng) và
+  cửa CA PHE (rèm trắng, không sáng); ảnh đêm có cửa sáng
+  (đúng ở đó). Sửa: ô cửa rect (802,396,878,464), pixel
+  R>145 & R-B>55, blend 0.85 về kính lạnh; cửa sổ rect
+  (928,402,1052,538), pixel R>150 & R-B>70, blend 0.6.
+  Kết quả đo: kính ô cửa R-B 104→26 (RGB 161,118,57 →
+  132,119,106); giữa cửa sổ 77→50; trung bình rect ô cửa
+  91→29, cửa sổ 71→45; đối chứng PHỞ BÒ không đổi (84).
+  Chỉ 8.396 pixel đổi, TẤT CẢ trong 2 rect, 0 ngoài rect.
+  Mảng xám-xanh trên cửa là CÓ SẴN (vùng (795,330,885,395)
+  byte-identical trước/sau: (100,70,46)) — thạch cao cũ,
+  không phải do sửa. Backup ảnh gốc
+  `visual-check/artpass8/bg_map001_day_before.png`; so
+  sánh trước/sau
+  `visual-check/artpass8/taphoa-before-after.png`. Ảnh đêm
+  không chạm. File sửa: `src/godot/art/bg_map001.png`
+  (1120×630) — binary, KHÔNG push được qua snapshot-push,
+  chỉ sống trong pck đã deploy.
+- Lớp code — `src/godot/scripts/nadia_scene.gd`: hàm tĩnh
+  mới `window_glass_color(f)`: Sáng (0.78,0.84,0.88) kính
+  lạnh ban ngày; Chiều (1.0,0.84,0.52) ấm; Tối
+  (1.0,0.78,0.38) hổ phách sáng đèn. `_draw_window` dùng
+  nó. Lưu ý: Map001 KHÔNG dùng `_draw_window` (mặt tiền là
+  ảnh composite — sửa bằng lớp ảnh); Map002+ dùng mặt tiền
+  code. `set_frame` đã gọi `queue_redraw()` khi đổi khung;
+  `_process` redraw mỗi 0.15s.
+
+### 21.5 Sửa còn lại
+
+- **Panel 2 bên ẩn chữ landing khi vào game**
+  (`src/godot/web_shell.html`): tiêu đề/phụ panel bọc
+  `.panel-title` / `.panel-sub`; CSS
+  `body.in-game .side-panel .panel-title,.panel-sub
+  { display: none; }` (hộp phím giữ lại làm trợ giúp;
+  nền art mờ giữ lại); nút bắt đầu thêm
+  `document.body.classList.add('in-game')`.
+- **Watchdog phân biệt kẹt biên dịch vs kẹt mạng**
+  (`web_shell.html`): theo dõi `lastProgress` trong
+  `onProgress`; kẹt >12s hiển thị "Đang khởi động
+  game… (lần đầu biên dịch hơi lâu, chờ chút)" nếu tiến
+  độ đã tới 100% (biên dịch wasm 39MB, 10–30s trên máy
+  chậm), ngược lại "Đang tải chậm — mạng yếu, vẫn đang
+  tải…".
+
+### 21.6 Verify vòng 8 (đầy đủ)
+
+- **Quirk môi trường mới (20/11 ~17:35): `--check-only`
+  TREO** — chạy 10+ phút, main thread ngủ trong
+  `hrtimer_nanosleep`, ~3% CPU, không ghi import mới;
+  kill bằng SIGTERM. (Import vẫn hoàn thành trong lần
+  chạy đó — export sau chỉ mất 20s.) **Từ nay dùng đường
+  test `-s` thay vì `--check-only`.**
+- Test mới `src/godot/tests/g4_artpass8_test.gd` 18/18 PASS
+  (~17:40, 4s): độ ấm pixel ảnh nền incl. đối chứng đêm,
+  màu kính cửa sổ theo khung, `Main._key_to_dir`
+  physical/keycode incl. Shift+D, F không phải di chuyển,
+  toán fit desktop 1920×1000. 2 WARNING chỉ từ
+  `Image.load_from_file` trong chính test — test-only,
+  không phải code game.
+- Regression đầy đủ, 0 FAIL (~17:40): artpass 60/60, G1
+  selftest 419/419, G1 playtest 14/14, G2 selftest 87/87,
+  hotspot 37/37, phonehub 66/66, jobs 56/56,
+  economy+education 92/92, inventory+crafting 78/78,
+  social+titles+story 102/102, tools 155/155, online
+  91/91, savecloud 69/69, UI wiring 37/37, UI wiring2
+  71/71, MarketBattle 123/123, G3 playtest 95/95,
+  artpass3 24/24, artpass4 19/19, artpass5 17/17,
+  artpass7 25/25, battle scene 43/43, battle AI 34/34,
+  battle main 15/15, battle save 31/31, coord WASD
+  16/16, polish 18/18, online server 37/37.
+- Headless smoke `--headless --quit-after 120` exit 0,
+  không lỗi. Export exit 0: pck mới 6.863.932 byte SHA
+  `73ae78df…`, wasm không đổi 39.514.754 byte
+  (`fc74679e…`).
+- Staging build `build_gh_pages.py` VERIFY OK (~17:42):
+  wasm version `fc74679e` (293 chunk, không đổi), pck
+  version `73ae78df` (51 chunk), img title_bg `260962c1`
+  (1 chunk), char_player `9639c122` (2), char_banthan
+  `4750238d` (2); fileSizes khớp build; loader dùng
+  đường dẫn versioned. Chunk cũ không version đã xóa
+  khỏi staging. Staging: `wasm/fc74679e/`,
+  `pck/73ae78df/`, `img/<tên>/<ver>/`, `versions.json`,
+  `index.html`, `index.js`, worklets, icons.
+- **Browser-verify staging mới**
+  (`visual-check/check_artpass8_verify.py`, 1920×1000,
+  ~17:50, exit 0, ~149s): **ERRORS: 0, FAILED REQUESTS:
+  0**; canvas box 1920×1000; `body.in-game` set + tiêu
+  đề panel ẩn = True. Ảnh `visual-check/artpass8/a8-01`
+  …`a8-07` đã xem trực tiếp:
+  - Di chuyển ĐƯỢC: giữ D 3s + 10 tap D đi tới cuối
+    TẠP HÓA, tap-to-move trong canvas chạy, biển "TẠP
+    HÓA" hiện trọn, không cắt.
+  - Cửa TẠP HÓA Sáng hết sáng cam: đo đúng vị trí ô cửa
+    (cùng bước giữ D 3s) R-B 80 (vòng 7) → 57 (vòng 8);
+    ảnh gốc 104→26; `.ctex` re-import 10:39:54
+    (842.838 byte, từ 841.156), pck ghi 10:39:56 — ảnh
+    mới CHẮC CHẮN trong pck. (2 lần đo trước sai hộp đo:
+    đo tường thay vì cửa — đo pixel phải đo ĐÚNG VỊ TRÍ.)
+  - Khung Tối đúng: trời xanh đậm, trăng + sao, cửa sổ
+    TẠP HÓA sáng đèn (ảnh đêm không chạm — đúng), nhãn
+    "Hẻm trọ buổi tối", toast "Ngày 1 • Khung Tối" ở đáy.
+  - Đáy đủ ở 1920×1000 (xe đạp + chậu hoa thấy trọn);
+    panel 2 bên chỉ còn hộp phím, không còn chữ landing.
+  - So sánh trước/sau trong game:
+    `visual-check/artpass8/taphoa-game-before-after.png`
+    (trên = vòng 7, dưới = vòng 8).
+
+### 21.7 Deploy — (ghi sau khi push xong)
+
+### 21.8 Việc tiếp theo
+
+- G4 bước 7 (xem §20) — nối PxbOnline sang server Godot.
+- Dọn thư mục version pck/wasm cũ trên gh-pages định kỳ
+  (mỗi deploy thêm ~7MB).
+- Câu hỏi thiết kế mở (từ vòng 7): nhãn hotspot động
+  "buổi" không còn báo khung tốt nhất (sparkle + toast
+  vẫn báo) — quyết có đổi tên hotspot trung tính
+  ("Hẻm trọ") hay không.

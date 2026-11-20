@@ -7,6 +7,22 @@ base64 nhỏ, trình duyệt ráp lại qua fetch giả (loader chèn vào
 index.html). Script này tái tạo bản deploy 06:12 20/11 (script cũ
 nằm ở /tmp, đã mất) và là bản persistent trong repo.
 
+Vong 8 (20/11 17:30) — CHUNK THEO VERSION (sha8 cua noi dung):
+kiem live 16:52–17:10 chay BAN TRON (pck cu + moi): di chuyen
+chet, day cat ~200px, cua so van cam — trong khi cung pck do chay
+local staging thi di chuyen/tap deu duoc. Goc: chunk o URL CO DINH
+(wasm/part-000.txt...) — CDN Pages cache tung chunk rieng (max-age
+600s), nen ngay sau deploy trinh duyet rap pck tu chunk cu + moi
+tron lan (cron 16:45 tu ghi 4 chunk 019–022 lech luc dau). SUA:
+moi asset nam trong thu muc version = 8 ky tu dau sha256 cua chinh
+no (wasm/<sha8>/, pck/<sha8>/, img/<ten>/<sha8>/). URL doi theo
+noi dung → CDN/browser khong bao gio tra chunk cu cho ban moi;
+index.html cu (con cache ≤10 phut) van tro dung chunk cu cua no.
+Gia: moi deploy them 1 thu muc version moi (~7MB pck; wasm chi
+them khi wasm doi) — thu muc cu mo coi tren gh-pages, don dinh ky.
+THU TU DEPLOY: push het chunk version moi truoc, verify, roi moi
+push index.html cuoi cung.
+
 Chạy từ repo root:
     python3 tools/godot/build_gh_pages.py [--verify-only]
 
@@ -46,6 +62,9 @@ async function fetchChunk(u) {{
   // Vong 7: chunk fetch co retry — truoc day 1 chunk loi (404 luc
   // Pages dang rebuild / mang chap chon) la ca wasm/pck/anh chet,
   // game ket o 15% ma khong bao loi. Retry 3 lan, backoff tang.
+  // Vong 8: chunk nam trong thu muc version theo sha8 cua noi dung
+  // (wasm/<sha8>/part-*.txt...) — URL doi theo noi dung nen CDN
+  // khong bao gio tra chunk cu tron voi chunk moi nua.
   let lastErr = null;
   for (let attempt = 0; attempt < 3; attempt++) {{
     try {{
@@ -118,16 +137,25 @@ def reassemble(names: list[str], in_dir: Path) -> bytes:
     return bytes(out)
 
 
+def _version(data: bytes) -> str:
+    # Version = 8 ky tu dau sha256 cua noi dung (vong 8): URL chunk
+    # doi theo noi dung nen CDN khong bao gio tra chunk cu cho ban moi.
+    return hashlib.sha256(data).hexdigest()[:8]
+
+
 def build() -> dict:
     wasm = (BUILD_DIR / "index.wasm").read_bytes()
     pck = (BUILD_DIR / "index.pck").read_bytes()
-    wasm_names = split_chunks(wasm, STAGING_DIR / "wasm", "wasm")
-    pck_names = split_chunks(pck, STAGING_DIR / "pck", "pck")
+    wasm_ver = _version(wasm)
+    pck_ver = _version(pck)
+    wasm_names = split_chunks(wasm, STAGING_DIR / "wasm" / wasm_ver, "wasm")
+    pck_names = split_chunks(pck, STAGING_DIR / "pck" / pck_ver, "pck")
     # Anh tieu de + nhan vat cho DOM shell (title_bg.jpg + 2 char PNG):
     # file nhi phan khong push truc tiep duoc qua snapshot-push nen
     # chunk base64 nhu wasm/pck, loader rap lai qua fetch gia.
     import json
     img_parts: dict[str, list[str]] = {}
+    img_vers: dict[str, str] = {}
     img_srcs = {
         "title_bg.jpg": BUILD_DIR / "title_bg.jpg",
         "char_player.png": ROOT / "src" / "godot" / "art" / "char_player.png",
@@ -138,31 +166,41 @@ def build() -> dict:
             print(f"CANH BAO: thieu anh {name} ({src}) — bo qua, DOM dung fallback")
             continue
         data = src.read_bytes()
-        names = split_chunks(data, STAGING_DIR / "img" / name, "img")
-        img_parts[name] = [f"img/{name}/{n}" for n in names]
-        print(f"img {name}: {len(data)} byte, {len(names)} chunk")
+        ver = _version(data)
+        img_vers[name] = ver
+        names = split_chunks(data, STAGING_DIR / "img" / name / ver, "img")
+        img_parts[name] = [f"img/{name}/{ver}/{n}" for n in names]
+        print(f"img {name}: {len(data)} byte, {len(names)} chunk, version {ver}")
     for f in SMALL_FILES:
         src = BUILD_DIR / f
         if src.exists():
             shutil.copyfile(src, STAGING_DIR / f)
     html = (BUILD_DIR / "index.html").read_text()
     loader = LOADER_TEMPLATE.format(
-        wasm_parts=", ".join(f"'wasm/{n}'" for n in wasm_names),
-        pck_parts=", ".join(f"'pck/{n}'" for n in pck_names),
+        wasm_parts=", ".join(f"'wasm/{wasm_ver}/{n}'" for n in wasm_names),
+        pck_parts=", ".join(f"'pck/{pck_ver}/{n}'" for n in pck_names),
         img_parts_json=json.dumps(img_parts, ensure_ascii=False),
     )
     marker = '<script src="index.js"></script>'
     assert marker in html, "khong tim thay <script src=index.js> trong index.html"
     html = html.replace(marker, loader + "\n\t\t" + marker, 1)
     (STAGING_DIR / "index.html").write_text(html)
+    # Ghi version hien tai de buoc deploy biet thu muc nao moi.
+    (STAGING_DIR / "versions.json").write_text(json.dumps(
+        {"wasm": wasm_ver, "pck": pck_ver, "img": img_vers},
+        ensure_ascii=False, indent=2))
+    print(f"versions: wasm={wasm_ver} pck={pck_ver} img={img_vers}")
     return {
         "wasm_bytes": len(wasm),
         "wasm_sha": hashlib.sha256(wasm).hexdigest(),
         "wasm_parts": len(wasm_names),
+        "wasm_ver": wasm_ver,
         "pck_bytes": len(pck),
         "pck_sha": hashlib.sha256(pck).hexdigest(),
         "pck_parts": len(pck_names),
+        "pck_ver": pck_ver,
         "img_parts": {k: len(v) for k, v in img_parts.items()},
+        "img_vers": img_vers,
     }
 
 
@@ -170,25 +208,33 @@ def verify() -> bool:
     ok = True
     for kind in ("wasm", "pck"):
         src = BUILD_DIR / f"index.{kind}"
-        names = sorted(p.name for p in (STAGING_DIR / kind).glob("part-*.txt"))
-        data = reassemble(names, STAGING_DIR / kind)
-        match = hashlib.sha256(data).hexdigest() == hashlib.sha256(src.read_bytes()).hexdigest()
-        print(f"{kind}: {len(names)} chunk, {len(data)} byte, khop byte: {match}")
-        ok = ok and match
+        data = src.read_bytes()
+        ver = _version(data)
+        chunk_dir = STAGING_DIR / kind / ver
+        names = sorted(p.name for p in chunk_dir.glob("part-*.txt")) if chunk_dir.exists() else []
+        data2 = reassemble(names, chunk_dir) if names else b""
+        match = names and hashlib.sha256(data2).hexdigest() == hashlib.sha256(data).hexdigest()
+        print(f"{kind}: version {ver}, {len(names)} chunk, {len(data2)} byte, khop byte: {bool(match)}")
+        ok = ok and bool(match)
     # Anh tieu de + nhan vat: rap lai chunk, so voi file goc.
     for name, src in {
         "title_bg.jpg": BUILD_DIR / "title_bg.jpg",
         "char_player.png": ROOT / "src" / "godot" / "art" / "char_player.png",
         "char_banthan.png": ROOT / "src" / "godot" / "art" / "char_banthan.png",
     }.items():
-        d = STAGING_DIR / "img" / name
-        if not d.exists() or not src.exists():
-            print(f"img {name}: khong co trong staging/goc — bo qua")
+        if not src.exists():
+            print(f"img {name}: khong co file goc — bo qua")
+            continue
+        ver = _version(src.read_bytes())
+        d = STAGING_DIR / "img" / name / ver
+        if not d.exists():
+            print(f"img {name}: khong co trong staging (version {ver}) — FAIL")
+            ok = False
             continue
         names = sorted(p.name for p in d.glob("part-*.txt"))
         data = reassemble(names, d)
         match = hashlib.sha256(data).hexdigest() == hashlib.sha256(src.read_bytes()).hexdigest()
-        print(f"img {name}: {len(names)} chunk, {len(data)} byte, khop byte: {match}")
+        print(f"img {name}: version {ver}, {len(names)} chunk, {len(data)} byte, khop byte: {match}")
         ok = ok and match
     # Loader + fileSizes trong index.html staging phai khop build hien tai.
     html = (STAGING_DIR / "index.html").read_text()
@@ -201,6 +247,12 @@ def verify() -> bool:
         ok = ok and a and b and a.group(1) == b.group(1)
     print("loader co trong index.html staging:", "WASM_PARTS" in html and "window.fetch = function" in html)
     ok = ok and "WASM_PARTS" in html
+    # Loader phai tro chunk THEO VERSION (vong 8) — khong con URL co dinh.
+    import re as _re
+    has_ver = bool(_re.search(r"wasm/[0-9a-f]{8}/part-000\.txt", html)) and \
+        bool(_re.search(r"pck/[0-9a-f]{8}/part-000\.txt", html))
+    print("loader dung chunk theo version:", has_ver)
+    ok = ok and has_ver
     return ok
 
 
