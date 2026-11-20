@@ -92,3 +92,11 @@ giữ phím 3 ô <60 frame, điện thoại full màn hình, NPC có sprite).
   mắt: map lấp đầy màn hình, nhãn không chồng/cắt, điện thoại full màn hình
   đục, Chiều/Tối đổi màu rõ.
 - Đã push main + deploy lại gh-pages (xem commit/sync trong báo cáo deploy).
+  Main `fefd8a27`; gh-pages `4319286e` (chi push lai pck 10 chunk +
+  index.html — wasm giong y cu, SHA fc74679e, khong can push lai).
+  Verify: giai ma chunk pck khop 100% byte (SHA becb748d); API GitHub
+  doc remote index.html + pck/part-009.txt khong byte voi local;
+  chay thu dung bo file gh-pages tren Chromium local (loader chunk):
+  title + map + dien thoai hien dung, 0 loi console.
+  Han che con lai: subagent khong mo duoc browser task nen chua tu mo
+  link github.io that — can parent chay browser task kiem lan cuoi.
