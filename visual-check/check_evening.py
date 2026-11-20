@@ -11,7 +11,7 @@ async def main():
         page.on("pageerror", lambda e: errors.append(f"pageerror: {e}"))
         await page.goto(URL, wait_until="load", timeout=120000)
         await page.wait_for_timeout(20000)
-        await page.mouse.click(360, 740)
+        await page.mouse.click(360, 640)
         await page.wait_for_timeout(6000)
         await page.keyboard.press("f")  # Sang -> Chieu
         await page.wait_for_timeout(1500)

@@ -12,6 +12,14 @@ var _pulse := 0.0
 var _sprite: CharacterSprite = null
 var _label_style: StyleBoxFlat = null
 
+const NPC_PARITY_OFFSET := 40.0
+# HUD chiem 252px tren cung man hinh (panel 16..252); nhan khong duoc
+# vuot qua day (cong 16px cach) — truoc day chi kep theo vung nhin
+# nen nhan "Goc Che Tao" van chui duoi HUD (20/11 10:30).
+const HUD_BOTTOM_SCREEN := 268.0
+# Cach mep toi thieu ~20px man hinh o zoom 1.6 (13 world units).
+const EDGE_MARGIN_WORLD := 13.0
+
 const NPC_STYLE := {
 	"co-tu": {"shirt": Color(0.56, 0.27, 0.68, 1), "hair_style": "bui"},
 	"ban-than": {"shirt": Color(0.25, 0.65, 0.35, 1), "hair_style": "ngan"},
@@ -58,95 +66,158 @@ func _draw() -> void:
 			_draw_door()
 	_draw_name()
 
-func _draw_name() -> void:
+## Hinh chu nhat cua nhan (toa do cuc bo) sau khi da kep trong vung
+## nhin thay cua camera, tru vung HUD tren cung va cach mep ~20px
+## man hinh. Test dung de kiem tra nhan khong bi cat / che.
+func label_rect() -> Rect2:
 	if font == null:
-		return
+		return Rect2()
 	var text := String(event_data.get("name", ""))
 	if text == "":
-		return
+		return Rect2()
 	# Nhan cua / goc che tao dat cao hon nhan NPC 86px de khong chong
 	# nhau khi 2 diem ke o (vd "Ban Than" vs "Cua ra Cho Dau Moi").
 	var kind := String(event_data.get("kind", ""))
-	# Nhan cua/goc che tao dat cao (-170) de khong chong nhan NPC
-	# (-84/-114) khi 2 diem ke o (vd "Hem tro buoi toi" vs "Co Tu").
+	# Nhan cua/goc che tao dat cao (-120) de khong chong nhan NPC
+	# (-84/-124) khi 2 diem ke o (vd "Hem tro buoi toi" vs "Co Tu")
+	# va khong che bien hieu mat tien nhu muc -170 truoc day.
 	# Nhan hotspot dat DUOI sao (+24) thay vi tren — sao hotspot o
 	# cung do cao voi nhan NPC nen de tren se chong nhau.
-	var top := -170.0 if kind == "door" or kind == "craft" else -84.0
+	var top := -120.0 if kind == "door" or kind == "craft" else -84.0
 	if kind == "hotspot":
 		top = 24.0
 	# Nhan NPC ke o chong nhau (vd "Ban Tro" vs "Co Tu"): le cao nhan
 	# theo chan/le cua (tile.x + tile.y) — 2 o ke nhau luon khac chan/le
-	# nen nhan lech nhau 30px doc, khong chong nua.
+	# nen nhan lech nhau 40px doc, khong chong nua.
 	if kind == "npc" and event_data.has("tile"):
 		var t: Array = event_data["tile"]
 		if (int(t[0]) + int(t[1])) % 2 == 1:
-			top -= 30.0
+			top -= NPC_PARITY_OFFSET
 	var size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20)
 	var rect := Rect2(-size.x / 2.0 - 8, top, size.x + 16, 26)
 	# Kep nhan trong man hinh hien thi (theo camera that, khong dung
 	# canvas transform — luc tao marker transform chua co camera nen
 	# kep sai va nhan o ria map (vd "Cua ra Cho Dau Moi") bi cat).
+	# Meo tren KHONG phai mep man hinh ma la duoi HUD (268px man hinh):
+	# nhan nao vuot qua day se bi panel HUD che mat nua tren.
 	var cam := get_viewport().get_camera_2d()
 	if cam != null:
 		var half := get_viewport_rect().size / (2.0 * cam.zoom)
 		var center := cam.get_screen_center_position()
 		var vis_min := center - half
 		var vis_max := center + half
+		var top_min := vis_min.y + HUD_BOTTOM_SCREEN / cam.zoom.y
 		var gp := global_position
+		# Nhan cua diem ngoai man hinh: AN nhan (truoc day kep dua nhan
+		# vao trong man hinh trong khi sao/NPC o ngoai — nhan troi khong
+		# co diem neo, vd hs-tro-toi o (10,3) khi moi vao game).
+		if gp.x < vis_min.x - 20 or gp.x > vis_max.x + 20 or gp.y < vis_min.y - 20 or gp.y > vis_max.y + 20:
+			return Rect2()
 		var wrect := Rect2(gp + rect.position, rect.size)
 		var shift := Vector2.ZERO
-		if wrect.position.x < vis_min.x + 8:
-			shift.x = vis_min.x + 8 - wrect.position.x
-		elif wrect.end.x > vis_max.x - 8:
-			shift.x = vis_max.x - 8 - wrect.end.x
-		if wrect.position.y < vis_min.y + 8:
-			shift.y = vis_min.y + 8 - wrect.position.y
-		elif wrect.end.y > vis_max.y - 8:
-			shift.y = vis_max.y - 8 - wrect.end.y
+		if wrect.position.x < vis_min.x + EDGE_MARGIN_WORLD:
+			shift.x = vis_min.x + EDGE_MARGIN_WORLD - wrect.position.x
+		elif wrect.end.x > vis_max.x - EDGE_MARGIN_WORLD:
+			shift.x = vis_max.x - EDGE_MARGIN_WORLD - wrect.end.x
+		if wrect.position.y < top_min:
+			shift.y = top_min - wrect.position.y
+		elif wrect.end.y > vis_max.y - EDGE_MARGIN_WORLD:
+			shift.y = vis_max.y - EDGE_MARGIN_WORLD - wrect.end.y
 		rect.position += shift
+	return rect
+
+func _draw_name() -> void:
+	var rect := label_rect()
+	if rect.size == Vector2.ZERO:
+		return
 	draw_style_box(_label_style, rect)
-	draw_string(font, Vector2(rect.position.x + 8, rect.position.y + 20), text,
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(0.15, 0.12, 0.08, 1))
+	draw_string(font, Vector2(rect.position.x + 8, rect.position.y + 20),
+		String(event_data.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 20,
+		Color(0.15, 0.12, 0.08, 1))
+
+func _mini_sparkle(pos: Vector2, r: float, col: Color) -> void:
+	draw_colored_polygon(PackedVector2Array([
+		pos + Vector2(0, -r), pos + Vector2(r * 0.3, -r * 0.3),
+		pos + Vector2(r, 0), pos + Vector2(r * 0.3, r * 0.3),
+		pos + Vector2(0, r), pos + Vector2(-r * 0.3, r * 0.3),
+		pos + Vector2(-r, 0), pos + Vector2(-r * 0.3, -r * 0.3),
+	]), col)
 
 func _draw_hotspot() -> void:
-	var s := 1.0 + 0.18 * sin(_pulse * 4.0)
-	var r := 15.0 * s
-	var gold := Color(0.88, 0.66, 0.0, 1)
-	# Hao quang mo.
-	draw_circle(Vector2(0, 0), r + 8.0, Color(1.0, 0.8, 0.2, 0.18))
-	# Sao 8 canh.
-	var pts := PackedVector2Array([
-		Vector2(0, -r), Vector2(r * 0.45, -r * 0.45), Vector2(r, 0),
-		Vector2(r * 0.45, r * 0.45), Vector2(0, r),
-		Vector2(-r * 0.45, r * 0.45), Vector2(-r, 0), Vector2(-r * 0.45, -r * 0.45),
-	])
-	draw_colored_polygon(pts, gold)
-	draw_circle(Vector2(0, 0), 4.0, Color(1, 1, 1, 0.9))
-	# Tia lanh xoay quanh.
-	for i in range(4):
-		var a := _pulse * 1.5 + float(i) * PI / 2.0
-		var p := Vector2(cos(a), sin(a)) * (r + 12.0)
-		draw_circle(p, 2.0 + sin(_pulse * 4.0 + float(i)) * 0.8, Color(1, 0.9, 0.4, 0.9))
-	# Bong "!" goi tuong tac kieu Nadia.
-	draw_circle(Vector2(16, -30), 9, Color(0.95, 0.75, 0.1, 1))
-	if font != null:
-		draw_string(font, Vector2(12, -23), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.2, 0.1, 0.0, 1))
+	# Sao lap lanh kieu Nadia: 4 canh dai, xanh = thuong, cam = thuong
+	# tot (mau lay tu PxbHotspot.sparkle_color theo rarity). Khong bien
+	# mat khi chua nhat — hotspot "cho nguoi choi" (scene-study §1.2).
+	var col := Color.html(PxbHotspot.sparkle_color(event_data))
+	var s := 1.0 + 0.18 * sin(_pulse * 3.0)
+	var r := 17.0 * s
+	# Bong sang mem duoi dat + hao quang.
+	draw_set_transform(Vector2(0, 6), 0.0, Vector2(1.0, 0.33))
+	draw_circle(Vector2.ZERO, 20, Color(col.r, col.g, col.b, 0.18))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	draw_circle(Vector2(0, 0), r + 10.0, Color(col.r, col.g, col.b, 0.15))
+	# Sao 4 canh lon (>= 44pt cham duoc tren mobile).
+	_mini_sparkle(Vector2.ZERO, r * 1.5, col)
+	draw_circle(Vector2(0, 0), 4.5, Color(1, 1, 1, 0.95))
+	# Tia lanh nho xoay quanh.
+	for i in range(3):
+		var a := _pulse * 1.5 + float(i) * TAU / 3.0
+		var p := Vector2(cos(a), sin(a)) * (r + 13.0)
+		_mini_sparkle(p, 2.5 + sin(_pulse * 4.0 + float(i) * 2.0) * 1.0,
+			Color(1.0, 0.95, 0.6, 0.9))
 
 func _draw_craft() -> void:
+	# Goc Che Tao kieu Nadia (Native Shrine trong phong tro): ban go cu,
+	# den ban vang, hop dung cu, van go dua tuong, khung sat goc phong.
+	draw_set_transform(Vector2(0, 14), 0.0, Vector2(1.0, 0.33))
+	draw_circle(Vector2.ZERO, 22, Color(0, 0, 0, 0.20))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	# Van go dua tuong (2 tam nghieng).
+	draw_set_transform(Vector2(-20, -8), -0.25, Vector2.ONE)
+	draw_rect(Rect2(-3, -16, 6, 32), Color(0.70, 0.55, 0.35, 1))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	draw_set_transform(Vector2(22, -6), 0.3, Vector2.ONE)
+	draw_rect(Rect2(-3, -14, 6, 28), Color(0.65, 0.50, 0.32, 1))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	# Khung sat dung goc.
+	draw_rect(Rect2(14, -26, 3, 26), Color(0.45, 0.45, 0.48, 1))
+	draw_rect(Rect2(14, -26, 10, 3), Color(0.45, 0.45, 0.48, 1))
 	# Ban che tao: mat ban + chan + do nghe tren ban.
-	draw_rect(Rect2(-16, -10, 32, 22), Color(0.55, 0.38, 0.22, 1))
-	draw_rect(Rect2(-20, -16, 40, 8), Color(0.65, 0.48, 0.28, 1))
-	draw_rect(Rect2(-14, 12, 5, 8), Color(0.45, 0.30, 0.18, 1))
-	draw_rect(Rect2(9, 12, 5, 8), Color(0.45, 0.30, 0.18, 1))
-	draw_circle(Vector2(-8, -20), 4, Color(0.85, 0.85, 0.88, 1))
-	draw_circle(Vector2(8, -20), 4, Color(0.95, 0.75, 0.1, 1))
-	draw_circle(Vector2(0, -26), 8, Color(0.95, 0.75, 0.1, 1))
+	draw_rect(Rect2(-18, -12, 36, 22), Color(0.55, 0.38, 0.22, 1))
+	draw_rect(Rect2(-22, -18, 44, 8), Color(0.65, 0.48, 0.28, 1))
+	draw_rect(Rect2(-16, 10, 5, 8), Color(0.45, 0.30, 0.18, 1))
+	draw_rect(Rect2(11, 10, 5, 8), Color(0.45, 0.30, 0.18, 1))
+	# Den ban vang: hao quang + chop.
+	draw_circle(Vector2(0, -28), 12, Color(1.0, 0.85, 0.4, 0.20))
+	draw_line(Vector2(0, -18), Vector2(0, -30), Color(0.3, 0.25, 0.2, 1), 2.0)
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(-7, -30), Vector2(7, -30), Vector2(0, -38)]),
+		Color(0.95, 0.75, 0.25, 1))
+	draw_circle(Vector2(0, -29), 2.5, Color(1.0, 0.95, 0.6, 1))
+	# Do nghe tren ban: bua + hop dung cu.
+	draw_circle(Vector2(-10, -20), 3.5, Color(0.85, 0.85, 0.88, 1))
+	draw_circle(Vector2(9, -20), 3.5, Color(0.95, 0.75, 0.1, 1))
+	draw_rect(Rect2(2, -22, 8, 4), Color(0.35, 0.55, 0.75, 1))
 
 func _draw_door() -> void:
-	# Cua di khu khac: khung cua + mai tam giac + o cua sang.
-	draw_colored_polygon(PackedVector2Array([
-		Vector2(-20, -28), Vector2(20, -28), Vector2(0, -44)]),
-		Color(0.72, 0.27, 0.18, 1))
-	draw_rect(Rect2(-16, -30, 32, 44), Color(0.20, 0.55, 0.35, 1))
-	draw_rect(Rect2(-8, -14, 16, 28), Color(0.85, 0.95, 0.9, 1))
-	draw_circle(Vector2(10, 0), 2, Color(0.95, 0.75, 0.1, 1))
+	# Cua di khu khac: khung cua go + mai che + o cua sang + den long.
+	draw_set_transform(Vector2(0, 16), 0.0, Vector2(1.0, 0.33))
+	draw_circle(Vector2.ZERO, 20, Color(0, 0, 0, 0.20))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	# Mai che ke soc.
+	for k in range(3):
+		var col := Color(0.80, 0.25, 0.20, 1) if k % 2 == 0 else Color(0.98, 0.95, 0.88, 1)
+		draw_rect(Rect2(-21 + k * 14, -46, 14, 8), col)
+	draw_rect(Rect2(-21, -46, 42, 3), Color(0.45, 0.30, 0.16, 1))
+	# Khung cua + o cua sang am.
+	draw_rect(Rect2(-16, -40, 32, 56), Color(0.45, 0.30, 0.16, 1))
+	draw_rect(Rect2(-12, -36, 24, 52), Color(0.95, 0.88, 0.65, 1))
+	draw_rect(Rect2(-12, -36, 24, 52), Color(0.55, 0.40, 0.20, 1), false, 1.5)
+	draw_line(Vector2(0, -36), Vector2(0, 16), Color(0.55, 0.40, 0.20, 1), 1.5)
+	# Tay nam + bac them.
+	draw_circle(Vector2(-8, -8), 2.0, Color(0.85, 0.65, 0.2, 1))
+	draw_circle(Vector2(8, -8), 2.0, Color(0.85, 0.65, 0.2, 1))
+	draw_rect(Rect2(-19, 16, 38, 4), Color(0.65, 0.60, 0.52, 1))
+	# Den long do treo ben cua.
+	draw_line(Vector2(20, -44), Vector2(20, -36), Color(0.6, 0.5, 0.2, 1), 1.0)
+	draw_circle(Vector2(20, -32), 5, Color(0.85, 0.20, 0.15, 1))
+	draw_rect(Rect2(18, -38, 4, 2), Color(0.95, 0.75, 0.2, 1))

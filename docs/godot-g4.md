@@ -3,7 +3,7 @@
 > **G3 đã được kiểm chứng bằng TRÌNH DUYỆT THẬT (20/11 ~09:50)** — lần đầu tiên
 > kể từ G0: game Godot chạy được trên Chromium thật, đi được, chuyển map
 > 2 chiều, mở điện thoại, đổi khung, 0 console error. Chi tiết §1.
-> Việc tiếp theo: online thật (§2) + release (§3) + scene trận MarketBattle (§4).
+> Việc tiếp theo: online thật (§2) + release (§3) + scene trận MarketBattle (§4 — XONG 20/11 ~11:00, xem §5 việc tiếp theo).
 
 ## 1. Browser-verify G3 — XONG 20/11 ~09:50
 
@@ -98,14 +98,70 @@
 - Khi deploy: `src/godot-build/` → root `gh-pages` (không phải
   `godot-play-single.html` — đó là bản MV cũ).
 
-## 4. Scene trận MarketBattle (UI)
+## 4. Scene trận MarketBattle (UI) — XONG (G4 bước 1, 20/11 ~11:00)
 
 - Luật ĐÃ CHỐT 20/11 06:06, logic `scripts/pxb_marketbattle.gd` + test
-  123/123 đã xong (G2). Còn thiếu: scene trận vẽ lưới 12×9 isometric qua
-  `iso_map.gd`, chọn đấu sĩ, nút di chuyển/đánh/hỗ trợ/kết thúc lượt,
-  đồng hồ 10s/lượt + 180s/trận hiển thị thật.
-- Đây là phần code lớn tiếp theo nếu chủ chưa bật Pages / chưa chốt
-  server online.
+  123/123 đã xong (G2). Scene nay đã có: `scripts/battle_scene.gd`
+  (class `BattleScene`, Node2D trên CanvasLayer layer 2 — trên HUD,
+  không bị camera zoom 1.6 kéo theo) + 2 test mới.
+- Vẽ: lưới 12×9 isometric (cùng công thức `IsoMap`, tâm (360,560)),
+  ô di chuyển xanh lá, địch trong tầm viền đỏ, đấu sĩ = vòng tròn
+  màu vai + thanh HP + tên (lệch theo chẵn/lẻ x, vẽ 2 lượt để tên
+  không bị vòng tròn đè), vòng vàng + mũi tên chỉ lượt đi; HUD trận:
+  tỉ số % HP 2 đội, vòng x/12, lượt còn xs (≤3s đỏ), trận còn m:ss;
+  panel dưới: lượt ai/vai/vũ khí/tầm, gợi ý chạm, dòng log hành động,
+  nút "Kết thúc lượt" + "Đóng (B)"; hết trận hiện panel kết quả
+  (thắng/hòa, Danh vọng mỗi đội, giữ sạp đến ngày game mấy).
+- Chạm/chuột: ô xanh = di chuyển (1 lần/lượt), địch trong tầm = đánh,
+  Vàng chạm đồng đội kề = hỗ trợ +12 HP, chạm đấu sĩ mình = xem;
+  đồng hồ lượt 10s tự chuyển lượt, đồng hồ trận 180s kết thúc bằng
+  % HP — đều gọi thẳng `PxbMarketBattle`, không sửa luật.
+- Nối vào Main: phím **B** mở/đóng trận demo 3v3 (Đội Bạn: Bạn Tank/
+  Chảo, Bạn Thân Chiến thuật/Cá khô, Cô Tư Hỗ trợ/Loa — vs Đội Chợ
+  Đầu Mối seed NPC; tranh sạp `sap-cho-dau-moi`, đội chợ đang giữ).
+  Khi mở: khóa input map, ẩn HUD (`_ui_layer`); khi đóng: trả lại.
+  Gợi ý phím B đã thêm vào màn hình title.
+- Verify thật đợt này (20/11 ~10:55–11:00): test scene **43/43
+  PASS** (di chuyển 13 ô đúng tầm 3, đánh Tank −9 HP đúng luật,
+  hỗ trợ +12 HP, nút, hết 10s tự chuyển lượt, hết 180s hòa khi
+  100%–100%, hòa không giữ sạp); test nối Main **15/15 PASS**
+  (phím B mở/đóng thật, khóa/mở input, ẩn/hiện HUD, đồng hồ thật
+  tự chuyển lượt sau 11s); regression G2 MarketBattle 123/123,
+  G1 419/419, G3 95/95, G2 selftest 87/87 (không regression);
+  `--check-only` 4 file mới/sửa đều exit 0; scene Main 120 frame
+  exit 0; export web exit 0 (wasm SHA không đổi `fc74679e…`,
+  pck mới `964beb1a…`, chứa `res://scripts/battle_scene.gd`);
+  HTTP 200 đủ 6 file (cổng 8163), `GODOT_THREADS_ENABLED = false`.
+- **Browser-verify thật (Chromium 1255 + swiftshader, 720×1280):**
+  build mới chạy được, bấm B mở trận, lưới + đấu sĩ + HUD + 2 nút
+  vẽ đúng như thiết kế, 0 console error, 0 pageerror — ảnh
+  `hidden_files/pxb-browser-verify-2026-11-20/13-battle-open.png`
+  (script tái chạy: `hidden_files/pxb-browser-verify-battle.py`).
+  2 lỗi vẽ tìm được trên ảnh thật và đã sửa: (1) dòng gợi ý tràn
+  khỏi panel → rút ngắn; (2) tên đấu sĩ chéo nhau đè lên nhau →
+  lệch theo chẵn/lẻ x + vẽ tên sau vòng tròn (2 lượt vẽ).
+- Chưa làm: AI đánh lượt địch (hiện địch đứng yên chờ hết 10s rồi
+  mới tới lượt mình — chơi demo phải chờ); animation di chuyển/
+  đánh (đấu sĩ nhảy ô tức thì); chọn đội/vũ khí trước trận; lưu
+  giữ sạp + Danh vọng vào save (logic `PxbMarketBattle.data()` đã
+  có, Main chưa nối vào SaveCloud); deploy gh-pages bản mới (wasm
+  không đổi nên chỉ cần push lại pck chunk + index.html).
+
+## 5. Việc tiếp theo — G4 bước 2
+
+1. **AI lượt địch** cho trận MarketBattle (địch tự di chuyển tới gần
+   + đánh khi trong tầm, hết 10s thì hết lượt) — nếu không có AI thì
+   trận demo chơi rất chậm.
+2. **Deploy gh-pages bản mới** (pck `964beb1a…` đã export; wasm
+   không đổi `fc74679e…` nên chỉ push lại pck chunk + index.html —
+   xem `docs/artpass-20-11.md` §6 cách deploy chunk).
+3. **G4 online thật**: server `.NET 8` trong `src/server/` vẫn chưa
+   build/chạy được trên VM (không có dotnet SDK) — quyết dùng Godot
+   headless dedicated server thay .NET hay chờ máy có dotnet
+   (xem `docs/opensource-engine.md` §3.4).
+4. Polish G4 §1.4 còn lại: camera zoom trận (lưới đang nhỏ giữa màn
+   hình), tile riêng Map003–018 (đang PROVISIONAL), hiệu ứng đánh/
+   ngã sạp.
 
 
 ## Link chơi thật (LIVE 20/11 09:54)
