@@ -278,6 +278,22 @@ def build() -> dict:
     marker = '<script src="index.js"></script>'
     assert marker in html, "khong tim thay <script src=index.js> trong index.html"
     html = html.replace(marker, loader + "\n\t\t" + marker, 1)
+    # Vong 9 — inline 3 anh icon/splash dang data URI: snapshot-push
+    # chi day duoc file text nen index.png / index.icon.png /
+    # index.apple-touch-icon.png khong bao gio co tren gh-pages
+    # (404, la console error duy nhat con lai o ban live). Anh nho
+    # (5,7 + 11,9 + 21,4 KB -> ~52KB base64), index.html van duoi
+    # gioi han 188.416 byte/file.
+    for fname, attr in (("index.icon.png", 'href="index.icon.png"'),
+                        ("index.apple-touch-icon.png", 'href="index.apple-touch-icon.png"'),
+                        ("index.png", 'src="index.png"')):
+        src = BUILD_DIR / fname
+        if src.exists():
+            b64 = base64.b64encode(src.read_bytes()).decode()
+            html = html.replace(attr, attr.split("=")[0] + '="data:image/png;base64,' + b64 + '"', 1)
+            print(f"inline {fname}: {len(b64)} ky tu base64")
+        else:
+            print(f"CANH BAO: thieu {fname} — khong inline duoc")
     (STAGING_DIR / "index.html").write_text(html)
     # Ghi version hien tai de buoc deploy biet thu muc nao moi.
     (STAGING_DIR / "versions.json").write_text(json.dumps(
@@ -353,6 +369,14 @@ def verify() -> bool:
         has = marker in html
         print(f"loader cung vong 9 [{marker}]:", has)
         ok = ok and has
+    # Vong 9 — 3 anh icon/splash phai inline dang data URI (khong
+    # con tro file PNG rieng — file nhi phan khong push duoc).
+    for bad in ('href="index.icon.png"', 'href="index.apple-touch-icon.png"', 'src="index.png"'):
+        gone = bad not in html
+        print(f"khong con tro file rieng [{bad}]:", gone)
+        ok = ok and gone
+    print("icon/splash inline data URI:", html.count("data:image/png;base64,") == 3)
+    ok = ok and html.count("data:image/png;base64,") == 3
     return ok
 
 
