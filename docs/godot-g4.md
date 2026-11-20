@@ -140,21 +140,67 @@
   2 lỗi vẽ tìm được trên ảnh thật và đã sửa: (1) dòng gợi ý tràn
   khỏi panel → rút ngắn; (2) tên đấu sĩ chéo nhau đè lên nhau →
   lệch theo chẵn/lẻ x + vẽ tên sau vòng tròn (2 lượt vẽ).
-- Chưa làm: AI đánh lượt địch (hiện địch đứng yên chờ hết 10s rồi
-  mới tới lượt mình — chơi demo phải chờ); animation di chuyển/
-  đánh (đấu sĩ nhảy ô tức thì); chọn đội/vũ khí trước trận; lưu
-  giữ sạp + Danh vọng vào save (logic `PxbMarketBattle.data()` đã
-  có, Main chưa nối vào SaveCloud); deploy gh-pages bản mới (wasm
-  không đổi nên chỉ cần push lại pck chunk + index.html).
+- Chưa làm: animation di chuyển/đánh (đấu sĩ nhảy ô tức thì); chọn
+  đội/vũ khí trước trận; lưu giữ sạp + Danh vọng vào save (logic
+  `PxbMarketBattle.data()` đã có, Main chưa nối vào SaveCloud);
+  deploy gh-pages bản mới (wasm không đổi nên chỉ cần push lại pck
+  chunk + index.html — LƯU Ý: pck mới 4.204.080 byte, gấp ~3 lần
+  bản 11:00 (1.352.664 byte), do export lần này đóng gói cả
+  `.godot/imported/*.ctex` + art gốc; deploy sẽ nặng hơn).
+  AI lượt địch ĐÃ XONG (G4 bước 2, xem §5.1).
 
 ## 5. Việc tiếp theo — G4 bước 2
 
-1. **AI lượt địch** cho trận MarketBattle (địch tự di chuyển tới gần
-   + đánh khi trong tầm, hết 10s thì hết lượt) — nếu không có AI thì
-   trận demo chơi rất chậm.
-2. **Deploy gh-pages bản mới** (pck `964beb1a…` đã export; wasm
-   không đổi `fc74679e…` nên chỉ push lại pck chunk + index.html —
-   xem `docs/artpass-20-11.md` §6 cách deploy chunk).
+### 5.1 AI lượt địch — XONG (G4 bước 2, 20/11 ~12:00)
+
+- Logic lõi `PxbMarketBattle.ai_take_turn(battle, fighter_id)` (mới,
+  `scripts/pxb_marketbattle.gd`): xác định, không ngẫu nhiên, KHÔNG
+  sửa luật — chỉ gọi `move_fighter` / `attack` / `support` /
+  `end_turn` có sẵn. Thứ tự: (1) Vàng hỗ trợ đồng đội kề bên thiếu
+  HP nhất; (2) đánh địch trong tầm vũ khí, ưu tiên ít HP nhất (hòa
+  thì id nhỏ); (3) chưa hành động thì đi tới ô trong tầm di chuyển
+  gần địch gần nhất nhất (chỉ đi khi gần hơn vị trí hiện tại; hòa
+  thì x nhỏ, rồi y nhỏ); (4) sau khi đi, đánh nếu có địch vào tầm;
+  (5) kết thúc lượt. Trả `{ok, actions: [chuỗi mô tả], ended}`.
+- Scene `BattleScene` (`scripts/battle_scene.gd`): `ai_enabled`
+  (mặc định **tắt** — test cũ không đổi hành vi), `ai_team = "B"`,
+  `AI_ACT_DELAY = 1,2s` (đợi đầu lượt địch để người chơi kịp thấy
+  lượt chuyển sang ai). Khi tới lượt đội AI: đợi đủ delay rồi chạy
+  1 lượt AI, ghi hành động vào dòng log dưới panel; gợi ý dưới
+  panel đổi thành "Đội Chợ đang đi…" khi tới lượt AI. `Main`
+  (`_start_battle_demo`) bật `ai_enabled = true` khi mở trận demo.
+- Test mới `tests/g4_battle_ai_test.gd`: **34/34 PASS** — đánh trong
+  tầm (Chảo 12 → Tank −9 HP đúng luật), đi tới (6,4) rồi chưa đánh,
+  Vàng hỗ trợ +12 HP, chọn mục tiêu ít HP nhất, chặn khi sai lượt /
+  trận đã xong, scene AI tắt thì địch đứng yên, bật thì sau delay
+  B1 đi tới (8,3) + sang lượt A2, trận tự chạy hết 180s (log có đòn
+  của Tiểu thương, đội A mất HP giữa trận).
+- Verify thật đợt này: `--check-only` 4 file đều exit 0; regression
+  MarketBattle 123/123, battle scene 43/43, battle main 15/15,
+  G2 selftest 87/87, G1 selftest 419/419, G3 playtest 95/95; scene
+  Main 120 frame exit 0; export web exit 0 (wasm SHA không đổi
+  `fc74679e…`, pck mới `aaba00da…`, 4.204.080 byte — xem lưu ý §4);
+  HTTP 200 đủ 4 file (cổng 8163).
+- **Browser-verify thật (Chromium 1255 + swiftshader, 720×1280):**
+  build mới chạy được, bấm B mở trận, đợi 150s wall, 0 console
+  error, 0 pageerror — ảnh `hidden_files/pxb-browser-verify-2026-11-20/17-battle-ai-after.png`
+  (script tái chạy: `hidden_files/pxb-browser-verify-ai.py`):
+  đồng hồ trận còn 2:27 (đã qua 33s game), tới lượt "Tiểu thương 3
+  (Hỗ trợ — Ghế nhựa…)", panel ghi "Đội Chợ đang đi…" +
+  "Tiểu thương 2 di chuyển tới (6,4).", 2 đấu sĩ địch đã rời cột
+  phải tiến về giữa lưới. Đúng hành vi AI đã test headless.
+- Phát hiện về môi trường (ghi để không kết luận sai sau này):
+  game trong headless Chromium + swiftshader chạy **~4–5× chậm hơn
+  thời gian thật** (25s wall chỉ được ~6s game; 150s wall được ~33s
+  game) — chờ theo đồng hồ game trong ảnh, không chờ theo wall.
+  Lỗi test ban đầu "đội A không mất HP sau 180s" là do test sai:
+  hết trận HP hồi đầy theo luật — đã sửa test đo HP giữa trận.
+
+1. ~~**AI lượt địch** cho trận MarketBattle~~ — **XONG, xem §5.1.**
+2. **Deploy gh-pages bản mới** (pck `aaba00da…` đã export 20/11
+   ~11:52; wasm không đổi `fc74679e…` nên chỉ push lại pck chunk +
+   index.html — xem `docs/artpass-20-11.md` §6 cách deploy chunk;
+   pck nay 4.204.080 byte nên số chunk tăng ~3 lần).
 3. **G4 online thật**: server `.NET 8` trong `src/server/` vẫn chưa
    build/chạy được trên VM (không có dotnet SDK) — quyết dùng Godot
    headless dedicated server thay .NET hay chờ máy có dotnet

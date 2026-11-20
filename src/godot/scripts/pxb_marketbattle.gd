@@ -618,6 +618,145 @@ func expire_turn(battle: Dictionary) -> bool:
 	return end_turn(battle)
 
 
+# --- AI lượt địch (G4 bước 2, 20/11) ---
+## Chơi 1 lượt cho đấu sĩ đang tới lượt (đội địch trong demo trận).
+## Xác định, không ngẫu nhiên — test được; KHÔNG sửa luật, chỉ gọi
+## move_fighter / attack / support / end_turn có sẵn.
+## Thứ tự: (1) Vàng hỗ trợ đồng đội kề bên thiếu HP nhất; (2) đánh
+## địch trong tầm vũ khí (ưu tiên ít HP nhất, hòa thì id nhỏ);
+## (3) chưa hành động thì đi tới ô trong tầm di chuyển gần địch gần
+## nhất nhất (chỉ đi khi ô đích gần địch hơn vị trí hiện tại; hòa
+## thì x nhỏ, rồi y nhỏ); (4) sau khi đi, đánh nếu có địch vào tầm;
+## (5) kết thúc lượt (trừ khi trận đã xong giữa chừng).
+## Trả {ok, actions: [chuỗi mô tả], ended} hoặc {ok: false, reason}.
+func ai_take_turn(battle: Dictionary, fighter_id: String) -> Dictionary:
+	var actions: Array[String] = []
+	if battle.is_empty() or str(battle.get("status", "")) != STATUS_FIGHTING:
+		return {"ok": false, "reason": "tran-xong", "actions": actions, "ended": false}
+	var f: Dictionary = find_fighter(battle, fighter_id)
+	if f.is_empty() or not bool(f.get("alive", false)):
+		return {"ok": false, "reason": "khong-co-dau-si", "actions": actions, "ended": false}
+	if str(battle.get("activeFighterId", "")) != fighter_id:
+		return {"ok": false, "reason": "khong-phai-luot", "actions": actions, "ended": false}
+	# 1. Vang ho tro dong doi ke ben thieu HP nhat.
+	if str(f.get("role", "")) == "Vang" and not bool(f.get("actedThisTurn", false)):
+		var ally: Dictionary = _ai_best_support_target(battle, f)
+		if not ally.is_empty():
+			var res: Dictionary = support(battle, fighter_id, str(ally["id"]))
+			if bool(res.get("ok", false)):
+				actions.append("%s hỗ trợ %s +%d HP." % [str(f["name"]), str(ally["name"]), int(res["healed"])])
+	# 2. Danh dich trong tam vu khi (uu tien it HP nhat).
+	if not bool(f.get("actedThisTurn", false)):
+		_ai_try_attack(battle, f, actions)
+	# 3. Chua hanh dong thi di lai gan dich nhat.
+	if not bool(f.get("actedThisTurn", false)) and not bool(f.get("movedThisTurn", false)):
+		var dest: Vector2i = _ai_best_move_tile(battle, f)
+		if dest.x >= 0 and move_fighter(battle, fighter_id, dest.x, dest.y):
+			actions.append("%s di chuyển tới (%d,%d)." % [str(f["name"]), dest.x, dest.y])
+			# 4. Sau khi di, danh neu co dich vao tam.
+			_ai_try_attack(battle, f, actions)
+	# 5. Ket thuc luot (tru khi tran da xong giua chung).
+	var ended := false
+	if str(battle.get("status", "")) == STATUS_FIGHTING:
+		ended = end_turn(battle)
+	return {"ok": true, "actions": actions, "ended": ended}
+
+
+## Địch trong tầm vũ khí, ít HP nhất (hòa thì id nhỏ).
+func _ai_best_attack_target(battle: Dictionary, f: Dictionary) -> Dictionary:
+	var w: Dictionary = WEAPONS.get(str(f.get("weapon", "Chao")), WEAPONS["Chao"])
+	var rng: int = int(w["range"])
+	var my_team: String = team_of(battle, f)
+	var best: Dictionary = {}
+	for e in all_fighters(battle):
+		if not bool(e.get("alive", false)):
+			continue
+		if team_of(battle, e) == my_team:
+			continue
+		if manhattan(int(f["x"]), int(f["y"]), int(e["x"]), int(e["y"])) > rng:
+			continue
+		if best.is_empty() or int(e["hp"]) < int(best["hp"]) or (int(e["hp"]) == int(best["hp"]) and str(e["id"]) < str(best["id"])):
+			best = e
+	return best
+
+
+## Đồng đội kề bên (Manhattan 1) thiếu HP nhiều nhất (hòa thì ít HP
+## hơn, rồi id nhỏ). Chỉ Vàng mới hỗ trợ — hàm gọi đã kiểm vai.
+func _ai_best_support_target(battle: Dictionary, f: Dictionary) -> Dictionary:
+	var my_team: String = team_of(battle, f)
+	var best: Dictionary = {}
+	var best_missing := 0
+	for e in all_fighters(battle):
+		if str(e.get("id", "")) == str(f.get("id", "")):
+			continue
+		if not bool(e.get("alive", false)):
+			continue
+		if team_of(battle, e) != my_team:
+			continue
+		if manhattan(int(f["x"]), int(f["y"]), int(e["x"]), int(e["y"])) > 1:
+			continue
+		var missing: int = int(e["maxHp"]) - int(e["hp"])
+		if missing <= 0:
+			continue
+		if best.is_empty() or missing > best_missing or (missing == best_missing and (int(e["hp"]) < int(best["hp"]) or (int(e["hp"]) == int(best["hp"]) and str(e["id"]) < str(best["id"])))):
+			best = e
+			best_missing = missing
+	return best
+
+
+## Ô trống trong tầm di chuyển gần địch gần nhất nhất. Chỉ trả ô
+## gần địch hơn vị trí hiện tại; không có thì (-1,-1) = đứng yên.
+## Hòa thì x nhỏ, rồi y nhỏ (quét x ngoài, y trong, chỉ nhận khi
+## gần hơn hẳn).
+func _ai_best_move_tile(battle: Dictionary, f: Dictionary) -> Vector2i:
+	var my_team: String = team_of(battle, f)
+	var enemies: Array = []
+	for e in all_fighters(battle):
+		if bool(e.get("alive", false)) and team_of(battle, e) != my_team:
+			enemies.append(e)
+	if enemies.is_empty():
+		return Vector2i(-1, -1)
+	var cur_dist := 999
+	for e in enemies:
+		cur_dist = mini(cur_dist, manhattan(int(f["x"]), int(f["y"]), int(e["x"]), int(e["y"])))
+	var rng: int = move_range_of(f)
+	var best := Vector2i(-1, -1)
+	var best_dist := cur_dist
+	for x in range(GRID_W):
+		for y in range(GRID_H):
+			if x == int(f["x"]) and y == int(f["y"]):
+				continue
+			if manhattan(int(f["x"]), int(f["y"]), x, y) > rng:
+				continue
+			if not fighter_at(battle, x, y).is_empty():
+				continue
+			var d := 999
+			for e in enemies:
+				d = mini(d, manhattan(x, y, int(e["x"]), int(e["y"])))
+			if d < best_dist:
+				best = Vector2i(x, y)
+				best_dist = d
+	return best
+
+
+## Thử đánh 1 đòn theo luật chọn mục tiêu của AI; ghi mô tả vào
+## actions. Trả true nếu đã đánh (kể cả địch né).
+func _ai_try_attack(battle: Dictionary, f: Dictionary, actions: Array[String]) -> bool:
+	var target: Dictionary = _ai_best_attack_target(battle, f)
+	if target.is_empty():
+		return false
+	var res: Dictionary = attack(battle, str(f["id"]), str(target["id"]))
+	if not bool(res.get("ok", false)):
+		return false
+	if bool(res.get("dodged", false)):
+		actions.append("%s né đòn của %s!" % [str(target["name"]), str(f["name"])])
+	elif bool(res.get("ko", false)):
+		actions.append("%s đánh ngã %s (−%d HP)!" % [str(f["name"]), str(target["name"]), int(res["damage"])])
+	else:
+		actions.append("%s đánh %s −%d HP." % [str(f["name"]), str(target["name"]), int(res["damage"])])
+	return true
+
+
 func _reset_round_flags(battle: Dictionary) -> void:
 	for f in all_fighters(battle):
 		(f as Dictionary)["dodgedThisRound"] = false

@@ -110,6 +110,10 @@ var _daynight: ColorRect
 var _overlay_layer: CanvasLayer
 var _ui_layer: CanvasLayer
 var _title_panel: PanelContainer
+var _label_layer: CanvasLayer  # Lop nhan tren the gioi (duoi HUD).
+var _phone_notch: Panel  # Notch + thanh home cua khung dien thoai.
+var _phone_homebar: Panel
+var _js_poll := 0.0  # Poll window.__pxb_start (nut DOM "Bat dau").
 var title_open := true
 var _dlg_panel: PanelContainer
 var _dlg_name: Label
@@ -210,7 +214,7 @@ func load_map(map_id: int, spawn_tile: Vector2i) -> void:
 		player.queue_free()
 	iso_map = IsoMap.new()
 	add_child(iso_map)
-	iso_map.build(_map_by_id(map_id), Marker, font)
+	iso_map.build(_map_by_id(map_id), Marker, font, _label_layer)
 	player = Player.new()
 	add_child(player)
 	player.place(iso_map, spawn_tile)
@@ -248,6 +252,15 @@ func _process(delta: float) -> void:
 	# Camera bam theo nguoi choi (zoom 1.6: map lap day viewport).
 	if _camera != null and player != null:
 		_camera.position = player.position + CAMERA_LOOK_UP
+	# Nut DOM "Bat dau" tren web (web_shell.html): nut HTML dat
+	# window.__pxb_start = true; poll 4 lan/giay (khong dung signal
+	# vi JavaScriptBridge chi co eval, khong co callback tu JS).
+	if title_open and OS.has_feature("web"):
+		_js_poll += delta
+		if _js_poll > 0.25:
+			_js_poll = 0.0
+			if JavaScriptBridge.eval("window.__pxb_start === true"):
+				_on_start_pressed()
 	_frame_timer += delta
 	if _frame_timer >= float(PxbBalance.FRAME_MINUTES) * 60.0:
 		_frame_timer = 0.0
@@ -556,6 +569,8 @@ func _start_battle_demo() -> void:
 	battle_scene = BattleScene.new()
 	layer.add_child(battle_scene)
 	battle_scene.setup(battle_mb, res["battle"], font, font_bold)
+	# G4 bước 2: đội Chợ (B) do AI cầm — tự di chuyển/đánh/hỗ trợ.
+	battle_scene.ai_enabled = true
 	battle_scene.close_requested.connect(_close_battle)
 	battle_open = true
 	if player != null:
@@ -593,6 +608,8 @@ func _open_phone(tab_id: String = "") -> void:
 		player.input_blocked = true
 	_phone_dim.visible = true
 	_phone_panel.visible = true
+	_phone_notch.visible = true
+	_phone_homebar.visible = true
 	_refresh_phone()
 	_update_hud()
 
@@ -604,6 +621,8 @@ func _close_phone() -> void:
 		player.input_blocked = false
 	_phone_dim.visible = false
 	_phone_panel.visible = false
+	_phone_notch.visible = false
+	_phone_homebar.visible = false
 	_update_hud()
 
 
@@ -711,14 +730,39 @@ func _refresh_phone() -> void:
 
 func _social_text() -> String:
 	var lines: Array[String] = ["Danh bạ — trò chuyện tăng thân thiết (+5/lần):"]
+	var known: Dictionary = {}
 	for rel in social.all_relations():
 		var r := rel as Dictionary
-		lines.append("• %s — %s, thân thiết %d/100 (%s)" % [
-			String(r.get("display_name", "")),
-			String(KIND_NAMES.get(String(r.get("kind", "")), String(r.get("kind", "")))),
-			int(r.get("closeness", 0)),
-			String(STAGE_NAMES.get(String(r.get("stage", "")), String(r.get("stage", ""))))])
-	if social.all_relations().is_empty():
+		known[String(r.get("person_id", ""))] = true
+		var kind_name := String(KIND_NAMES.get(String(r.get("kind", "")), String(r.get("kind", ""))))
+		var name := String(r.get("display_name", ""))
+		# Bo lap "Bạn thân — Bạn thân": ten hien thi trung ten loai
+		# quan he thi chi in 1 lan (loi 20/11 11:40).
+		if name == kind_name:
+			lines.append("• %s, thân thiết %d/100 (%s)" % [
+				name,
+				int(r.get("closeness", 0)),
+				String(STAGE_NAMES.get(String(r.get("stage", "")), String(r.get("stage", ""))))])
+		else:
+			lines.append("• %s — %s, thân thiết %d/100 (%s)" % [
+				name,
+				kind_name,
+				int(r.get("closeness", 0)),
+				String(STAGE_NAMES.get(String(r.get("stage", "")), String(r.get("stage", ""))))])
+	# Lap khoang trong 1/3 bang: liet ke ca NPC chua quen (toan bo
+	# 18 khu) — nguoi choi thay ngay ai co the lam quen.
+	var seen_npc: Dictionary = {}
+	for m in maps_data["maps"]:
+		for e in (m as Dictionary).get("events", []):
+			var ev := e as Dictionary
+			if String(ev.get("kind", "")) != "npc":
+				continue
+			var pid := String(ev.get("id", ""))
+			if pid == "" or seen_npc.has(pid) or known.has(pid):
+				continue
+			seen_npc[pid] = true
+			lines.append("• %s — chưa quen (nói chuyện ở ngoài đời để kết bạn)" % String(ev.get("name", pid)))
+	if social.all_relations().is_empty() and seen_npc.is_empty():
 		lines.append("(chưa có quan hệ nào)")
 	return "\n".join(lines)
 
@@ -1306,6 +1350,13 @@ func _build_ui() -> void:
 	mul.blend_mode = CanvasItemMaterial.BLEND_MODE_MUL
 	_daynight.material = mul
 	_overlay_layer.add_child(_daynight)
+	# Lop nhan: CanvasLayer rieng, layer 1, tao TRUOC lop HUD nen ve
+	# duoi HUD — nhan luon tren nhan vat + nha (Node2D the gioi o
+	# layer 0), khong bi y-sort che mat nua, khong de len panel dien
+	# thoai / hop thoai (lop HUD ve sau, tren cung).
+	_label_layer = CanvasLayer.new()
+	_label_layer.layer = 1
+	add_child(_label_layer)
 	var layer := CanvasLayer.new()
 	_ui_layer = layer
 	layer.layer = 1
@@ -1363,6 +1414,12 @@ func _build_ui() -> void:
 	_phone_panel.add_theme_stylebox_override("panel", _phone_panel_style())
 	_phone_panel.visible = false
 	layer.add_child(_phone_panel)
+	# Khung dien thoai that: notch tren + thanh home duoi (chi hien
+	# khi mo dien thoai) — thay cho hinh chu nhat tron tron.
+	_phone_notch = _mk_phone_bar(Vector2(300, 183), Vector2(120, 14))
+	layer.add_child(_phone_notch)
+	_phone_homebar = _mk_phone_bar(Vector2(290, 1078), Vector2(140, 10))
+	layer.add_child(_phone_homebar)
 	var pvb := VBoxContainer.new()
 	pvb.add_theme_constant_override("separation", 10)
 	_phone_panel.add_child(pvb)
@@ -1432,8 +1489,15 @@ func _build_ui() -> void:
 	_title_panel = PanelContainer.new()
 	_title_panel.position = Vector2(0, 0)
 	_title_panel.size = Vector2(720, 1280)
-	_title_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.99, 0.93, 0.78, 1.0)))
+	_title_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.99, 0.93, 0.78, 0.55)))
 	layer.add_child(_title_panel)
+	# Anh nen title (crop giua anh mat tien): len tren panel, duoi chu.
+	if ResourceLoader.exists("res://art/title_bg.png"):
+		var tbg := TextureRect.new()
+		tbg.texture = load("res://art/title_bg.png")
+		tbg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tbg.stretch_mode = TextureRect.STRETCH_SCALE
+		_title_panel.add_child(tbg)
 	var tvb := VBoxContainer.new()
 	tvb.add_theme_constant_override("separation", 18)
 	tvb.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -1446,8 +1510,10 @@ func _build_ui() -> void:
 	sub2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var start_btn := Button.new()
 	start_btn.text = "▶  Bắt đầu chơi"
-	_style_button(start_btn, 34)
-	start_btn.custom_minimum_size = Vector2(440, 88)
+	_style_button(start_btn, 40)
+	# Nut LON (620x110) de bam tren desktop + mobile; tren web con
+	# co nut DOM that ngoai canvas (web_shell.html, __pxb_start).
+	start_btn.custom_minimum_size = Vector2(620, 110)
 	start_btn.pressed.connect(_on_start_pressed)
 	var center := CenterContainer.new()
 	center.add_child(start_btn)
@@ -1462,6 +1528,22 @@ func _on_start_pressed() -> void:
 	_title_panel.visible = false
 	if player != null:
 		player.input_blocked = false
+
+func _mk_phone_bar(pos: Vector2, size: Vector2) -> Panel:
+	# Thanh notch / home cua khung dien thoai: hinh chu nhat bo tron,
+	# mau nau dam — giong vien dien thoai that.
+	var p := Panel.new()
+	p.position = pos
+	p.size = size
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(0.15, 0.10, 0.06, 1)
+	st.corner_radius_top_left = 7
+	st.corner_radius_top_right = 7
+	st.corner_radius_bottom_left = 7
+	st.corner_radius_bottom_right = 7
+	p.add_theme_stylebox_override("panel", st)
+	p.visible = false
+	return p
 
 func _mk_label(parent: Node, f: Font, size: int, pos: Vector2, text: String) -> Label:
 	var l := Label.new()

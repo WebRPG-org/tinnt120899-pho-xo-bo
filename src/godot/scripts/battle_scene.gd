@@ -44,11 +44,22 @@ var battle: Dictionary = {}
 var font: Font = null
 var font_bold: Font = null
 
+## AI lượt địch (G4 bước 2): Main bật khi mở trận demo thật
+## (ai_enabled = true); test mặc định tắt để lượt địch đứng yên
+## như trước. ai_team = đội do AI cầm (mặc định "B" = Đội Chợ).
+## AI_ACT_DELAY: đợi 1,2s đầu lượt địch rồi mới đi — người chơi
+## kịp thấy lượt chuyển sang ai.
+const AI_ACT_DELAY := 1.2
+var ai_enabled := false
+var ai_team := "B"
+
 var _offset := Vector2.ZERO
 var _selected_id := ""
 var _turn_elapsed := 0.0
 var _match_acc := 0.0
 var _last_action := ""
+var _ai_wait := 0.0
+var _ai_done_this_turn := false
 var _end_rect := Rect2(16, 1120, 330, 70)
 var _close_rect := Rect2(374, 1120, 330, 70)
 
@@ -74,6 +85,8 @@ func setup(p_mb: PxbMarketBattle, p_battle: Dictionary, p_font: Font, p_font_bol
 	_turn_elapsed = 0.0
 	_match_acc = 0.0
 	_last_action = "Trận bắt đầu — chạm ô xanh lá để di chuyển."
+	_ai_wait = 0.0
+	_ai_done_this_turn = false
 	if mb != null:
 		mb.turn_changed.connect(_on_turn_changed)
 		mb.battle_finished.connect(_on_battle_finished)
@@ -82,6 +95,8 @@ func setup(p_mb: PxbMarketBattle, p_battle: Dictionary, p_font: Font, p_font_bol
 func _on_turn_changed(_fighter_id: String) -> void:
 	_turn_elapsed = 0.0
 	_selected_id = str(battle.get("activeFighterId", ""))
+	_ai_wait = 0.0
+	_ai_done_this_turn = false
 	queue_redraw()
 
 
@@ -301,6 +316,38 @@ func _advance_timers(seconds: float) -> void:
 	if _turn_elapsed >= float(PxbMarketBattle.TURN_SECONDS):
 		_turn_elapsed = 0.0
 		mb.expire_turn(battle)
+		if not is_fighting():
+			return
+	# AI lượt địch: tới lượt đội AI thì đợi AI_ACT_DELAY rồi đi 1
+	# lượt (di chuyển/đánh/hỗ trợ + kết thúc lượt) qua
+	# PxbMarketBattle.ai_take_turn.
+	if ai_enabled and not _ai_done_this_turn:
+		var act := active_fighter()
+		if not act.is_empty() and mb.team_of(battle, act) == ai_team:
+			_ai_wait += seconds
+			if _ai_wait >= AI_ACT_DELAY:
+				_ai_done_this_turn = true
+				_run_ai_turn()
+
+
+## Chạy 1 lượt AI cho đấu sĩ đang tới lượt; ghi hành động vào
+## dòng log dưới panel để người chơi thấy địch vừa làm gì.
+func _run_ai_turn() -> void:
+	if mb == null or battle.is_empty():
+		return
+	var f := active_fighter()
+	if f.is_empty():
+		return
+	var res: Dictionary = mb.ai_take_turn(battle, str(f["id"]))
+	var parts := PackedStringArray()
+	for a in (res.get("actions", []) as Array):
+		parts.append(str(a))
+	if parts.is_empty():
+		_last_action = "%s hết lượt." % str(f["name"])
+	else:
+		_last_action = " ".join(parts)
+	_selected_id = str(battle.get("activeFighterId", ""))
+	queue_redraw()
 
 
 ## Test headless: chạy đồng hồ N giây mà không cần _process.
@@ -452,7 +499,10 @@ func _draw_bottom() -> void:
 		_text(font_bold, Vector2(32, 1036), "Lượt: %s (%s — %s, tầm %d)" % [
 			str(act["name"]), str(PxbMarketBattle.ROLES[str(act["role"])]["name"]),
 			str(w["name"]), int(w["range"])], 26, Color(1, 0.9, 0.4))
-		_text(font, Vector2(32, 1070), "Ô xanh: đi  •  Viền đỏ: đánh  •  Vàng chạm đồng đội kề: +12 HP", 20, Color(0.9, 0.9, 0.85))
+		if ai_enabled and mb.team_of(battle, act) == ai_team:
+			_text(font, Vector2(32, 1070), "Đội Chợ đang đi…", 20, Color(0.9, 0.9, 0.85))
+		else:
+			_text(font, Vector2(32, 1070), "Ô xanh: đi  •  Viền đỏ: đánh  •  Vàng chạm đồng đội kề: +12 HP", 20, Color(0.9, 0.9, 0.85))
 	else:
 		_text(font_bold, Vector2(32, 1036), "Trận đã kết thúc.", 26, Color(1, 0.9, 0.4))
 	_text(font, Vector2(32, 1104), _last_action, 22, Color(0.85, 0.9, 0.85))
