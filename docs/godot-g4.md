@@ -106,3 +106,9 @@
   đồng hồ 10s/lượt + 180s/trận hiển thị thật.
 - Đây là phần code lớn tiếp theo nếu chủ chưa bật Pages / chưa chốt
   server online.
+
+
+## Link chơi thật (LIVE 20/11 09:54)
+
+- Repo đã public + GitHub Pages đã bật (branch gh-pages, root), verify bằng trình duyệt thật: trang tải thành công, tiêu đề "Phố Xô Bồ", màn hình tải game Godot.
+- Link: https://tinnt120899.github.io/pho-xo-bo/
