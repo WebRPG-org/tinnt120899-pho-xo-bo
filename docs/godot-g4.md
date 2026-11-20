@@ -1899,8 +1899,26 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
   **FAILED REQUESTS: 0**; 1 console warning còn lại là
   "GPU stall due to ReadPixels" của swiftshader (đã biết
   từ vòng 8, chỉ là cảnh báo hiệu năng, không phải lỗi).
-  Deploy icon-inline: index.html mới (gh-pages head sau
-  push — xem sync record), `--check-live` lại sau đó.
+  Deploy icon-inline: index.html mới (main `f5b2fdd8`,
+  gh-pages `462a5eac`, index.html staging SHA
+  `c82cf663…`, 86.987 byte), `--check-live` OK sau đó
+  (live index.html SHA `c82cf663…` = staging, 3 data URI,
+  pxbShowLoadError ×4; CDN mất ~7 phút mới đổi bản).
+  **Verify cuối trên file tải TRỰC TIẾP TỪ LIVE bản mới**
+  (354 file, cổng 8167, 22:10 +07): nút bật sau 24,0s,
+  **ERRORS: 0, FAILED REQUESTS: 0**; giữ D + 10 tap D đi
+  được tới cuối TẠP HÓA, F đổi khung, P mở điện thoại
+  (ảnh `a9-01…a9-07` ghi đè từ lần chạy này). 24,0s là
+  lần tải đầu trên CPU VM yếu (biên dịch wasm); các lần
+  đo trước: 11,5s / 15,4s / 29,4s — dao động theo tải CPU,
+  đều dưới watchdog 120s.
+- Lưu ý hạ tầng: service restart 2 lần trong buổi đã xóa
+  sạch /tmp (mất file tải live + server http) và gỡ
+  module playwright (cài lại bằng `pip install
+  --break-system-packages playwright`; browser
+  chromium-1255 trong cache vẫn còn). File tải live cuối
+  để ở `~/workspace/live-final-verify/` (ngoài repo,
+  bền qua restart) thay vì /tmp.
 - Ảnh kiểm chứng: `visual-check/artpass9/` (`a9-01…a9-07`,
   `live-title.png` + script `check_live_load.py`,
   `check_artpass9_verify.py`).
