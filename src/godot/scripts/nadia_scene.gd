@@ -68,11 +68,18 @@ func _draw() -> void:
 	# Map002: anh troi ve thay troi code; mai xa + mat tien code giu
 	# (ve len tren anh troi). Ground/tuong ben/hang rao/dao cu code giu
 	# (dat len tren anh, khop tile).
+	# Nen dat (hinh thoi) KHONG ve nua — mat dat la anh ve tay
+	# ground_wide.jpg (Sprite2D cua Main): hinh thoi phang tao duong
+	# noi ngang gat voi mat tien (loi 20/11 12:30).
 	if map_id != 1:
 		_draw_far_roofs()
-	_draw_ground()
 	_draw_shadows()
-	_draw_side_walls()
+	# Tuong ben chi ve tu Map002 tro di: Map001 co anh composite ve
+	# san tuong/nha 2 ben — tuong code (hinh chu nhat be phang +
+	# ap phich trang-do) de len anh dat trong nhu tile placeholder
+	# (loi 20/11 12:30).
+	if map_id != 1:
+		_draw_side_walls()
 	if map_id != 1:
 		_draw_facades()
 	_draw_bottom_fence()
@@ -300,8 +307,13 @@ func _draw_bottom_fence() -> void:
 	for tx in range(12):
 		var c := tile_center(Vector2i(tx, 8))
 		var h := _hash(tx, 8)
-		draw_rect(Rect2(c + Vector2(-32, -2), Vector2(64, 18)), Color(0.80, 0.72, 0.55, 1))
-		draw_rect(Rect2(c + Vector2(-32, -2), Vector2(64, 4)), Color(0.88, 0.80, 0.62, 1))
+		# Thanh rao be phang chi ve tu Map002 tro di: Map001 co anh
+		# nen ve tay — thanh rao code trong nhu tile placeholder o
+		# mep duoi (loi 20/11 12:30). Chau cay + meo giu lai (doc
+		# nhu chau cay tren dat, khong can thanh rao).
+		if map_id != 1:
+			draw_rect(Rect2(c + Vector2(-32, -2), Vector2(64, 18)), Color(0.80, 0.72, 0.55, 1))
+			draw_rect(Rect2(c + Vector2(-32, -2), Vector2(64, 4)), Color(0.88, 0.80, 0.62, 1))
 		if h % 3 == 0:
 			# Chau cay tren hang rao.
 			draw_colored_polygon(PackedVector2Array([

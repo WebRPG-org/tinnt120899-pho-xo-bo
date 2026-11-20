@@ -31,16 +31,13 @@ const MATERIAL_NAMES := {
 	"banh-xe": "Bánh Xe",
 }
 
-# Camera nhin lech len 100 world units: nguoi choi nam o 2/3 duoi man
-# hinh, day nha mat tien (ty=0) xuong duoi HUD thay vi bi HUD che
-# (art pass Nadia 20/11: mat tien la phan dep nhat cua canh).
-const CAMERA_LOOK_UP := Vector2(0, -230)
-# Look-up -230 (thay -100 cu): camera nhin len tren de bien hieu
-# (the gioi y -28..17) xuong duoi HUD (game y 224..296, doc duoc)
-# va dai troi hien o mep tren; di len hang tren thi troi hien day
-# du (troi o tren cung map, khong the thay het luc spawn vi HUD
-# chiem 252px tren cung + hop thoai chiem 950..1250 — nguoi choi
-# phai o game y < 950 de mat khong bi hop thoai che).
+# Camera nhin lech len 320 world units + zoom 1.4 (thay -230/1.6):
+# nguoi choi nam o 2/3 duoi man hinh, dai troi (anh mo rong tren
+# mat tien) hien duoc ~60px duoi HUD gon luc spawn (loi 20/11 12:30:
+# troi khong thay duoc luc spawn vi HUD cao 236px + camera -230 chi
+# thay toi dinh anh). Zoom 1.4 mo rong tam nhin doc 457px moi ben
+# (thay 400px) de troi lo them; nhan vat van du lon o 1.4x.
+const CAMERA_LOOK_UP := Vector2(0, -320)
 # Meo dien thoai xoay theo ngay — lap khoang trong duoi panel
 # (art pass Nadia 20/11: panel 1100 cao hon noi dung ~450px).
 const PHONE_TIPS := [
@@ -135,6 +132,8 @@ var _phone_hint: Label
 var _phone_tip: Label
 var _phone_footer: Label
 var _phone_actions: VBoxContainer
+var _phone_act_scroll: ScrollContainer
+var _phone_today: Label  # Khoi "Hom nay" lap khoang trong dien thoai.
 var _phone_tab_buttons := {}
 
 # Ten tieng Viet cho loai quan he / giai doan (khong hien ma noi bo
@@ -225,11 +224,14 @@ func load_map(map_id: int, spawn_tile: Vector2i) -> void:
 	add_child(player)
 	player.place(iso_map, spawn_tile)
 	player.moved_to.connect(_on_player_moved_to)
+	if iso_map.skyfx != null:
+		iso_map.skyfx.player = player
 	if _camera != null:
 		_camera.position = player.position + CAMERA_LOOK_UP
 		_camera.reset_smoothing()
 	_hud_map.text = "Phố Xô Bồ — " + String(_map_by_id(map_id)["name"])
 	_update_hud()
+	_update_daynight()  # Ap khung hien tai cho map moi (anh dem/tint/mat troi).
 
 func _on_player_moved_to(tile: Vector2i) -> void:
 	var ev := iso_map.event_at(tile)
@@ -616,6 +618,10 @@ func _open_phone(tab_id: String = "") -> void:
 	_phone_panel.visible = true
 	_phone_notch.visible = true
 	_phone_homebar.visible = true
+	# Toast doi khung (y=200) de len tieu de "Dien thoai" cua panel
+	# (panel y=190) neu mo dien thoai ngay sau khi doi khung — an
+	# toast khi mo dien thoai (loi 20/11 12:30).
+	_toast.visible = false
 	_refresh_phone()
 	_update_hud()
 
@@ -660,6 +666,7 @@ func _refresh_phone() -> void:
 	var sl := _story_text().split("\n")
 	_phone_hint.text = "Tiến trình — %s\n%s" % [sl[0], sl[2]] if sl.size() > 2 else "Tiến trình — " + sl[0]
 	_phone_tip.text = "Mẹo: " + String(PHONE_TIPS[day % PHONE_TIPS.size()])
+	_phone_today.text = _today_text()
 	_clear_phone_actions()
 	match phonehub.current_tab:
 		PxbPhoneHub.TAB_DANH_BA_TIN_NHAN:
@@ -731,8 +738,29 @@ func _refresh_phone() -> void:
 			_phone_action("Đồng bộ slot 1 lên server", _on_upload_pressed.bind(1))
 		_:
 			_phone_content.text = "Tab này chưa có nội dung."
+	# Chieu cao vung nut theo so nut that (toi da 240): nut it thi
+	# vung thu lai, goi y + chan trang noi ngay sau — khong de khoang
+	# trong 140-180px nhu truoc (loi 20/11 12:30).
+	var n_act := _phone_actions.get_child_count() + 1  # + nut Dong.
+	_phone_act_scroll.custom_minimum_size = Vector2(580, clampi(64 * n_act - 8, 64, 240))
 	_phone_action("Đóng điện thoại", _close_phone)
 
+
+func _today_text() -> String:
+	# Khoi "Hom nay" trong dien thoai: thong tin that cua khu dang
+	# dung + muc tieu truyen — lap khoang trong giua nut bam va khoi
+	# Tien trinh (loi 20/11 12:30).
+	var npcs := 0
+	var total := 0
+	if iso_map != null:
+		for mk in iso_map.markers:
+			total += 1
+			if String(mk.event_data.get("kind", "")) == "npc":
+				npcs += 1
+	var sl := _story_text().split("\n")
+	var goal := sl[0] if not sl.is_empty() else ""
+	return "Hôm nay — Ngày %d • Khung %s • %s: %d người, %d điểm tương tác\n%s" % [
+		day, _frame_name(), String(_map_by_id(current_map_id).get("name", "")), npcs, total, goal]
 
 func _social_text() -> String:
 	var lines: Array[String] = ["Danh bạ — trò chuyện tăng thân thiết (+5/lần):"]
@@ -1319,10 +1347,14 @@ func _daynight_color(f: int) -> Color:
 	# toi di ca anh nhung giu tuong phan — nha/cua van nhin thay,
 	# khong bi lop alpha dac nuot (loi khung Toi van sang, 20/11 10:30).
 	# Sang = trang (khong doi); Chieu = vang cam; Toi = xanh dem dam.
+	# Map co anh nen dem rieng (1-2): anh dem da toi san (~0.65) nen
+	# MUL nhe hon (0.55 thay 0.42) keo ca anh khong toi den (loi 20/11 12:30).
 	match f:
 		1:
 			return Color(1.0, 0.82, 0.55, 1.0)
 		2:
+			if iso_map != null and iso_map.has_night_bg:
+				return Color(0.55, 0.62, 0.9, 1.0)
 			return Color(0.42, 0.52, 0.85, 1.0)
 	return Color(1.0, 1.0, 1.0, 1.0)
 
@@ -1331,11 +1363,45 @@ func _update_daynight() -> void:
 		_daynight.color = _daynight_color(frame_idx)
 	if iso_map != null and iso_map.night_glow != null:
 		iso_map.night_glow.set_lit(frame_idx == 2)
+	if iso_map != null:
+		iso_map.set_frame(frame_idx)
+		_update_character_tint()
+
+## Tint nhan vat theo khung: lop MUL nhan deu ca anh nen nhung anh
+## PNG nhan vat sang hon nen dat nen can toi them 1 nac nua keo
+## khoi "dan" tren nen toi (loi 20/11 12:30: nhan vat sang nhu ban
+## ngay giua khung Toi). Chieu am vang nhe, Toi xanh toi ro.
+func _update_character_tint() -> void:
+	var tint := Color(1, 1, 1, 1)
+	if frame_idx == 1:
+		tint = Color(1.0, 0.88, 0.7, 1)
+	elif frame_idx == 2:
+		tint = Color(0.72, 0.78, 0.95, 1)
+	if player != null:
+		player.set_tint(tint)
+	if iso_map != null:
+		for mk in iso_map.markers:
+			if mk.has_method("set_tint"):
+				mk.set_tint(tint)
 
 func _build_ui() -> void:
-	# Camera bam nguoi choi, zoom 1.6 de map lap day viewport 720x1280.
+	# Nen dat ve tay (ground_wide.jpg): 1 anh lon co dinh cho moi map,
+	# mep tren la via he co bac them nam duoi chan mat tien — thay cho
+	# hinh thoi IsoMap._draw cu (le toa do + duong noi gat + mang
+	# zigzag). Them o index 0 cua Main (duoi iso_map/player) de
+	# khong che vat; vi tri co dinh vi moi map 12x9 deu cung offset.
+	if ResourceLoader.exists("res://art/ground_wide.jpg"):
+		var gtex := load("res://art/ground_wide.jpg") as Texture2D
+		var g := Sprite2D.new()
+		g.texture = gtex
+		g.scale = Vector2(1400.0 / float(gtex.get_width()), 900.0 / float(gtex.get_height()))
+		g.position = Vector2(360, 730)  # Mep tren o y=280, duoi chan mat tien (~322).
+		add_child(g)
+		move_child(g, 0)
+	# Camera bam nguoi choi, zoom 1.4 de map lap day viewport 720x1280
+	# (1.6 cu hep tam nhin doc, khong thay troi luc spawn).
 	_camera = Camera2D.new()
-	_camera.zoom = Vector2(1.6, 1.6)
+	_camera.zoom = Vector2(1.4, 1.4)
 	_camera.position_smoothing_enabled = true
 	_camera.position_smoothing_speed = 10.0
 	add_child(_camera)
@@ -1367,20 +1433,26 @@ func _build_ui() -> void:
 	_ui_layer = layer
 	layer.layer = 1
 	add_child(layer)
-	# HUD: 5 dong thong tin trong 1 panel giay am — khong de text tran.
+	# HUD GON 4 dong (panel cao thuc te ~157px do min-size cua noi
+	# dung, day panel y ~173 — dat size 124px nhung PanelContainer
+	# tu no ra min-size) thay vi 5 dong 236px — HUD cu chiem het dai
+	# troi tren cung nen troi khong bao gio thay duoc luc spawn
+	# (loi 20/11 12:30). Gop: tui vao dong ngay, vi+EXP vao dong
+	# rieng; dong tui rieng (_hud_bag) an di.
 	var hud_panel := PanelContainer.new()
 	hud_panel.position = Vector2(16, 16)
-	hud_panel.size = Vector2(452, 236)
+	hud_panel.size = Vector2(452, 124)
 	hud_panel.add_theme_stylebox_override("panel", _panel_style(Color(1.0, 0.97, 0.88, 0.94)))
 	layer.add_child(hud_panel)
 	var hvb := VBoxContainer.new()
 	hvb.add_theme_constant_override("separation", 2)
 	hud_panel.add_child(hvb)
-	_hud_map = _mk_label(hvb, font_bold, 32, Vector2.ZERO, "Phố Xô Bồ")
-	_hud_day = _mk_label(hvb, font, 26, Vector2.ZERO, "")
-	_hud_bag = _mk_label(hvb, font, 26, Vector2.ZERO, "")
-	_hud_gold = _mk_label(hvb, font, 26, Vector2.ZERO, "")
-	_hud_stats = _mk_label(hvb, font, 26, Vector2.ZERO, "")
+	_hud_map = _mk_label(hvb, font_bold, 30, Vector2.ZERO, "Phố Xô Bồ")
+	_hud_day = _mk_label(hvb, font, 24, Vector2.ZERO, "")
+	_hud_bag = _mk_label(hvb, font, 24, Vector2.ZERO, "")
+	_hud_bag.visible = false
+	_hud_gold = _mk_label(hvb, font, 24, Vector2.ZERO, "")
+	_hud_stats = _mk_label(hvb, font, 24, Vector2.ZERO, "")
 	var frame_btn := Button.new()
 	frame_btn.text = "Đổi khung (F)"
 	_style_button(frame_btn)
@@ -1415,6 +1487,9 @@ func _build_ui() -> void:
 	# Panel dien thoai GON (680x900, can giua doc) thay vi 680x1100
 	# — noi dung that chi ~720px, panel cu thua ~450px trong
 	# (art pass Nadia 20/11, loi goc 20/11 10:30).
+	# y=190: nam duoi HUD gon (day thuc te ~173) + 16px cach — panel
+	# cu o y=156 de len day HUD (loi 20/11 12:30, do min-size day
+	# panel len 157px thay vi 124px dat truoc).
 	_phone_panel.position = Vector2(20, 190)
 	_phone_panel.size = Vector2(680, 900)
 	_phone_panel.add_theme_stylebox_override("panel", _phone_panel_style())
@@ -1428,9 +1503,10 @@ func _build_ui() -> void:
 	layer.add_child(_phone_homebar)
 	var pvb := VBoxContainer.new()
 	# Separation 8 (khong phai 10): tong chieu cao toi thieu cua VBox
-	# (tieu de 36 + luoi tab 172 + 2 scroll 240/280 + goi y/meo 57/57
-	# + chan trang 27 + 7 khoang cach) phai <= 896 de panel giu dung
-	# 680x900 — separation 10 day panel len 907 (loi 20/11 12:00).
+	# (tieu de 36 + luoi tab 172 + 2 scroll 200/240 + hom nay 60 +
+	# goi y/meo 57/57 + chan trang 27 + khoang cach) phai <= 896 de
+	# panel giu dung 680x900 — separation 10 day panel len 907
+	# (loi 20/11 12:00).
 	pvb.add_theme_constant_override("separation", 8)
 	_phone_panel.add_child(pvb)
 	_phone_title = _mk_label(pvb, font_bold, 30, Vector2.ZERO, "Điện thoại")
@@ -1449,7 +1525,7 @@ func _build_ui() -> void:
 		_phone_tab_buttons[String(t["id"])] = tb
 	_phone_content = _mk_label(pvb, font, 26, Vector2.ZERO, "")
 	_phone_content.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_phone_content.size = Vector2(580, 240)
+	_phone_content.size = Vector2(580, 200)
 	# Chieu rong toi thieu 580: Label trong ScrollContainer mac dinh
 	# bi ep ve chieu rong toi thieu 1px (autowrap) nen chu xep doc
 	# 1 ky tu/dong (loi 20/11 12:10) — dat min width = be rong scroll.
@@ -1457,21 +1533,26 @@ func _build_ui() -> void:
 	# Noi dung dai (vd danh ba 16 NPC) phai CUON, khong tran khoi
 	# panel: label trong ScrollContainer, chieu cao tu noi dung.
 	var content_scroll := ScrollContainer.new()
-	content_scroll.custom_minimum_size = Vector2(580, 240)
+	content_scroll.custom_minimum_size = Vector2(580, 200)
 	pvb.add_child(content_scroll)
 	_phone_content.get_parent().remove_child(_phone_content)
 	content_scroll.add_child(_phone_content)
-	var act_scroll := ScrollContainer.new()
-	act_scroll.custom_minimum_size = Vector2(580, 280)
-	pvb.add_child(act_scroll)
+	_phone_act_scroll = ScrollContainer.new()
+	_phone_act_scroll.custom_minimum_size = Vector2(580, 240)
+	pvb.add_child(_phone_act_scroll)
 	_phone_actions = VBoxContainer.new()
 	_phone_actions.add_theme_constant_override("separation", 8)
-	act_scroll.add_child(_phone_actions)
-	# Khoang dem day goi y + chan trang xuong day panel (khong de
-	# khoang trong lon giua nut bam va chan trang nhu truoc).
-	var spacer := Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	pvb.add_child(spacer)
+	_phone_act_scroll.add_child(_phone_actions)
+	# Khoi "Hom nay" — noi dung that lap khoang trong giua nut bam
+	# va khoi Tien trinh (loi 20/11 12:30: khoang trong 140-180px).
+	_phone_today = _mk_label(pvb, font, 22, Vector2.ZERO, "")
+	_phone_today.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_phone_today.size = Vector2(580, 60)
+	# KHONG dung spacer day goi y + chan trang xuong day panel nua:
+	# spacer chinh la khoang trong 140-180px giua nut "Dong dien
+	# thoai" va khoi Tien trinh (loi 20/11 12:30). Bo spacer di, goi y
+	# + chan trang noi ngay sau noi dung; phan trong (neu co) nam o
+	# DAY panel — nhu man hinh dien thoai that, khong phai giua chung.
 	_phone_hint = _mk_label(pvb, font, 22, Vector2.ZERO, "")
 	_phone_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_phone_hint.size = Vector2(580, 90)
@@ -1482,9 +1563,10 @@ func _build_ui() -> void:
 	# phan trong o duoi panel (loi 20/11 10:30).
 	_phone_footer = _mk_label(pvb, font, 22, Vector2.ZERO, "")
 	_phone_footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	# Toast doi khung nam ngay duoi HUD (y=268), khong de len nhan vat
-	# o giua man hinh (loi "Ngay 1 • Khung Toi" che mat nguoi, 20/11 10:30).
-	_toast = _mk_label(layer, font_bold, 30, Vector2(60, 268), "")
+	# Toast doi khung nam ngay duoi HUD gon (y=200, day HUD thuc te
+	# ~173), khong de len nhan vat o giua man hinh (loi "Ngay 1 •
+	# Khung Toi" che mat nguoi, 20/11 10:30).
+	_toast = _mk_label(layer, font_bold, 30, Vector2(60, 200), "")
 	_toast.size = Vector2(600, 60)
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_toast.add_theme_color_override("font_outline_color", Color(1, 1, 1, 0.95))
@@ -1588,12 +1670,14 @@ func _fmt_vnd(n: int) -> String:
 
 
 func _update_hud() -> void:
-	_hud_day.text = "Ngày %d • Khung %s" % [day, _frame_name()]
 	var parts: Array[String] = []
 	for k in inventory.keys():
 		if int(inventory[k]) > 0:
 			parts.append("%s ×%d" % [String(MATERIAL_NAMES.get(k, k)), int(inventory[k])])
-	_hud_bag.text = "Túi: " + (" • ".join(parts) if not parts.is_empty() else "trống")
+	# HUD gon 4 dong: tui gop vao dong ngay (chi dem so loai de khong
+	# tran panel 452px); dong tui rieng (_hud_bag) da an trong _build_ui.
+	_hud_day.text = "Ngày %d • Khung %s • Túi: %s" % [day, _frame_name(),
+		("%d loại" % parts.size()) if not parts.is_empty() else "trống"]
 	_hud_gold.text = "Ví: %sđ • EXP %d" % [_fmt_vnd(jobs.gold), jobs.exp_total]
 	_hud_stats.text = "Thể %d • Trí %d • Tâm %d" % [stats.the, stats.tri, stats.tam]
 	var unread := phonehub.total_unread() if phonehub != null else 0

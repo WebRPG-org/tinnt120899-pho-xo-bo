@@ -45,6 +45,11 @@ func place(p_map: IsoMap, p_tile: Vector2i) -> void:
 func set_auto_target(t: Vector2i) -> void:
 	_auto_target = t
 
+## Tint theo khung gio — chuyen tiep xuong CharacterSprite.
+func set_tint(c: Color) -> void:
+	if _sprite != null:
+		_sprite.set_tint(c)
+
 func _try_step(dir: Vector2i) -> bool:
 	var nt := tile + dir
 	if iso_map == null or not iso_map.is_walkable(nt):
@@ -86,13 +91,16 @@ func _process(delta: float) -> void:
 		_step_toward_auto()
 
 func _held_dir() -> Vector2i:
-	if Input.is_action_pressed("ui_up"):
+	# WASD (action move_*, project.godot) + mui ten (ui_* mac dinh):
+	# truoc day chi co ui_* nen phim WASD khong di duoc du hint ghi
+	# "WASD / mui ten" (loi 20/11 12:20).
+	if Input.is_action_pressed("move_up") or Input.is_action_pressed("ui_up"):
 		return Vector2i(0, -1)
-	if Input.is_action_pressed("ui_down"):
+	if Input.is_action_pressed("move_down") or Input.is_action_pressed("ui_down"):
 		return Vector2i(0, 1)
-	if Input.is_action_pressed("ui_left"):
+	if Input.is_action_pressed("move_left") or Input.is_action_pressed("ui_left"):
 		return Vector2i(-1, 0)
-	if Input.is_action_pressed("ui_right"):
+	if Input.is_action_pressed("move_right") or Input.is_action_pressed("ui_right"):
 		return Vector2i(1, 0)
 	return Vector2i.ZERO
 

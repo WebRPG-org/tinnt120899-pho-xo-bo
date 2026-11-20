@@ -16,10 +16,10 @@ var _label_style: StyleBoxFlat = null
 var _label: Label = null  # Nhan Control tren CanvasLayer (neu co).
 
 const NPC_PARITY_OFFSET := 40.0
-# HUD chiem 252px tren cung man hinh (panel 16..252); nhan khong duoc
-# vuot qua day (cong 16px cach) — truoc day chi kep theo vung nhin
-# nen nhan "Goc Che Tao" van chui duoi HUD (20/11 10:30).
-const HUD_BOTTOM_SCREEN := 268.0
+# HUD gon (panel cao thuc te ~157px do min-size cua noi dung, day
+# panel y ~173) nen nhan chi can kep duoi y=190px man hinh (truoc
+# day HUD cao 236px nen kep 268px).
+const HUD_BOTTOM_SCREEN := 190.0
 # Cach mep toi thieu ~20px man hinh o zoom 1.6 (13 world units).
 const EDGE_MARGIN_WORLD := 13.0
 
@@ -70,6 +70,11 @@ func _on_tree_exited() -> void:
 	if _label != null and is_instance_valid(_label):
 		_label.queue_free()
 		_label = null
+
+## Tint theo khung gio — chuyen tiep xuong CharacterSprite (NPC).
+func set_tint(c: Color) -> void:
+	if _sprite != null:
+		_sprite.set_tint(c)
 
 func _process(delta: float) -> void:
 	_pulse += delta
@@ -137,28 +142,26 @@ func label_rect() -> Rect2:
 	var text := String(event_data.get("name", ""))
 	if text == "":
 		return Rect2()
-	# Nhan cua / hotspot dat DUOI bieu tuong (+24), goc che tao dat
-	# TREN (-120) de khong chong nhan NPC dat tren (-84/-124) khi
-	# 2 diem ke o (vd "Cua ra Cho Dau Moi" vs "Ban Than" o (5,4)/(3,5)),
-	# va khong roi vao cho nguoi choi dung (goc che tao dat duoi se
-	# bi nguoi choi spawn (4,5) che mat).
+	# Vi tri nhan theo loai (sua 20/11 12:30, kiem live): nhan nam tren
+	# CanvasLayer rieng nen KHONG bao gio bi nhan vat che nua — cac
+	# muc "che mat" cu het hieu luc. Dat theo vi tri that tren anh:
+	#  * NPC -170 (tren dau 104px, cach 40px): -144 cu nam dung tren
+	#    duong noi mat tien/dat; day len -170 cho thoat khoi duong noi.
+	#  * Goc che tao -40 (TREN bieu tuong): +24 cu de xuong dung
+	#    cho nguoi choi spawn (4,5) — nhan che mat nguoi choi luc
+	#    spawn (loi 20/11 12:30). Dat tren nhu hotspot: y 316-342,
+	#    cach dau nguoi choi ~18px, duoi duong noi mat tien.
+	#  * Hotspot -40 (TREN sao): +24 cu nam cung dai y 550-586 voi
+	#    nhan cua ra (bi clamp day len) nen chong nhau. Dat tren
+	#    sao: y 486-512, cach nhan cua 48px, cach "Goc Che Tao" 54px,
+	#    cach "Co Tu" 88px — sach tren Map001.
+	#  * Cua ra +130 (duoi bieu tuong): gan day map nen bi clamp day
+	#    len y 560-586 luc spawn; khong chong nhan nao sau khi
+	#    hotspot doi len tren.
 	var kind := String(event_data.get("kind", ""))
-	# Nhan cua/goc che tao dat DUOI bieu tuong (+24, nhu hotspot):
-	# dat tren (-120) se chong nhan NPC ke ben (vd "Cua ra Cho Dau
-	# Moi" chong "Ban Than" o (5,4)/(3,5), vong 2 art pass).
-	# Nhan hotspot dat DUOI sao (+24) thay vi tren — sao hotspot o
-	# cung do cao voi nhan NPC nen de tren se chong nhau.
-	var top := -120.0 if kind == "craft" else (24.0 if kind == "hotspot" else -144.0)
-	# Nhan NPC o -144 (khong phai -84 cu): nhan vat anh ve tay cao
-	# 104px, dau o -104 — nhan phai nam tren dau, cach 14px, khong
-	# de len toc. Goc che tao -120 giu nguyen (tren bieu tuong).
-	# Goc che tao dat TREN (-120): dat duoi se roi dung cho nguoi choi
-	# spawn (4,5) — nhan bi nguoi choi che mat (vong 3).
-	# Cua ra dat DUOI bieu tuong (+70, thap hon hotspot +24) de nhan
-	# khong bi Co Tu (8,6) dung ke che mat chu "Đầu" (vong 4: +44
-	# van bi chan Co Tu che vi chu nam dung tam chan cua Co Tu).
+	var top := -40.0 if kind == "hotspot" or kind == "craft" else -170.0
 	if kind == "door":
-		top = 70.0
+		top = 130.0
 	# Nhan NPC ke o chong nhau (vd "Ban Tro" vs "Co Tu"): le cao nhan
 	# theo chan/le cua (tile.x + tile.y) — 2 o ke nhau luon khac chan/le
 	# nen nhan lech nhau 40px doc, khong chong nua.
@@ -171,8 +174,8 @@ func label_rect() -> Rect2:
 	# Kep nhan trong man hinh hien thi (theo camera that, khong dung
 	# canvas transform — luc tao marker transform chua co camera nen
 	# kep sai va nhan o ria map (vd "Cua ra Cho Dau Moi") bi cat).
-	# Meo tren KHONG phai mep man hinh ma la duoi HUD (268px man hinh):
-	# nhan nao vuot qua day se bi panel HUD che mat nua tren.
+	# Meo tren KHONG phai mep man hinh ma la duoi HUD gon (160px man
+	# hinh): nhan nao vuot qua day se bi panel HUD che mat nua tren.
 	var cam := get_viewport().get_camera_2d()
 	if cam != null:
 		var half := get_viewport_rect().size / (2.0 * cam.zoom)

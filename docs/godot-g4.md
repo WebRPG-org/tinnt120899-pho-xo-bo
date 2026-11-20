@@ -412,3 +412,159 @@ khác), nhân vật + nền đều dùng ảnh, code chỉ còn fallback.
   và không có ảnh nền (có guard `ResourceLoader.exists`).
 - Deploy gh-pages: xem §6.4 (script `tools/godot/build_gh_pages.py`).
 - Live link vẫn phục vụ bản 06:12 tới khi deploy này xong.
+
+
+
+## 8. G4 bước 3 — WASD + tọa độ Map003 + artpass3 (20/11 ~13:00–13:20)
+
+> Làm song song 2 luồng: luồng kia sửa code (WASD, DIAMOND_DOWN, art
+> mới sky/ground/night, HUD gọn, nhãn chống chồng) 12:36–13:04; luồng
+> này verify + export + deploy + browser-verify. Không sửa đè code
+> của luồng kia khi thấy file còn đang đổi (kiểm tra mtime trước
+> mỗi bước; xem bài học chạy song song ở cuối §8).
+
+### 8.1 WASD + tọa độ Map003 — XONG
+
+- `player.gd` `_held_dir()`: nghe cả `move_*` (W/A/S/D, đã bind sẵn
+  trong `project.godot`) lẫn `ui_*` (mũi tên) — trước đây chỉ `ui_*`
+  nên W/D không đi được dù hint ghi "WASD / mũi tên" (lỗi 12:20).
+- `iso_map.gd`: `tile_set.tile_layout = TILE_LAYOUT_DIAMOND_DOWN`
+  (không phải STACKED mặc định) — TileMapLayer trước đây vẽ sai chỗ
+  so với marker/người chơi ở Map003+.
+- Test mới `tests/g4_coord_wasd_test.gd`: **16/16 PASS** — action
+  move_* đủ W+Up/S+Down/A+Left/D+Right; W lên (4,4), D sang (5,4),
+  mũi tên trái vẫn đi, giữ W đi liên tục 2 ô; 108 ô Map003 tâm tile
+  ground/object trùng `tile_center`, marker đúng tile của mình.
+- Test mới `tests/g4_artpass3_test.gd` (vòng sửa 12:30): **21/21
+  PASS** — 4 ảnh mới tồn tại, ground sprite mép trên y~280, HUD gọn
+  ≤140, panel điện thoại y ≥ 150, skyfx tồn tại, đổi khung Toi đổi
+  ảnh nền đêm + tint nhân vật tối + night_glow bật + sky_in_image,
+  nhãn Map001 không chồng nhau, về Sáng ảnh nền + tint trở lại.
+
+### 8.2 Hồi quy sau vòng sửa — artpass 57/57 trở lại
+
+- Lúc 12:59 artpass cũ rớt 6/57 + artpass3 rớt 2/21 (HUD 157px,
+  nhãn "Hẻm trọ buổi tối" chồng "Cửa ra Chợ Đầu Mối", zoom 1.4 vs
+  test cũ đòi 1.6, toast y=200 vs [260,280], màu overlay Toi
+  (0.55,0.62,0.9) vs (0.42,0.52,0.85), night spots rỗng ở Map001-002).
+  Nguyên nhân: một phần là code chưa sửa xong (HUD, nhãn), một phần
+  là test cũ lỗi thời so với thay đổi có chủ ý (zoom 1.4 cho thấy
+  trời lúc spawn; overlay Toi nhạt hơn vì ảnh nền đêm đã tối sẵn;
+  spots rỗng vì cửa sổ sáng đã có trong ảnh đêm; toast/phone dời
+  theo HUD gọn). Luồng kia sửa code + cập nhật test 13:01–13:04.
+- Verify lại lúc 13:05: **artpass 57/57**, **artpass3 21/21**;
+  G1 selftest 419/419, G3 playtest 95/95, G2 selftest 87/87,
+  MarketBattle 123/123, battle scene 43/43, battle main 15/15,
+  battle AI 34/34, G1 playtest 14/14, coord+WASD 16/16 — không
+  regression.
+
+### 8.3 Bài học chạy Godot headless (ghi để không tái phạm)
+
+1. **Cache class cũ gây lỗi parse ảo:** log 12:50–12:56 báo
+   `SkyEffects` không tìm thấy, `kind` không khai báo,
+   `skyfx` không resolve — nhưng code đúng. Nguyên nhân:
+   `global_script_class_cache.cfg` cũ, trước lần `--import`
+   12:54 của luồng kia. Sau import, mọi `--check-only` đều
+   exit 0. Gặp lỗi parse lạ: chạy `--headless --import` trước
+   rồi mới kết luận code hỏng.
+2. **Test lỗi giữa `_init` thì engine treo:** test script lỗi
+   runtime trước khi tới `quit()` thì SceneTree chạy idle mãi
+   (0% CPU, không thoát) — tiến trình test đầu tiên của luồng
+   này treo 7 phút vì vậy. Luôn bọc lệnh test headless bằng
+   `timeout 150`.
+3. **Hai luồng Godot cùng lúc:** tiến trình import/check-only
+   của luồng kia + test của luồng này cùng mở một project gây
+   nhiễu (treo, cache cũ). Trước khi chạy Godot, kiểm tra
+   `ps` + mtime file; chỉ chạy khi không còn tiến trình Godot
+   nào khác.
+
+### 8.4 Export + deploy bản mới (luồng này)
+
+- Export 13:07 exit 0: pck mới **6.859.624 byte, SHA
+  `053c5401…`** (từ 4.210.640 — tăng do nướng 4 ảnh JPG mới);
+  wasm không đổi `fc74679e…`. pck chứa `move_up` +
+  `ground_wide`/`sky_wide`.
+- `--headless --quit-after 120` exit 0, không ERROR.
+- Staging rebuild: pck **51 chunk** (từ 32), wasm 293 chunk
+  không đổi; `build_gh_pages.py --verify-only` OK (khớp byte).
+- Deploy gh-pages: xem §8.5 (ghi sau khi push xong).
+- HTTP 200 đủ 4 file (cổng 8164).
+
+### 8.5 Browser-verify WASD thật (Chromium 1255 + swiftshader)
+
+- Script mới `hidden_files/pxb-browser-verify-wasd.py`.
+- **Lỗi verify lần 1:** click tọa độ (360,665) quá sớm — nút DOM
+  `#start-btn` bắt đầu DISABLED ("Đang tải game…"), chỉ enable
+  khi engine tải xong; click sớm không có tác dụng, 5 ảnh đều ở
+  title (byte-identical). Sửa script: đợi
+  `#start-btn:not([disabled])` rồi mới click qua selector, thử
+  lại tối đa 3 lần, xác nhận `window.__pxb_start === true` +
+  overlay ẩn.
+- **Lần 2 — PASS, đã xem ảnh thật:** title biến mất, map Map001
+  vẽ đẹp (trời mây + chim, mặt tiền CÀ PHÊ + đèn lồng, sprite
+  thật); bấm **W** player lên 1 ô (ảnh 18→19); bấm **D** sang
+  cửa (5,4) → title `Chợ Đầu Mối` + toast `Đã sang Chợ Đầu Mối`
+  (ảnh 20); 4× **S** xuống cửa (5,8) → title `Khu Công Nhân` +
+  toast `Đã sang Khu Công Nhân` (ảnh 22) — **DIAMOND_DOWN đúng
+  bằng mắt**: tile/NPC/cửa Map003 thẳng hàng, không lệch. 0 console
+  error, 0 pageerror.
+- Phát hiện cho vòng polish sau (không chặn deploy):
+  1. Map003: nửa trên màn hình (~55%) là nền nâu trơn — Map003
+     không có ảnh trời/đất riêng (chỉ Map001-002 có), tile chỉ
+     phủ nửa dưới.
+  2. HUD tràn chữ: tên map dài ("Khu Công Nhân") bị cắt ở mép
+     panel 452px, chữ chui dưới nút phải.
+  3. Map002/Map003: nhãn 2 cửa ở đáy màn hình chồng/cắt nhau
+     ("Cửa đi Bến Xe Miền Đông" đè "...u Mới") — test chống
+     chồng hiện chỉ kiểm tra Map001.
+
+### 8.6 Vòng sửa artpass3-fix — sau khi tự xem ảnh lần 2 (13:20–13:45)
+
+Live-check lần 2 (ảnh thật Chromium, 6 điểm) chưa đạt: trăng
+không thấy, mặt trời Sáng/Chiều không thấy, tường bên/hàng rào
+code vẫn hiện, nhãn chế tạo đè người chơi, toast đè tiêu đề điện
+thoại. Đã sửa + xem lại ảnh, 6 điểm hết:
+
+- **Trăng/mặt trời vô hình — nguyên nhân y-sort:** `IsoMap`
+  bật `y_sort_enabled`; `SkyEffects` ở y=0 nên bị sprite nền
+  composite (y=23, đục) vẽ đè (cùng họ lỗi NightGlow 12:20).
+  Sửa: `skyfx.z_index = 10` (`iso_map.gd`). Mặt trời Sáng/Chiều
+  dời xuống world y −140 (màn hình ~245, dưới HUD 173) + mặt
+  trời Sáng vàng đậm hơn (trước −195 nằm sau HUD + chìm trong
+  mây trắng). Trăng vẽ bằng code ở world (368,−103) = màn hình
+  (394,297) lúc spawn; trăng trong ảnh đêm đã XÓA (clone vùng
+  trời trái bằng PIL — lần đầu clone nhầm vùng chứa nửa trăng
+  nên trăng vẫn còn, phải vá lại lần 2 bằng vùng trời sạch
+  x 0..400). `sky_night.jpg` cũng xóa trăng (chỉ còn sao + mây
+  đêm) để không có 2 trăng khi đi lên cao. Bài học: ảnh gen
+  không đặt trăng đúng tọa độ được — trăng/mặt trời nên vẽ code.
+- **Tường bên + hàng rào code:** `_draw_side_walls()` và thanh
+  hàng rào `_draw_bottom_fence()` bỏ với Map001 (ảnh composite
+  đã vẽ sẵn tường/nhà 2 bên) — chỉ giữ chậu cây + mèo ngủ.
+  Map002+ giữ nguyên (mặt tiền vẽ code).
+- **Nhãn chế tạo:** +24 → −40 (lên trên icon, như hotspot) —
+  +24 cũ đè đúng chỗ người chơi spawn (4,5).
+- **Toast:** `_open_phone()` ẩn toast — toast y=200 đè lên
+  tiêu đề "Điện thoại" (panel y=190) khi mở điện thoại ngay
+  sau đổi khung.
+- **Test:** artpass3 thêm check mặt trời (`sun_pos.y` trong
+  −160..−100) + trăng (`moon_pos` trong x 100..600, y
+  −300..−20) → **23/23 PASS**; artpass 57/57; hồi quy còn lại
+  giữ nguyên (G1 419/419, G3 95/95, MarketBattle 123/123…).
+- **Staging Map003 — bài học:** map bắt đầu lấy từ
+  `data/maps.json` (`start.map`), KHÔNG phải `current_map_id`
+  (biến này bị `load_map()` ghi đè lúc `_ready`). Lần stage
+  đầu sửa nhầm `current_map_id` nên vẫn hiện Map001; sửa đúng
+  `maps.json` → Map003 hiện đúng.
+
+## 9. Việc tiếp theo — G4 bước 4
+
+1. Polish §8.5: ảnh trời/đất cho Map003+ (hoặc nền mặc định phủ
+   kín màn hình), HUD co chữ/tăng rộng theo tên map, chống chồng
+   nhãn trên mọi map (không chỉ Map001).
+2. G4 online thật: quyết Godot headless dedicated server thay
+   .NET hay chờ máy có dotnet (xem `docs/opensource-engine.md`
+   §3.4).
+3. Lưu giữ sạp + Danh vọng trận MarketBattle vào SaveCloud
+   (logic `data()` đã có, Main chưa nối); animation di chuyển/
+   đánh; chọn đội/vũ khí trước trận.

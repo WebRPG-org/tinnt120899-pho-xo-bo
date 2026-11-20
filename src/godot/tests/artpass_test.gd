@@ -60,7 +60,7 @@ func _on_frame() -> void:
 				_check("input bi khoa khi title mo", _main.player.input_blocked)
 				_check("camera ton tai", _main._camera != null)
 				_check("camera current", _main._camera.is_current())
-				_check("camera zoom 1.6", _main._camera.zoom == Vector2(1.6, 1.6))
+				_check("camera zoom 1.4", _main._camera.zoom == Vector2(1.4, 1.4))
 				_check("HUD trong panel", _main._hud_gold.get_parent().get_parent() is PanelContainer)
 				var has_sprite := false
 				var has_tex := false
@@ -92,12 +92,18 @@ func _on_frame() -> void:
 				_check("lop nhan ton tai", _main._label_layer != null)
 				_check("lop nhan duoi lop HUD", _main._label_layer.get_index() < _main._ui_layer.get_index())
 				# Nhan cua hotspot ngoai man hinh (hs-tro-toi o (10,3),
-				# camera o spawn) phai AN, khong troi vao man hinh.
-				var hs_hidden := true
+				# camera o spawn) phai AN, hoac neu hien thi phai nam
+				# gon trong man hinh (khong troi ra mep). Tu vong
+				# artpass3 (zoom 1.4 + look-up -320) hotspot nay da
+				# vao trong tam nhin luc spawn nen hien la dung.
+				var hs_r := Rect2()
 				for mk in _main.iso_map.markers:
 					if String(mk.event_data.get("id", "")) == "hs-tro-toi":
-						hs_hidden = (mk as Marker).label_screen_rect().size == Vector2.ZERO
-				_check("nhan hotspot ngoai man hinh bi an", hs_hidden)
+						hs_r = (mk as Marker).label_screen_rect()
+				var hs_ok := hs_r.size == Vector2.ZERO or (
+					hs_r.position.x >= 16.0 and hs_r.end.x <= 704.0
+					and hs_r.position.y >= 190.0 and hs_r.end.y <= 1264.0)
+				_check("nhan hotspot ngoai man hinh bi an", hs_ok)
 				_main._on_start_pressed()
 				_check("bam Bat dau -> het title", not _main.title_open)
 				_check("panel title an", not _main._title_panel.visible)
@@ -149,20 +155,24 @@ func _on_frame() -> void:
 			var mat := _main._daynight.material as CanvasItemMaterial
 			_check("overlay che do NHAN", mat != null and mat.blend_mode == CanvasItemMaterial.BLEND_MODE_MUL)
 			_check("khung Sang trang khong doi", _main._daynight.color == Color(1, 1, 1, 1))
-			_check("toast ngay duoi HUD", _main._toast.position.y >= 260 and _main._toast.position.y <= 280)
+			_check("toast ngay duoi HUD", _main._toast.position.y >= 190 and _main._toast.position.y <= 210)
 			_main._advance_frame()
 			_check("khung Chieu vang cam (nhan)", _main._daynight.color == Color(1.0, 0.82, 0.55, 1.0))
 			_main._advance_frame()
-			_check("khung Toi xanh dem dam (nhan)", _main._daynight.color == Color(0.42, 0.52, 0.85, 1.0))
+			# Toi: MUL nhe hon (0.55,0.62,0.9) vi anh nen dem da toi
+			# san — (0.42,0.52,0.85) cu se dap nat anh dem.
+			_check("khung Toi xanh dem dam (nhan)", _main._daynight.color == Color(0.55, 0.62, 0.9, 1.0))
 			_check("Toi: dom sang cua so bat", _main.iso_map.night_glow != null and _main.iso_map.night_glow.visible and _main.iso_map.night_glow.lit)
-			_check("Toi: co diem sang nha", _main.iso_map.night_glow.spots.size() > 0)
+			# Map001-002: diem sang cua so nam TRONG anh nen dem
+			# (sky_in_image), khong con spots code nua.
+			_check("Toi: co diem sang nha", _main.iso_map.night_glow.sky_in_image or _main.iso_map.night_glow.spots.size() > 0)
 			_check("Toi: co trang (moon_on)", _main.iso_map.night_glow.moon_on)
 			_check("Toi: co den duong", _main.iso_map.night_glow.lamps.size() > 0)
 			_state = 3
 		3:
-			# Moi nhan (toa do man hinh 720x1280): nam duoi HUD
-			# (y >= 276) va cach mep >= 16px — kiem tra tren
-			# label_screen_rect() cua lop CanvasLayer.
+			# Moi nhan (toa do man hinh 720x1280): nam duoi HUD gon
+			# (y >= 190, day HUD thuc te ~173) va cach mep >= 16px
+			# — kiem tra tren label_screen_rect() cua lop CanvasLayer.
 			var all_ok := true
 			var worst := ""
 			var any_label := false
@@ -173,7 +183,7 @@ func _on_frame() -> void:
 				any_label = true
 				var ok: bool = r.position.x >= 16.0 - 0.5 \
 					and r.end.x <= 720.0 - 16.0 + 0.5 \
-					and r.position.y >= 276.0 - 0.5 \
+					and r.position.y >= 190.0 - 0.5 \
 					and r.end.y <= 1280.0 - 16.0 + 0.5
 				if not ok:
 					all_ok = false

@@ -28,6 +28,34 @@ var object_layer: TileMapLayer
 var markers: Array = []  # Marker nodes, moi cai giu event_data
 var night_glow: NightGlow = null  # Dom sang cua so khung Toi.
 var nadia_scene: NadiaScene = null  # Canh ve tay kieu Nadia (chi Map001-002).
+var skyfx: SkyEffects = null  # Mat troi + bong dai theo khung.
+var has_night_bg := false  # Map co anh nen dem rieng de doi khi Toi.
+var _bg_sprite: Sprite2D = null  # Anh nen mat tien (Map001) / dai troi (Map002).
+var _bg_day_tex: Texture2D = null
+var _bg_night_tex: Texture2D = null
+var _sky_ext_sprite: Sprite2D = null  # Dai troi mo rong phia tren anh nen (Map001-002).
+var _sky_ext_day_tex: Texture2D = null
+var _sky_ext_night_tex: Texture2D = null
+
+## Doi khung (0 Sang, 1 Chieu, 2 Toi): doi anh nen sang ban dem,
+## cap nhat mat troi/bong dai. Main goi trong _update_daynight
+## (ca khi load map — map moi co the mo o khung Toi).
+func set_frame(f: int) -> void:
+	if _bg_sprite != null:
+		if f == 2 and _bg_night_tex != null:
+			_bg_sprite.texture = _bg_night_tex
+		elif _bg_day_tex != null:
+			_bg_sprite.texture = _bg_day_tex
+	if _sky_ext_sprite != null:
+		if f == 2 and _sky_ext_night_tex != null:
+			_sky_ext_sprite.texture = _sky_ext_night_tex
+			_sky_ext_sprite.scale = Vector2(1.0, 400.0 / 280.0)
+		elif _sky_ext_day_tex != null:
+			_sky_ext_sprite.texture = _sky_ext_day_tex
+			_sky_ext_sprite.scale = Vector2.ONE
+	if skyfx != null:
+		skyfx.frame_idx = f
+		skyfx.queue_redraw()
 
 ## Hash xac dinh (khong random moi lan ve): 0..99.
 static func _hash(tx: int, ty: int) -> int:
@@ -109,6 +137,12 @@ func build(data: Dictionary, marker_script: Script, font: Font, p_label_layer: C
 	var tile_set := TileSet.new()
 	tile_set.tile_size = Vector2i(TILE_W, TILE_H)
 	tile_set.tile_shape = TileSet.TILE_SHAPE_ISOMETRIC
+	# DIAMOND_DOWN (khong phai STACKED mac dinh): chi layout nay
+	# map_to_local moi khop cong thuc iso co dien tile_center_raw
+	# (sai so hang so (32,0) — probe 20/11 12:30). STACKED mac dinh
+	# cho toa do lech kieu staggered, tile ve sai cho tren Map003+
+	# (loi: map_to_local((5,4))=(352,80) trong khi tile_center=(344,462)).
+	tile_set.tile_layout = TileSet.TILE_LAYOUT_DIAMOND_DOWN
 	var source := TileSetAtlasSource.new()
 	source.texture = load(data["atlas_png"])
 	source.texture_region_size = Vector2i(CELL_W, CELL_H)
@@ -132,6 +166,14 @@ func build(data: Dictionary, marker_script: Script, font: Font, p_label_layer: C
 	object_layer.tile_set = tile_set
 	object_layer.y_sort_enabled = true
 	add_child(object_layer)
+	# Can lop tile vao he toa do cua marker/nguoi choi (offset+raw):
+	# voi DIAMOND_DOWN, tam hinh thoi cua o t trong khong gian lop
+	# = map_to_local(t) + (32,16) = raw + (64,16); muon tam do trung
+	# tile_center(t) = offset + raw thi lop phai dich offset-(64,16).
+	# Khong dich thi tile ve lech khoi NPC/nguoi choi tren Map003+
+	# (loi 20/11 12:20; Map001-002 khong thay vi lop bi an).
+	ground_layer.position = offset - Vector2(64, 16)
+	object_layer.position = offset - Vector2(64, 16)
 	for i in range(108):
 		var tx := i % 12
 		var ty := i / 12
@@ -150,16 +192,44 @@ func build(data: Dictionary, marker_script: Script, font: Font, p_label_layer: C
 	# (nhu NadiaScene/marker), khong dung toa do tho cua TileMapLayer.
 	# Composite Map001: 1120x630, day o ground row 0 (+20), dinh -610.
 	# Troi Map002: 1120x280, dinh -330, day -50.
+	# Ban dem doi sang anh dem rieng (set_frame) thay vi chi phu lop
+	# MUL — anh ngay ma phu MUL thi troi van sang, may trang nguyen.
+	_bg_day_tex = null
+	_bg_night_tex = null
+	_bg_sprite = null
 	if map_id == 1 and ResourceLoader.exists("res://art/bg_map001.png"):
-		var bg := Sprite2D.new()
-		bg.texture = load("res://art/bg_map001.png")
-		bg.position = offset + Vector2(0, -295)
-		add_child(bg)
+		_bg_day_tex = load("res://art/bg_map001.png")
+		if ResourceLoader.exists("res://art/bg_map001_night.jpg"):
+			_bg_night_tex = load("res://art/bg_map001_night.jpg")
+		_bg_sprite = Sprite2D.new()
+		_bg_sprite.texture = _bg_day_tex
+		_bg_sprite.position = offset + Vector2(0, -295)
+		add_child(_bg_sprite)
 	elif map_id == 2 and ResourceLoader.exists("res://art/sky_band.png"):
-		var sky := Sprite2D.new()
-		sky.texture = load("res://art/sky_band.png")
-		sky.position = offset + Vector2(0, -190)
-		add_child(sky)
+		_bg_day_tex = load("res://art/sky_band.png")
+		if ResourceLoader.exists("res://art/sky_night.jpg"):
+			_bg_night_tex = load("res://art/sky_night.jpg")
+		_bg_sprite = Sprite2D.new()
+		_bg_sprite.texture = _bg_day_tex
+		_bg_sprite.position = offset + Vector2(0, -190)
+		add_child(_bg_sprite)
+	has_night_bg = _bg_night_tex != null
+	# Dai troi mo rong (sky_wide.jpg 1120x400): noi tren dinh anh nen
+	# de dai troi cao them 400px — anh goc chi co ~60px troi nen camera
+	# nhin len bao nhieu cung khong thay troi luc spawn (loi 20/11 12:30).
+	# Tam: Map001 offset+(0,-810) (dinh -1010..-610), Map002 offset+(0,-530).
+	_sky_ext_day_tex = null
+	_sky_ext_night_tex = null
+	_sky_ext_sprite = null
+	if (map_id == 1 or map_id == 2) and ResourceLoader.exists("res://art/sky_wide.jpg"):
+		_sky_ext_day_tex = load("res://art/sky_wide.jpg")
+		if ResourceLoader.exists("res://art/sky_night.jpg"):
+			_sky_ext_night_tex = load("res://art/sky_night.jpg")
+		_sky_ext_sprite = Sprite2D.new()
+		_sky_ext_sprite.texture = _sky_ext_day_tex
+		var ext_center_y := -810.0 if map_id == 1 else -530.0
+		_sky_ext_sprite.position = offset + Vector2(0, ext_center_y)
+		add_child(_sky_ext_sprite)
 	# Map001-002: canh ve tay kieu Nadia thay tile Kenney (atlas van giu
 	# de logic lop 1 / is_walkable dung so lieu cu, chi an hinh).
 	if map_id == 1 or map_id == 2:
@@ -168,6 +238,16 @@ func build(data: Dictionary, marker_script: Script, font: Font, p_label_layer: C
 		nadia_scene = NadiaScene.new()
 		add_child(nadia_scene)
 		nadia_scene.setup(data, font, offset)
+	# Mat troi + bong dai theo khung (ve tren anh troi, duoi HUD):
+	# them sau NadiaScene (ve tren canh) nhung truoc marker (duoi NPC).
+	skyfx = SkyEffects.new()
+	skyfx.offset = offset
+	# z_index 10: IsoMap bat y-sort — SkyEffects o y=0 se bi Sprite2D
+	# nen composite (y=23, duc) ve DE LEN, che mat troi/trang (cung
+	# ho loi NightGlow 20/11 12:20). z_index dua mat troi/trang/bong
+	# len tren anh nen; chung o tren troi (y<0) nen khong che NPC.
+	skyfx.z_index = 10
+	add_child(skyfx)
 	for e in data["events"]:
 		var m: Node2D = marker_script.new()
 		m.event_data = e
@@ -176,6 +256,7 @@ func build(data: Dictionary, marker_script: Script, font: Font, p_label_layer: C
 		m.position = tile_center(Vector2i(e["tile"][0], e["tile"][1]))
 		add_child(m)
 		markers.append(m)
+	skyfx.setup_npcs(markers)
 	# Dom sang cua so (them sau cung de ve tren lop vat, duoi NPC).
 	night_glow = NightGlow.new()
 	add_child(night_glow)
@@ -184,7 +265,14 @@ func build(data: Dictionary, marker_script: Script, font: Font, p_label_layer: C
 	# (loi 20/11 12:20: trang ve nhung khong thay). z_index dua dom
 	# len tren ca anh nen + NPC (anh sang chong len nhan vat la dung).
 	night_glow.z_index = 10
-	night_glow.set_spots(night_spots())
+	# Map co anh nen dem rieng (1-2): cua so/den long da sang trong
+	# anh — khong ve them cua so sang (de lech vi tri) hay trang/sao
+	# (trung voi trang/sao trong anh); chi giu quang den long.
+	if map_id == 1 or map_id == 2:
+		night_glow.set_spots([])
+		night_glow.sky_in_image = true
+	else:
+		night_glow.set_spots(night_spots())
 	# Goc tren-trai DAI TROI (composite 1120x630, tam o offset+(0,-295)
 	# -> dinh y = offset.y-610, day y = offset.y+20): trang/sao nam
 	# trong dai nay, khong roi xuong mat tien nhu truoc (loi: truyen
@@ -193,60 +281,12 @@ func build(data: Dictionary, marker_script: Script, font: Font, p_label_layer: C
 	night_glow.lamps = [tile_center(Vector2i(10, 10)) + Vector2(10, -28)]
 	queue_redraw()
 
-# Nen dat mo rong quanh map: ca viewport la dat duong am chu khong phai
-# khoang toi (loi xau nhat tren ban live: ~85% man hinh navy trong).
-# Ve truoc TileMapLayer (parent ve truoc children) nen tile map de len tren.
+# Nen dat nay la anh ve tay (ground_wide.jpg, Sprite2D cua Main) thay
+# cho hinh thoi ve bang code — hinh thoi cu co 3 loi: ve bang
+# tile_center_raw (khong cong offset) nen lech he toa do voi marker;
+# duong nhua/via he cheo + cum co lo ra thanh mang zigzag o goc
+# tren-phai va duong o xanh la cheo o khung Toi; duong noi ngang gat
+# voi mat tien (loi 20/11 12:30). Khong ve gi o day nua; neu thieu
+# anh thi nen la mau clear am cua project.
 func _draw() -> void:
-	var tone_a := Color(0.78, 0.70, 0.55, 1)  # Dat kho am
-	var tone_b := Color(0.72, 0.64, 0.49, 1)
-	var tone_c := Color(0.66, 0.58, 0.44, 1)  # Diem toi hon (co dai)
-	var road := Color(0.42, 0.40, 0.38, 1)  # Duong nhua
-	var sidewalk := Color(0.82, 0.78, 0.66, 1)  # Via he
-	var grass := Color(0.32, 0.48, 0.22, 1)
-	for ty in range(-12, 25):
-		for tx in range(-14, 27):
-			var c := tile_center_raw(Vector2i(tx, ty))
-			var half_w := TILE_W / 2.0
-			var half_h := TILE_H / 2.0
-			var diamond := PackedVector2Array([
-				c + Vector2(0, -half_h), c + Vector2(half_w, 0),
-				c + Vector2(0, half_h), c + Vector2(-half_w, 0),
-			])
-			var tone := tone_a if (tx + ty) % 2 == 0 else tone_b
-			if (tx * 7 + ty * 13) % 7 == 0:
-				tone = tone_c
-			# Duong nhua chay doc (tx - ty khong doi) + via he 2 ben,
-			# de nen duoi map khong con la be tron (20/11 10:30).
-			var diff := (tx - ty) % 16
-			if diff == 0 or diff == 1:
-				tone = road
-			elif diff == 2 or diff == 15:
-				tone = sidewalk
-			draw_colored_polygon(diamond, tone)
-			# Vach trang giua duong (net dut).
-			if (diff == 0 or diff == 1) and (tx + ty) % 4 == 0:
-				draw_colored_polygon(PackedVector2Array([
-					c + Vector2(0, -4), c + Vector2(8, 0),
-					c + Vector2(0, 4), c + Vector2(-8, 0),
-				]), Color(0.92, 0.90, 0.82, 0.9))
-			# Chi tiet nho (chi tren nen dat, khong ve tren duong/via he).
-			if diff != 0 and diff != 1 and diff != 2 and diff != 15:
-				var h := _hash(tx, ty)
-				if h < 8:
-					# Cum co: 3 net ngan.
-					for k in range(3):
-						var base := c + Vector2(-6 + k * 6, 4)
-						draw_line(base, base + Vector2(-2 + k, -8), grass, 2.0)
-				elif h < 12:
-					# Hoa dai: 3 cham hong/vang/trang.
-					var petal := [Color(0.95, 0.55, 0.65, 1), Color(0.98, 0.85, 0.3, 1), Color(0.95, 0.95, 0.9, 1)]
-					for k in range(3):
-						draw_circle(c + Vector2(-8 + k * 8, -2 + (k % 2) * 5), 2.5, petal[k])
-				elif h < 16:
-					# Soi da nho.
-					draw_circle(c + Vector2(-5, 2), 3.0, Color(0.6, 0.58, 0.54, 1))
-					draw_circle(c + Vector2(5, -1), 2.0, Color(0.68, 0.66, 0.62, 1))
-				elif h < 19:
-					# La roi.
-					draw_circle(c + Vector2(-4, 3), 2.5, Color(0.85, 0.55, 0.2, 0.9))
-					draw_circle(c + Vector2(6, -3), 2.5, Color(0.75, 0.45, 0.15, 0.9))
+	pass

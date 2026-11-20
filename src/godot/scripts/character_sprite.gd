@@ -29,6 +29,12 @@ var _tex: Sprite2D = null
 var _t := 0.0
 var _body_style: StyleBoxFlat = null
 
+## Tint theo khung gio (Main goi khi doi khung): Toi toi di de nhan
+## vat khong "dan" tren nen toi — lop MUL nhan deu ca anh nen nhung
+## anh PNG nhan vat sang hon nen dat nen can toi them 1 nac nua.
+func set_tint(c: Color) -> void:
+	modulate = c
+
 func setup(cfg: Dictionary) -> void:
 	shirt = cfg.get("shirt", shirt)
 	pants = cfg.get("pants", pants)
