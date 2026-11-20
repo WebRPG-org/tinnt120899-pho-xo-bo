@@ -27,7 +27,10 @@ body {
    Panel la DOM (nen am + hoa tiet + chu) nam TREN canvas WebGL
    (opaque, dai den) — z-index 10, pointer-events none de khong
    chan click vao game. Chu MAU TOI tren nen kem am (khong phai chu
-   sang tren dai den nhu vong 6 cu). */
+   sang tren dai den nhu vong 6 cu). Vong 6: nen panel la tranh ve
+   tay title_bg.jpg (JS set backgroundImage, co lop kem mo de chu
+   doc duoc) thay cho caro be trong — gradient caro chi la fallback
+   truoc khi anh ve. */
 .side-panel {
 	position: fixed;
 	top: 0;
@@ -47,6 +50,7 @@ body {
 		repeating-linear-gradient(45deg, rgba(120, 84, 40, 0.08) 0 2px, transparent 2px 26px),
 		repeating-linear-gradient(-45deg, rgba(120, 84, 40, 0.08) 0 2px, transparent 2px 26px),
 		linear-gradient(180deg, #f7e8c8 0%, #e8d3a8 45%, #c9a86a 100%);
+	background-size: auto, auto, auto;
 	z-index: 10;
 	pointer-events: none;
 }
@@ -71,18 +75,39 @@ body {
    tren desktop (loi 20/11 11:40) — nut HTML lon, o giua man hinh,
    bam la vao game ngay. Overlay phu kin man hinh luc tai game,
    hien tien do tai; engine chay xong nut sang len. Click: dat
-   window.__pxb_start = true (Godot poll 4 lan/giay) + an overlay. */
+   window.__pxb_start = true (Godot poll 4 lan/giay) + an overlay.
+   Vong 6: overlay la tranh ve tay title_bg.jpg (JS set, cover)
+   thay cho caro be trong; the tieu de la panel giay mo o duoi man
+   hinh (doc duoc tren moi nen anh), 2 nhan vat chibi dung 2 ben
+   nut (anh char_player.png / char_banthan.png, JS set src). */
 #start-overlay {
 	position: fixed;
 	inset: 0;
 	z-index: 30;
 	display: flex;
 	justify-content: center;
-	align-items: center;
+	align-items: flex-end;
+	padding-bottom: 6vh;
 	background:
 		repeating-linear-gradient(45deg, rgba(120, 84, 40, 0.07) 0 2px, transparent 2px 26px),
 		repeating-linear-gradient(-45deg, rgba(120, 84, 40, 0.07) 0 2px, transparent 2px 26px),
 		linear-gradient(180deg, #f7e8c8 0%, #e8d3a8 45%, #c9a86a 100%);
+	background-size: auto, auto, auto;
+}
+
+.start-row {
+	display: flex;
+	align-items: flex-end;
+	justify-content: center;
+	gap: 18px;
+	max-width: 96vw;
+}
+
+.title-char {
+	height: 170px;
+	width: auto;
+	filter: drop-shadow(0 6px 6px rgba(43, 33, 24, 0.45));
+	flex: none;
 }
 
 .start-card {
@@ -90,6 +115,11 @@ body {
 	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
 	color: #5a3d1e;
 	max-width: 90vw;
+	background: rgba(255, 247, 230, 0.94);
+	border: 3px solid #8b5a2b;
+	border-radius: 20px;
+	padding: 24px 34px 28px;
+	box-shadow: 0 10px 24px rgba(43, 33, 24, 0.35);
 }
 
 .start-title {
@@ -223,11 +253,15 @@ body {
 		<div class="side-panel left">PHỐ XÔ BỒ<br><span>Game xã hội 2.5D Việt Nam<br>18 khu phố • Làm việc • Buôn bán • Kết bạn</span></div>
 		<div class="side-panel right">CHƠI TRÊN ĐIỆN THOẠI<br><span>Game thiết kế cho màn hình dọc.<br>Trên máy tính, kéo cửa sổ hẹp lại sẽ đẹp hơn.</span></div>
 		<div id="start-overlay">
-			<div class="start-card">
-				<div class="start-title">PHỐ XÔ BỒ</div>
-				<div class="start-sub">Game xã hội 2.5D Việt Nam<br>18 khu phố • Làm việc • Buôn bán • Kết bạn</div>
-				<button id="start-btn" disabled>Đang tải game…</button>
-				<div class="start-note">Bấm nút để vào game — chơi trên điện thoại là đẹp nhất</div>
+			<div class="start-row">
+				<img id="title-char-player" class="title-char" alt="">
+				<div class="start-card">
+					<div class="start-title">PHỐ XÔ BỒ</div>
+					<div class="start-sub">Game xã hội 2.5D Việt Nam<br>18 khu phố • Làm việc • Buôn bán • Kết bạn</div>
+					<button id="start-btn" disabled>Đang tải game…</button>
+					<div class="start-note">Bấm nút để vào game — chơi trên điện thoại là đẹp nhất</div>
+				</div>
+				<img id="title-char-banthan" class="title-char" alt="">
 			</div>
 		</div>
 		<canvas id="canvas">
@@ -245,9 +279,11 @@ body {
 		</div>
 
 		<script>
-/* Gh-pages build: wasm + pck tách chunk base64, ráp lại qua fetch giả. */
+/* Gh-pages build: wasm + pck + anh tieu de tach chunk base64, rap lai qua fetch gia. */
 const WASM_PARTS = ['wasm/part-000.txt', 'wasm/part-001.txt', 'wasm/part-002.txt', 'wasm/part-003.txt', 'wasm/part-004.txt', 'wasm/part-005.txt', 'wasm/part-006.txt', 'wasm/part-007.txt', 'wasm/part-008.txt', 'wasm/part-009.txt', 'wasm/part-010.txt', 'wasm/part-011.txt', 'wasm/part-012.txt', 'wasm/part-013.txt', 'wasm/part-014.txt', 'wasm/part-015.txt', 'wasm/part-016.txt', 'wasm/part-017.txt', 'wasm/part-018.txt', 'wasm/part-019.txt', 'wasm/part-020.txt', 'wasm/part-021.txt', 'wasm/part-022.txt', 'wasm/part-023.txt', 'wasm/part-024.txt', 'wasm/part-025.txt', 'wasm/part-026.txt', 'wasm/part-027.txt', 'wasm/part-028.txt', 'wasm/part-029.txt', 'wasm/part-030.txt', 'wasm/part-031.txt', 'wasm/part-032.txt', 'wasm/part-033.txt', 'wasm/part-034.txt', 'wasm/part-035.txt', 'wasm/part-036.txt', 'wasm/part-037.txt', 'wasm/part-038.txt', 'wasm/part-039.txt', 'wasm/part-040.txt', 'wasm/part-041.txt', 'wasm/part-042.txt', 'wasm/part-043.txt', 'wasm/part-044.txt', 'wasm/part-045.txt', 'wasm/part-046.txt', 'wasm/part-047.txt', 'wasm/part-048.txt', 'wasm/part-049.txt', 'wasm/part-050.txt', 'wasm/part-051.txt', 'wasm/part-052.txt', 'wasm/part-053.txt', 'wasm/part-054.txt', 'wasm/part-055.txt', 'wasm/part-056.txt', 'wasm/part-057.txt', 'wasm/part-058.txt', 'wasm/part-059.txt', 'wasm/part-060.txt', 'wasm/part-061.txt', 'wasm/part-062.txt', 'wasm/part-063.txt', 'wasm/part-064.txt', 'wasm/part-065.txt', 'wasm/part-066.txt', 'wasm/part-067.txt', 'wasm/part-068.txt', 'wasm/part-069.txt', 'wasm/part-070.txt', 'wasm/part-071.txt', 'wasm/part-072.txt', 'wasm/part-073.txt', 'wasm/part-074.txt', 'wasm/part-075.txt', 'wasm/part-076.txt', 'wasm/part-077.txt', 'wasm/part-078.txt', 'wasm/part-079.txt', 'wasm/part-080.txt', 'wasm/part-081.txt', 'wasm/part-082.txt', 'wasm/part-083.txt', 'wasm/part-084.txt', 'wasm/part-085.txt', 'wasm/part-086.txt', 'wasm/part-087.txt', 'wasm/part-088.txt', 'wasm/part-089.txt', 'wasm/part-090.txt', 'wasm/part-091.txt', 'wasm/part-092.txt', 'wasm/part-093.txt', 'wasm/part-094.txt', 'wasm/part-095.txt', 'wasm/part-096.txt', 'wasm/part-097.txt', 'wasm/part-098.txt', 'wasm/part-099.txt', 'wasm/part-100.txt', 'wasm/part-101.txt', 'wasm/part-102.txt', 'wasm/part-103.txt', 'wasm/part-104.txt', 'wasm/part-105.txt', 'wasm/part-106.txt', 'wasm/part-107.txt', 'wasm/part-108.txt', 'wasm/part-109.txt', 'wasm/part-110.txt', 'wasm/part-111.txt', 'wasm/part-112.txt', 'wasm/part-113.txt', 'wasm/part-114.txt', 'wasm/part-115.txt', 'wasm/part-116.txt', 'wasm/part-117.txt', 'wasm/part-118.txt', 'wasm/part-119.txt', 'wasm/part-120.txt', 'wasm/part-121.txt', 'wasm/part-122.txt', 'wasm/part-123.txt', 'wasm/part-124.txt', 'wasm/part-125.txt', 'wasm/part-126.txt', 'wasm/part-127.txt', 'wasm/part-128.txt', 'wasm/part-129.txt', 'wasm/part-130.txt', 'wasm/part-131.txt', 'wasm/part-132.txt', 'wasm/part-133.txt', 'wasm/part-134.txt', 'wasm/part-135.txt', 'wasm/part-136.txt', 'wasm/part-137.txt', 'wasm/part-138.txt', 'wasm/part-139.txt', 'wasm/part-140.txt', 'wasm/part-141.txt', 'wasm/part-142.txt', 'wasm/part-143.txt', 'wasm/part-144.txt', 'wasm/part-145.txt', 'wasm/part-146.txt', 'wasm/part-147.txt', 'wasm/part-148.txt', 'wasm/part-149.txt', 'wasm/part-150.txt', 'wasm/part-151.txt', 'wasm/part-152.txt', 'wasm/part-153.txt', 'wasm/part-154.txt', 'wasm/part-155.txt', 'wasm/part-156.txt', 'wasm/part-157.txt', 'wasm/part-158.txt', 'wasm/part-159.txt', 'wasm/part-160.txt', 'wasm/part-161.txt', 'wasm/part-162.txt', 'wasm/part-163.txt', 'wasm/part-164.txt', 'wasm/part-165.txt', 'wasm/part-166.txt', 'wasm/part-167.txt', 'wasm/part-168.txt', 'wasm/part-169.txt', 'wasm/part-170.txt', 'wasm/part-171.txt', 'wasm/part-172.txt', 'wasm/part-173.txt', 'wasm/part-174.txt', 'wasm/part-175.txt', 'wasm/part-176.txt', 'wasm/part-177.txt', 'wasm/part-178.txt', 'wasm/part-179.txt', 'wasm/part-180.txt', 'wasm/part-181.txt', 'wasm/part-182.txt', 'wasm/part-183.txt', 'wasm/part-184.txt', 'wasm/part-185.txt', 'wasm/part-186.txt', 'wasm/part-187.txt', 'wasm/part-188.txt', 'wasm/part-189.txt', 'wasm/part-190.txt', 'wasm/part-191.txt', 'wasm/part-192.txt', 'wasm/part-193.txt', 'wasm/part-194.txt', 'wasm/part-195.txt', 'wasm/part-196.txt', 'wasm/part-197.txt', 'wasm/part-198.txt', 'wasm/part-199.txt', 'wasm/part-200.txt', 'wasm/part-201.txt', 'wasm/part-202.txt', 'wasm/part-203.txt', 'wasm/part-204.txt', 'wasm/part-205.txt', 'wasm/part-206.txt', 'wasm/part-207.txt', 'wasm/part-208.txt', 'wasm/part-209.txt', 'wasm/part-210.txt', 'wasm/part-211.txt', 'wasm/part-212.txt', 'wasm/part-213.txt', 'wasm/part-214.txt', 'wasm/part-215.txt', 'wasm/part-216.txt', 'wasm/part-217.txt', 'wasm/part-218.txt', 'wasm/part-219.txt', 'wasm/part-220.txt', 'wasm/part-221.txt', 'wasm/part-222.txt', 'wasm/part-223.txt', 'wasm/part-224.txt', 'wasm/part-225.txt', 'wasm/part-226.txt', 'wasm/part-227.txt', 'wasm/part-228.txt', 'wasm/part-229.txt', 'wasm/part-230.txt', 'wasm/part-231.txt', 'wasm/part-232.txt', 'wasm/part-233.txt', 'wasm/part-234.txt', 'wasm/part-235.txt', 'wasm/part-236.txt', 'wasm/part-237.txt', 'wasm/part-238.txt', 'wasm/part-239.txt', 'wasm/part-240.txt', 'wasm/part-241.txt', 'wasm/part-242.txt', 'wasm/part-243.txt', 'wasm/part-244.txt', 'wasm/part-245.txt', 'wasm/part-246.txt', 'wasm/part-247.txt', 'wasm/part-248.txt', 'wasm/part-249.txt', 'wasm/part-250.txt', 'wasm/part-251.txt', 'wasm/part-252.txt', 'wasm/part-253.txt', 'wasm/part-254.txt', 'wasm/part-255.txt', 'wasm/part-256.txt', 'wasm/part-257.txt', 'wasm/part-258.txt', 'wasm/part-259.txt', 'wasm/part-260.txt', 'wasm/part-261.txt', 'wasm/part-262.txt', 'wasm/part-263.txt', 'wasm/part-264.txt', 'wasm/part-265.txt', 'wasm/part-266.txt', 'wasm/part-267.txt', 'wasm/part-268.txt', 'wasm/part-269.txt', 'wasm/part-270.txt', 'wasm/part-271.txt', 'wasm/part-272.txt', 'wasm/part-273.txt', 'wasm/part-274.txt', 'wasm/part-275.txt', 'wasm/part-276.txt', 'wasm/part-277.txt', 'wasm/part-278.txt', 'wasm/part-279.txt', 'wasm/part-280.txt', 'wasm/part-281.txt', 'wasm/part-282.txt', 'wasm/part-283.txt', 'wasm/part-284.txt', 'wasm/part-285.txt', 'wasm/part-286.txt', 'wasm/part-287.txt', 'wasm/part-288.txt', 'wasm/part-289.txt', 'wasm/part-290.txt', 'wasm/part-291.txt', 'wasm/part-292.txt'];
 const PCK_PARTS = ['pck/part-000.txt', 'pck/part-001.txt', 'pck/part-002.txt', 'pck/part-003.txt', 'pck/part-004.txt', 'pck/part-005.txt', 'pck/part-006.txt', 'pck/part-007.txt', 'pck/part-008.txt', 'pck/part-009.txt', 'pck/part-010.txt', 'pck/part-011.txt', 'pck/part-012.txt', 'pck/part-013.txt', 'pck/part-014.txt', 'pck/part-015.txt', 'pck/part-016.txt', 'pck/part-017.txt', 'pck/part-018.txt', 'pck/part-019.txt', 'pck/part-020.txt', 'pck/part-021.txt', 'pck/part-022.txt', 'pck/part-023.txt', 'pck/part-024.txt', 'pck/part-025.txt', 'pck/part-026.txt', 'pck/part-027.txt', 'pck/part-028.txt', 'pck/part-029.txt', 'pck/part-030.txt', 'pck/part-031.txt', 'pck/part-032.txt', 'pck/part-033.txt', 'pck/part-034.txt', 'pck/part-035.txt', 'pck/part-036.txt', 'pck/part-037.txt', 'pck/part-038.txt', 'pck/part-039.txt', 'pck/part-040.txt', 'pck/part-041.txt', 'pck/part-042.txt', 'pck/part-043.txt', 'pck/part-044.txt', 'pck/part-045.txt', 'pck/part-046.txt', 'pck/part-047.txt', 'pck/part-048.txt', 'pck/part-049.txt', 'pck/part-050.txt'];
+const IMG_PARTS = {"title_bg.jpg": ["img/title_bg.jpg/part-000.txt"], "char_player.png": ["img/char_player.png/part-000.txt", "img/char_player.png/part-001.txt"], "char_banthan.png": ["img/char_banthan.png/part-000.txt", "img/char_banthan.png/part-001.txt"]};
+const IMG_TYPES = {"title_bg.jpg": "image/jpeg", "char_player.png": "image/png", "char_banthan.png": "image/png"};
 async function assemble(parts) {
   const bufs = await Promise.all(parts.map(async (u) => {
     const t = await (await fetch(u)).text();
@@ -271,12 +307,16 @@ window.fetch = function (input, init) {
     if (!EMBEDDED[name]) EMBEDDED[name] = assemble(parts);
     return EMBEDDED[name].then((bytes) => new Response(bytes, { headers: { 'Content-Type': name === 'index.wasm' ? 'application/wasm' : 'application/octet-stream' } }));
   }
+  if (name in IMG_PARTS) {
+    if (!EMBEDDED[name]) EMBEDDED[name] = assemble(IMG_PARTS[name]);
+    return EMBEDDED[name].then((bytes) => new Response(bytes, { headers: { 'Content-Type': IMG_TYPES[name] } }));
+  }
   return _fetch(input, init);
 };
 </script>
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":6843288,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":6849684,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 
@@ -303,6 +343,59 @@ const engine = new Engine(GODOT_CONFIG);
 	}
 	layoutSidePanels();
 	window.addEventListener('resize', layoutSidePanels);
+
+	// Vong 6 — Anh tieu de ve tay + nhan vat: fetch file anh (local:
+	// file that ben canh index.html; gh-pages: loader chen vao
+	// index.html chan fetch va tra byte rap tu chunk). Loi thi thoi
+	// (gi gradient caro fallback), khong chan game.
+	function loadTitleArt() {
+		fetch('title_bg.jpg').then((r) => {
+			if (!r.ok) throw new Error('no title art');
+			return r.blob();
+		}).then((b) => {
+			const u = URL.createObjectURL(b);
+			startOverlay.style.backgroundImage =
+				'linear-gradient(180deg, rgba(43,33,24,0.10) 0%, rgba(43,33,24,0.0) 45%, rgba(43,33,24,0.55) 100%), url("' + u + '")';
+			startOverlay.style.backgroundSize = 'cover, cover';
+			startOverlay.style.backgroundPosition = 'center, center';
+			for (const p of [leftPanel, rightPanel]) {
+				p.style.backgroundImage =
+					'linear-gradient(180deg, rgba(247,232,200,0.88) 0%, rgba(232,211,168,0.88) 100%), url("' + u + '")';
+				p.style.backgroundSize = 'cover, cover';
+				p.style.backgroundPosition = 'center, center';
+			}
+		}).catch(() => {});
+		for (const [id, file] of [['title-char-player', 'char_player.png'], ['title-char-banthan', 'char_banthan.png']]) {
+			fetch(file).then((r) => {
+				if (!r.ok) throw new Error('no char art');
+				return r.blob();
+			}).then((b) => {
+				const img = document.getElementById(id);
+				if (img) img.src = URL.createObjectURL(b);
+			}).catch(() => {});
+		}
+	}
+	loadTitleArt();
+
+	// Vong 6 — Watchdog nut tai (loi 20/11 15:18): onProgress toi
+	// 100% nhung engine.startGame().then() chi chay sau khi wasm
+	// compile + khoi dong xong, nen nut ket o "Dang tai game… 100%"
+	// (disabled) neu buoc sau cham; lan tai dau ket 15% >20s cung
+	// khong co tin hieu gi. Sua: dat 100% doi nhan thanh
+	// "Dang khoi dong game…", va neu >12s khong co tien do thi bao
+	// "Dang tai cham — mang yeu, van dang tai…" de nguoi choi biet
+	// game chua chet. .then() tat watchdog + doi nhan thanh BAT DAU.
+	let lastProgressAt = Date.now();
+	let stallTimer = null;
+	function armStallWatchdog() {
+		if (stallTimer) return;
+		stallTimer = setInterval(() => {
+			if (!startBtn.disabled) { clearInterval(stallTimer); stallTimer = null; return; }
+			if (Date.now() - lastProgressAt > 12000) {
+				startBtn.textContent = 'Đang tải chậm — mạng yếu, vẫn đang tải…';
+			}
+		}, 3000);
+	}
 
 	startBtn.addEventListener('click', () => {
 		window.__pxb_start = true;
@@ -343,6 +436,7 @@ const engine = new Engine(GODOT_CONFIG);
 
 	function displayFailureNotice(err) {
 		console.error(err);
+		if (stallTimer) { clearInterval(stallTimer); stallTimer = null; }
 		if (err instanceof Error) {
 			setStatusNotice(err.message);
 		} else if (typeof err === 'string') {
@@ -393,18 +487,25 @@ const engine = new Engine(GODOT_CONFIG);
 		}
 	} else {
 		setStatusMode('progress');
+		armStallWatchdog();
 		engine.startGame({
 			'onProgress': function (current, total) {
+				lastProgressAt = Date.now();
 				if (current > 0 && total > 0) {
 					statusProgress.value = current;
 					statusProgress.max = total;
-					startBtn.textContent = 'Đang tải game… ' + Math.round(current / total * 100) + '%';
+					if (current >= total) {
+						startBtn.textContent = 'Đang khởi động game…';
+					} else {
+						startBtn.textContent = 'Đang tải game… ' + Math.round(current / total * 100) + '%';
+					}
 				} else {
 					statusProgress.removeAttribute('value');
 					statusProgress.removeAttribute('max');
 				}
 			},
 		}).then(() => {
+			if (stallTimer) { clearInterval(stallTimer); stallTimer = null; }
 			setStatusMode('hidden');
 			startBtn.disabled = false;
 			startBtn.textContent = '▶  BẮT ĐẦU CHƠI';
