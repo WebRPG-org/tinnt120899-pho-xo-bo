@@ -156,7 +156,9 @@ func _test_defaults_and_base_url() -> void:
 		PxbOnline.default_data() == {"base_url": "http://localhost:5000",
 			"online": false, "last_health_check_at": 0, "last_health_ok": false,
 			"outbox": [], "sent_gift_keys": [], "last_balance": {},
-			"last_balance_at": 0})
+			"last_balance_at": 0,
+			"ws_url": "ws://localhost:8765", "ws_player_id": "",
+			"ws_display_name": "Người chơi", "ws_chat_log": []})
 
 
 func _test_health() -> void:

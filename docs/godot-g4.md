@@ -1547,12 +1547,110 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
   (Pages rebuild vài phút sau push; verify trên đã
   thấy bản mới ngay).
 
-### 21.8 Việc tiếp theo
+### 22. G4 bước 7 — Nối PxbOnline sang server Godot — XONG (20/11 ~17:45–18:30)
 
-- G4 bước 7 (xem §20) — nối PxbOnline sang server Godot.
-- Dọn thư mục version pck/wasm cũ trên gh-pages định kỳ
-  (mỗi deploy thêm ~7MB).
-- Câu hỏi thiết kế mở (từ vòng 7): nhãn hotspot động
-  "buổi" không còn báo khung tốt nhất (sparkle + toast
-  vẫn báo) — quyết có đổi tên hotspot trung tính
-  ("Hẻm trọ") hay không.
+### 22.1 Code mới
+
+- `scripts/pxb_online.gd` (G4 bước 7): client WebSocket protocol
+  v1 dùng `WebSocketMultiplayerPeer` (đã chứng minh nối được
+  PxbServer trong test server). `connect_ws(url, player_id,
+  name)` (mặc định `ws://localhost:8765`, id tự sinh
+  `pxb-<ms>-<rand>`, tên "Người chơi"), `disconnect_ws()` (gửi
+  bye), `poll_ws()` (gọi từ `_process` khi vào cây + gọi tay
+  trong test), `send_ws_chat(text)` (chặn ở client: chưa nối /
+  rỗng / >500 ký tự), signal `ws_status_changed` /
+  `ws_presence_changed` / `ws_chat_received`. Nhắn khi socket
+  CONNECTED mới gửi hello; welcome → `ws_connected=true` +
+  presence; error server → ngắt. Gói rác không phải JSON object
+  chặn trước khi parse (tránh log ERROR như server). KHÔNG tự
+  reconnect — bấm nối lại. `data()`/`from_data()` thêm `ws_url`
+  / `ws_player_id` / `ws_display_name` / `ws_chat_log` (lọc bẩn:
+  tên cắt 30, tin quá dài/thiếu tên thì bỏ, log tối đa 100).
+  Đường HTTP .NET giữ nguyên làm fallback — WS chỉ chat +
+  presence, KHÔNG quyết tiền/đồ.
+- `main.gd`: nối 3 signal WS lúc `_ready`; `_online_text()`
+  thêm "• Chat: …"; tab Tin nhắn thêm khối `ws_phone_text()`
+  (trạng thái + người online + 8 tin gần nhất) vào cuối
+  `_social_text()` + nút "Kết nối chat online (server local)"
+  / khi đã nối: ô nhập `LineEdit` (placeholder "Nhắn chat
+  online…", tối đa 500) + "Gửi chat" + "Ngắt kết nối chat";
+  tin/presence mới → làm tươi tab nếu đang mở, không thì báo
+  số chưa đọc; nối xong toast "Đã nối chat online (N người)".
+- `tests/g2_online_test.gd`: cập nhật check
+  `default_data()` (thêm 4 key WS mới).
+
+### 22.2 Test mới + hồi quy
+
+- `tests/g4_online_ws_client_test.gd`: **49/49 PASS** — socket
+  thật qua loopback cổng 18767: A+B hello + welcome +
+  presence 2 người, chat A → B nhận đúng player_id/tên + A
+  nhận echo, B ngắt → presence về 1, gửi khi chưa nối / chat
+  rỗng / chat 501 ký tự bị chặn ở client (server không nhận
+  thêm tin), chat đúng 500 ký tự gửi được + echo về, nối cổng
+  đóng thì không kết nối, `data()`/`from_data()` giữ ws_url +
+  id + tên + log chat (tên dài cắt 30, tin bẩn bỏ), reset_state
+  ngắt WS + xóa log + server về 0 người.
+- Hồi quy đầy đủ, 0 FAIL: G2 online 91/91, server 37/37, G1
+  selftest 419/419, G2 selftest 87/87, G3 playtest 95/95,
+  artpass 60/60, artpass3 24/24, artpass4 19/19, artpass5
+  17/17, artpass7 25/25, artpass8 18/18, polish 18/18,
+  v6_overlay 16/16, coord+WASD 16/16, ui_wiring 37/37 +
+  71/71, MarketBattle 123/123, battle scene 43/43, battle AI
+  34/34, battle main 15/15, battle save 31/31, G1 playtest
+  14/14, hotspot 37/37, phonehub 66/66, jobs 56/56,
+  economy+education 92/92, inventory+crafting 78/78,
+  social+titles+story 102/102, tools 155/155, savecloud
+  69/69. Smoke `--headless --quit-after 120` exit 0.
+- Export web exit 0: pck **6.880.296 byte, SHA `d9e5dc31…`**
+  (trước `73ae78df…`), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ 3 file
+  (cổng 8166).
+
+### 22.3 Browser-verify chat WS thật (Chromium 1255 + swiftshader, 720×1280)
+
+- Server thật `server_main.gd` cổng 8765 + game `src/godot-build/`
+  cổng 8166, script `hidden_files/pxb-browser-verify-ws.py` +
+  `pxb-browser-verify-ws-send.py`, ảnh
+  `hidden_files/pxb-browser-verify-2026-11-20/30–34`:
+  engine-start OK, start-clicked OK, P mở điện thoại OK,
+  **0 console error, 0 pageerror**.
+- Bấm "Kết nối chat online (server local)": server log ghi
+  `+ peer … (pxb-1795172114960-…)`, toast game "Đã nối chat
+  online (1 người).", ô nhập + nút "Gửi chat" / "Ngắt kết
+  nối chat" hiện đúng.
+- Gõ "Xin chao Cho Dau Moi!" + bấm "Gửi chat": server log
+  ghi `chat [Người chơi] Xin chao Cho Dau Moi!` — tin nhắn
+  gõ trong game tới server thật; ô nhập xóa sau khi gửi.
+  (Echo về `ws_chat_log` đã chứng minh bằng headless 49/49;
+  trên ảnh trình duyệt tin nằm cuối vùng nội dung cần cuộn
+  nên chưa thấy trực tiếp — xem hạn chế dưới.)
+
+### 22.4 Hạn chế còn lại (không chặn)
+
+- Khối chat online nằm CUỐI nội dung tab Tin nhắn (sau danh
+  bạ ~38 dòng) — muốn xem tin phải cuộn vùng nội dung; cân
+  nhắc đưa khối chat lên trên danh bạ hoặc tự cuộn tới cuối
+  khi có tin mới (vòng polish sau).
+- Server WS hiện chỉ chạy local (localhost:8765, chưa có địa
+  chỉ công khai) — người chơi khác máy chưa nối được; cần
+  deploy server + cấu hình `ws_url` khi có máy chủ.
+- Chưa có auth (player_id tự khai) + chưa giới hạn tốc độ
+  chat + chưa lưu lịch sử cho client mới vào (ghi từ §17.5).
+
+## 23. Việc tiếp theo — G4 bước 8
+
+1. **Deploy gh-pages bản bước 7** (pck `d9e5dc31…`, theo
+   scheme versioned §21.3: push chunk version mới trước,
+   `index.html` cuối cùng; kiểm tra head gh-pages trước mỗi
+   lô để không đè deploy artpass8 nếu còn đang chạy).
+2. Quyền lợi giữ sạp áp vào Economy (`hold_benefits` đã có,
+   Main chưa gọi); animation di chuyển/đánh trận; chọn đội/vũ
+   khí trước trận; `can_challenge` ở demo.
+3. Tile riêng Map003–018 (đang PROVISIONAL); camera zoom trận
+   MarketBattle (lưới đang nhỏ giữa màn hình); nhãn tên đấu sĩ
+   trong trận còn hơi chồng nhau (ảnh browser-verify 13).
+4. Khối chat online trong tab Tin nhắn: đưa lên trên / tự
+   cuộn tới tin mới (xem §22.4); server WS: auth player_id,
+   giới hạn tốc độ chat, lịch sử cho client mới vào.
+5. Dọn thư mục version pck/wasm cũ trên gh-pages định kỳ
+   (mỗi deploy thêm ~7MB).

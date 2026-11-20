@@ -139,6 +139,7 @@ var _phone_footer: Label
 var _phone_actions: VBoxContainer
 var _phone_act_scroll: ScrollContainer
 var _phone_content_scroll: ScrollContainer  # Vong 4: cao 224 de hien tron dong Chi Le.
+var _phone_chat_input: LineEdit = null  # G4 buoc 7: o nhap chat WS (tab Tin nhan).
 var _phone_today: Label  # Khoi "Hom nay" lap khoang trong dien thoai.
 var _phone_tab_buttons := {}
 
@@ -210,6 +211,11 @@ func _create_systems() -> void:
 	add_child(tools)
 	online = PxbOnline.new()
 	add_child(online)
+	# G4 buoc 7: chat WS — tin/presence moi thi lam tuoi dien
+	# thoai neu dang mo tab Tin nhan, khong thi bao so chua doc.
+	online.ws_chat_received.connect(_on_ws_chat_received)
+	online.ws_presence_changed.connect(_on_ws_presence_changed)
+	online.ws_status_changed.connect(_on_ws_status_changed)
 
 func _map_by_id(map_id: int) -> Dictionary:
 	for m in maps_data["maps"]:
@@ -759,11 +765,24 @@ func _refresh_phone() -> void:
 	_clear_phone_actions()
 	match phonehub.current_tab:
 		PxbPhoneHub.TAB_DANH_BA_TIN_NHAN:
-			_phone_content.text = _social_text()
+			_phone_content.text = _social_text() + "\n\n" + online.ws_phone_text()
 			for rel in social.all_relations():
 				var pid := String((rel as Dictionary).get("person_id", ""))
 				var label := "Trò chuyện: %s" % String((rel as Dictionary).get("display_name", pid))
 				_phone_action(label, _on_interact_pressed.bind(pid))
+			# G4 buoc 7: chat online qua server Godot (WS) — nut
+			# noi/ngat + o nhap + nut gui, nam trong tab Tin nhan.
+			if online.is_ws_connected():
+				_phone_chat_input = LineEdit.new()
+				_phone_chat_input.placeholder_text = "Nhắn chat online…"
+				_phone_chat_input.custom_minimum_size = Vector2(580, 56)
+				_phone_chat_input.max_length = PxbOnline.WS_MAX_CHAT_LEN
+				_phone_actions.add_child(_phone_chat_input)
+				_phone_action("Gửi chat", _on_ws_send_pressed)
+				_phone_action("Ngắt kết nối chat", _on_ws_disconnect_pressed)
+			else:
+				_phone_chat_input = null
+				_phone_action("Kết nối chat online (server local)", _on_ws_connect_pressed)
 		PxbPhoneHub.TAB_NGAN_HANG:
 			_wallet_to_economy()
 			_phone_content.text = "Tiền mặt: %sđ\nTiết kiệm: %sđ (lãi 0,5%%/tháng game)\nĐiểm tín dụng: %d" % [
@@ -974,9 +993,9 @@ func _story_text() -> String:
 
 func _online_text() -> String:
 	var st := savecloud.sync_status()
-	return "Online: %s • Đồng bộ: %s (%s)" % [
+	return "Online: %s • Đồng bộ: %s (%s) • Chat: %s" % [
 		("có mạng" if online.is_online() else "ngoại tuyến"),
-		String(st["status"]), String(st["detail"])]
+		String(st["status"]), String(st["detail"]), online.ws_status_text()]
 
 
 # --- Hanh dong tu dien thoai (tra Dictionary de test goi truc tiep) ---
@@ -1363,6 +1382,69 @@ func _on_load_pressed(slot: int) -> void:
 
 func _on_check_online_pressed() -> void:
 	_check_online()
+
+
+# --- Chat online WS (G4 buoc 7) ---
+
+# Tin chat moi: dang mo tab Tin nhan thi lam tuoi ngay (tin hien
+# trong _phone_content), khong thi bao so chua doc o tab.
+func _on_ws_chat_received(_msg: Dictionary) -> void:
+	if phone_open and phonehub.current_tab == PxbPhoneHub.TAB_DANH_BA_TIN_NHAN:
+		_refresh_phone()
+	else:
+		phonehub.notify(PxbPhoneHub.TAB_DANH_BA_TIN_NHAN)
+
+
+# Presence doi: lam tuoi nhu tin chat (danh sach online trong
+# _phone_content thay doi).
+func _on_ws_presence_changed(_players: Array) -> void:
+	if phone_open and phonehub.current_tab == PxbPhoneHub.TAB_DANH_BA_TIN_NHAN:
+		_refresh_phone()
+	else:
+		phonehub.notify(PxbPhoneHub.TAB_DANH_BA_TIN_NHAN)
+
+
+# Trang thai WS doi: chi bao khi vua noi xong (ngat thi im — nut
+# "Ngat ket noi chat" nguoi choi tu bam da ro).
+func _on_ws_status_changed(connected: bool) -> void:
+	if connected:
+		show_toast("Đã nối chat online (%d người)." % online.ws_players.size())
+	_refresh_phone()
+
+
+func _on_ws_connect_pressed() -> void:
+	var res: Dictionary = online.connect_ws()
+	if bool(res.get("ok", false)):
+		show_toast("Đang nối chat online…")
+	else:
+		show_toast("Không nối được chat (%s)." % String(res.get("reason", "")))
+	_refresh_phone()
+
+
+func _on_ws_disconnect_pressed() -> void:
+	online.disconnect_ws()
+	show_toast("Đã ngắt chat online.")
+	_refresh_phone()
+
+
+func _on_ws_send_pressed() -> void:
+	if _phone_chat_input == null:
+		return
+	var text := _phone_chat_input.text
+	var res: Dictionary = online.send_ws_chat(text)
+	if bool(res.get("ok", false)):
+		_phone_chat_input.text = ""
+	else:
+		match String(res.get("reason", "")):
+			"chua-ket-noi-ws":
+				show_toast("Chưa nối chat online.")
+			"chat-trong":
+				show_toast("Chưa nhập gì để gửi.")
+			"chat-qua-dai":
+				show_toast("Tin nhắn quá dài (tối đa 500 ký tự).")
+			_:
+				show_toast("Không gửi được chat.")
+	_refresh_phone()
 
 
 func _on_upload_pressed(slot: int) -> void:

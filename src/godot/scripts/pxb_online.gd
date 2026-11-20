@@ -1,10 +1,17 @@
 class_name PxbOnline
 extends Node
-## Phố Xô Bồ — PXB_Online (Godot G2, bước 6/17).
+## Phố Xô Bồ — PXB_Online (Godot G2, bước 6/17 + G4 bước 7).
 ## Port trung thực PXB_Online.js (src/nadia/www/js/plugins/
 ## PXB_Online.js) — client online: health check, số dư + tặng tiền
 ## qua server .NET, hàng đợi outbox khi offline; trade / đấu giá /
 ## công ty=guild CHƯA có endpoint nên luôn trả server-chua-co-endpoint.
+##
+## G4 bước 7 — CHAT ONLINE QUA SERVER GODOT (protocol v1, xem
+## server/pxb_server.gd): client WebSocket trong game này, dùng
+## chung giao thức hello/chat/presence với PxbServer. Đường HTTP
+## .NET giữ nguyên làm fallback cho tới khi WS ổn định (quyết
+## docs/godot-g4.md §12.5). WS chỉ là chat + presence — KHÔNG
+## quyết tiền/đồ của ai (sổ cái vẫn qua HTTP .NET như cũ).
 ##
 ## - Endpoint THẬT đã có trên server (src/server/src/Program.cs):
 ##   GET  /health
@@ -75,6 +82,19 @@ const OUTBOX_MAX := 50
 const SENT_KEYS_MAX := 200
 # Số dư cache chỉ để hiển thị, hết hạn sau 60 giây — PROVISIONAL.
 const BALANCE_CACHE_MS := 60000
+# URL mặc định của server chat Godot (chạy local; URL deploy thật
+# chưa có — server chưa có địa chỉ công khai).
+const DEFAULT_WS_URL := "ws://localhost:8765"
+# Phiên bản giao thức WS — phải khớp PxbServer.PROTOCOL_VERSION.
+const WS_PROTOCOL_VERSION := 1
+# Chat WS tối đa 500 ký tự — khớp giới hạn server (PxbServer).
+const WS_MAX_CHAT_LEN := 500
+# Chat log WS giữ 100 tin gần nhất — khớp server (CHAT_LOG_MAX).
+const WS_CHAT_LOG_MAX := 100
+# Tên hiển thị WS tối đa 30 ký tự — khớp server (cắt ở server).
+const WS_MAX_NAME_LEN := 30
+# player_id WS tối đa 64 ký tự — khớp server.
+const WS_MAX_PLAYER_ID_LEN := 64
 
 # Lý do trả về khi server chưa có endpoint — dùng chung cho trade /
 # đấu giá / công ty=guild để event / QC bắt được bằng test tĩnh.
@@ -84,6 +104,12 @@ const REASON_NO_ENDPOINT := "server-chua-co-endpoint"
 signal online_changed(is_online: bool)
 ## Phát khi số món trong outbox đổi (thêm món chờ / gửi xong món).
 signal outbox_changed(count: int)
+## Phát khi trạng thái kết nối chat WS đổi (G4 bước 7).
+signal ws_status_changed(connected: bool)
+## Phát khi danh sách người online đổi (welcome / presence).
+signal ws_presence_changed(players: Array)
+## Phát khi nhận 1 tin chat WS (kể cả echo tin của chính mình).
+signal ws_chat_received(msg: Dictionary)
 
 ## Đường gọi HTTP có thể thay thế (test headless gán stub Callable
 ## trả Dictionary đồng bộ). Rỗng = dùng HTTPRequest thật.
@@ -98,6 +124,19 @@ var sent_gift_keys: Array = [] # IdempotencyKey đã gửi (chống gửi lần 
 var last_balance: Dictionary = {} # {player_id, cash_vnd, savings_vnd} cache để hiển thị
 var last_balance_at: int = 0 # epoch-ms lúc lấy số dư gần nhất
 
+# --- Chat online qua server Godot (G4 bước 7, protocol v1) ---
+var ws_url: String = DEFAULT_WS_URL
+var ws_player_id: String = "" # rỗng → tự sinh "pxb-<ms>-<rand>" lúc nối
+var ws_display_name: String = "Người chơi"
+var ws_connected: bool = false # đã hello + nhận welcome chưa
+var ws_peer_id: int = 0 # peer_id server cấp trong welcome (0 = chưa có)
+var ws_players: Array = [] # presence hiện tại [{peer_id, player_id, name}]
+var ws_chat_log: Array = [] # 100 tin chat gần nhất {player_id, name, text, at_ms}
+var ws_last_error: String = "" # lý do lỗi WS gần nhất ("" = chưa lỗi)
+var ws_peer: WebSocketMultiplayerPeer = null # null = chưa nối / đã ngắt
+var _ws_hello_sent: bool = false # đã gửi hello sau khi socket nối chưa
+var _ws_was_connecting: bool = false # đang trong quá trình nối (để báo lỗi)
+
 
 static func default_data() -> Dictionary:
 	return {
@@ -109,6 +148,10 @@ static func default_data() -> Dictionary:
 		"sent_gift_keys": [],
 		"last_balance": {},
 		"last_balance_at": 0,
+		"ws_url": DEFAULT_WS_URL,
+		"ws_player_id": "",
+		"ws_display_name": "Người chơi",
+		"ws_chat_log": [],
 	}
 
 
@@ -387,6 +430,272 @@ func outbox_count() -> int:
 	return outbox.size()
 
 
+# --- Chat online qua server Godot (G4 bước 7, protocol v1) ---
+# Client WebSocket dùng WebSocketMultiplayerPeer (đã chứng minh nối
+# được PxbServer trong tests/g4_online_server_test.gd). Node này
+# thêm _process để tự poll khi đã vào cây scene (Main add_child);
+# test headless gọi poll_ws() tay cũng được (poll 2 lần/frame
+# không sao — xem PxbServer.poll).
+# Trình tự: connect_ws() tạo socket (bất đồng bộ) → poll_ws thấy
+# CONNECTED thì gửi hello → server trả welcome → ws_connected=true
+# + presence. Gửi chat chỉ sau welcome. Ngắt (bye / mất kết nối /
+# server trả error) thì ws_connected=false + xóa presence.
+# CHƯA có auth (player_id do client tự khai — chỉ dùng nội bộ,
+# giống server); KHÔNG tự reconnect — người chơi bấm nối lại.
+
+func _process(_delta: float) -> void:
+	if ws_peer != null:
+		poll_ws()
+
+
+# Đặt trạng thái WS + phát signal chỉ khi giá trị đổi (giống
+# _set_online của đường HTTP).
+func _set_ws_connected(value: bool) -> void:
+	if ws_connected == value:
+		return
+	ws_connected = value
+	ws_status_changed.emit(value)
+
+
+# Sinh player_id WS mới khi chưa có: "pxb-<epoch-ms>-<rand>".
+static func new_ws_player_id() -> String:
+	return "pxb-%d-%d" % [_now_ms(), randi_range(0, 999999999)]
+
+
+# Nối tới server chat WS. url / player_id / tên rỗng thì dùng giá
+# trị đã lưu (mặc định ws://localhost:8765, id tự sinh, tên
+# "Người chơi"). Trả {ok:true, url, player_id} khi đã tạo socket
+# (kết nối bất đồng bộ — hello gửi khi CONNECTED, xem poll_ws),
+# {ok:false, reason} khi đã nối rồi / URL sai / tạo socket lỗi.
+# Không chặn: gọi xong trả ngay, Main báo "Đang nối…".
+func connect_ws(url: String = "", player_id: String = "",
+		display_name: String = "") -> Dictionary:
+	if ws_peer != null and ws_connected:
+		return {"ok": false, "reason": "ws-da-ket-noi"}
+	if ws_peer != null:
+		return {"ok": false, "reason": "ws-dang-noi"}
+	var target_url := url.strip_edges() if not url.is_empty() else ws_url
+	if target_url.is_empty():
+		return {"ok": false, "reason": "thieu-ws-url"}
+	ws_url = target_url
+	if not player_id.is_empty():
+		ws_player_id = player_id.strip_edges()
+	if ws_player_id.is_empty() or ws_player_id.length() > WS_MAX_PLAYER_ID_LEN:
+		ws_player_id = new_ws_player_id()
+	if not display_name.is_empty():
+		ws_display_name = display_name.strip_edges()
+	if ws_display_name.is_empty():
+		ws_display_name = "Người chơi"
+	if ws_display_name.length() > WS_MAX_NAME_LEN:
+		ws_display_name = ws_display_name.substr(0, WS_MAX_NAME_LEN)
+	ws_last_error = ""
+	_ws_hello_sent = false
+	_ws_was_connecting = true
+	var peer := WebSocketMultiplayerPeer.new()
+	var err: Error = peer.create_client(ws_url)
+	if err != OK:
+		ws_last_error = "ws-khong-tao-duoc"
+		_ws_was_connecting = false
+		return {"ok": false, "reason": "ws-khong-tao-duoc", "error": err}
+	ws_peer = peer
+	return {"ok": true, "url": ws_url, "player_id": ws_player_id}
+
+
+# Ngắt chat WS: gửi bye nếu đã hello, đóng socket, xóa presence +
+# trạng thái. Gọi khi chưa nối cũng an toàn.
+func disconnect_ws() -> void:
+	if ws_peer != null:
+		if ws_connected and _ws_hello_sent:
+			ws_peer.put_packet(JSON.stringify({"type": "bye"}).to_utf8_buffer())
+		ws_peer.close()
+		ws_peer = null
+	_ws_hello_sent = false
+	_ws_was_connecting = false
+	ws_peer_id = 0
+	ws_players = []
+	_set_ws_connected(false)
+	ws_presence_changed.emit(ws_players)
+
+
+# Đã nối chat WS (đã hello + nhận welcome) chưa.
+func is_ws_connected() -> bool:
+	return ws_connected
+
+
+# Một nhịp mạng WS: poll socket + xử lý hết gói đang chờ + gửi
+# hello ngay khi socket vừa CONNECTED. Gọi từ _process (node trong
+# cây) hoặc tay trong test.
+func poll_ws() -> void:
+	if ws_peer == null:
+		return
+	ws_peer.poll()
+	var status := ws_peer.get_connection_status()
+	if status == MultiplayerPeer.CONNECTION_CONNECTED:
+		if not _ws_hello_sent:
+			_ws_hello_sent = true
+			_ws_was_connecting = false
+			ws_peer.put_packet(JSON.stringify({
+				"type": "hello",
+				"protocol": WS_PROTOCOL_VERSION,
+				"player_id": ws_player_id,
+				"name": ws_display_name,
+			}).to_utf8_buffer())
+		while ws_peer.get_available_packet_count() > 0:
+			var raw: PackedByteArray = ws_peer.get_packet()
+			_handle_ws_packet(raw)
+		return
+	if status == MultiplayerPeer.CONNECTION_DISCONNECTED:
+		# Nối thất bại (cổng đóng / server sập) hoặc mất kết nối
+		# giữa chừng: báo ngoại tuyến, dọn socket để bấm nối lại.
+		if _ws_was_connecting:
+			ws_last_error = "ws-khong-noi-duoc"
+		ws_peer = null
+		_ws_hello_sent = false
+		_ws_was_connecting = false
+		ws_peer_id = 0
+		ws_players = []
+		_set_ws_connected(false)
+		ws_presence_changed.emit(ws_players)
+
+
+# Nhận 1 gói thô từ server: chặn rác không phải JSON object trước
+# khi parse (giống PxbServer — tránh JSON.parse_string in ERROR).
+func _handle_ws_packet(raw: PackedByteArray) -> void:
+	var text := raw.get_string_from_utf8().strip_edges()
+	if not text.begins_with("{") or not text.ends_with("}"):
+		return
+	var parsed: Variant = JSON.parse_string(text)
+	if not (parsed is Dictionary):
+		return
+	_handle_ws_message(parsed)
+
+
+# Xử lý 1 gói JSON hợp lệ từ server (welcome / presence / chat /
+# error). Gói lạ thì bỏ lặng — client độc không phá được phòng.
+func _handle_ws_message(msg: Dictionary) -> void:
+	match String(msg.get("type", "")):
+		"welcome":
+			ws_peer_id = int(msg.get("peer_id", 0))
+			var plist: Variant = msg.get("players", [])
+			ws_players = _clean_presence(plist)
+			_set_ws_connected(true)
+			ws_presence_changed.emit(ws_players)
+		"presence":
+			var plist2: Variant = msg.get("players", [])
+			ws_players = _clean_presence(plist2)
+			ws_presence_changed.emit(ws_players)
+		"chat":
+			var chat_msg := _clean_chat_message(msg)
+			if chat_msg.is_empty():
+				return
+			ws_chat_log.append(chat_msg)
+			while ws_chat_log.size() > WS_CHAT_LOG_MAX:
+				ws_chat_log.pop_front()
+			ws_chat_received.emit(chat_msg)
+		"error":
+			ws_last_error = String(msg.get("reason", "ws-loi-server"))
+			disconnect_ws()
+		_:
+			pass
+
+
+# Chuẩn hóa presence server gửi: chỉ giữ {peer_id, player_id,
+# name} hợp lệ, xếp theo peer_id tăng dần.
+static func _clean_presence(raw_list: Variant) -> Array:
+	var out: Array = []
+	if not (raw_list is Array):
+		return out
+	for item in raw_list:
+		if not (item is Dictionary):
+			continue
+		var pid := String(item.get("player_id", ""))
+		var pname := String(item.get("name", ""))
+		if pid.is_empty() or pname.is_empty():
+			continue
+		out.append({
+			"peer_id": int(item.get("peer_id", 0)),
+			"player_id": pid,
+			"name": pname,
+		})
+	out.sort_custom(func(a, b) -> bool: return int(a["peer_id"]) < int(b["peer_id"]))
+	return out
+
+
+# Chuẩn hóa 1 tin chat server gửi: bỏ tin thiếu tên/text hoặc
+# text quá dài (server đáng lẽ đã lọc — client lọc lại cho chắc).
+static func _clean_chat_message(msg: Dictionary) -> Dictionary:
+	var pname := String(msg.get("name", ""))
+	var text := String(msg.get("text", ""))
+	if pname.is_empty() or text.is_empty() or text.length() > WS_MAX_CHAT_LEN:
+		return {}
+	return {
+		"player_id": String(msg.get("player_id", "")),
+		"name": pname,
+		"text": text,
+		"at_ms": _clean_ms(msg.get("at_ms", 0)),
+	}
+
+
+# Gửi 1 tin chat lên server (phải đã nối + đã welcome). Trả
+# {ok:true} khi đã gửi (server broadcast lại, kể cả cho chính
+# mình — tin hiện trong log khi nhận echo), {ok:false, reason}
+# khi chưa nối / chat rỗng / chat quá 500 ký tự / socket lỗi.
+func send_ws_chat(text: String) -> Dictionary:
+	if not ws_connected or ws_peer == null:
+		return {"ok": false, "reason": "chua-ket-noi-ws"}
+	var clean := text.strip_edges()
+	if clean.is_empty():
+		return {"ok": false, "reason": "chat-trong"}
+	if clean.length() > WS_MAX_CHAT_LEN:
+		return {"ok": false, "reason": "chat-qua-dai"}
+	var err: Error = ws_peer.put_packet(JSON.stringify(
+		{"type": "chat", "text": clean}).to_utf8_buffer())
+	if err != OK:
+		return {"ok": false, "reason": "ws-gui-that-bai", "error": err}
+	return {"ok": true}
+
+
+# Trạng thái chat WS để hiển thị (Cài đặt / Tin nhắn).
+func ws_status_text() -> String:
+	if ws_connected:
+		return "đã nối (%d người online)" % ws_players.size()
+	if ws_peer != null:
+		return "đang nối…"
+	if not ws_last_error.is_empty():
+		return "ngoại tuyến (%s)" % ws_last_error
+	return "ngoại tuyến"
+
+
+# Danh sách người online để hiển thị (tối đa 10 tên).
+func ws_presence_text() -> String:
+	if ws_players.is_empty():
+		return "(chưa thấy ai online)"
+	var names: Array[String] = []
+	for p in ws_players.slice(0, 10):
+		names.append(String((p as Dictionary).get("name", "")))
+	var extra := ""
+	if ws_players.size() > 10:
+		extra = " +%d người nữa" % (ws_players.size() - 10)
+	return " • ".join(names) + extra
+
+
+# Khối chat online để hiển thị trong tab Tin nhắn: trạng thái +
+# người online + 8 tin gần nhất (mới nhất cuối).
+func ws_phone_text() -> String:
+	var lines: Array[String] = [
+		"Chat online — %s" % ws_status_text(),
+		"Đang online: %s" % ws_presence_text(),
+	]
+	if ws_chat_log.is_empty():
+		lines.append("(chưa có tin nhắn nào — nối chat rồi nhắn thử)")
+	else:
+		for m in ws_chat_log.slice(maxi(0, ws_chat_log.size() - 8)):
+			lines.append("%s: %s" % [
+				String((m as Dictionary).get("name", "?")),
+				String((m as Dictionary).get("text", ""))])
+	return "\n".join(lines)
+
+
 # --- Trade / đấu giá / công ty=guild: server CHƯA có endpoint ---
 # Mọi hàm dưới đây LUÔN trả {ok:false, reason:"server-chua-co-endpoint"}.
 # KHÔNG bịa endpoint, KHÔNG giả vờ thành công, KHÔNG tự quyết
@@ -454,6 +763,10 @@ func data() -> Dictionary:
 		"sent_gift_keys": sent_gift_keys.duplicate(),
 		"last_balance": last_balance.duplicate(),
 		"last_balance_at": last_balance_at,
+		"ws_url": ws_url,
+		"ws_player_id": ws_player_id,
+		"ws_display_name": ws_display_name,
+		"ws_chat_log": ws_chat_log.duplicate(true),
 	}
 
 
@@ -508,6 +821,33 @@ func from_data(d: Dictionary) -> void:
 				"savings_vnd": _clean_money(raw_balance.get("savings_vnd", 0)),
 			}
 	last_balance_at = _clean_ms(d.get("last_balance_at", 0))
+	# WS chat (G4 bước 7): dữ liệu bẩn bị bỏ giống HTTP — URL rỗng
+	# → mặc định; id rỗng / quá dài → rỗng (sinh lại lúc nối);
+	# tên rỗng → "Người chơi", dài → cắt 30; tin chat thiếu tên/
+	# text hoặc quá 500 ký tự → bỏ; log giữ tối đa 100 tin.
+	var raw_ws_url: Variant = d.get("ws_url", DEFAULT_WS_URL)
+	ws_url = String(raw_ws_url) if raw_ws_url is String \
+		and not String(raw_ws_url).is_empty() else DEFAULT_WS_URL
+	var raw_ws_id: Variant = d.get("ws_player_id", "")
+	ws_player_id = String(raw_ws_id) if raw_ws_id is String \
+		and not String(raw_ws_id).is_empty() \
+		and String(raw_ws_id).length() <= WS_MAX_PLAYER_ID_LEN else ""
+	var raw_ws_name: Variant = d.get("ws_display_name", "Người chơi")
+	ws_display_name = String(raw_ws_name) if raw_ws_name is String \
+		and not String(raw_ws_name).is_empty() else "Người chơi"
+	if ws_display_name.length() > WS_MAX_NAME_LEN:
+		ws_display_name = ws_display_name.substr(0, WS_MAX_NAME_LEN)
+	ws_chat_log = []
+	var raw_log: Variant = d.get("ws_chat_log", [])
+	if raw_log is Array:
+		for raw_msg in raw_log:
+			if ws_chat_log.size() >= WS_CHAT_LOG_MAX:
+				break
+			if not (raw_msg is Dictionary):
+				continue
+			var clean_msg := _clean_chat_message(raw_msg)
+			if not clean_msg.is_empty():
+				ws_chat_log.append(clean_msg)
 
 
 # Mốc thời gian bẩn → 0 (âm / không phải số).
@@ -553,7 +893,9 @@ static func _clean_outbox_item(raw_item: Variant) -> Dictionary:
 
 
 # Reset state hiện tại về mặc định (event/test dùng để bắt đầu lại).
+# Ngắt WS trước (nếu đang nối) rồi mới xóa trạng thái.
 func reset_state() -> bool:
+	disconnect_ws()
 	var d := default_data()
 	base_url = String(d["base_url"])
 	online = bool(d["online"])
@@ -563,4 +905,9 @@ func reset_state() -> bool:
 	sent_gift_keys = []
 	last_balance = {}
 	last_balance_at = int(d["last_balance_at"])
+	ws_url = String(d["ws_url"])
+	ws_player_id = String(d["ws_player_id"])
+	ws_display_name = String(d["ws_display_name"])
+	ws_chat_log = []
+	ws_last_error = ""
 	return true
