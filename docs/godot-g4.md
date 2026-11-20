@@ -1925,3 +1925,278 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
 - Caveat cho parent: **chưa kiểm live bằng cloud browser
   trên URL thật** (Chromium local không mở được github.io)
   — parent cần chạy kiểm live cuối trước khi báo user.
+
+## 25. Vòng sửa 9+ — di chuyển hỏng trên live (20/11 ~22:05–23:30)
+
+### 25.1 Kiểm live — tải xong, di chuyển vẫn hỏng
+
+- Kiểm live cloud browser 22:05–22:13 (bản gh-pages sau khi
+  cron bổ sung 293 chunk wasm): **tải ĐÃ SỬA XONG** — nút
+  "Bắt đầu chơi" bật sau ~20 giây, vào game được ngay,
+  điện thoại/chat (P), đổi khung F, nhãn Sáng/Chiều/Tối
+  đều đúng. Nhưng **di chuyển VẪN HỎNG**: nhấn D/d/mũi
+  tên phải nhiều lần + tap vào đất trống phía phải đều
+  không nhúc nhích, nhân vật đứng yên tuyệt đối. P và F
+  vẫn nhận nên kết luận ban đầu là "không phải focus/
+  bàn phím — lỗi logic di chuyển".
+- **Đính chính §24.5:** câu "giữ D + 10 tap D đi được tới
+  cuối TẠP HÓA" là SAI — so ảnh a9-03 (sau giữ D) với
+  a9-04 (sau 10 tap D) thì nhân vật ở YÊN MỘT CHỖ; toàn
+  bộ di chuyển đến từ 3 giây GIỮ D, 10 tap không thêm ô
+  nào. a9-05 (sau tap-to-move) cũng y nguyên. Verify cũ
+  không so từng ảnh nên đã kết luận sai.
+
+### 25.2 Tái hiện + tìm gốc — 2 lỗi thật, 1 hiểu lầm
+
+- Đối chiếu bản live (22:15): `versions.json` live vẫn
+  wasm `fc74679e` / pck `d9e5dc31`; live `index.html` SHA
+  `c82cf663…` = staging; pck local SHA `d9e5dc31…` = live.
+  **Bản live ĐANG CHẠY code di chuyển mới nhất — không
+  phải pck cũ.** Gốc không ở deploy.
+- Test headless mới `tests/g4_move_input_test.gd` (đi qua
+  pipeline input thật `Input.parse_input_event`, khác test
+  cũ chỉ gọi `_try_step`/`action_press` trực tiếp):
+  keydown D 1 lần → (5,5) ✓; nhấn-nhả nhanh D → (6,5) ✓;
+  mũi tên phải → (7,5) ✓; F/P ✓. **Nhấn 1 lần = 1 ô
+  ĐÃ CHẠY ở tầng logic.**
+- **Lỗi 1 — tap-to-move chết khi chạm ô bị chặn:** tap
+  vào ô không đi được (tường biên/mặt tiền) thì code cũ
+  (`elif iso_map.is_walkable(tile)`) im lặng bỏ qua,
+  không đi đâu cả. Tap (1150,750) của verify cũ ánh xạ
+  tới ô (11,2) — cột biên bị chặn. Người chơi tap "đất
+  trống phía phải" rất dễ rơi vào ô biên/mặt tiền vì
+  nền vẽ tay không khớp lưới tile.
+- **Lỗi 2 — nhấn nhanh trong lúc đang tween bị mất:**
+  `press_dir` cũ chỉ bước ngay khi `not _moving`; phím
+  nhấn trong 0,15s tween (keyup đến trước khi tween
+  xong) thì held bị xóa, bước đó mất hẳn. Nhấn dồn dập
+  kiểu trình duyệt cloud (nhấn-nhả nhanh liên tiếp)
+  sẽ mất bước.
+- **Hiểu lầm — tọa độ chuột headless:** `parse_input_event`
+  ở headless NHÂN ~20x tọa độ chuột (probe: gửi
+  (462,1022) → tới `_unhandled_input` thành
+  (8959,20440)) — do stretch headless, KHÔNG phải lỗi
+  game. Nên tap-to-move headless phải gọi thẳng
+  `_unhandled_input`; đường GUI thật kiểm bằng trình
+  duyệt. Probe GUI cũng cho thấy KHÔNG Control nào
+  nuốt click tại điểm tap (`_daynight` đã
+  `MOUSE_FILTER_IGNORE` từ trước; `gui_get_hovered_control`
+  null).
+- Focus đã loại trừ: `web_shell.html` vòng 7 đã focus
+  canvas khi bấm Bắt đầu + mọi `pointerdown`
+  (dòng 389–398, 430); thí nghiệm local đo
+  `activeElement = canvas` trước và sau khi bấm start.
+  Camera smoothing (`position_smoothing_enabled`, tốc độ
+  10) làm nền trôi chậm sau mỗi bước — đo độ dịch nền
+  ngay sau bước sẽ ĐÁNH GIÁ THẤP số ô đã đi; phải so
+  vị trí nhân vật/NPC, không so nền.
+
+### 25.3 Sửa gốc — queue bước + tap tới ô gần nhất
+
+- `player.gd` — hàng `_queued_dirs: Array[Vector2i]`
+  (tối đa 8): `press_dir` khi đang tween thì append
+  hướng vào hàng thay vì bỏ; `_process` khi tween xong
+  thì `pop_front` và bước ngay. `release_dir` cố tình
+  KHÔNG xóa hàng (nhấn-nhả nhanh vẫn đủ 1 ô). `place()`
+  xóa hàng. Giữ phím vẫn đi liên tục như cũ (poll
+  `_held_dir`); nhấn 1 lần = đi đúng 1 ô, nhấn dồn
+  3 lần trong 1 tween = đủ 3 ô.
+- `main.gd` — `_nearest_walkable(t)` (BFS trên lưới
+  12x9): tap vào ô không đi được thì đi tới ô đi được
+  GẦN NHẤT thay vì đứng yên. Nhánh tap trong
+  `_unhandled_input` đổi từ `elif is_walkable` thành
+  `else` + fallback này (tương tác NPC/hotspot/cửa
+  khi đứng kề vẫn như cũ).
+- Test mới `tests/g4_move_input_test.gd` (9 checks):
+  spawn; 3 phím D nhấn nhanh → (7,5) [queue]; nhấn D
+  1 lần → (8,5); mũi tên phải → (9,5); tap (9,7);
+  tap ô biên (11,2) → (10,2) gần nhất; F → Chiều;
+  P → mở điện thoại. **9/9 PASS** (lần chạy đầu 7/9
+  do kỳ vọng test sai: giữ phím 25 frame đi 2 ô là
+  đúng thiết kế đi liên tục — đã sửa test thành
+  nhấn-nhả nhanh).
+- Thí nghiệm trình duyệt `check_move_single.py`
+  (staging = bản live, viewport 1920×1000, ảnh
+  `m1-01…m1-08`): nút bật sau 24,0s; `activeElement`
+  = canvas trước/sau start; **ERRORS: 0, FAILED: 0**;
+  3 lần nhấn D riêng lẻ → nhân vật từ spawn (4,5)
+  tới khu Cô Tư (~(7,5)); mũi tên phải +1 ô; **tap
+  (1050,700) ĐI ĐƯỢC** (~2,5 ô lên phải); tap
+  (1150,750) KHÔNG đi (ô biên (11,2) — chính lỗi
+  đã sửa bằng fallback); phím F đổi khung Chiều.
+
+### 25.4 Export + deploy — XONG (20/11 ~22:55–23:06)
+
+- Export Godot (exit 0): pck mới 6.891.804 byte SHA
+  `7f8ef9bbdfe0225a…` (52 chunk versioned), wasm không đổi
+  `fc74679e…`. Staging rebuild bằng `build_gh_pages.py`:
+  VERIFY OK (pck/wasm/img khớp byte, loader cứng đủ
+  marker, icon inline đủ 3 data URI).
+- **Writer song song:** lượt cron hourly 23:00 đã đẩy
+  main trước — commit `08a0de9c` (23:01:34 +07, 5 paths:
+  `player.gd`, `main.gd`, `pxb_economy.gd` [G4 bước 8],
+  `g4_move_input_test.gd`, `g4_battle_hold_benefits_test.gd`;
+  message ghi rõ "2053 PASS 0 FAIL; export web pck
+  7f8ef9bb") — rồi deploy gh-pages trong 4 lô
+  (`e5cda33b` 23 chunk pck 000–022, `bc4d25f6` 23 chunk
+  023–045, `722c8e14` 6 chunk 046–051, `1ed8f9f8`
+  `index.html` + `versions.json`), ghi đủ vào sync record
+  (133 entries). Cùng lượt cron đã làm G4 bước 8 trước
+  đó (~22:34 +07: áp quyền lợi giữ sạp vào Economy —
+  `pxb_economy.gd` 15:34 UTC, test hold_benefits 30/30)
+  nên pck `7f8ef9bb` chứa CẢ sửa di chuyển VÀ G4-8.
+- Docs §25 KHÔNG nằm trong commit `08a0de9c` của cron —
+  bản docs này là follow-up riêng sau deploy.
+- CDN mất vài phút mới đổi bản: lúc 23:03 live vẫn
+  `d9e5dc31`, tới ~23:06 đã là `7f8ef9bb`.
+
+### 25.5 Verify vòng 9+ — XONG
+
+- Regression Godot (35 suite, `-s`): **2053 PASS / 0 FAIL**.
+  Lần chạy đầu 34 OK + 1 FAIL `g4_online_server_probe`
+  (timeout phase=0) — là artifact của harness: probe cần
+  server riêng đang chạy; chạy lại với server thật trên
+  18765 thì "PROBE OK: echo chat". Tổng 2053 tính cả
+  probe chạy lại (37/37 server test + 49/49 WS client).
+  Ghi chú: lần chạy đầu của `g4_move_input_test` là 7/9
+  do kỳ vọng test sai (giữ phím 25 frame đi 2 ô là đúng
+  thiết kế đi liên tục) — đã sửa test, 9/9.
+- Browser-verify staging mới (Chromium local, 1920×1000,
+  cổng 8168, script `check_move_v2.py`, ảnh `m2-01…m2-08`):
+  nút bật sau 24,7s, `activeElement` = canvas trước/sau
+  start, **ERRORS: 0, FAILED REQUESTS: 0**; 3 lần nhấn D
+  riêng lẻ → đi ~3 ô sang phải (camera pan, TẠP HÓA lộ
+  ra); mũi tên phải +1 ô; **tap (1150,750) — điểm chết
+  cũ — NAY ĐI ĐƯỢC** (đi tới cuối TẠP HÓA, fallback ô
+  gần nhất hoạt động); tap (1050,700) không đổi (đã đứng
+  sát đích); phím F → Khung Chiều (mặt trời cam +
+  toast "Ngày 1 • Khung Chiều").
+- Verify từ site live (curl): `--check-live` OK (live
+  `versions.json` pck `7f8ef9bb`, mọi part-000 200, live
+  `index.html` SHA `6282a11b…` = staging); **ráp lại
+  toàn bộ 52 chunk pck từ live: 6.891.804 byte, SHA
+  `7f8ef9bbdfe0225a…` = build ✓** (file ở
+  `~/workspace/live-move-verify/`).
+- Caveat cho parent: **chưa kiểm live bằng cloud browser
+  trên URL thật** — parent cần chạy kiểm live cuối
+  (nhấn D 1 lần / tap điểm cũ) trước khi báo user.
+
+## 25. Vòng 10 — kiểm live 22:09 + quyền lợi giữ sạp G4 bước 8 (20/11 ~22:05–22:47)
+
+### 25.1 Kiểm live bằng cloud browser trên URL thật — ĐẠT trừ di chuyển
+
+- Browser-task 708b5a8b (22:08–22:24 +07, chẩn đoán tiếp 22:30–22:39):
+  tải nhanh, nút BẮT ĐẦU bật sau vài giây, vào game Map001, F đổi
+  khung (Sáng→Chiều→Tối, trăng/sao, nhân vật tối đi), P mở điện thoại
+  đủ 9 tab + khối chat online cuối tab Tin nhắn, **0 console/pageerror/
+  failed request**.
+- Di chuyển KHÔNG ĐẠT trong môi trường đó: ~70 lần bấm D/W/A/S/mũi
+  tên + chạm chuột 3 điểm + giữ chuột/drag đều không nhúc nhích;
+  chẩn đoán lại (viewport 1920×999, canvas x 678–1240, tâm (959,504)):
+  40 lần bấm D + 30 ArrowRight + tap (1110,700) và (1050,800) trong
+  canvas đều không đi; nút Điện thoại trong game bấm chuột thì mở
+  ngay → input tới được game, nhưng tap/phím di chuyển không đi.
+  Kết luận của browser: nghiêng về lỗi di chuyển thật (ít nhất đường
+  chạm-chuột); đường phím chưa kết luận tuyệt đối vì môi trường đó
+  không giữ phím thật được (không có keyboard.down/keyUp, không có
+  eval/CDP để đo activeElement).
+- E gần Cô Tư không mở hội thoại (ghi nhận thêm): người chơi chưa di
+  chuyển tới kề Cô Tư nên `_try_interact` không có event trong tầm —
+  chưa phải bug riêng, kiểm lại sau khi di chuyển được.
+
+### 25.2 Tái hiện local — di chuyển ĐƯỢC trên đúng bản live
+
+- Script mới của luồng song song
+  `visual-check/artpass9/check_move_single.py` (staging = bản live,
+  pck d9e5dc31, cổng 8164, Chromium 1255 + swiftshader, 1920×1000):
+  nút bật sau 24,0s; activeElement trước/sau start đều là canvas;
+  0 ERROR, 0 failed request.
+- Ảnh m1-01…m1-08 (vòng này đã xem trực tiếp): 3 lần giữ D 400ms →
+  người chơi đi phải, camera theo, biển TẠP HÓA hiện trọn (m1-04);
+  tap (1050,700) đi tới ô (m1-06); F → Khung Chiều + toast (m1-08).
+  Vậy code di chuyển của bản deploy CHẠY ĐƯỢC với input thật trên
+  Chromium local.
+- Chênh lệch còn lại: cloud browser không giữ phím thật + tap trúng ô
+  bị chặn (xem §25.3) — cần kiểm lại bằng bàn phím vật lý giữ D 3s
+  trên URL live để khép.
+
+### 25.3 Chẩn đoán + sửa của luồng song song (đang làm, chưa verify xong)
+
+- Test mới `tests/g4_move_input_test.gd` (8/9 PASS): keydown D/mũi
+  tên qua `Input.parse_input_event` đi được 1 ô/lần; tap-to-move qua
+  parse_input_event FAIL (đứng ở (7,5), auto_target (-1,-1)) nhưng gọi
+  thẳng `Main._unhandled_input` thì PASS → kết luận ban đầu "click bị
+  GUI nuốt".
+- Probe của luồng đó do vòng này chạy lại: `g4_gui_probe` — KHÔNG
+  Control visible nào chứa điểm (462,1022),
+  `gui_get_hovered_control` = null (không có Control nào ăn click ở
+  điểm đó); `g4_mouse_probe` — click qua parse_input_event VẪN tới
+  được `_unhandled_input` của probe, nhưng position bị biến thành
+  (8959.999, 20440.0) — artefact của đường parse_input_event headless,
+  không phải của trình duyệt thật. Kết luận "GUI nuốt click" vì vậy
+  CHƯA chắc; đừng sửa theo nó.
+- Sửa thật của luồng song song (main.gd + player.gd, 15:38–15:44 UTC,
+  đang tiếp tục sửa lúc 15:46):
+  1. `player.gd` `_queued_dirs` (tối đa 8): press_dir trong lúc tween
+     thì QUEUE bước lại, bước ngay khi tween xong; release_dir cố
+     tình KHÔNG xóa queue — phím nhấn-nhả nhanh không bị mất bước
+     (cơ chế mất bước: press trong lúc `_moving` thì code cũ chỉ ghi
+     `_held_dirs`, keyup xóa ngay → mất hẳn; ở FPS thấp + bấm dồn
+     dập thì hầu hết các lần bấm rơi vào lúc tween).
+  2. `main.gd` `_nearest_walkable(t)` (BFS 12×9): tap vào ô không đi
+     được (tường biên/mặt tiền) thì đi tới ô đi được GẦN NHẤT thay vì
+     đứng yên — đúng điểm tap (1110,700)/(1050,800) trên live ánh xạ
+     tới ô biên bị chặn.
+- Va chạm: luồng song song sửa cùng main.gd/player.gd trong lúc vòng
+  này làm G4 bước 8 — code bước 8 còn nguyên (đã kiểm grep sau mỗi
+  lần file đổi), nhưng KHÔNG push/deploy trong vòng này để khỏi đè/
+  chẻ fix của luồng kia (xem §25.5).
+
+### 25.4 G4 bước 8 — quyền lợi giữ sạp áp vào Economy — XONG CODE + TEST, CHƯA PUSH
+
+- `pxb_economy.gd`: `buy(item_id, discount_percent := 0)` — giá hiệu
+  dụng = price × (100−disc)/100 (chia nguyên); tiền thuê phòng trọ
+  KHÔNG giảm (không phải giá sỉ); trả thêm `"price_paid"`.
+  `auction_seller_receives(hammer, tax_cut_percent := 0)` — phí 5% ×
+  (100−cut)/100 (giữ sạp cut 20 → phí 4%, nhận 96%).
+- `main.gd`: `_hold_benefits_now()` =
+  `hold_benefits(battle_state, "doi-ban", day)`; `buy_item` truyền
+  wholesaleDiscountPercent (trừ phong-tro), toast "Đã mua X
+  (giá sỉ −10%.)" khi có giảm; `_advance_frame`: sang ngày mới (sau
+  expire_holds) mà còn giữ sạp thì fame += famePerDay (10), toast
+  ngày thêm "• Giữ sạp +10 Danh vọng".
+- Test mới `tests/g4_battle_hold_benefits_test.gd`: **30/30 PASS** —
+  hold_benefits đúng 10/20/10, hết hạn ngày 8 thì {}, đội khác {},
+  economy mua giảm (4.600.000 mua được điện thoại cũ, còn 100.000,
+  price_paid 4.500.000), không giảm thì không đủ tiền, thuê trọ không
+  giảm, đấu giá 1.000.000 → 950.000 / giữ sạp → 960.000; Main: thắng
+  trận giữ sạp → mua giá sỉ được, sang ngày +10 Danh vọng, xóa giữ
+  sạp → mua giá đầy + không +fame.
+- Hồi quy đầy đủ trên cây TRƯỚC sửa di chuyển của luồng song song
+  (chạy 15:35–15:39 UTC): economy 92/92, battle save 31/31, battle
+  main 15/15, MarketBattle 123/123, battle AI 34/34, online 91/91,
+  savecloud 69/69, G1 selftest 419/419, G2 selftest 87/87, G3 playtest
+  95/95, G1 playtest 14/14, artpass 60/60, artpass3 24/24, artpass4
+  19/19, artpass5 17/17, artpass7 25/25, artpass8 18/18, battle scene
+  43/43, coord+WASD 16/16, polish 18/18, v6_overlay 16/16, online
+  server 37/37, WS client 49/49, hotspot 37/37, inventory+crafting
+  78/78, jobs 56/56, phonehub 66/66, social+titles+story 102/102,
+  tools 155/155, ui_wiring 37/37 + 71/71 — **0 FAIL**. (4 suite in
+  tổng kết dạng khác nên grep lần đầu trượt: artpass 60, artpass7 25,
+  artpass8 18, v6 16 — đã chạy lại riêng, đều PASS.)
+- Lưu ý test: g4_move_input_test 8/9 (1 FAIL tap-to-move qua
+  parse_input_event — artefact vị trí ×20 của đường test headless,
+  xem §25.3; không phải hồi quy của bước 8).
+
+### 25.5 CHƯA PUSH / CHƯA EXPORT / CHƯA DEPLOY trong vòng này — lý do
+
+- Luồng song song đang sửa main.gd/player.gd (sửa lần cuối 15:44:52
+  UTC, đang chạy probe/test lúc 15:46) — cây chưa ổn định. Push
+  main.gd lúc này sẽ quét cả fix di chuyển chưa verify xong của luồng
+  kia; push lẻ economy+test sẽ chẻ tính năng. Đợi cây ổn định → chạy
+  lại hồi quy trên cây gộp (đặc biệt g4_move_input +
+  g4_battle_hold_benefits + artpass) → export → deploy 1 lần.
+- Việc tiếp theo: (1) luồng song song verify fix di chuyển (hồi quy +
+  local browser + kiểm live lại bằng bàn phím vật lý giữ D); (2) push
+  main (bước 8 + fix di chuyển) + export + deploy gh-pages bản mới;
+  (3) kiểm live cuối trên URL thật.
