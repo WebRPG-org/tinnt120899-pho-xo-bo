@@ -724,7 +724,8 @@
      ],
      "best_frame": "Chiều",
      "material": "sat-vun",
-     "amount": 1
+     "amount": 1,
+     "rarity": "hiem"
     },
     {
      "kind": "craft",

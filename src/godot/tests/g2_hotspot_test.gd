@@ -130,9 +130,9 @@ func _test_hint() -> void:
 func _test_sparkle() -> void:
 	_check("min_touch_pt = 44", PxbHotspot.min_touch_pt() == 44)
 	var h := PxbHotspot.get_hotspot("hs-cho-sang")
-	_check("sparkle_color: hotspot thuong = vang #E0A800",
-		PxbHotspot.sparkle_color(h) == "#E0A800")
-	_check("sparkle_color: hotspot hiem (PROVISIONAL) = cam #E07800",
+	_check("sparkle_color: hotspot thuong = xanh Nadia #2E7FD9",
+		PxbHotspot.sparkle_color(h) == "#2E7FD9")
+	_check("sparkle_color: hotspot hiem = cam #E07800",
 		PxbHotspot.sparkle_color({"rarity": "hiem"}) == "#E07800")
 	_check("sparkle_brightness: da nhat 0.25",
 		is_equal_approx(PxbHotspot.sparkle_brightness(h, "Sáng", true), 0.25))

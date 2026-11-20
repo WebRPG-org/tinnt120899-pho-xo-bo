@@ -168,3 +168,85 @@
 
 - Repo đã public + GitHub Pages đã bật (branch gh-pages, root), verify bằng trình duyệt thật: trang tải thành công, tiêu đề "Phố Xô Bồ", màn hình tải game Godot.
 - Link: https://tinnt120899.github.io/pho-xo-bo/
+
+## 6. Art pass Nadia — đồ họa giống Treasure of Nadia (20/11, 6 vòng sửa)
+
+Đổi hướng theo lệnh chủ 10:48 20/11: dựng đồ họa CHO GIỐNG Treasure of
+Nadia, không chỉ sửa lặt vặt. Đọc `docs/nadia-reference.md` +
+`docs/nadia-scene-study.md` rồi áp phong cách Nadia vào Godot.
+
+### 6.1 Cái đã làm (Map001–002)
+
+- **Nền vẽ tay procedural** (`scripts/nadia_scene.gd`, mới, ~900 dòng):
+  sky wash 3 dải ấm, mái nhà xa, mặt đất lát gạch có nứt/rêu/vũng
+  nước/lá rơi/phấn vẽ, tường 2 bên có poster + cây leo + vết nước,
+  mặt tiền nhà theo từng ô: tường vàng cũ + vết bẩn/nứt, mái tôn có
+  đường gờ + ống khói, biển hiệu gỗ chữ Việt ngắn (PHỞ BÒ, CÀ PHÊ,
+  TẠP HÓA, CHÁO LÒNG…), cửa sổ/cửa ra vào/cổng sắt, mái hiên sọc +
+  quầy hàng + giỏ trái cây (chợ), hàng rào thấp + chậu cây + mèo
+  ngủ cuộn tròn, cột điện + 3 dây võng + chim đậu, đạo cụ dưới map:
+  xe máy, cây chuối, xe đồ ăn có khói bay (vẽ lại ~7 lần/s), ghế
+  nhựa + ly cà phê, cột đèn lồng đỏ, xe đẩy hàng rong, xe đạp dựng
+  vỉa hè, chồng giỏ hàng.
+- **Nhân vật Nadia** (`character_sprite.gd` viết lại): cao ~72px,
+  tỉ lệ đầu:thân ~1:5.5, mặt có lông mày/mắt có highlight/má hồng/
+  miệng/nháy mắt ~3s, tóc ngắn/dài/búi/nón, áo có cổ/cúc/túi, chân
+  dài + giày có viền trắng, tay vung ngược chân, nhún khi đi, bóng
+  bầu dục dưới chân, người chơi có vòng vàng.
+- **Hotspot lấp lánh Nadia** (`marker.gd`, `pxb_hotspot.gd`):
+  sao 4 cánh dài + halo + 3 tia xoay, xanh #2E7FD9 = thường,
+  cam #E07800 = thưởng tốt (`hs-cho-chieu` đánh dấu `rarity: hiem`
+  trong `data/maps.json` để có 1 sao cam trong slice), không biến
+  mất khi chưa nhặt. Bỏ dấu "!" cũ.
+- **HUD/UI gỗ/giấy** (`main.gd`): panel viền gỗ nâu bo 12 + bóng
+  mềm, nút gỗ nâu chữ kem, điện thoại là panel gỗ bo 18.
+- **Giữ 4 điểm sửa 10:27–10:30** nhưng làm theo chuẩn Nadia:
+  nhãn kẹp dưới HUD + cách mép ~20px, nhãn của điểm ngoài màn hình
+  thì ẨN (không trôi vào màn hình không có điểm neo), nửa dưới map
+  có đường/vỉa hè/cây/đạo cụ tới đáy, điện thoại gọn 680x900 căn
+  giữa dọc + chân trang + gợi ý tiến trình + mẹo xoay theo ngày,
+  khung Tối tối hẳn (MUL 0.42,0.52,0.85 + cửa sổ sáng), toast đổi
+  khung dưới HUD, desktop có chú thích 2 bên (≥1400px) + ghi rõ
+  game dọc.
+
+### 6.2 Các vòng sửa sau khi tự xem ảnh (artpass 35 → 39 checks)
+
+1. Camera lệch lên 100 world units (`CAMERA_LOOK_UP`): người chơi
+   ở 2/3 dưới màn hình, mặt tiền thoát khỏi HUD.
+2. Nhãn cửa/chế tạo: trên (-120) thì chồng nhãn NPC, dưới (+24)
+   thì chế tạo rơi vào chỗ người chơi đứng, cửa thì bị Cô Tư che
+   chữ "Đầu" — chốt: chế tạo trên -120, cửa dưới +70, hotspot
+   dưới +24.
+3. Biển hiệu rút ngắn ≤8 ký tự + cỡ 10 để vừa bảng 58px.
+4. Điện thoại: panel 680x1100 → 680x900, scroll 420 → 280, thêm
+   `_phone_hint` (chương + ending gợi ý) + `_phone_tip` (mẹo xoay
+   theo ngày); ending ID dịch sang tiếng Việt (`ENDING_NAMES`:
+   TuDo → Tự do…).
+5. Desktop: chú thích 2 bên bị canvas che (z-index 0 → 10) +
+   chữ kem + text-shadow cho đọc được trên nền đen.
+6. Hạn chế đã đo: canvas WebGL `alpha: false` nên engine tô đen
+   letterbox — CSS gradient không hiện qua được; 2 dải đen còn đó
+   nhưng có chú thích giải thích. Muốn hết đen hẳn phải đổi
+   stretch aspect sang "expand" (chưa làm — cần neo lại HUD).
+
+### 6.3 Verify
+
+- `--check-only` 0 lỗi; artpass 39/39; G1 selftest 419/419;
+  G3 playtest 95/95; G1 playtest 14/14; hotspot 37/37;
+  MarketBattle 123/123; scene 120 frame 0 ERROR.
+- Export web exit 0; Chromium local 720x1280 (map/phone/Chiều/
+  Tối) + desktop 1920x1080 đều 0 lỗi, đã xem ảnh thật từng vòng.
+- Deploy gh-pages bản mới: xem §6.4 (chunk base64, verify khớp byte).
+
+### 6.4 Deploy gh-pages (tái tạo từ bản 06:12, script nay ở repo)
+
+- Script `tools/godot/build_gh_pages.py` (mới, persistent trong
+  repo): chia `index.wasm` (~39,5 MB) + `index.pck` (~1,35 MB)
+  thành chunk base64 ≤180 KB, chèn loader fetch vào `index.html`
+  (ghi đè fetch để ráp lại trong trình duyệt), verify SHA từng
+  chunk decode khớp byte với `src/godot-build/`.
+- Staging `gh-pages-staging/` (307 file): `index.html` + `wasm/`
+  + `pck/` + `index.png`/`index.icon.png`/`index.apple-touch-icon.png`.
+  Push lên branch `gh-pages` bằng snapshot-push theo lô ~20 file,
+  sync record riêng (xem `src/nadia/www.muse-github-snapshot-sync.json`).
+- Live link vẫn phục vụ bản 06:12 tới khi deploy này xong.

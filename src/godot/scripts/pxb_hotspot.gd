@@ -64,11 +64,11 @@ extends Node
 # chưa chốt GDD (Exploration.cs). Chỉ dùng 4 khu slice: 1 Xóm Trọ Cũ,
 # 2 Chợ Đầu Mối, 17 Công Viên An Bình, 18 Phố Đi Bộ – Chợ Đêm.
 # id, name, district_id, best_frame ("Sáng"/"Chiều"/"Tối"), material_id,
-# amount_per_visit, rarity ("thuong" — cả 5 đều thường; Exploration.cs
-# không có trường hiếm).
+# amount_per_visit, rarity ("thuong" / "hiem" — hs-cho-chieu la hiem tu
+# art pass Nadia 20/11 de hien sao cam; GDD chua chot bang hiem day du).
 const HOTSPOTS := [
 	{"id": "hs-cho-sang", "name": "Sạp rau buổi sáng", "district_id": 2, "best_frame": "Sáng", "material_id": "la-chuoi", "amount": 2, "rarity": "thuong"},
-	{"id": "hs-cho-chieu", "name": "Góc phế liệu chợ", "district_id": 2, "best_frame": "Chiều", "material_id": "sat-vun", "amount": 1, "rarity": "thuong"},
+	{"id": "hs-cho-chieu", "name": "Góc phế liệu chợ", "district_id": 2, "best_frame": "Chiều", "material_id": "sat-vun", "amount": 1, "rarity": "hiem"},
 	{"id": "hs-tro-toi", "name": "Hẻm trọ buổi tối", "district_id": 1, "best_frame": "Tối", "material_id": "chai-nhua", "amount": 2, "rarity": "thuong"},
 	{"id": "hs-cong-vien", "name": "Ghế đá công viên", "district_id": 17, "best_frame": "Chiều", "material_id": "van-go", "amount": 1, "rarity": "thuong"},
 	{"id": "hs-cho-dem", "name": "Sạp đêm cuối phố", "district_id": 18, "best_frame": "Tối", "material_id": "vai-vun", "amount": 2, "rarity": "thuong"},
@@ -86,12 +86,11 @@ const DISTRICT_COUNT := 18
 # --- Hằng hiển thị (không phải số game — lấy từ HotspotView.cs) ---
 # Vùng chạm tối thiểu 44×44 pt trên mobile (architecture-nadia §6.5).
 const MIN_TOUCH_PT := 44
-# Màu Vàng Tâm #E0A800 — palette lock (HotspotView.cs, docs/art-assets.md §0).
-const SPARKLE_COLOR_COMMON := "#E0A800" # vàng — thường
-# PROVISIONAL — mã màu cam cho hotspot hiếm: GDD chưa chốt hotspot hiếm
-# nào (Exploration.cs không có trường hiếm) nên màu này chưa dùng trong
-# slice; đổi khi chốt palette hiếm.
-const SPARKLE_COLOR_RARE := "#E07800" # cam — hiếm (PROVISIONAL)
+# Màu lấp lánh kieu Nadia (scene-study §1.2): XANH = thuong, CAM =
+# thuong tot. Doi tu vang #E0A800 sang xanh tu art pass Nadia 20/11
+# (lenh chu) — giu cam #E07800 cho hiem.
+const SPARKLE_COLOR_COMMON := "#2E7FD9" # xanh duong — thường
+const SPARKLE_COLOR_RARE := "#E07800" # cam — hiếm
 # Độ sáng lấp lánh (HotspotView.cs): đã nhặt 0.25 / đúng khung 1.5 / còn lại 0.8.
 const BRIGHTNESS_COLLECTED := 0.25
 const BRIGHTNESS_BEST_FRAME := 1.5

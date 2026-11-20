@@ -4,8 +4,9 @@ extends SceneTree
 ## 1. Title screen mo san + nut Bat dau mo khoa input.
 ## 2. Camera ton tai, current, zoom 1.6, bam theo player.
 ## 3. Giu phim di lien tuc: tu (4,5) giu ui_right -> toi (7,5) trong <60 frame.
-## 4. Panel dien thoai KHUNG RIENG 640x1100 tren lop mo toi, co chan
-##    trang; noi dung dung ten tieng Viet (khong ma noi bo).
+## 4. Panel dien thoai KHUNG RIENG 680x900 can giua doc tren lop mo toi, co chan
+##    trang + goi y tien trinh + meo xoay theo ngay; noi dung dung ten
+##    tieng Viet (khong ma noi bo).
 ## 5. HUD nam trong panel (khong text tran) + nhan NPC co sprite.
 ## 6. (20/11 10:30) Overlay ngay/dem dang NHAN: Sang trang (khong doi),
 ##    Chieu vang cam, Toi xanh dem dam + dom sang cua so bat; toast doi
@@ -84,14 +85,16 @@ func _on_frame() -> void:
 			_main._open_phone("")
 			_check("panel dien thoai hien", _main._phone_panel.visible)
 			_check("lop mo dien thoai hien", _main._phone_dim.visible)
-			_check("dien thoai khung rieng 680x1100", _main._phone_panel.size == Vector2(680, 1100))
-			_check("dien thoai cach mep 20/90", _main._phone_panel.position == Vector2(20, 90))
+			_check("dien thoai khung rieng 680x900", _main._phone_panel.size == Vector2(680, 900))
+			_check("dien thoai cach mep 20/190", _main._phone_panel.position == Vector2(20, 190))
 			var txt: String = str(_main._phone_content.text)
 			_check("noi dung khong ma noi bo QuenBiet", not txt.contains("QuenBiet"))
 			_check("noi dung khong ma noi bo BestFriend", not txt.contains("BestFriend"))
 			_check("giai doan tieng Viet Quen biet", txt.contains("Quen biết"))
 			_check("chan trang co ngay/vi", _main._phone_footer.text.contains("Ngày 1") and _main._phone_footer.text.contains("Ví"))
 			_check("dien thoai co goi y tien trinh", _main._phone_hint.text.contains("Chương"))
+			_check("ending hien tieng Viet, khong ID", _main._phone_hint.text.contains("Tự do") and not _main._phone_hint.text.contains("TuDo"))
+			_check("dien thoai co meo xoay theo ngay", _main._phone_tip.text.begins_with("Mẹo: "))
 			_main._close_phone()
 			_check("dong dien thoai", not _main._phone_panel.visible)
 			_check("lop mo an theo", not _main._phone_dim.visible)

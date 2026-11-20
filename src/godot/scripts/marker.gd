@@ -75,17 +75,25 @@ func label_rect() -> Rect2:
 	var text := String(event_data.get("name", ""))
 	if text == "":
 		return Rect2()
-	# Nhan cua / goc che tao dat cao hon nhan NPC 86px de khong chong
-	# nhau khi 2 diem ke o (vd "Ban Than" vs "Cua ra Cho Dau Moi").
+	# Nhan cua / hotspot dat DUOI bieu tuong (+24), goc che tao dat
+	# TREN (-120) de khong chong nhan NPC dat tren (-84/-124) khi
+	# 2 diem ke o (vd "Cua ra Cho Dau Moi" vs "Ban Than" o (5,4)/(3,5)),
+	# va khong roi vao cho nguoi choi dung (goc che tao dat duoi se
+	# bi nguoi choi spawn (4,5) che mat).
 	var kind := String(event_data.get("kind", ""))
-	# Nhan cua/goc che tao dat cao (-120) de khong chong nhan NPC
-	# (-84/-124) khi 2 diem ke o (vd "Hem tro buoi toi" vs "Co Tu")
-	# va khong che bien hieu mat tien nhu muc -170 truoc day.
+	# Nhan cua/goc che tao dat DUOI bieu tuong (+24, nhu hotspot):
+	# dat tren (-120) se chong nhan NPC ke ben (vd "Cua ra Cho Dau
+	# Moi" chong "Ban Than" o (5,4)/(3,5), vong 2 art pass).
 	# Nhan hotspot dat DUOI sao (+24) thay vi tren — sao hotspot o
 	# cung do cao voi nhan NPC nen de tren se chong nhau.
-	var top := -120.0 if kind == "door" or kind == "craft" else -84.0
-	if kind == "hotspot":
-		top = 24.0
+	var top := -120.0 if kind == "craft" else (24.0 if kind == "hotspot" else -84.0)
+	# Goc che tao dat TREN (-120): dat duoi se roi dung cho nguoi choi
+	# spawn (4,5) — nhan bi nguoi choi che mat (vong 3).
+	# Cua ra dat DUOI bieu tuong (+70, thap hon hotspot +24) de nhan
+	# khong bi Co Tu (8,6) dung ke che mat chu "Đầu" (vong 4: +44
+	# van bi chan Co Tu che vi chu nam dung tam chan cua Co Tu).
+	if kind == "door":
+		top = 70.0
 	# Nhan NPC ke o chong nhau (vd "Ban Tro" vs "Co Tu"): le cao nhan
 	# theo chan/le cua (tile.x + tile.y) — 2 o ke nhau luon khac chan/le
 	# nen nhan lech nhau 40px doc, khong chong nua.

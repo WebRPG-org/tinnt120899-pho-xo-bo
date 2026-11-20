@@ -35,6 +35,22 @@ const MATERIAL_NAMES := {
 # hinh, day nha mat tien (ty=0) xuong duoi HUD thay vi bi HUD che
 # (art pass Nadia 20/11: mat tien la phan dep nhat cua canh).
 const CAMERA_LOOK_UP := Vector2(0, -100)
+# Meo dien thoai xoay theo ngay — lap khoang trong duoi panel
+# (art pass Nadia 20/11: panel 1100 cao hon noi dung ~450px).
+const PHONE_TIPS := [
+	"Nói chuyện với Bạn thân mỗi khung tăng thân thiết +5.",
+	"Hotspot xanh là đồ thường, cam là đồ hiếm — nhặt trước khi đổi khung.",
+	"Góc Chế Tạo: gom đủ nguyên liệu rồi bấm Chế tạo.",
+	"Đổi khung (F) để sang Sáng/Chiều/Tối — mỗi khung có việc khác nhau.",
+	"Cửa ra Chợ Đầu Mối dẫn sang khu chợ — đi bộ tới cửa rồi bấm vào.",
+]
+# Ten ending hien thi cho nguoi choi — suggest_ending() tra ve ID
+# noi bo (TuDo/GiamDoc/...), hien thi phai dich sang tieng Viet
+# (loi "Ending gợi ý hiện tại: TuDo" o dien thoai, vong 3 art pass).
+const ENDING_NAMES := {
+	"GiamDoc": "Giám đốc", "HocGia": "Học giả", "GiaDinh": "Gia đình",
+	"TuDo": "Tự do", "SieuGiau": "Siêu giàu", "ChuaMo": "Chưa mở",
+}
 # Map ten hien thi cua su kien "craft" trong data/maps.json -> recipe_id
 # trong PxbBalance.RECIPES. Ten su kien do map data quyet dinh; recipe_id
 # do Balance quyet dinh — anh xa o day de khong sua map data.
@@ -106,6 +122,7 @@ var _phone_panel: PanelContainer
 var _phone_title: Label
 var _phone_content: Label
 var _phone_hint: Label
+var _phone_tip: Label
 var _phone_footer: Label
 var _phone_actions: VBoxContainer
 var _phone_tab_buttons := {}
@@ -617,6 +634,7 @@ func _refresh_phone() -> void:
 		day, _fmt_vnd(jobs.gold), fame, story.chapter]
 	var sl := _story_text().split("\n")
 	_phone_hint.text = "Tiến trình — %s\n%s" % [sl[0], sl[2]] if sl.size() > 2 else "Tiến trình — " + sl[0]
+	_phone_tip.text = "Mẹo: " + String(PHONE_TIPS[day % PHONE_TIPS.size()])
 	_clear_phone_actions()
 	match phonehub.current_tab:
 		PxbPhoneHub.TAB_DANH_BA_TIN_NHAN:
@@ -772,7 +790,7 @@ func _story_text() -> String:
 	var lines: Array[String] = [
 		"Chương %d: %s" % [story.chapter, story.chapter_name()],
 		"Danh vọng: %d • Tài sản: %sđ • An Yên: %d" % [fame, _fmt_vnd(assets), stats.an_yen()],
-		"Ending gợi ý hiện tại: %s" % ending,
+		"Ending gợi ý hiện tại: %s" % String(ENDING_NAMES.get(ending, ending)),
 		"Danh hiệu (%s): %s" % [titles.alignment,
 			(" • ".join(titles.all_titles()) if not titles.all_titles().is_empty() else "chưa có")],
 		"Quest giúp NPC: %d/3 (cần cho chương 4)" % story.help_quests_done,
@@ -1337,8 +1355,11 @@ func _build_ui() -> void:
 	_phone_dim.visible = false
 	layer.add_child(_phone_dim)
 	_phone_panel = PanelContainer.new()
-	_phone_panel.position = Vector2(20, 90)
-	_phone_panel.size = Vector2(680, 1100)
+	# Panel dien thoai GON (680x900, can giua doc) thay vi 680x1100
+	# — noi dung that chi ~720px, panel cu thua ~450px trong
+	# (art pass Nadia 20/11, loi goc 20/11 10:30).
+	_phone_panel.position = Vector2(20, 190)
+	_phone_panel.size = Vector2(680, 900)
 	_phone_panel.add_theme_stylebox_override("panel", _phone_panel_style())
 	_phone_panel.visible = false
 	layer.add_child(_phone_panel)
@@ -1363,7 +1384,7 @@ func _build_ui() -> void:
 	_phone_content.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_phone_content.size = Vector2(580, 240)
 	var act_scroll := ScrollContainer.new()
-	act_scroll.custom_minimum_size = Vector2(580, 420)
+	act_scroll.custom_minimum_size = Vector2(580, 280)
 	pvb.add_child(act_scroll)
 	_phone_actions = VBoxContainer.new()
 	_phone_actions.add_theme_constant_override("separation", 8)
@@ -1376,6 +1397,9 @@ func _build_ui() -> void:
 	_phone_hint = _mk_label(pvb, font, 22, Vector2.ZERO, "")
 	_phone_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_phone_hint.size = Vector2(580, 90)
+	_phone_tip = _mk_label(pvb, font, 22, Vector2.ZERO, "")
+	_phone_tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_phone_tip.size = Vector2(580, 60)
 	# Chan trang dien thoai: ngay + vi + danh vong + chuong — lap
 	# phan trong o duoi panel (loi 20/11 10:30).
 	_phone_footer = _mk_label(pvb, font, 22, Vector2.ZERO, "")
