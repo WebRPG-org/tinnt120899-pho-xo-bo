@@ -29,6 +29,7 @@ func _ready() -> void:
 		"pants": Color(0.16, 0.18, 0.24, 1),
 		"hair_style": "ngan",
 		"player": true,
+		"texture": "res://art/char_player.png",  # Anh ve tay (fallback ve code neu thieu file).
 	})
 	add_child(_sprite)
 

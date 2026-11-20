@@ -34,7 +34,13 @@ const MATERIAL_NAMES := {
 # Camera nhin lech len 100 world units: nguoi choi nam o 2/3 duoi man
 # hinh, day nha mat tien (ty=0) xuong duoi HUD thay vi bi HUD che
 # (art pass Nadia 20/11: mat tien la phan dep nhat cua canh).
-const CAMERA_LOOK_UP := Vector2(0, -100)
+const CAMERA_LOOK_UP := Vector2(0, -230)
+# Look-up -230 (thay -100 cu): camera nhin len tren de bien hieu
+# (the gioi y -28..17) xuong duoi HUD (game y 224..296, doc duoc)
+# va dai troi hien o mep tren; di len hang tren thi troi hien day
+# du (troi o tren cung map, khong the thay het luc spawn vi HUD
+# chiem 252px tren cung + hop thoai chiem 950..1250 — nguoi choi
+# phai o game y < 950 de mat khong bi hop thoai che).
 # Meo dien thoai xoay theo ngay — lap khoang trong duoi panel
 # (art pass Nadia 20/11: panel 1100 cao hon noi dung ~450px).
 const PHONE_TIPS := [
@@ -1421,7 +1427,11 @@ func _build_ui() -> void:
 	_phone_homebar = _mk_phone_bar(Vector2(290, 1078), Vector2(140, 10))
 	layer.add_child(_phone_homebar)
 	var pvb := VBoxContainer.new()
-	pvb.add_theme_constant_override("separation", 10)
+	# Separation 8 (khong phai 10): tong chieu cao toi thieu cua VBox
+	# (tieu de 36 + luoi tab 172 + 2 scroll 240/280 + goi y/meo 57/57
+	# + chan trang 27 + 7 khoang cach) phai <= 896 de panel giu dung
+	# 680x900 — separation 10 day panel len 907 (loi 20/11 12:00).
+	pvb.add_theme_constant_override("separation", 8)
 	_phone_panel.add_child(pvb)
 	_phone_title = _mk_label(pvb, font_bold, 30, Vector2.ZERO, "Điện thoại")
 	var tab_grid := GridContainer.new()
@@ -1440,6 +1450,17 @@ func _build_ui() -> void:
 	_phone_content = _mk_label(pvb, font, 26, Vector2.ZERO, "")
 	_phone_content.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_phone_content.size = Vector2(580, 240)
+	# Chieu rong toi thieu 580: Label trong ScrollContainer mac dinh
+	# bi ep ve chieu rong toi thieu 1px (autowrap) nen chu xep doc
+	# 1 ky tu/dong (loi 20/11 12:10) — dat min width = be rong scroll.
+	_phone_content.custom_minimum_size = Vector2(580, 0)
+	# Noi dung dai (vd danh ba 16 NPC) phai CUON, khong tran khoi
+	# panel: label trong ScrollContainer, chieu cao tu noi dung.
+	var content_scroll := ScrollContainer.new()
+	content_scroll.custom_minimum_size = Vector2(580, 240)
+	pvb.add_child(content_scroll)
+	_phone_content.get_parent().remove_child(_phone_content)
+	content_scroll.add_child(_phone_content)
 	var act_scroll := ScrollContainer.new()
 	act_scroll.custom_minimum_size = Vector2(580, 280)
 	pvb.add_child(act_scroll)

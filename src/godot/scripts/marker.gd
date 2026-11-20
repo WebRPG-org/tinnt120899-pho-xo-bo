@@ -8,9 +8,12 @@ extends Node2D
 
 var event_data: Dictionary = {}
 var font: Font = null
+var label_layer: CanvasLayer = null  # Lop nhan rieng (Main tao): nhan
+	# luon ve TREN nhan vat + HUD che, khong bi y-sort che mat nua.
 var _pulse := 0.0
 var _sprite: CharacterSprite = null
 var _label_style: StyleBoxFlat = null
+var _label: Label = null  # Nhan Control tren CanvasLayer (neu co).
 
 const NPC_PARITY_OFFSET := 40.0
 # HUD chiem 252px tren cung man hinh (panel 16..252); nhan khong duoc
@@ -21,10 +24,10 @@ const HUD_BOTTOM_SCREEN := 268.0
 const EDGE_MARGIN_WORLD := 13.0
 
 const NPC_STYLE := {
-	"co-tu": {"shirt": Color(0.56, 0.27, 0.68, 1), "hair_style": "bui"},
-	"ban-than": {"shirt": Color(0.25, 0.65, 0.35, 1), "hair_style": "ngan"},
-	"chi-le": {"shirt": Color(0.90, 0.45, 0.13, 1), "hair_style": "dai"},
-	"anh-hai": {"shirt": Color(0.09, 0.63, 0.52, 1), "hair_style": "ngan"},
+	"co-tu": {"shirt": Color(0.56, 0.27, 0.68, 1), "hair_style": "bui", "texture": "res://art/char_cotu.png"},
+	"ban-than": {"shirt": Color(0.25, 0.65, 0.35, 1), "hair_style": "ngan", "texture": "res://art/char_banthan.png"},
+	"chi-le": {"shirt": Color(0.90, 0.45, 0.13, 1), "hair_style": "dai", "texture": "res://art/char_chile.png"},
+	"anh-hai": {"shirt": Color(0.09, 0.63, 0.52, 1), "hair_style": "ngan", "texture": "res://art/char_anhhai.png"},
 }
 
 func _ready() -> void:
@@ -36,17 +39,37 @@ func _ready() -> void:
 	_label_style.corner_radius_bottom_right = 6
 	_label_style.border_color = Color(0.85, 0.68, 0.35, 1)
 	_label_style.set_border_width_all(1)
-	_label_style.content_margin_left = 6
-	_label_style.content_margin_right = 6
-	_label_style.content_margin_top = 2
-	_label_style.content_margin_bottom = 2
+	_label_style.content_margin_left = 10
+	_label_style.content_margin_right = 10
+	_label_style.content_margin_top = 4
+	_label_style.content_margin_bottom = 4
 	if String(event_data.get("kind", "")) == "npc":
 		var cfg: Dictionary = NPC_STYLE.get(String(event_data.get("id", "")),
 			{"shirt": Color(0.5, 0.5, 0.5, 1), "hair_style": "ngan"})
 		_sprite = CharacterSprite.new()
 		_sprite.setup(cfg)
 		add_child(_sprite)
+	# Nhan tren CanvasLayer rieng (layer 1, duoi HUD): Control o toa do
+	# man hinh, luon nam tren moi Node2D cua the gioi (nhan vat, nha,
+	# troi) — nhan khong bao gio bi nhan vat che nua. Khong co lop
+	# thi fallback ve _draw_name() cu (ve trong _draw cua marker).
+	if label_layer != null and font != null and String(event_data.get("name", "")) != "":
+		_label = Label.new()
+		_label.text = String(event_data.get("name", ""))
+		_label.add_theme_font_override("font", font)
+		_label.add_theme_font_size_override("font_size", 32)  # 20 world * zoom 1.6.
+		_label.add_theme_color_override("font_color", Color(0.15, 0.12, 0.08, 1))
+		_label.add_theme_stylebox_override("normal", _label_style)
+		_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_label.visible = false
+		label_layer.add_child(_label)
+		tree_exited.connect(_on_tree_exited)
 	queue_redraw()
+
+func _on_tree_exited() -> void:
+	if _label != null and is_instance_valid(_label):
+		_label.queue_free()
+		_label = null
 
 func _process(delta: float) -> void:
 	_pulse += delta
@@ -54,6 +77,7 @@ func _process(delta: float) -> void:
 	# nguoi choi, nhan o ria phai dich theo — ve 1 lan luc tao thi
 	# nhan bi cat o mep man hinh).
 	queue_redraw()
+	_update_label()
 
 func _draw() -> void:
 	var kind := String(event_data.get("kind", ""))
@@ -64,7 +88,45 @@ func _draw() -> void:
 			_draw_craft()
 		"door":
 			_draw_door()
-	_draw_name()
+	if _label == null:
+		_draw_name()
+
+## Hinh chu nhat cua nhan TREN MAN HINH (toa do pixel 720x1280),
+## sau khi kep trong vung nhin thay cua camera, tru vung HUD tren
+## cung va cach mep 16px. Test dung de kiem tra nhan khong bi cat /
+## che. Rect2() rong = nhan an (diem neo ngoai man hinh).
+func label_screen_rect() -> Rect2:
+	if _label == null:
+		return Rect2()
+	var wr := label_rect()
+	if wr.size == Vector2.ZERO:
+		return Rect2()
+	var cam := get_viewport().get_camera_2d()
+	if cam == null:
+		return Rect2()
+	# label_rect() kep theo the gioi; doi sang man hinh: tam X giu
+	# nguyen, Y giu nguyen (chi doi don vi) — nhan 32px cao 38px.
+	var ct := get_viewport().get_canvas_transform()
+	var sp: Vector2 = ct * (global_position + wr.position)
+	var text := String(event_data.get("name", ""))
+	var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 32).x
+	var w := tw + 20.0
+	var h := 38.0
+	var pos := Vector2(sp.x + (wr.size.x * cam.zoom.x - w) / 2.0, sp.y + (wr.size.y * cam.zoom.y - h) / 2.0)
+	pos.x = clampf(pos.x, 16.0, 720.0 - 16.0 - w)
+	pos.y = clampf(pos.y, HUD_BOTTOM_SCREEN, 1280.0 - 16.0 - h)
+	return Rect2(pos, Vector2(w, h))
+
+func _update_label() -> void:
+	if _label == null:
+		return
+	var r := label_screen_rect()
+	if r.size == Vector2.ZERO:
+		_label.visible = false
+		return
+	_label.visible = true
+	_label.position = r.position
+	_label.size = r.size
 
 ## Hinh chu nhat cua nhan (toa do cuc bo) sau khi da kep trong vung
 ## nhin thay cua camera, tru vung HUD tren cung va cach mep ~20px
@@ -86,7 +148,10 @@ func label_rect() -> Rect2:
 	# Moi" chong "Ban Than" o (5,4)/(3,5), vong 2 art pass).
 	# Nhan hotspot dat DUOI sao (+24) thay vi tren — sao hotspot o
 	# cung do cao voi nhan NPC nen de tren se chong nhau.
-	var top := -120.0 if kind == "craft" else (24.0 if kind == "hotspot" else -84.0)
+	var top := -120.0 if kind == "craft" else (24.0 if kind == "hotspot" else -144.0)
+	# Nhan NPC o -144 (khong phai -84 cu): nhan vat anh ve tay cao
+	# 104px, dau o -104 — nhan phai nam tren dau, cach 14px, khong
+	# de len toc. Goc che tao -120 giu nguyen (tren bieu tuong).
 	# Goc che tao dat TREN (-120): dat duoi se roi dung cho nguoi choi
 	# spawn (4,5) — nhan bi nguoi choi che mat (vong 3).
 	# Cua ra dat DUOI bieu tuong (+70, thap hon hotspot +24) de nhan

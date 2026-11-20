@@ -6,6 +6,13 @@ extends Node2D
 ## dat. Ve bang code — khong dung asset ngoai (tranh ban quyen).
 ## Goc toa do o chan (giua 2 ban chan). API cu giu nguyen: setup(cfg),
 ## moving / facing / is_player / walk_phase.
+##
+## Vong Nadia-style 20/11: neu cfg co "texture" (anh ve tay da tach
+## nen, res://art/char_*.png) thi dung Sprite2D anh that thay cho
+## hinh ve bang code — mat/toc/shading chi tiet hon han; ve bang code
+## chi con la fallback khi thieu file (vd chay tren ban cu).
+
+const TEX_HEIGHT := 104.0  # Chieu cao hien thi cua anh (lon hon ban cu 72px de mat doc duoc).
 
 var shirt := Color(0.18, 0.44, 0.69, 1)
 var pants := Color(0.16, 0.18, 0.24, 1)
@@ -16,6 +23,8 @@ var walk_phase := 0.0
 var moving := false
 var facing := 1  # 1 = phai, -1 = trai
 var is_player := false  # Nguoi choi: vong vang duoi chan de nhan ra.
+var texture: Texture2D = null
+var _tex: Sprite2D = null
 
 var _t := 0.0
 var _body_style: StyleBoxFlat = null
@@ -27,6 +36,17 @@ func setup(cfg: Dictionary) -> void:
 	hair_color = cfg.get("hair", hair_color)
 	hair_style = String(cfg.get("hair_style", hair_style))
 	is_player = bool(cfg.get("player", false))
+	if cfg.has("texture"):
+		var path := String(cfg["texture"])
+		if ResourceLoader.exists(path):
+			texture = load(path) as Texture2D
+	if texture != null:
+		_tex = Sprite2D.new()
+		_tex.texture = texture
+		var s := TEX_HEIGHT / float(texture.get_height())
+		_tex.scale = Vector2(s, s)
+		_tex.position = Vector2(0, -TEX_HEIGHT / 2.0)
+		add_child(_tex)
 	_body_style = StyleBoxFlat.new()
 	_body_style.bg_color = shirt
 	_body_style.corner_radius_top_left = 7
@@ -41,6 +61,17 @@ func _process(delta: float) -> void:
 	_t += delta
 	if moving:
 		walk_phase += delta * 10.0
+	if _tex != null:
+		# Anh ve tay: nhun + nghieng nhe khi di thay cho walk cycle
+		# chan (anh tinh khong co khung chan); dung yen thi tho nhe.
+		var bob := 0.0
+		if moving:
+			bob = -absf(sin(walk_phase)) * 2.5
+		else:
+			bob = -sin(_t * 2.0) * 0.8
+		_tex.position.y = -TEX_HEIGHT / 2.0 + bob
+		_tex.rotation = sin(walk_phase) * 0.04 if moving else 0.0
+		_tex.flip_h = facing < 0
 	queue_redraw()
 
 func _ellipse_shadow(c: Vector2, rx: float, ry: float, alpha: float) -> void:
@@ -49,6 +80,16 @@ func _ellipse_shadow(c: Vector2, rx: float, ry: float, alpha: float) -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _draw() -> void:
+	# Anh ve tay: chi ve bong + vong vang (Sprite2D con ve sau _draw
+	# nen anh nam tren bong); huong mat qua flip_h cua Sprite2D.
+	if _tex != null:
+		_ellipse_shadow(Vector2(0, 3), 14.0, 4.5, 0.30)
+		if is_player:
+			draw_set_transform(Vector2(0, 3), 0.0, Vector2(1.0, 0.33))
+			draw_arc(Vector2.ZERO, 46, 0, TAU, 24, Color(1.0, 0.8, 0.2, 0.9), 2.0)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		return
+	# Fallback ve bang code (khong co anh).
 	# Huong mat: lat ngang khi quay trai (bong doi xung nen khong anh huong).
 	scale.x = float(facing)
 	var bob := 0.0

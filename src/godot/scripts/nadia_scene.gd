@@ -64,13 +64,20 @@ func _process(delta: float) -> void:
 		queue_redraw()
 
 func _draw() -> void:
-	_draw_sky()
-	_draw_far_roofs()
+	# Map001: anh composite ve thay troi + mai xa + mat tien + day dien.
+	# Map002: anh troi ve thay troi code; mai xa + mat tien code giu
+	# (ve len tren anh troi). Ground/tuong ben/hang rao/dao cu code giu
+	# (dat len tren anh, khop tile).
+	if map_id != 1:
+		_draw_far_roofs()
 	_draw_ground()
+	_draw_shadows()
 	_draw_side_walls()
-	_draw_facades()
+	if map_id != 1:
+		_draw_facades()
 	_draw_bottom_fence()
-	_draw_wires()
+	if map_id != 1:
+		_draw_wires()
 	_draw_props()
 
 func _draw_sky() -> void:
@@ -357,10 +364,24 @@ func _draw_props() -> void:
 	_draw_bicycle(tile_center(Vector2i(12, 9)) + Vector2(0, 6))
 	_draw_baskets(tile_center(Vector2i(13, 10)) + Vector2(0, 6))
 
-func _draw_ellipse_shadow(c: Vector2, rx: float, ry: float) -> void:
+func _draw_shadows() -> void:
+	# Bong do mem tren mat dat — nang sang tu phai-tren (mat troi o
+	# goc phai tren anh troi) nen bong do le ve trai-duoi. Bong dai nha
+	# doc chan mat tien (day anh composite o the gioi y +20) + bong
+	# cay chuoi / xe may / xe day / xe dap o dat mo rong duoi map.
+	var base := offset + Vector2(0, 30)
+	for i in range(6):
+		var c := base + Vector2(-560 + i * 200.0 + 60.0, 18.0 + i * 2.0)
+		_draw_ellipse_shadow(c, 130.0, 10.0, 0.10)
+	_draw_ellipse_shadow(tile_center(Vector2i(9, 11)) + Vector2(-22, 10), 34.0, 8.0, 0.14)
+	_draw_ellipse_shadow(tile_center(Vector2i(2, 11)) + Vector2(-18, 12), 26.0, 7.0, 0.14)
+	_draw_ellipse_shadow(tile_center(Vector2i(8, 13)) + Vector2(-20, 10), 30.0, 7.0, 0.14)
+	_draw_ellipse_shadow(tile_center(Vector2i(12, 9)) + Vector2(-18, 10), 24.0, 6.0, 0.14)
+
+func _draw_ellipse_shadow(c: Vector2, rx: float, ry: float, alpha: float = 0.22) -> void:
 	# Bong mem: ve bang vong tron de phang (scale y nho).
 	draw_set_transform(c, 0.0, Vector2(1.0, ry / rx))
-	draw_circle(Vector2.ZERO, rx, Color(0, 0, 0, 0.22))
+	draw_circle(Vector2.ZERO, rx, Color(0, 0, 0, alpha))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _draw_motorbike(c: Vector2) -> void:

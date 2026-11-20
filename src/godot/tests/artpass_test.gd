@@ -11,6 +11,10 @@ extends SceneTree
 ## 6. (20/11 10:30) Overlay ngay/dem dang NHAN: Sang trang (khong doi),
 ##    Chieu vang cam, Toi xanh dem dam + dom sang cua so bat; toast doi
 ##    khung o ngay duoi HUD; moi nhan kep duoi HUD va cach mep ~20px.
+## 7. (20/11 vong Nadia-style) Nhan vat + nen dung ANH VE TAY (res://art),
+##    nhan tren CanvasLayer rieng (tren nhan vat, duoi HUD), troi toi co
+##    trang + sao + den duong, dien thoai co notch/home bar + danh ba
+##    khong lap "Bạn thân — Bạn thân", nut Bat dau lon 620x110.
 
 var _frame := 0
 var _state := 0
@@ -33,6 +37,15 @@ func _init() -> void:
 	_main = ps.instantiate()
 	root.add_child(_main)
 
+func _find_button(node: Node, text_part: String) -> Button:
+	for ch in node.get_children():
+		if ch is Button and String((ch as Button).text).contains(text_part):
+			return ch as Button
+		var found := _find_button(ch, text_part)
+		if found != null:
+			return found
+	return null
+
 func _on_frame() -> void:
 	_frame += 1
 	if _frame > 600:
@@ -50,18 +63,40 @@ func _on_frame() -> void:
 				_check("camera zoom 1.6", _main._camera.zoom == Vector2(1.6, 1.6))
 				_check("HUD trong panel", _main._hud_gold.get_parent().get_parent() is PanelContainer)
 				var has_sprite := false
+				var has_tex := false
 				for mk in _main.iso_map.markers:
 					if String(mk.event_data.get("id", "")) == "co-tu":
 						for ch in mk.get_children():
 							if ch is CharacterSprite:
 								has_sprite = true
+								has_tex = (ch as CharacterSprite).texture != null
 				_check("NPC Co Tu co sprite chibi", has_sprite)
+				_check("NPC Co Tu dung anh ve tay", has_tex)
+				_check("nguoi choi dung anh ve tay", _main.player._sprite.texture != null)
+				# Anh nen composite Map001 + troi Map002 da nap.
+				var bg_ok := false
+				for ch in _main.iso_map.get_children():
+					if ch is Sprite2D and (ch as Sprite2D).texture != null:
+						bg_ok = true
+				_check("anh nen ve tay da nap (Map001)", bg_ok)
+				# Title co anh nen + nut Bat dau lon.
+				var title_bg := false
+				for ch in _main._title_panel.get_children():
+					if ch is TextureRect and (ch as TextureRect).texture != null:
+						title_bg = true
+				_check("title co anh nen", title_bg)
+				var btn := _find_button(_main._title_panel, "Bắt đầu chơi")
+				_check("nut Bat dau ton tai", btn != null)
+				if btn != null:
+					_check("nut Bat dau lon 620x110", btn.custom_minimum_size == Vector2(620, 110))
+				_check("lop nhan ton tai", _main._label_layer != null)
+				_check("lop nhan duoi lop HUD", _main._label_layer.get_index() < _main._ui_layer.get_index())
 				# Nhan cua hotspot ngoai man hinh (hs-tro-toi o (10,3),
 				# camera o spawn) phai AN, khong troi vao man hinh.
 				var hs_hidden := true
 				for mk in _main.iso_map.markers:
 					if String(mk.event_data.get("id", "")) == "hs-tro-toi":
-						hs_hidden = (mk as Marker).label_rect().size == Vector2.ZERO
+						hs_hidden = (mk as Marker).label_screen_rect().size == Vector2.ZERO
 				_check("nhan hotspot ngoai man hinh bi an", hs_hidden)
 				_main._on_start_pressed()
 				_check("bam Bat dau -> het title", not _main.title_open)
@@ -87,17 +122,25 @@ func _on_frame() -> void:
 			_check("lop mo dien thoai hien", _main._phone_dim.visible)
 			_check("dien thoai khung rieng 680x900", _main._phone_panel.size == Vector2(680, 900))
 			_check("dien thoai cach mep 20/190", _main._phone_panel.position == Vector2(20, 190))
+			_check("dien thoai co notch", _main._phone_notch.visible)
+			_check("dien thoai co thanh home", _main._phone_homebar.visible)
 			var txt: String = str(_main._phone_content.text)
 			_check("noi dung khong ma noi bo QuenBiet", not txt.contains("QuenBiet"))
 			_check("noi dung khong ma noi bo BestFriend", not txt.contains("BestFriend"))
-			_check("giai doan tieng Viet Quen biet", txt.contains("Quen biết"))
+			_check("giai doan tieng Viet Quen biết", txt.contains("Quen biết"))
 			_check("chan trang co ngay/vi", _main._phone_footer.text.contains("Ngày 1") and _main._phone_footer.text.contains("Ví"))
 			_check("dien thoai co goi y tien trinh", _main._phone_hint.text.contains("Chương"))
 			_check("ending hien tieng Viet, khong ID", _main._phone_hint.text.contains("Tự do") and not _main._phone_hint.text.contains("TuDo"))
 			_check("dien thoai co meo xoay theo ngay", _main._phone_tip.text.begins_with("Mẹo: "))
+			var soc: String = _main._social_text()
+			_check("danh ba khong lap 'Bạn thân — Bạn thân'", not soc.contains("Bạn thân — Bạn thân"))
+			_check("danh ba co Ban than 1 lan", soc.contains("Bạn thân"))
+			_check("danh ba liet ke NPC chua quen", soc.contains("Cô Tư") and soc.contains("chưa quen"))
 			_main._close_phone()
 			_check("dong dien thoai", not _main._phone_panel.visible)
 			_check("lop mo an theo", not _main._phone_dim.visible)
+			_check("notch an theo", not _main._phone_notch.visible)
+			_check("thanh home an theo", not _main._phone_homebar.visible)
 			# Buoi 2: overlay ngay/dem + thu tu layer.
 			_check("overlay ton tai", _main._daynight != null)
 			_check("overlay duoi HUD", _main._overlay_layer.layer < _main._ui_layer.layer)
@@ -113,31 +156,30 @@ func _on_frame() -> void:
 			_check("khung Toi xanh dem dam (nhan)", _main._daynight.color == Color(0.42, 0.52, 0.85, 1.0))
 			_check("Toi: dom sang cua so bat", _main.iso_map.night_glow != null and _main.iso_map.night_glow.visible and _main.iso_map.night_glow.lit)
 			_check("Toi: co diem sang nha", _main.iso_map.night_glow.spots.size() > 0)
+			_check("Toi: co trang (moon_on)", _main.iso_map.night_glow.moon_on)
+			_check("Toi: co den duong", _main.iso_map.night_glow.lamps.size() > 0)
 			_state = 3
 		3:
-			# Moi nhan: nam duoi HUD (268px man hinh) va cach mep >=13
-			# world (~20px man hinh) — kiem tra theo camera that.
-			var cam: Camera2D = _main._camera
-			var half: Vector2 = _main.get_viewport_rect().size / (2.0 * cam.zoom)
-			var center: Vector2 = cam.get_screen_center_position()
-			var vis_min: Vector2 = center - half
-			var vis_max: Vector2 = center + half
-			var top_min: float = vis_min.y + 268.0 / cam.zoom.y
+			# Moi nhan (toa do man hinh 720x1280): nam duoi HUD
+			# (y >= 276) va cach mep >= 16px — kiem tra tren
+			# label_screen_rect() cua lop CanvasLayer.
 			var all_ok := true
 			var worst := ""
+			var any_label := false
 			for mk in _main.iso_map.markers:
-				var r := (mk as Marker).label_rect()
+				var r := (mk as Marker).label_screen_rect()
 				if r.size == Vector2.ZERO:
 					continue
-				var wr := Rect2(mk.global_position + r.position, r.size)
-				var ok: bool = wr.position.x >= vis_min.x + 13.0 - 0.5 \
-					and wr.end.x <= vis_max.x - 13.0 + 0.5 \
-					and wr.position.y >= top_min - 0.5 \
-					and wr.end.y <= vis_max.y - 13.0 + 0.5
+				any_label = true
+				var ok: bool = r.position.x >= 16.0 - 0.5 \
+					and r.end.x <= 720.0 - 16.0 + 0.5 \
+					and r.position.y >= 276.0 - 0.5 \
+					and r.end.y <= 1280.0 - 16.0 + 0.5
 				if not ok:
 					all_ok = false
-					worst = "%s %s (top_min %.1f)" % [String(mk.event_data.get("name", "?")), str(wr), top_min]
-			_check("moi nhan duoi HUD + cach mep", all_ok)
+					worst = "%s %s" % [String(mk.event_data.get("name", "?")), str(r)]
+			_check("co nhan CanvasLayer hien", any_label)
+			_check("moi nhan duoi HUD + cach mep (man hinh)", all_ok)
 			if not all_ok:
 				print("  nhan vi pham: ", worst)
 			print("ARTPASS TEST: %d PASS / %d FAIL" % [_pass, _fail])

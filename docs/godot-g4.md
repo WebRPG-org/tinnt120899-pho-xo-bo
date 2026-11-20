@@ -296,3 +296,119 @@ Nadia, không chỉ sửa lặt vặt. Đọc `docs/nadia-reference.md` +
   Push lên branch `gh-pages` bằng snapshot-push theo lô ~20 file,
   sync record riêng (xem `src/nadia/www.muse-github-snapshot-sync.json`).
 - Live link vẫn phục vụ bản 06:12 tới khi deploy này xong.
+
+## 7. Art pass 2 — Nadia-style bằng ẢNH VẼ THẬT (20/11 ~12:00, theo 6 điểm live-check 11:40)
+
+Kết luận live-check 11:40: vẽ bằng code KHÔNG BAO GIỜ ra tranh vẽ
+tay có shading mềm kiểu Nadia — vòng này đổi hẳn sang ảnh vẽ thật
+(tự tạo mới bằng media image generation, KHÔNG lấy từ Nadia/game
+khác), nhân vật + nền đều dùng ảnh, code chỉ còn fallback.
+
+### 7.1 Ảnh (src/godot/art/, tự tạo mới 20/11)
+
+- 5 sprite nhân vật tách nền trắng → trong suốt, chuẩn hóa cao
+  512px: `char_player.png` (260×512), `char_cotu.png` (275×512),
+  `char_banthan.png` (330×512), `char_chile.png` (233×512),
+  `char_anhhai.png` (213×512) — mặt chi tiết (mắt/má/tóc mái),
+  quần áo có shading. Xử lý bằng PIL (`/tmp/process_art.py`,
+  không lưu trong repo): trắng → trong suốt (ngưỡng 235 + feather),
+  tách từng nhân vật theo bbox, resize cao 512.
+- `bg_map001.png` (1120×630): composite — sky band (mây + nắng +
+  chim, 280px) + facade crop (tường vàng cũ, mái tôn, 3 biển
+  "PHO BO / CA PHE / TAP HOA" đủ chữ, đèn lồng, cửa sổ/cửa ra vào).
+- `sky_band.png` (1120×280): trời riêng cho Map002.
+- `title_bg.png` (720×1280): crop giữa facade làm nền title.
+- Map001 dùng composite thay toàn bộ trời + mái xa + mặt tiền +
+  dây điện code; Map002 dùng sky_band thay trời code, giữ mái xa +
+  mặt tiền code (vẽ đè lên ảnh trời).
+
+### 7.2 Code (6 điểm live-check đều sửa)
+
+1. **Nhân vật có mặt** (`character_sprite.gd`): cfg có `texture`
+   → Sprite2D ảnh thật cao 104px (nhún + nghiêng nhẹ khi đi,
+   flip_h khi quay trái); không có file thì fallback vẽ code.
+   `player.gd` + `marker.gd` (NPC_STYLE) gắn texture từng người.
+2. **Nhãn luôn trên nhân vật** (`marker.gd`, `main.gd`,
+   `iso_map.gd`): nhãn là Label trên CanvasLayer riêng (layer 1,
+   tạo trước lớp HUD nên vẽ dưới HUD, trên mọi Node2D thế giới),
+   font 32px, tính rect theo `label_screen_rect()` (tọa độ màn
+   hình, kẹp y ≥ 276, cách mép 16px); nhãn NPC dời lên -144 (đầu
+   nhân vật ảnh cao 104px). Không có lớp thì fallback `_draw_name()`.
+3. **Trời có chi tiết**: composite/sky_band có mây + nắng + chim
+   (Sáng); overlay Chiều (1.0,0.82,0.55) / Tối (0.42,0.52,0.85)
+   giữ nguyên; Tối có trăng + sao + đèn lồng có quầng
+   (`night_glow.gd`: trăng ở nửa dưới dải trời, sao rải 80px dưới
+   cùng dải trời, màu HDR >1.0 để xuyên qua lớp overlay MUL —
+   màu thường bị nhân tối, chìm vào trời đêm); nhà có cửa sổ/cửa
+   ra vào trong ảnh; bóng đổ nhà/cây/xe (`nadia_scene.gd`
+   `_draw_shadows()`, nắng từ phải-trên → bóng lệch trái-dưới).
+   Camera `CAMERA_LOOK_UP` (0,-100) → (0,-230) để biển hiệu xuống
+   dưới HUD lúc spawn; trời hiện rõ khi đi lên hàng trên.
+4. **Điện thoại** (`main.gd`): bỏ lặp "Bạn thân — Bạn thân"
+   (tên trùng loại quan hệ thì in 1 lần); danh bạ liệt kê cả NPC
+   chưa quen (toàn bộ 18 khu) lấp khoảng trống; nội dung dài cho
+   vào ScrollContainer (không tràn panel — label phải đặt
+   `custom_minimum_size.x = 580` nếu không autowrap ép về 1px,
+   chữ xếp dọc 1 ký tự/dòng); notch + thanh home (Panel bo tròn
+   nâu đậm) hiện/ẩn theo điện thoại; panel giữ đúng 680x900
+   (separation VBox 10 → 8, không panel phình lên 907).
+5. **Nút "Bắt đầu chơi"**: trong game lớn 620x110 (font 40) +
+   nút DOM thật ngoài canvas (`web_shell.html` #start-overlay:
+   nút HTML "▶ BẮT ĐẦU CHƠI", enable khi engine tải xong, click
+   đặt `window.__pxb_start = true`, Godot poll 4 lần/giây qua
+   `JavaScriptBridge.eval` rồi đóng title; overlay ẩn sau 400ms).
+6. **Desktop hết dải đen** (`web_shell.html`): `.side-panel`
+   (thay `.side-caption`) — JS `layoutSidePanels()` đo vùng
+   letterbox thật (scale = min(w/720, h/1280)) rồi đặt panel 2 bên
+   đúng bằng phần thừa, nền gradient ấm + họa tiết + chữ nâu đậm,
+   `pointer-events: none`, ẩn khi phần thừa < 80px.
+
+### 7.3 Lỗi tìm ra trong vòng này (ghi để không tái phạm)
+
+- **NightGlow bị ảnh nền che**: IsoMap bật y-sort — NightGlow ở
+  y=0 xếp trước Sprite2D nền (y=7, đục) nên trăng/sao/đốm sáng bị
+  vẽ đè lên, không thấy dù `moon_on = true`. Sửa: `z_index = 10`
+  cho NightGlow (ánh sáng chồng lên nhân vật là đúng).
+- **Trăng/sao sai tọa độ**: `set_sky(offset + (-560,-330))` là
+  đỉnh mặt tiền, không phải đỉnh dải trời — sao rơi lên cửa/nền
+  đất. Đúng: `offset + (-560,-610)` (đỉnh composite 630px, tâm ở
+  offset+(0,-295)). Trăng/sao phải ở nửa dưới dải trời mới thấy
+  dưới HUD khi đi lên hàng trên.
+- **Overlay MUL nuốt nguồn sáng**: màu trăng/sao/đèn vẽ thường
+  (≤1.0) bị nhân với (0.42,0.52,0.85) thành xanh tối, chìm vào
+  trời đêm. Nguồn sáng phải vẽ bằng màu HDR >1.0.
+- **Panel điện thoại phình 900 → 907**: ScrollContainer mới làm
+  tổng chiều cao tối thiểu VBox vượt 900. Sửa bằng separation
+  10 → 8, giữ đúng 680x900.
+- **WASD không đi được**: hint ghi "WASD / mũi tên" nhưng code
+  chỉ dùng action `ui_up/down/left/right` (mặc định chỉ có phím
+  mũi tên, không bind W/A/S/D trong project.godot) — đi lên phải
+  dùng ArrowUp. Chưa sửa (việc riêng, ghi cho vòng sau).
+- **Nghi lệch tọa độ Map003+** (chưa verify bằng mắt): TileMapLayer
+  `map_to_local((5,4)) = (352,80)` vs `tile_center((5,4)) =
+  (344,462)` — marker/NPC dùng hệ offset, tile layer dùng hệ thô.
+  Map001–002 không ảnh hưởng (layer ẩn, NadiaScene dùng hệ
+  offset). Cần screenshot Map003 trước khi kết luận.
+
+### 7.4 Verify (vòng này)
+
+- `--check-only` exit 0; artpass 57/57 (thêm 18 check mới: ảnh
+  nhân vật/nền/title đã nạp, nút 620x110, lớp nhãn dưới HUD, notch/
+  home bar, danh bạ không lặp + liệt kê NPC, trăng + đèn đường);
+  scene 120 frame exit 0; G1 selftest 419/419; G2 selftest 87/87;
+  G3 playtest 95/95.
+- Export web exit 0; Chromium local (Xvfb + Playwright, 0 console
+  error): desktop 1280x720 (title DOM / map spawn / lên hàng trên /
+  Chiều / Tối + trăng sao / điện thoại) + portrait 720x1280 — đã
+  xem ảnh thật từng vòng (`visual-check/artpass2/`).
+- Hạn chế còn lại (đã đo, không giấu): trời + mặt trời chỉ hiện
+  rõ khi đi lên hàng trên (lúc spawn HUD chiếm 252px trên cùng +
+  camera theo người chơi nên trời nằm ngoài khung); mặt đất vẫn
+  là hình thoi vẽ code (be) dưới mặt tiền vẽ ảnh — tương phản
+  thấy rõ ở bản portrait; ảnh PNG (1,1–1,3 MB) KHÔNG push được
+  lên main qua snapshot-push (giới hạn 188.416 byte/file, chỉ file
+  text) — PNG chỉ có ở working copy local + nướng trong file
+  `.pck` đã deploy; clone mới sẽ fallback về vẽ code (nhân vật)
+  và không có ảnh nền (có guard `ResourceLoader.exists`).
+- Deploy gh-pages: xem §6.4 (script `tools/godot/build_gh_pages.py`).
+- Live link vẫn phục vụ bản 06:12 tới khi deploy này xong.

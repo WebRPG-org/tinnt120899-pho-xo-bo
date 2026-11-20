@@ -22,6 +22,7 @@ const CELL_H := 64
 
 var map_data: Dictionary = {}
 var offset := Vector2.ZERO
+var label_layer: CanvasLayer = null  # Lop nhan (tren the gioi, duoi HUD) — Main truyen vao.
 var ground_layer: TileMapLayer
 var object_layer: TileMapLayer
 var markers: Array = []  # Marker nodes, moi cai giu event_data
@@ -84,8 +85,9 @@ func is_walkable(tile: Vector2i) -> bool:
 		return false
 	return true
 
-func build(data: Dictionary, marker_script: Script, font: Font) -> void:
+func build(data: Dictionary, marker_script: Script, font: Font, p_label_layer: CanvasLayer = null) -> void:
 	map_data = data
+	label_layer = p_label_layer
 	for c in get_children():
 		c.queue_free()
 	markers.clear()
@@ -141,9 +143,25 @@ func build(data: Dictionary, marker_script: Script, font: Font) -> void:
 			object_layer.set_cell(Vector2i(tx, ty), 0, Vector2i(col_of[o], 0))
 
 	y_sort_enabled = true
+	var map_id := int(data.get("id", 0))
+	# Anh nen ve tay (Map001: troi + mat tien composite; Map002: troi
+	# rieng): Sprite2D con cua IsoMap, dat TRUOC NadiaScene trong cay
+	# nen canh code ve sau de len tren anh — dung he toa do offset
+	# (nhu NadiaScene/marker), khong dung toa do tho cua TileMapLayer.
+	# Composite Map001: 1120x630, day o ground row 0 (+20), dinh -610.
+	# Troi Map002: 1120x280, dinh -330, day -50.
+	if map_id == 1 and ResourceLoader.exists("res://art/bg_map001.png"):
+		var bg := Sprite2D.new()
+		bg.texture = load("res://art/bg_map001.png")
+		bg.position = offset + Vector2(0, -295)
+		add_child(bg)
+	elif map_id == 2 and ResourceLoader.exists("res://art/sky_band.png"):
+		var sky := Sprite2D.new()
+		sky.texture = load("res://art/sky_band.png")
+		sky.position = offset + Vector2(0, -190)
+		add_child(sky)
 	# Map001-002: canh ve tay kieu Nadia thay tile Kenney (atlas van giu
 	# de logic lop 1 / is_walkable dung so lieu cu, chi an hinh).
-	var map_id := int(data.get("id", 0))
 	if map_id == 1 or map_id == 2:
 		ground_layer.visible = false
 		object_layer.visible = false
@@ -154,13 +172,25 @@ func build(data: Dictionary, marker_script: Script, font: Font) -> void:
 		var m: Node2D = marker_script.new()
 		m.event_data = e
 		m.font = font
+		m.label_layer = label_layer
 		m.position = tile_center(Vector2i(e["tile"][0], e["tile"][1]))
 		add_child(m)
 		markers.append(m)
 	# Dom sang cua so (them sau cung de ve tren lop vat, duoi NPC).
 	night_glow = NightGlow.new()
 	add_child(night_glow)
+	# z_index 10: IsoMap bat y-sort — NightGlow o y=0 se bi Sprite2D
+	# nen composite (y=7, duc) ve DE LEN, che mat trang/sao/dom sang
+	# (loi 20/11 12:20: trang ve nhung khong thay). z_index dua dom
+	# len tren ca anh nen + NPC (anh sang chong len nhan vat la dung).
+	night_glow.z_index = 10
 	night_glow.set_spots(night_spots())
+	# Goc tren-trai DAI TROI (composite 1120x630, tam o offset+(0,-295)
+	# -> dinh y = offset.y-610, day y = offset.y+20): trang/sao nam
+	# trong dai nay, khong roi xuong mat tien nhu truoc (loi: truyen
+	# offset+(-560,-330) la dinh mat tien, sao roi len cua/nen dat).
+	night_glow.set_sky(offset + Vector2(-560, -610))
+	night_glow.lamps = [tile_center(Vector2i(10, 10)) + Vector2(10, -28)]
 	queue_redraw()
 
 # Nen dat mo rong quanh map: ca viewport la dat duong am chu khong phai

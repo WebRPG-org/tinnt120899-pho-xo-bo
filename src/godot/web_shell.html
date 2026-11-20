@@ -21,48 +21,120 @@ body {
 	touch-action: none;
 }
 
-/* Chu thich 2 ben tren man hinh rong (desktop): game doc 720x1280
-   chi chiem giua man hinh, 2 dai ben khong de den nua.
-   z-index 10: canvas WebGL phu kin cua so (opaque) nen chu thich
-   phai nam TREN canvas, khong thi bi che mat (vong 5 art pass).
-   Mau chu SANG (kem) de doc tren dai den cua canvas — canvas
-   WebGL alpha:false nen nen gradient CSS khong hien qua duoc,
-   dai ben van den, chu thich la phan "ghi ro game doc" (vong 6). */
-.side-caption {
+/* Panel 2 ben lap dai den desktop: game doc 720x1280 chi chiem
+   giua man hinh; JS layoutSidePanels() do rong/chieu cao chinh xac
+   theo vung letterbox that cua canvas (khong doan 300px co dinh).
+   Panel la DOM (nen am + hoa tiet + chu) nam TREN canvas WebGL
+   (opaque, dai den) — z-index 10, pointer-events none de khong
+   chan click vao game. Chu MAU TOI tren nen kem am (khong phai chu
+   sang tren dai den nhu vong 6 cu). */
+.side-panel {
 	position: fixed;
-	top: 50%;
-	transform: translateY(-50%);
+	top: 0;
+	bottom: 0;
 	width: 300px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	text-align: center;
 	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
 	font-size: 28px;
 	font-weight: bold;
 	line-height: 1.4;
-	color: #f7e8c8;
-	text-align: center;
-	text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+	color: #5a3d1e;
+	background:
+		repeating-linear-gradient(45deg, rgba(120, 84, 40, 0.08) 0 2px, transparent 2px 26px),
+		repeating-linear-gradient(-45deg, rgba(120, 84, 40, 0.08) 0 2px, transparent 2px 26px),
+		linear-gradient(180deg, #f7e8c8 0%, #e8d3a8 45%, #c9a86a 100%);
 	z-index: 10;
-	display: none;
 	pointer-events: none;
 }
 
-.side-caption span {
+.side-panel span {
 	font-size: 18px;
 	font-weight: normal;
-	color: #e8d3a8;
+	color: #6b4a26;
+	margin-top: 12px;
+	line-height: 1.5;
 }
 
-.side-caption.left {
-	left: 24px;
+.side-panel.left {
+	left: 0;
 }
 
-.side-caption.right {
-	right: 24px;
+.side-panel.right {
+	right: 0;
 }
 
-@media (min-width: 1400px) {
-	.side-caption {
-		display: block;
-	}
+/* Nut Bat dau DOM THAT ngoai canvas: nut trong canvas de bam truot
+   tren desktop (loi 20/11 11:40) — nut HTML lon, o giua man hinh,
+   bam la vao game ngay. Overlay phu kin man hinh luc tai game,
+   hien tien do tai; engine chay xong nut sang len. Click: dat
+   window.__pxb_start = true (Godot poll 4 lan/giay) + an overlay. */
+#start-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 30;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background:
+		repeating-linear-gradient(45deg, rgba(120, 84, 40, 0.07) 0 2px, transparent 2px 26px),
+		repeating-linear-gradient(-45deg, rgba(120, 84, 40, 0.07) 0 2px, transparent 2px 26px),
+		linear-gradient(180deg, #f7e8c8 0%, #e8d3a8 45%, #c9a86a 100%);
+}
+
+.start-card {
+	text-align: center;
+	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
+	color: #5a3d1e;
+	max-width: 90vw;
+}
+
+.start-title {
+	font-size: 64px;
+	font-weight: bold;
+	letter-spacing: 2px;
+}
+
+.start-sub {
+	font-size: 22px;
+	line-height: 1.5;
+	margin-top: 12px;
+	color: #6b4a26;
+}
+
+#start-btn {
+	margin-top: 36px;
+	font-family: inherit;
+	font-size: 34px;
+	font-weight: bold;
+	color: #fff8e6;
+	background: #8b5a2b;
+	border: 3px solid #5a3d1e;
+	border-radius: 16px;
+	padding: 26px 64px;
+	cursor: pointer;
+	box-shadow: 0 6px 0 #5a3d1e;
+}
+
+#start-btn:active {
+	transform: translateY(4px);
+	box-shadow: 0 2px 0 #5a3d1e;
+}
+
+#start-btn:disabled {
+	background: #a08a6a;
+	border-color: #7a6a52;
+	box-shadow: 0 6px 0 #7a6a52;
+	cursor: wait;
+}
+
+.start-note {
+	font-size: 18px;
+	margin-top: 20px;
+	color: #6b4a26;
 }
 
 #canvas {
@@ -146,8 +218,16 @@ body {
 		$GODOT_HEAD_INCLUDE
 	</head>
 	<body>
-		<div class="side-caption left">PHỐ XÔ BỒ<br><span>Game xã hội 2.5D Việt Nam<br>18 khu phố • Làm việc • Buôn bán • Kết bạn</span></div>
-		<div class="side-caption right">CHƠI TRÊN ĐIỆN THOẠI<br><span>Game thiết kế cho màn hình dọc.<br>Trên máy tính, kéo cửa sổ hẹp lại sẽ đẹp hơn.</span></div>
+		<div class="side-panel left">PHỐ XÔ BỒ<br><span>Game xã hội 2.5D Việt Nam<br>18 khu phố • Làm việc • Buôn bán • Kết bạn</span></div>
+		<div class="side-panel right">CHƠI TRÊN ĐIỆN THOẠI<br><span>Game thiết kế cho màn hình dọc.<br>Trên máy tính, kéo cửa sổ hẹp lại sẽ đẹp hơn.</span></div>
+		<div id="start-overlay">
+			<div class="start-card">
+				<div class="start-title">PHỐ XÔ BỒ</div>
+				<div class="start-sub">Game xã hội 2.5D Việt Nam<br>18 khu phố • Làm việc • Buôn bán • Kết bạn</div>
+				<button id="start-btn" disabled>Đang tải game…</button>
+				<div class="start-note">Bấm nút để vào game — chơi trên điện thoại là đẹp nhất</div>
+			</div>
+		</div>
 		<canvas id="canvas">
 			Your browser does not support the canvas tag.
 		</canvas>
@@ -172,6 +252,33 @@ const engine = new Engine(GODOT_CONFIG);
 	const statusOverlay = document.getElementById('status');
 	const statusProgress = document.getElementById('status-progress');
 	const statusNotice = document.getElementById('status-notice');
+	const startOverlay = document.getElementById('start-overlay');
+	const startBtn = document.getElementById('start-btn');
+	const leftPanel = document.querySelector('.side-panel.left');
+	const rightPanel = document.querySelector('.side-panel.right');
+
+	// Do panel 2 ben khop vung letterbox that: game 720x1280 scale
+	// vua cua so, phan thua 2 ben la dai den can lap.
+	function layoutSidePanels() {
+		const scale = Math.min(window.innerWidth / 720, window.innerHeight / 1280);
+		const gameW = 720 * scale;
+		const sideW = Math.max(0, (window.innerWidth - gameW) / 2);
+		const show = sideW >= 80;
+		for (const p of [leftPanel, rightPanel]) {
+			p.style.display = show ? 'flex' : 'none';
+			p.style.width = sideW + 'px';
+		}
+	}
+	layoutSidePanels();
+	window.addEventListener('resize', layoutSidePanels);
+
+	startBtn.addEventListener('click', () => {
+		window.__pxb_start = true;
+		document.getElementById('canvas').focus();
+		// Cho Godot poll (0.25s) dong title truoc khi an overlay,
+		// tranh chop man hinh title 1 khoanh khac.
+		setTimeout(() => { startOverlay.style.display = 'none'; }, 400);
+	});
 
 	let initializing = true;
 	let statusMode = '';
@@ -213,6 +320,8 @@ const engine = new Engine(GODOT_CONFIG);
 		}
 		setStatusMode('notice');
 		initializing = false;
+		startBtn.disabled = true;
+		startBtn.textContent = 'Không tải được game — tải lại trang';
 	}
 
 	const missing = Engine.getMissingFeatures({
@@ -257,6 +366,7 @@ const engine = new Engine(GODOT_CONFIG);
 				if (current > 0 && total > 0) {
 					statusProgress.value = current;
 					statusProgress.max = total;
+					startBtn.textContent = 'Đang tải game… ' + Math.round(current / total * 100) + '%';
 				} else {
 					statusProgress.removeAttribute('value');
 					statusProgress.removeAttribute('max');
@@ -264,6 +374,8 @@ const engine = new Engine(GODOT_CONFIG);
 			},
 		}).then(() => {
 			setStatusMode('hidden');
+			startBtn.disabled = false;
+			startBtn.textContent = '▶  BẮT ĐẦU CHƠI';
 		}, displayFailureNotice);
 	}
 }());
