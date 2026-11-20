@@ -1234,6 +1234,7 @@ sáng/tối ở khu TẠP HÓA). Sửa xong, tự xem ảnh thật cả 3 khung
 
 - `tools/godot/build_gh_pages.py` thêm `IMG_PARTS`: chunk base64 `title_bg.jpg` (1 chunk) + `char_player.png` (2) + `char_banthan.png` (2) vào `staging/img/<tên>/`; loader mở rộng fetch-override phục vụ 3 tên file với đúng Content-Type. Verify ráp lại khớp byte.
 - Export web vòng này: exit 0, pck 6.849.684 byte SHA `6d668deb…`, wasm không đổi `fc74679e…`.
+- Deploy gh-pages: main `7c5bb35f`; gh-pages 3 batch `e1a8db75` (index.html + pck 000–018) → `7324e001` (pck 019–037) → `2288401c` (pck 038–050 + 5 chunk ảnh); wasm 293 chunk không đổi nên không push lại. Verify khớp byte 6/6 mẫu remote-vs-staging (index.html, pck 000/025/050, img title_bg + char_player).
 
 ### 18.4 Verify vòng 6 (đầy đủ)
 
