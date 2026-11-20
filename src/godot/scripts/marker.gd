@@ -17,9 +17,6 @@ var _label: Label = null  # Nhan Control tren CanvasLayer (neu co).
 var label_override := Rect2()  # Main dat sau khi chong-chong o khong
 	# gian man hinh (vong 4, 20/11 14:00): rong = khong dung, tinh
 	# nhu cu bang label_screen_rect().
-var label_shift := Vector2.ZERO  # Lech px man hinh do Main day
-	# chong chong nhan (xem _deoverlap_labels): cong vao rect man
-	# hinh tra ve, khong doi vi tri goc cua nhan.
 
 const NPC_PARITY_OFFSET := 40.0
 # HUD gon (panel cao thuc te ~157px do min-size cua noi dung, day
@@ -126,10 +123,9 @@ func label_screen_rect() -> Rect2:
 	var pos := Vector2(sp.x + (wr.size.x * cam.zoom.x - w) / 2.0, sp.y + (wr.size.y * cam.zoom.y - h) / 2.0)
 	pos.x = clampf(pos.x, 16.0, 720.0 - 16.0 - w)
 	pos.y = clampf(pos.y, HUD_BOTTOM_SCREEN, 1280.0 - 16.0 - h)
-	# Lech chong chong do Main tinh (moi frame tinh lai, xem
-	# _deoverlap_labels): nhan van trong man hinh vi Main kep
-	# khi day (day xuong toi 1280-16-h, day len toi 190).
-	return Rect2(pos + label_shift, Vector2(w, h))
+	# Vi tri co ban (chua chong-chong); Main tinh label_override
+	# tu rect nay moi frame (xem _resolve_label_overlaps).
+	return Rect2(pos, Vector2(w, h))
 
 func _update_label() -> void:
 	if _label == null:

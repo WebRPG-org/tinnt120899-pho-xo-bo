@@ -663,8 +663,148 @@ thoại. Đã sửa + xem lại ảnh, 6 điểm hết:
 - Phát hiện còn lại (không chặn deploy): Map003 tile vẫn là khối
   vàng tái dùng (PROVISIONAL, chờ art riêng); toast "Đã sang…"
   đè lên mặt trời ở góc trái (cosmetic, đã biết từ trước).
+- **Va chạm song song (ghi 20/11 ~14:30):** trong lúc vòng này
+  chạy, một luồng khác làm artpass4 trên cùng working copy
+  (main.gd 07:16, export 07:17:54, pck mới `b6900f13…`). Push
+  main `8e590ded…` đã quét cả thay đổi artpass4 của luồng kia
+  (main.gd có cả `_deoverlap_labels` + `_resolve_label_overlaps`,
+  marker.gd có cả `label_shift` + `label_override`) — commit vẫn
+  coherent, đã verify lại trên code gộp: polish 18/18, artpass4
+  17/18 (1 FAIL là mục điện thoại của luồng kia, đang làm dở),
+  artpass 57/57, artpass3 23/23, G1 419/419, G3 95/95, G2 87/87,
+  MarketBattle 123/123, ui_wiring 37/37 + 71/71, battle AI 34/34.
+  **Deploy gh-pages CHƯA làm trong vòng này** (staging trên đĩa
+  vẫn là bản polish `71c1c358…` đã verify; build hiện tại là
+  `b6900f13…` của luồng kia, chưa verify xong) — vòng sau export
+  lại từ code gộp, verify rồi deploy 1 lần. Hai hệ nhãn cùng chạy
+  (`_resolve_label_overlaps` ghi `label_override`, `_update_label`
+  ưu tiên nó; `_deoverlap_labels` tính `label_shift` nhưng bị
+  override che) — **ĐÃ GỘP ở §10** (chỉ còn 1 hệ).
 
-## 10. Việc tiếp theo — G4 bước 5
+## 10. Art pass 4 — XONG (20/11 ~14:00–15:00, live check 13:53–13:56)
+
+5 điểm ưu tiên từ kiểm live 13:53–13:56 trên bản artpass3
+(gh-pages `8bed7c2c`), sửa xong, tự xem ảnh thật, deploy lại.
+
+### 10.1 Nhãn chống chồng — viết lại bộ giải (lần 2)
+
+- **Lần 1 (khoảng trống, vật cản toàn thân 90×160, gap nhân đôi
+  grow+6px) SAI:** debug cho thấy "Góc Chế Tạo" + "Cửa ra" cùng
+  rơi về y=1216 và chồng nhau. Nguyên nhân: grow(4)/grow(6) +
+  cộng thêm 6px trong công thức = gap tính 2 lần, ăn hết khe hẹp
+  giữa nhãn NPC và đầu NPC; vật cản toàn thân 160px đẩy nhãn
+  xuống tận đáy màn hình, rời khỏi điểm neo.
+- **Lần 2 (đang chạy):** vật cản chỉ đầu + thân trên
+  (`_sprite_obstacle_rect`: 90×100px, đầu ở -150, ngực ở -50 —
+  chân/bị che không sao, mặt/ngực mới quan trọng); gap 1 lần
+  duy nhất `LABEL_GAP = 4.0` (không grow); chọn khoảng dọc trống
+  gần vị trí mong muốn nhất; nếu khoảng dọc gần nhất xa hơn
+  60px thì **dịch NGANG giữ nguyên y** (ưu tiên phải rồi trái,
+  40/80/120/160px) thay vì đẩy lên/xuống xa khỏi điểm neo.
+- Đo thật lúc spawn (debug headless frame 60): Cô Tư giữ
+  (438,961); Bạn Thân giữ (229,827); Góc Chế Tạo (293,874) —
+  kẹp giữa nhãn Bạn Thân (đáy 865) và đầu Bạn Thân (915), cách
+  mỗi bên 4–9px, KHÔNG đè mặt; Hẻm trọ buổi tối (424,1154) —
+  dưới thân trên Cô Tư (hết 1150) +4px, chỉ che chân; Cửa ra giữ
+  (281,1225) đáy map.
+- **Gộp 2 hệ nhãn (§9):** xóa `_deoverlap_labels()` +
+  `marker.label_shift` — hệ cũ chạy chồng mỗi frame, `label_shift`
+  của nó còn làm nhiễu đầu vào (desired rect) của bộ giải mới
+  nhưng kết quả không bao giờ được dùng (override ưu tiên).
+  Chỉ còn `_resolve_label_overlaps` + `label_override`.
+  Polish test đổi sang kiểm tra vị trí HIỂN THỊ (override nếu
+  có, không thì rect cơ bản) — Map002/003 vẫn không chồng nhau
+  qua bộ giải chung.
+
+### 10.2 Nhân vật tối theo khung Tối — nguyên nhân gốc
+
+- Tint cũ (0.72,0.78,0.95) quá nhạt. Lấy mẫu pixel chứng minh
+  overlay MUL ngày/đêm ĐÃ phủ lên nhân vật (facade Tối/Nền
+  = 0.41 khớp ảnh đêm × MUL; đất = 0.62 khớp MUL) — tint chỉ
+  yếu chứ không thiếu. Đổi tint Tối → **(0.42,0.48,0.72)**,
+  Chiều → (1.0,0.85,0.62) ấm hơn. Đo ảnh Tối: nhân vật
+  48.3 vs Sáng 120.8 (tỷ lệ 0.40, gồm cả vòng chọn vàng dưới
+  chân) — nhìn thật: nhân vật xanh đậm, hòa vào nền đêm.
+
+### 10.3 Đường nối dọc 2 tấm nền — cân bằng lại ảnh
+
+- `tools/godot/regrade_bg.py`: cân lại `bg_map001.png` +
+  `bg_map001_night.jpg` (bản gốc backup `/tmp/artpass4-bak/`):
+  gain hằng theo từng phần ba + ramp tuyến tính 160px qua
+  biên x≈373/747, gain kẹp [0.92, 1.08], chỉ y≥240 + feather
+  dọc 40px. Ngày: độ sáng 3 phần 103.0/104.3/96.2 →
+  100.6/101.2/100.1; đêm 51.8/55.9/55.7 → 53.8/54.2/54.0.
+  (Bản v1 gain mượt 201px đã bỏ — làm bước nhảy ở khớp tệ hơn.)
+  Ảnh TẠP HÓA sau sửa: không còn ranh giới thẳng cắt qua
+  cửa/cửa sổ/mặt đất (chênh sáng 3 phần còn lại chủ yếu do
+  nội dung cửa tối, không phải nối ảnh).
+
+### 10.4 Toast + sao đêm + điện thoại
+
+- Toast ngày/khung (60,200) → **(60,720)** (giữa-dưới, trên
+  vỉa hè, không đè đĩa mặt trời/trăng ở y~200–400).
+- Sao đêm: vẽ LUÔN (kể cả khi `sky_in_image`), 64 sao (trước
+  36), alpha tới 0.95, bán kính tới 4.5; trăng vẫn bỏ qua khi
+  có ảnh trời (tránh 2 mặt trăng); thêm cờ `stars_drawn`.
+- Điện thoại: panel (20,190) → **(20,216)** (dưới nút HUD
+  "Điện thoại (P)" hết ở y=208 + 8px); notch → (300,209);
+  homebar → (290,1104); content scroll min 200 → **224**.
+- **Lỗi Chị Lệ lần 2 (14:15):** sau lần 1 vẫn nửa cắt — vì
+  danh bạ liệt kê NPC chưa quen cả 18 khu (38 dòng) và mỗi
+  bullet dài ~50 ký tự gập 2 dòng; dòng 2 bị cắt ở mép dưới
+  viewport. Sửa gốc: bullet "chưa quen" gọn 1 dòng
+  (`• <tên> — chưa quen`, tên dài nhất 20 ký tự = 34 ký tự),
+  gợi ý nói chuyện chuyển lên dòng tiêu đề. "Chị Lệ — chưa
+  quen" nay hiện đủ 1 dòng; dòng nửa cắt ở mép cuộn còn lại
+  là mục mới nguyên vẹn (báo hiệu cuộn được), không phải nửa
+  sau của 1 mục.
+
+### 10.5 Test + verify vòng này
+
+- **Test mới** `tests/g4_artpass4_test.gd`: **18/18 PASS** —
+  toast y 700–740; tint Tối r<0.6, b>r; panel/notch/homebar;
+  panel 680×900 sau khi mở; content scroll 224;
+  `_social_text()` kết thúc `"\n "` + bullet "chưa quen"
+  ≤44 ký tự; `stars_drawn`; nhãn override không chồng nhau,
+  không đè đầu/thân trên; về Sáng tint trắng trở lại.
+- Hồi quy đầy đủ (sau gộp hệ nhãn): artpass 57/57, artpass3
+  23/23, polish 18/18, G1 selftest 419/419, G1 playtest 14/14,
+  G2 selftest 87/87, G3 playtest 95/95, MarketBattle 123/123,
+  battle scene 43/43, battle main 15/15, battle AI 34/34,
+  coord+WASD 16/16, hotspot 37/37, jobs 56/56,
+  inventory+crafting 78/78, economy+education 92/92, phonehub
+  66/66, savecloud 69/69, social+titles+story 102/102, tools
+  155/155, online 91/91, ui_wiring 37/37 + 71/71;
+  `--check-only` main.gd + marker.gd exit 0; scene 120 frame
+  exit 0.
+- Export web exit 0: pck **6.876.920 byte, SHA `101dda2e…`**
+  (trước `7e84335…`), wasm không đổi `fc74679e…`.
+- **Tự xem ảnh thật** (Chromium 1255 + swiftshader, 720×1280,
+  `visual-check/artpass4/ap4-01..06.png`, script
+  `visual-check/check_artpass4.py`, 0 console error,
+  0 pageerror): Sáng spawn — nhãn tách nhau, không đè mặt,
+  mặt trời rõ; TẠP HÓA — không đường nối dọc; Chiều — toast
+  không đè mặt trời, ngả cam ấm; Tối — nhân vật xanh đậm,
+  trăng rõ, sao dày, toast không đè trăng, đèn lồng/cửa sổ
+  sáng; điện thoại — nút HUD đủ, "Chị Lệ — chưa quen" đủ
+  1 dòng. **5/5 điểm đã hết.**
+- File `tests/debug_labels_test.gd` (debug tạm, in rect nhãn)
+  đã xóa trước khi push.
+- Giới hạn còn lại: PNG art chỉ có trong bản local + `.pck`
+  đã deploy (snapshot-push giới hạn text 188.416 byte/file) —
+  clone mới vẫn fallback nhân vật vẽ code; nhãn "Cửa ra" vẫn
+  ở sát đáy (6px, đúng vị trí vì cửa ở đáy map); nhãn Hẻm
+  che chân Cô Tư (chỉ chân, không che thân).
+
+## 11. Việc tiếp theo — G4 bước 5
+
+1. G4 online thật: quyết Godot headless dedicated server thay .NET
+   hay chờ máy có dotnet (xem `docs/opensource-engine.md` §3.4).
+2. Lưu giữ sạp + Danh vọng trận MarketBattle vào SaveCloud
+   (logic `data()` đã có, Main chưa nối); animation di chuyển/
+   đánh; chọn đội/vũ khí trước trận.
+3. Tile riêng Map003–018 (đang PROVISIONAL); camera zoom trận
+   MarketBattle (lưới đang nhỏ giữa màn hình).
 
 1. G4 online thật: quyết Godot headless dedicated server thay .NET
    hay chờ máy có dotnet (xem `docs/opensource-engine.md` §3.4).

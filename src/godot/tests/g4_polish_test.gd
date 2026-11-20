@@ -38,7 +38,9 @@ func _labels_overlap() -> String:
 	# tra ve ten cap chong nhau dau tien (de in ra khi FAIL).
 	var rects := {}
 	for mk in _main.iso_map.markers:
-		var r: Rect2 = mk.label_screen_rect()
+		# Vi tri hien thi that: override do Main chong-chong
+		# (xem _resolve_label_overlaps); neu rong thi rect co ban.
+		var r: Rect2 = mk.label_override if mk.label_override.size != Vector2.ZERO else mk.label_screen_rect()
 		if r.size != Vector2.ZERO:
 			rects[String(mk.event_data.get("name", ""))] = r
 	var keys := rects.keys()

@@ -269,49 +269,6 @@ func _fit_hud_map() -> void:
 		size -= 2
 	_hud_map.add_theme_font_size_override("font_size", size)
 
-func _deoverlap_labels() -> void:
-	# Chong chong nhan tren MOI map (khong chi Map001): 2 cua o day
-	# map (vd Map002/Map003: (5,4) + (5,8)) deu bi kep xuong cung dai
-	# y o day man hinh nen nhan de len nhau (loi 20/11 13:20). Moi frame
-	# tinh lai rect man hinh cua moi nhan hien, sap theo y roi day
-	# nhan chong xuong duoi (het cho duoi thi day len tren); lech luu
-	# vao marker.label_shift (px man hinh) de _update_label ap dung.
-	# Chay trong Main._process (truoc _process cua marker con) nen
-	# nhan ve dung vi tri da day ngay trong frame do.
-	if iso_map == null:
-		return
-	for mk in iso_map.markers:
-		mk.label_shift = Vector2.ZERO
-	var items: Array = []
-	for mk in iso_map.markers:
-		var r: Rect2 = mk.label_screen_rect()
-		if r.size != Vector2.ZERO:
-			items.append([mk, r])
-	items.sort_custom(func(a, b): return (a[1] as Rect2).position.y < (b[1] as Rect2).position.y or ((a[1] as Rect2).position.y == (b[1] as Rect2).position.y and (a[1] as Rect2).position.x < (b[1] as Rect2).position.x))
-	var placed: Array[Rect2] = []
-	for item in items:
-		var mk: Marker = item[0]
-		var r: Rect2 = item[1]
-		var guard := 0
-		while guard < 60:
-			guard += 1
-			var hit := Rect2()
-			var found := false
-			for pr in placed:
-				if r.grow(3.0).intersects(pr):
-					hit = pr
-					found = true
-					break
-			if not found:
-				break
-			var down_y := hit.end.y + 6.0
-			if down_y + r.size.y <= 1280.0 - 16.0:
-				r.position.y = down_y
-			else:
-				r.position.y = maxf(hit.position.y - 6.0 - r.size.y, 190.0)
-		placed.append(r)
-		mk.label_shift = r.position - (item[1] as Rect2).position
-
 # --- Thoi gian ---
 func _process(delta: float) -> void:
 	# Camera bam theo nguoi choi (zoom 1.4: map lap day viewport).
@@ -321,7 +278,6 @@ func _process(delta: float) -> void:
 	# _process cua Marker (cha chay truoc con) nen override kip dung
 	# ngay trong frame nay.
 	_resolve_label_overlaps()
-	_deoverlap_labels()
 	# Nut DOM "Bat dau" tren web (web_shell.html): nut HTML dat
 	# window.__pxb_start = true; poll 4 lan/giay (khong dung signal
 	# vi JavaScriptBridge chi co eval, khong co callback tu JS).
@@ -825,7 +781,7 @@ func _today_text() -> String:
 		day, _frame_name(), String(_map_by_id(current_map_id).get("name", "")), npcs, total, goal]
 
 func _social_text() -> String:
-	var lines: Array[String] = ["Danh bạ — trò chuyện tăng thân thiết (+5/lần):"]
+	var lines: Array[String] = ["Danh bạ — trò chuyện tăng thân thiết (+5/lần). Chưa quen thì nói ở ngoài đời:"]
 	var known: Dictionary = {}
 	for rel in social.all_relations():
 		var r := rel as Dictionary
@@ -857,7 +813,12 @@ func _social_text() -> String:
 			if pid == "" or seen_npc.has(pid) or known.has(pid):
 				continue
 			seen_npc[pid] = true
-			lines.append("• %s — chưa quen (nói chuyện ở ngoài đời để kết bạn)" % String(ev.get("name", pid)))
+			# Gon 1 dong (ten NPC dai nhat 20 ky tu + "— chưa quen"
+			# = 34 ky tu, vua 1 dong 620px): khong go xuong 2 dong
+			# nua — dong 2 bi cat o mep duoi viewport la loi "Chi
+			# Le" 20/11 13:53/14:15. Goi y noi chuyen chuyen len
+			# dong tieu de.
+			lines.append("• %s — chưa quen" % String(ev.get("name", pid)))
 	if social.all_relations().is_empty() and seen_npc.is_empty():
 		lines.append("(chưa có quan hệ nào)")
 	# Dong trong cuoi: khi cuon het xuong, dong that cuoi khong bi
@@ -1422,27 +1383,40 @@ func _daynight_color(f: int) -> Color:
 			return Color(0.42, 0.52, 0.85, 1.0)
 	return Color(1.0, 1.0, 1.0, 1.0)
 
-## Chong-chong nhan (vong 4, 20/11 14:00): nhan tinh theo vi tri neo
-## rieng le thi de len dau nhan vat khac ("Goc Che Tao" de len dau
-## Ban Than, "Co Tu" sat mep "Goc Che Tao", "Hem tro buoi toi" de
-## len than Co Tu — kiem live 13:53). Giai o khong gian man hinh
-## (720x1280) moi frame: nhan nao chong nhan khac hoac dau nhan vat
-## thi dich xuong duoi vat can (neu con cho) hoac dich len tren vat
-## can; ket qua ghi vao Marker.label_override de Marker ve theo.
+## Chong-chong nhan (vong 4, 20/11 14:00, sua lan 2): nhan tinh
+## theo vi tri neo rieng le thi de len dau nhan vat khac ("Goc Che
+## Tao" de len dau Ban Than, "Co Tu" sat mep "Goc Che Tao", "Hem
+## tro buoi toi" de len than Co Tu — kiem live 13:53). Giai o
+## khong gian man hinh (720x1280) moi frame:
+##  * Vat can la dau + than tren cua nhan vat (90x100px, khong
+##    phai toan than 160px — chan/bi che khong sao, mat/nguc moi
+##    quan trong; vat can toan than day nhan xuong tan day man
+##    hinh, roi khoi diem neo).
+##  * Chon khoang doc trong gan vi tri mong muon nhat (cach 4px,
+##    khong cong gap 2 lan — grow() + cong them 6px an het khe
+##    hep giua nhan NPC va dau NPC).
+##  * Neu khoang doc gan nhat xa hon 60px thi dich NGANG (giu y)
+##    thay vi day len/xuong xa khoi diem neo — vd nhan Che Tao
+##    dich phai 120px de thoat dau Ban Than.
+## Ket qua ghi vao Marker.label_override de Marker ve theo.
+const LABEL_GAP := 4.0
+const LABEL_MAX_DRIFT := 60.0
+
+func _sprite_obstacle_rect(screen_pos: Vector2) -> Rect2:
+	# Dau + than tren cua sprite anh cao 104 world (~146px man hinh
+	# o zoom 1.4): tam o chan nhan vat, dau o -150, nguc o -50.
+	return Rect2(screen_pos + Vector2(-45, -150), Vector2(90, 100))
+
 func _resolve_label_overlaps() -> void:
 	if iso_map == null:
 		return
 	var ct := get_viewport().get_canvas_transform()
 	var obstacles: Array[Rect2] = []
-	# Dau nhan vat: sprite anh cao 104 world (~146px man hinh o
-	# zoom 1.4), rong ~90px — nhan khong duoc de len vung nay.
 	if player != null:
-		var pp: Vector2 = ct * player.position
-		obstacles.append(Rect2(pp + Vector2(-45, -150), Vector2(90, 160)))
+		obstacles.append(_sprite_obstacle_rect(ct * player.position))
 	for mk in iso_map.markers:
 		if String(mk.event_data.get("kind", "")) == "npc":
-			var mp: Vector2 = ct * mk.global_position
-			obstacles.append(Rect2(mp + Vector2(-45, -150), Vector2(90, 160)))
+			obstacles.append(_sprite_obstacle_rect(ct * mk.global_position))
 	var entries: Array = []
 	for mk in iso_map.markers:
 		var r: Rect2 = mk.label_screen_rect()
@@ -1461,50 +1435,77 @@ func _resolve_label_overlaps() -> void:
 	var placed: Array[Rect2] = []
 	for e in entries:
 		var r: Rect2 = e["rect"]
-		# Giai bang khoang trong: nhung vat can (dau nhan vat + nhan
-		# da dat) chong theo chieu X voi nhan nay se cam cac khoang
-		# doc; chon khoang trong gan vi tri mong muon nhat. (Ban
-		# dich xuong/len lan luot cu dao dong giua 2 vat can khi day
-		# man hinh het cho — vd Goc Che Tao va Cua ra cung roi ve
-		# y=1216 va chong nhau.)
-		var blockers: Array[Rect2] = []
-		for o in obstacles:
-			if o.end.x > r.position.x and o.position.x < r.end.x:
-				blockers.append(o.grow(4.0))
-		for p in placed:
-			if p.end.x > r.position.x and p.position.x < r.end.x:
-				blockers.append(p.grow(6.0))
-		var top_min := 190.0
-		var top_max := 1264.0 - r.size.y
-		var intervals: Array = [[top_min, top_max]]
-		for b in blockers:
-			var next_iv: Array = []
-			for iv in intervals:
-				var lo: float = iv[0]
-				var hi: float = iv[1]
-				var b_lo: float = b.position.y - r.size.y - 6.0
-				var b_hi: float = b.end.y + 6.0
-				if b_hi <= lo or b_lo >= hi:
-					next_iv.append(iv)
-				else:
-					if b_lo > lo:
-						next_iv.append([lo, minf(hi, b_lo)])
-					if b_hi < hi:
-						next_iv.append([maxf(lo, b_hi), hi])
-			intervals = next_iv
-		var best_y := -1.0
-		var best_dist := 1.0e9
-		for iv in intervals:
-			var y := clampf(r.position.y, iv[0], iv[1])
-			var d := absf(y - r.position.y)
-			if d < best_dist:
-				best_dist = d
-				best_y = y
-		if best_y >= 0.0:
+		var want_y := r.position.y
+		var best_y := _nearest_free_y(r, obstacles, placed)
+		if best_y < 0.0 or absf(best_y - want_y) > LABEL_MAX_DRIFT:
+			# Khoang doc gan nhat qua xa — thu dich ngang giu
+			# nguyen y (uu tien dich phai, roi dich trai).
+			var shifted := false
+			for dx in [40.0, 80.0, 120.0, 160.0, -40.0, -80.0, -120.0, -160.0]:
+				var cand := Rect2(r.position + Vector2(dx, 0), r.size)
+				cand.position.x = clampf(cand.position.x, 16.0, 704.0 - r.size.x)
+				if cand.position.x == r.position.x:
+					continue
+				var hit := false
+				for o in obstacles:
+					if cand.intersects(o):
+						hit = true
+						break
+				if not hit:
+					for p in placed:
+						if cand.intersects(p):
+							hit = true
+							break
+				if not hit:
+					r.position = cand.position
+					shifted = true
+					break
+			if not shifted and best_y >= 0.0:
+				r.position.y = best_y
+		else:
 			r.position.y = best_y
 		r.position.x = clampf(r.position.x, 16.0, 704.0 - r.size.x)
+		r.position.y = clampf(r.position.y, 190.0, 1264.0 - r.size.y)
 		placed.append(r)
 		e["mk"].label_override = r
+
+## Top gan nhat trong khoang doc trong (khong de len vat can / nhan
+## da dat, cach LABEL_GAP). Tra -1 neu khong co khoang trong nao.
+func _nearest_free_y(r: Rect2, obstacles: Array[Rect2], placed: Array[Rect2]) -> float:
+	var blockers: Array[Rect2] = []
+	for o in obstacles:
+		if o.end.x > r.position.x and o.position.x < r.end.x:
+			blockers.append(o)
+	for p in placed:
+		if p.end.x > r.position.x and p.position.x < r.end.x:
+			blockers.append(p)
+	var top_min := 190.0
+	var top_max := 1264.0 - r.size.y
+	var intervals: Array = [[top_min, top_max]]
+	for b in blockers:
+		var next_iv: Array = []
+		for iv in intervals:
+			var lo: float = iv[0]
+			var hi: float = iv[1]
+			var b_lo: float = b.position.y - r.size.y - LABEL_GAP
+			var b_hi: float = b.end.y + LABEL_GAP
+			if b_hi <= lo or b_lo >= hi:
+				next_iv.append(iv)
+			else:
+				if b_lo > lo:
+					next_iv.append([lo, minf(hi, b_lo)])
+				if b_hi < hi:
+					next_iv.append([maxf(lo, b_hi), hi])
+		intervals = next_iv
+	var best_y := -1.0
+	var best_dist := 1.0e9
+	for iv in intervals:
+		var y := clampf(r.position.y, iv[0], iv[1])
+		var d := absf(y - r.position.y)
+		if d < best_dist:
+			best_dist = d
+			best_y = y
+	return best_y
 
 func _update_daynight() -> void:
 	if _daynight != null:
