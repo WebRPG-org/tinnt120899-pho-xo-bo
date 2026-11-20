@@ -1298,6 +1298,42 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
 - Chromium local (script `visual-check/check_artpass7.py`, desktop 1920×1080, server 127.0.0.1:8161): **ERRORS: 0**. Ảnh `visual-check/artpass7/a7-01…a7-11.png` đã xem trực tiếp: tiêu đề có tranh + 2 nhân vật; nhãn đổi đúng Sáng→Chiều→Tối→Sáng; D/W/Shift+D/ArrowRight đều đi; cửa TẠP HÓA Sáng hết sáng cam; đáy đủ; điện thoại 9 tab đầy nội dung.
 - Nit còn lại (nhỏ, không chặn): dải tối ~10px ở mép phải cột game trên desktop (a7-06/07/09/10); toast "Ngày 2 • Khung Sáng" đè nhẹ xe đạp ở đáy (a7-10, tự mờ); nhân vật ở Tối vẫn hơi sáng so với đất (a7-09).
 
-### 19.8 Deploy
+### 19.8 Deploy — XONG (20/11 ~16:50)
 
-- (Ghi sau khi push — main SHA + gh-pages SHA + verify khớp byte.)
+- Staging đã rebuild sẵn từ artpass7 (pck `5e424b74…`, wasm không đổi,
+  `build_gh_pages.py` verify OK) — vòng này chỉ deploy gh-pages, 3 lô:
+  `c1388653` (1/3: index.html + pck 000–018), `73da431e` (2/3: pck
+  019–037), `f3d59243` (3/3: pck 038–050). gh-pages head `f3d59243`,
+  kiểm tra trước mỗi lô khớp head trước đó, không có writer khác đè.
+- Verify khớp byte từ site live: index.html khớp staging; 51 chunk
+  pck tải về ráp lại **6.858.400 byte, SHA `5e424b743c17` — khớp đúng
+  từng byte với build local**. Lưu ý: lần tải đầu 4 chunk 019–022
+  lệch (CDN Pages còn cache bản cũ); tải lại vài phút sau thì khớp
+  hết — blob SHA qua API (`70ee1586…` cho part-019) khớp staging
+  ngay từ đầu, chứng tỏ repo đúng, chỉ CDN chậm. Đừng kết luận
+  deploy sai chỉ vì curl ngay sau push thấy lệch — kiểm tra blob
+  qua API rồi tải lại sau vài phút.
+- Headless smoke trước deploy: `--headless --quit-after 120` exit 0,
+  không ERROR. Browser-verify bản này đã làm ở vòng artpass7
+  (a7-01..11, ERRORS: 0) — không chạy lại vì cùng pck đã verify.
+- Link live: https://tinnt120899.github.io/pho-xo-bo/ (Pages rebuild
+  vài phút sau push).
+
+## 20. Việc tiếp theo — G4 bước 7
+
+1. **Nối PxbOnline sang server Godot mới** (xem §17.2): client
+   WebSocket trong game dùng protocol v1 (hello/chat/presence) +
+   hiển thị trạng thái online + chat trong điện thoại (tab Tin nhắn);
+   giữ endpoint HTTP .NET làm fallback cho tới khi WS ổn định.
+   Server skeleton đã xong (§16): `src/godot/server/pxb_server.gd`,
+   test 37/37 + probe 2 tiến trình.
+2. Quyền lợi giữ sạp áp vào Economy (`hold_benefits` đã có,
+   Main chưa gọi); animation di chuyển/đánh trận; chọn đội/vũ
+   khí trước trận; `can_challenge` ở demo.
+3. Tile riêng Map003–018 (đang PROVISIONAL); camera zoom trận
+   MarketBattle (lưới đang nhỏ giữa màn hình); nhãn tên đấu sĩ
+   trong trận còn hơi chồng nhau (ảnh browser-verify 13).
+4. Nhãn "Cửa ra/Góc Chế Tạo/Bạn Thân" ở TẠP HÓA xếp chồng dọc
+   giữa mặt tiền cửa hàng (không chồng nhau, có khe — nhưng
+   nhìn như khối nổi trên cửa); cân nhắc neo nhãn gần điểm neo
+   hơn thay vì đẩy lên cao khi va đầu nhân vật.
