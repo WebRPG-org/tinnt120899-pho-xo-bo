@@ -133,3 +133,25 @@ func build(data: Dictionary, marker_script: Script, font: Font) -> void:
 		m.position = tile_center(Vector2i(e["tile"][0], e["tile"][1]))
 		add_child(m)
 		markers.append(m)
+	queue_redraw()
+
+# Nen dat mo rong quanh map: ca viewport la dat duong am chu khong phai
+# khoang toi (loi xau nhat tren ban live: ~85% man hinh navy trong).
+# Ve truoc TileMapLayer (parent ve truoc children) nen tile map de len tren.
+func _draw() -> void:
+	var tone_a := Color(0.78, 0.70, 0.55, 1)  # Dat kho am
+	var tone_b := Color(0.72, 0.64, 0.49, 1)
+	var tone_c := Color(0.66, 0.58, 0.44, 1)  # Diem toi hon (co dai)
+	for ty in range(-12, 25):
+		for tx in range(-14, 27):
+			var c := tile_center_raw(Vector2i(tx, ty))
+			var half_w := TILE_W / 2.0
+			var half_h := TILE_H / 2.0
+			var diamond := PackedVector2Array([
+				c + Vector2(0, -half_h), c + Vector2(half_w, 0),
+				c + Vector2(0, half_h), c + Vector2(-half_w, 0),
+			])
+			var tone := tone_a if (tx + ty) % 2 == 0 else tone_b
+			if (tx * 7 + ty * 13) % 7 == 0:
+				tone = tone_c
+			draw_colored_polygon(diamond, tone)

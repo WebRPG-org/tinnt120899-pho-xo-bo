@@ -80,6 +80,12 @@ var _hud_bag: Label
 var _hud_gold: Label
 var _hud_stats: Label
 var _toast: Label
+var _camera: Camera2D
+var _daynight: ColorRect
+var _overlay_layer: CanvasLayer
+var _ui_layer: CanvasLayer
+var _title_panel: PanelContainer
+var title_open := true
 var _dlg_panel: PanelContainer
 var _dlg_name: Label
 var _dlg_text: Label
@@ -101,6 +107,9 @@ func _ready() -> void:
 	_create_systems()
 	load_map(int(maps_data["start"]["map"]),
 		Vector2i(int(maps_data["start"]["x"]), int(maps_data["start"]["y"])))
+	# Man hinh title mo san: khoa input cho toi khi bam "Bat dau".
+	if player != null:
+		player.input_blocked = true
 
 
 # Tao cac he G2 lam node con cua Main. Stats uu tien dung autoload
@@ -165,6 +174,9 @@ func load_map(map_id: int, spawn_tile: Vector2i) -> void:
 	add_child(player)
 	player.place(iso_map, spawn_tile)
 	player.moved_to.connect(_on_player_moved_to)
+	if _camera != null:
+		_camera.position = player.position
+		_camera.reset_smoothing()
 	_hud_map.text = "Phố Xô Bồ — " + String(_map_by_id(map_id)["name"])
 	_update_hud()
 
@@ -192,6 +204,9 @@ func _transfer(to_map: int) -> void:
 
 # --- Thoi gian ---
 func _process(delta: float) -> void:
+	# Camera bam theo nguoi choi (zoom 1.6: map lap day viewport).
+	if _camera != null and player != null:
+		_camera.position = player.position
 	_frame_timer += delta
 	if _frame_timer >= float(PxbBalance.FRAME_MINUTES) * 60.0:
 		_frame_timer = 0.0
@@ -215,6 +230,7 @@ func _advance_frame() -> void:
 			if interest > 0:
 				show_toast("Lãi tiết kiệm tháng mới: +%sđ" % _fmt_vnd(interest))
 	_update_hud()
+	_update_daynight()
 	show_toast("Ngày %d • Khung %s" % [day, _frame_name()])
 	# Tot nghiep / khoa ngan han kiem tra sau toast ngay de toast
 	# tot nghiep khong bi toast ngay de mat.
@@ -244,6 +260,8 @@ func _check_graduations() -> void:
 			int(sc.get("gain", 0)), String(sc.get("sub_stat", ""))])
 
 func _unhandled_input(event: InputEvent) -> void:
+	if title_open:
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == PxbPhoneHub.PHONE_KEY_CODE:
 			if not dialogue_open:
@@ -261,7 +279,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		click_pos = event.position
 	if click_pos == Vector2.INF or dialogue_open or phone_open or iso_map == null:
 		return
-	var tile := iso_map.world_to_tile(click_pos)
+	# Doi toa do man hinh -> toa do the gioi (camera zoom/follow).
+	var world_pos: Vector2 = get_viewport().get_canvas_transform().affine_inverse() * click_pos
+	var tile := iso_map.world_to_tile(world_pos)
 	if not iso_map.in_bounds(tile):
 		return
 	var ev := iso_map.event_at(tile)
@@ -480,9 +500,8 @@ func _close_phone() -> void:
 func _phone_action(text: String, call: Callable) -> void:
 	var b := Button.new()
 	b.text = text
-	b.add_theme_font_size_override("font_size", 24)
-	b.add_theme_font_override("font", font)
-	b.custom_minimum_size = Vector2(580, 52)
+	_style_button(b, 24)
+	b.custom_minimum_size = Vector2(620, 56)
 	b.pressed.connect(call)
 	_phone_actions.add_child(b)
 
@@ -893,6 +912,7 @@ func load_game(slot: int) -> Dictionary:
 	var save: Dictionary = res.get("save", {})
 	_apply_save_data(save.get("gameSystem", {}))
 	_update_hud()
+	_update_daynight()
 	_refresh_phone()
 	show_toast("Đã tải save slot %d." % slot)
 	return {"ok": true, "slot": slot}
@@ -1064,43 +1084,124 @@ func _on_open_jobs_pressed() -> void:
 	_show_jobs_dialogue()
 
 # --- UI ---
+# Theme chung: giay vang am (#FFF8E1), vien nau, nut vang tron — 1 theme
+# dung cho ca game (HUD / dien thoai / doi thoai / title), khong de
+# text tran tren map nhu truoc.
+func _panel_style(bg: Color) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = bg
+	s.corner_radius_top_left = 14
+	s.corner_radius_top_right = 14
+	s.corner_radius_bottom_left = 14
+	s.corner_radius_bottom_right = 14
+	s.border_color = Color(0.85, 0.68, 0.35, 1)
+	s.set_border_width_all(2)
+	s.content_margin_left = 18
+	s.content_margin_right = 18
+	s.content_margin_top = 14
+	s.content_margin_bottom = 14
+	return s
+
+func _style_button(b: Button, font_size: int = 26) -> void:
+	b.add_theme_font_size_override("font_size", font_size)
+	b.add_theme_font_override("font", font)
+	b.add_theme_color_override("font_color", Color(0.20, 0.14, 0.06, 1))
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0.95, 0.78, 0.35, 1)
+	normal.set_corner_radius_all(12)
+	normal.content_margin_left = 12
+	normal.content_margin_right = 12
+	normal.content_margin_top = 8
+	normal.content_margin_bottom = 8
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(1.0, 0.85, 0.45, 1)
+	var pressed := normal.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color(0.85, 0.65, 0.25, 1)
+	b.add_theme_stylebox_override("normal", normal)
+	b.add_theme_stylebox_override("hover", hover)
+	b.add_theme_stylebox_override("pressed", pressed)
+	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+
+# --- Anh sang ngay/dem theo khung (art pass 20/11 buoi 2) ---
+# Overlay mau phu len the gioi (duoi HUD, tren map): Sang trong suot,
+# Chieu vang cam golden-hour, Toi xanh dam. Re (~30 dong) nhung doi
+# cam giac ngay/dem ngay lap tuc — truoc day khung chi la chu tren HUD.
+func _daynight_color(f: int) -> Color:
+	match f:
+		1:
+			return Color(1.0, 0.72, 0.30, 0.16)
+		2:
+			return Color(0.07, 0.10, 0.30, 0.30)
+	return Color(1.0, 0.98, 0.90, 0.0)
+
+func _update_daynight() -> void:
+	if _daynight != null:
+		_daynight.color = _daynight_color(frame_idx)
+
 func _build_ui() -> void:
+	# Camera bam nguoi choi, zoom 1.6 de map lap day viewport 720x1280.
+	_camera = Camera2D.new()
+	_camera.zoom = Vector2(1.6, 1.6)
+	_camera.position_smoothing_enabled = true
+	_camera.position_smoothing_speed = 10.0
+	add_child(_camera)
+	_camera.make_current()
+	# Lop overlay ngay/dem: CanvasLayer rieng, layer 0 (duoi HUD layer 1),
+	# follow_viewport de luon phu kin man hinh theo camera.
+	_overlay_layer = CanvasLayer.new()
+	_overlay_layer.layer = 0
+	_overlay_layer.follow_viewport_enabled = true
+	add_child(_overlay_layer)
+	_daynight = ColorRect.new()
+	_daynight.position = Vector2.ZERO
+	_daynight.size = Vector2(720, 1280)
+	_daynight.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_daynight.color = _daynight_color(frame_idx)
+	_overlay_layer.add_child(_daynight)
 	var layer := CanvasLayer.new()
+	_ui_layer = layer
+	layer.layer = 1
 	add_child(layer)
-	_hud_map = _mk_label(layer, font_bold, 34, Vector2(24, 24), "Phố Xô Bồ")
-	_hud_day = _mk_label(layer, font, 28, Vector2(24, 70), "")
-	_hud_bag = _mk_label(layer, font, 28, Vector2(24, 108), "")
-	_hud_gold = _mk_label(layer, font, 28, Vector2(24, 146), "")
-	_hud_stats = _mk_label(layer, font, 28, Vector2(24, 184), "")
+	# HUD: 5 dong thong tin trong 1 panel giay am — khong de text tran.
+	var hud_panel := PanelContainer.new()
+	hud_panel.position = Vector2(16, 16)
+	hud_panel.size = Vector2(452, 236)
+	hud_panel.add_theme_stylebox_override("panel", _panel_style(Color(1.0, 0.97, 0.88, 0.94)))
+	layer.add_child(hud_panel)
+	var hvb := VBoxContainer.new()
+	hvb.add_theme_constant_override("separation", 2)
+	hud_panel.add_child(hvb)
+	_hud_map = _mk_label(hvb, font_bold, 32, Vector2.ZERO, "Phố Xô Bồ")
+	_hud_day = _mk_label(hvb, font, 26, Vector2.ZERO, "")
+	_hud_bag = _mk_label(hvb, font, 26, Vector2.ZERO, "")
+	_hud_gold = _mk_label(hvb, font, 26, Vector2.ZERO, "")
+	_hud_stats = _mk_label(hvb, font, 26, Vector2.ZERO, "")
 	var frame_btn := Button.new()
 	frame_btn.text = "Đổi khung (F)"
-	frame_btn.add_theme_font_size_override("font_size", 26)
-	frame_btn.add_theme_font_override("font", font)
+	_style_button(frame_btn)
 	frame_btn.position = Vector2(720 - 224, 24)
 	frame_btn.size = Vector2(200, 56)
 	frame_btn.pressed.connect(func() -> void: _frame_timer = 0.0; _advance_frame())
 	layer.add_child(frame_btn)
 	var jobs_btn := Button.new()
 	jobs_btn.text = "Việc làm"
-	jobs_btn.add_theme_font_size_override("font_size", 26)
-	jobs_btn.add_theme_font_override("font", font)
+	_style_button(jobs_btn)
 	jobs_btn.position = Vector2(720 - 224, 88)
 	jobs_btn.size = Vector2(200, 56)
 	jobs_btn.pressed.connect(_show_jobs_dialogue)
 	layer.add_child(jobs_btn)
 	_phone_btn = Button.new()
 	_phone_btn.text = "Điện thoại (P)"
-	_phone_btn.add_theme_font_size_override("font_size", 26)
-	_phone_btn.add_theme_font_override("font", font)
+	_style_button(_phone_btn)
 	_phone_btn.position = Vector2(720 - 224, 152)
 	_phone_btn.size = Vector2(200, 56)
 	_phone_btn.pressed.connect(_toggle_phone)
 	layer.add_child(_phone_btn)
-	# Panel dien thoai: tieu de + luoi 9 tab + noi dung + nut hanh dong
-	# (cuon duoc). An mac dinh, mo bang phim P / nut "Dien thoai".
+	# Panel dien thoai: FULL MAN HINH, nen duc — map khong xuyen qua.
 	_phone_panel = PanelContainer.new()
-	_phone_panel.position = Vector2(40, 110)
-	_phone_panel.size = Vector2(640, 1060)
+	_phone_panel.position = Vector2(0, 0)
+	_phone_panel.size = Vector2(720, 1280)
+	_phone_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.99, 0.97, 0.92, 1.0)))
 	_phone_panel.visible = false
 	layer.add_child(_phone_panel)
 	var pvb := VBoxContainer.new()
@@ -1115,17 +1216,16 @@ func _build_ui() -> void:
 	for t in PxbPhoneHub.tab_list():
 		var tb := Button.new()
 		tb.text = String(t["name"])
-		tb.add_theme_font_size_override("font_size", 22)
-		tb.add_theme_font_override("font", font)
-		tb.custom_minimum_size = Vector2(196, 48)
+		_style_button(tb, 22)
+		tb.custom_minimum_size = Vector2(200, 52)
 		tb.pressed.connect(_on_phone_tab_pressed.bind(String(t["id"])))
 		tab_grid.add_child(tb)
 		_phone_tab_buttons[String(t["id"])] = tb
 	_phone_content = _mk_label(pvb, font, 26, Vector2.ZERO, "")
 	_phone_content.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_phone_content.size = Vector2(600, 260)
+	_phone_content.size = Vector2(640, 260)
 	var act_scroll := ScrollContainer.new()
-	act_scroll.custom_minimum_size = Vector2(600, 560)
+	act_scroll.custom_minimum_size = Vector2(640, 620)
 	pvb.add_child(act_scroll)
 	_phone_actions = VBoxContainer.new()
 	_phone_actions.add_theme_constant_override("separation", 8)
@@ -1133,10 +1233,13 @@ func _build_ui() -> void:
 	_toast = _mk_label(layer, font_bold, 30, Vector2(60, 560), "")
 	_toast.size = Vector2(600, 60)
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_toast.add_theme_color_override("font_outline_color", Color(1, 1, 1, 0.95))
+	_toast.add_theme_constant_override("outline_size", 8)
 	_toast.visible = false
 	_dlg_panel = PanelContainer.new()
 	_dlg_panel.position = Vector2(40, 1280 - 330)
 	_dlg_panel.size = Vector2(640, 300)
+	_dlg_panel.add_theme_stylebox_override("panel", _panel_style(Color(1.0, 0.97, 0.88, 1.0)))
 	_dlg_panel.visible = false
 	layer.add_child(_dlg_panel)
 	var vb := VBoxContainer.new()
@@ -1149,6 +1252,40 @@ func _build_ui() -> void:
 	_dlg_choices = VBoxContainer.new()
 	_dlg_choices.add_theme_constant_override("separation", 8)
 	vb.add_child(_dlg_choices)
+	# Man hinh title: tieu de + nut Bat dau (mo san khi vao game).
+	_title_panel = PanelContainer.new()
+	_title_panel.position = Vector2(0, 0)
+	_title_panel.size = Vector2(720, 1280)
+	_title_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.99, 0.93, 0.78, 1.0)))
+	layer.add_child(_title_panel)
+	var tvb := VBoxContainer.new()
+	tvb.add_theme_constant_override("separation", 18)
+	tvb.alignment = BoxContainer.ALIGNMENT_CENTER
+	_title_panel.add_child(tvb)
+	var title := _mk_label(tvb, font_bold, 72, Vector2.ZERO, "PHỐ XÔ BỒ")
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var sub := _mk_label(tvb, font, 30, Vector2.ZERO, "Game xã hội 2.5D Việt Nam")
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var sub2 := _mk_label(tvb, font, 26, Vector2.ZERO, "18 khu phố • Làm việc • Buôn bán • Kết bạn")
+	sub2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var start_btn := Button.new()
+	start_btn.text = "▶  Bắt đầu chơi"
+	_style_button(start_btn, 34)
+	start_btn.custom_minimum_size = Vector2(440, 88)
+	start_btn.pressed.connect(_on_start_pressed)
+	var center := CenterContainer.new()
+	center.add_child(start_btn)
+	tvb.add_child(center)
+	var hint := _mk_label(tvb, font, 22, Vector2.ZERO,
+		"Di chuyển: WASD / mũi tên / chạm\nE: tương tác • P: điện thoại • F: đổi khung")
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+func _on_start_pressed() -> void:
+	title_open = false
+	_title_panel.visible = false
+	if player != null:
+		player.input_blocked = false
 
 func _mk_label(parent: Node, f: Font, size: int, pos: Vector2, text: String) -> Label:
 	var l := Label.new()
@@ -1199,8 +1336,7 @@ func show_dialogue(who: String, text: String, choices: Array) -> void:
 	for ch in choices:
 		var b := Button.new()
 		b.text = String(ch[0])
-		b.add_theme_font_size_override("font_size", 28)
-		b.add_theme_font_override("font", font)
+		_style_button(b, 28)
 		b.custom_minimum_size = Vector2(600, 56)
 		var act: Callable = ch[1]
 		b.pressed.connect(act)
