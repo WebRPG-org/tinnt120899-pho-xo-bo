@@ -3005,9 +3005,12 @@ riêng ở nút D-pad giữ nguyên (thừa nhưng vô hại, comment của nó
 - Hồi quy đầy đủ: **42 OK, 0 FAIL** (41 cũ + 1 mới).
 - Export web exit 0: pck **6.945.720 byte, SHA `d691d82e…`**,
   wasm không đổi `fc74679e…`. HTTP 200 đủ 6 file (cổng 8161).
-- Push main — XONG, commit `TODO` (3 file: `main.gd`,
+- Push main — XONG, commit `33551e47` (5 file: `main.gd`,
   test mới + `.uid`, `run_regression.sh`, docs §34). Đối chiếu
-  trước push: TODO.
+  trước push: head `91a57d0b` khớp record; commit mới nhất chạm
+  `main.gd` / `run_regression.sh` = `31f82a77` (đúng sync base),
+  `godot-g4.md` = `91a57d0b` (đúng sync base), test mới chưa có
+  trên remote — không divergence. Sync record 173 entries.
 - Deploy gh-pages — **GIỮ LẠI (chưa deploy)**: lúc push, kiểm live
   bản `80da1a51` (§33.6 mục 1) vẫn đang chạy trên cloud browser
   (task `browser-task:145187af...`, bắt đầu ~14:39) — deploy pck
