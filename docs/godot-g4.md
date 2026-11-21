@@ -3030,3 +3030,49 @@ riêng ở nút D-pad giữ nguyên (thừa nhưng vô hại, comment của nó
 3. Map003+ vẫn dùng vẽ facade cũ chồng 50% (tạm) — sửa khi tới lượt.
 4. Map002 vẫn dùng lại ảnh đất của Map001 — cần ảnh đất riêng cho
    chợ khi làm art Map002.
+
+### 34.6 Deploy `d691d82e` lên gh-pages + kiểm nhanh (21/11 ~15:00–15:20 +07)
+
+- Đối chiếu trước deploy: `versions.json` remote trên gh-pages pin
+  đúng pck `80da1a51` tại head `6e7c4af7` (= deploy vòng 12); đường
+  dẫn `pck/d691d82e/part-000.txt` chưa tồn tại remote — deploy là
+  nối tiếp sạch, không divergence. (Lưu ý: sync record gh-pages
+  `src/nadia/www.muse-github-snapshot-sync.json` đã stale từ vòng 8
+  — các vòng 9–12 không ghi entry; đã ghi bù 5 entry của vòng này,
+  18 → 23 entry. Các commit gh-pages vòng 9–12 vẫn thiếu trong
+  record — không đoán paths để ghi bù.)
+- Rebuild staging `tools/godot/build_gh_pages.py`: VERIFY OK, 52
+  chunk pck, wasm `fc74679e` không đổi.
+- Deploy 5 lô (mỗi lô ≤18 file): `44a032a6` (chunk 000–016),
+  `2ffe8b76` (017–033), `40ca84b6` (034–051), `fa085d62`
+  (`versions.json`), `8c1e7d3e` (`index.html` CUỐI — head gh-pages).
+- Verify khớp byte từ live: ráp 52 chunk từ
+  `raw.githubusercontent.com` = 6.945.720 byte, SHA `d691d82e` ✓;
+  `versions.json` live pin `d691d82e` tại head `8c1e7d3e` ✓;
+  `index.html` live SHA `73dfdad05180fe42` = staging ✓ (ngay lần
+  fetch đầu, không dính CDN cache cũ).
+- Kiểm nhanh Chromium local trên đúng bản deploy (staging, cổng
+  8162, viewport 720×1280, probe
+  `visual-check/artpass13/check_focus_deploy.py`): 0 console error,
+  0 request fail.
+  - Spawn Ô (4,5). D-pad ▶ → (5,5) ✓. **FOCUS TEST ĐẠT**:
+    bấm ArrowRight ngay sau khi click nút D-pad → (6,5) ✓ (trước
+    fix, mũi tên sẽ bị GUI ăn focus). ArrowUp → (6,4) ✓, ArrowDown
+    → (6,5) ✓, ArrowLeft → (5,5) ✓. D-pad ▲ → (5,4) (= ô cửa,
+    chuyển sang Chợ Đầu Mối — đúng luật) rồi ▼ → (5,5) ✓. Phím D
+    → (6,5) ✓. P:1→3 đúng số lần bấm D-pad, không click lặp.
+  - Tap: (600,1150) đăng ký `chạm (10,6)`, đi (4,5)→(10,6) ✓;
+    (500,900) đăng ký `chạm (4,1)`, đi (4,5)→(4,1) ✓. Nhưng 2
+    điểm chạm vùng trên (200,750) và (500,700) KHÔNG đăng ký gì
+    (A vẫn (-1,-1)) — map ra ngoài hình thoi đất (chạm vào ảnh
+    nền mặt tiền/trời, không có ô). Và tap (200,900) đăng ký đích
+    (1,5) nhưng KHÔNG di chuyển, A xóa ngay trong 0,5s — đường đi
+    qua (3,5) nơi Bạn Thân đang đứng: auto-walk bỏ cuộc khi bước
+    tiếp bị NPC chặn thay vì đi vòng. Cả 2 đều là hành vi cũ (không
+    phải hồi quy của fix focus), ghi lại làm việc cho vòng sau:
+    (a) tap-to-move cần pathfind vòng NPC thay vì bỏ đích khi gặp
+    chướng ngại; (b) chạm ngoài hình thoi đất nên có phản hồi
+    (hoặc mở rộng vùng chạm) thay vì im lặng.
+- Kết luận: fix focus đã live trên `d691d82e` và kiểm local đạt.
+  Còn cần kiểm live bằng cloud browser trên URL thật (§34.5 mục 2:
+  bấm nút HUD thật rồi bấm mũi tên) để chốt hẳn.
