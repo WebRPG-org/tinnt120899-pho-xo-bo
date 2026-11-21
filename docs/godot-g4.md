@@ -2678,7 +2678,15 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
   domain Pages vẫn hiện `84b8649d` ngay sau deploy (CDN chậm vài phút như
   §19.8) — repo đã đúng, không kết luận deploy sai vì CDN.
 
-### 31.4 Push main — (điền sau khi push xong)
+### 31.4 Push main — XONG (riêng vòng này, không chung vòng 11)
+
+- Push main `de283d81` (5 file: `battle_scene.gd`, `g4_battle_anim_test.gd` +
+  `.uid`, `run_regression.sh`, `docs/godot-g4.md` §31). Trước push đã đối
+  chiếu: head main vẫn `da241a4d`, remote `battle_scene.gd` là bản trước
+  animation (không có `_visual_pos`), file test mới xác nhận ABSENT.
+  Code GitHub khớp build live `7dec3410` tại thời điểm push. (Vòng 11 sau
+  đó export pck mới `a87a871d` trên cây gộp — deploy bản đó sẽ thay live;
+  xem §32.4.)
 
 ### 31.5 Việc tiếp theo
 
@@ -2688,3 +2696,83 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
 2. Kiểm live bằng cloud browser trên URL thật sau deploy (cửa cuối theo
    luật AGENTS.md): mở trận bằng B, click ô xanh xem trượt, chờ lượt AI
    xem địch di chuyển/đánh có animation.
+
+## 32. Vòng 11 — Tap-to-move + lỗi biên Map002 + nhãn debug stale (21/11 ~12:00–14:00 +07)
+
+### 32.1 Kiểm live 11:33–11:57 báo 2 lỗi — probe KHÔNG tái hiện được lỗi nào
+
+- Kiểm live (browser task `9b4d13eb`): D-pad/WASD đi đúng 1 ô/lần, F/P OK,
+  0 lỗi console. Nhưng báo: (1) tap đất trống → nhãn nhảy tới ô đã chạm
+  (vd "Ô (9,4) • chạm (9,4)") nhưng sprite KHÔNG đi tới đó sau 4s
+  (tọa độ sprite ~(930,760) trước/sau sai số ~2px); (2) bấm phải tại
+  (9,4) Map002 → về (7,4) thay vì (10,4), chu trình 8→9→7 (tái hiện 2×);
+  (3) nhãn debug bị nhãn cửa Map002 che.
+- Probe Chromium local trên ĐÚNG bản live `ba8e4a99` (staging `/tmp/r11-live`,
+  `versions.json` pin pck live; script `visual-check/artpass11/probe_live.py`,
+  `probe2.py`, `probe3.py`, `probe4.py`):
+  - (9,4)→(10,4) đúng cả 3 lần probe (D-pad, tap xen kẽ, burst); bấm phải
+    tại (10,4) → vẫn (10,4) đúng [(11,4) là biên, `layers[1]` chặn].
+    Data Map002 đúng: chỉ biên bị chặn, (10,4) đi được, cửa (5,4)→Map001.
+  - Tap hợp lệ (900,806)→(10,6): nhãn tới (10,6), diff ảnh trước/sau
+    13,2% = camera cuộn theo (sprite ĐI THẬT). Tap (1000,850) đầu tiên
+    không làm gì vì map ra ô (14,6) ngoài biên — điểm tap xấu, không phải bug.
+  - Phép đổi chạm→ô ĐÚNG toán iso (phải = +x/−y): tap ngang hàng nhân vật
+    mà nhãn nhảy lên 2 hàng là đúng (vd (7,4)→(9,2)).
+  - **Bằng chứng "sprite không đi" của checker là SAI PHƯƠNG PHÁP:**
+    camera bám theo người chơi nên sprite gần như đứng yên TRÊN MÀN HÌNH
+    (tọa độ màn hình ~không đổi) trong khi đi thật — phải so landmark
+    (biển hiệu/cửa) trước/sau, không đo tọa độ sprite trên màn hình.
+  - rAF chỉ **3,0 fps** trên swiftshader (không phải lỗi game): mỗi bước
+    cần ~2 frame (~0,66s) nên đi chậm trên máy kiểm local, nhưng tween
+    0,15s vẫn xong trong 1 frame.
+
+### 32.2 Gốc thật tìm ra: NHÃN DEBUG STALE (không phải tap hỏng)
+
+- Sau tap, nhãn hiện `A:(10,6)` MÃI dù người chơi đã tới (10,6):
+  `_update_dbg()` trước đây chỉ gọi từ `moved_to` — mà `moved_to` chạy
+  TRƯỚC khi queue pop / auto-target clear trong `player._process`
+  (xem `player.gd`: `moved_to.emit` rồi mới pop queue; `_step_toward_auto`
+  clear `A` im lặng, không refresh nhãn). Tương tự `Q:1` kẹt sau khi
+  queued step bị chặn (không có `moved_to` mới để refresh).
+- Chính nhãn stale này làm checker (và vòng 11 lúc đầu) tưởng tap "chỉ
+  cập nhật ô logic, không kéo sprite". Chu trình (9,4)→(7,4) nhiều khả
+  năng cũng là đọc nhãn giữa lúc auto-walk/stale (không tái hiện được
+  bằng D-pad, tap, hay xen kẽ tap+D-pad).
+
+### 32.3 Sửa (`src/godot/main.gd` — vòng 11)
+
+- **Nhãn luôn tươi:** `Main._process` gọi `_update_dbg()` MỖI FRAME
+  (kể cả khi ẩn) — A:/Q: không bao giờ stale nữa.
+- **Dời nhãn:** (24,1172) cuối canvas → **(24,200) góc trên-trái, dưới
+  panel HUD**; nền tối mờ 72% + chữ kem, size (440,64) cho đủ 2 dòng —
+  không còn bị nhãn cửa Map002 (kẹp y≤1200) che.
+- **Mặc định ẩn KHÔNG ĐỔI** (`_debug_labels_visible=false`, F9 toggle) —
+  bản live `ba8e4a99` đã ẩn sẵn (probe 1 không F9 thì không thấy nhãn).
+- Test mới `tests/g4_r11_dbg_test.gd`: **11/11 PASS** — nhãn mặc định ẩn
+  + ở (24,200); Map002 (10,4) đi được / (11,4) chặn; D-pad phải
+  (9,4)→(10,4), phải nữa vẫn (10,4); tap tới (10,6) + nhãn tươi
+  `A:(-1,-1)`. (Bài học test: `process_frame` chạy TRƯỚC `Main._process`
+  nên phải đợi thêm 3 frame sau khi A clear mới đọc nhãn.)
+- `run_regression.sh`: thêm `g4_r11_dbg_test` → 39 suite + probe.
+
+### 32.4 Verify + push + deploy — (điền sau khi xong)
+
+- Hồi quy đầy đủ: **40 OK, 0 FAIL** (39 suite + probe — đã gồm
+  `g4_r11_dbg_test` 11/11 và `g4_battle_anim_test` 24/24).
+- `--check-only` main.gd OK; export web exit 0: pck **6.922.136 byte,
+  SHA `a87a871d…`**, wasm không đổi `fc74679e…`.
+- Browser-verify bản mới `a87a871d` (staging `gh-pages-staging`,
+  `probe4_verify.py`, Chromium 1255 + swiftshader): nhãn mới góc trên-trái
+  nền tối đọc rõ; (9,4)→(10,4) đúng, phải nữa vẫn (10,4); tap → (10,6)
+  + nhãn tươi `A:(-1,-1)`; diff ảnh sau tap 11,6% (camera cuộn);
+  0 console error.
+- Push main — (điền commit sau khi push).
+- Deploy gh-pages — (điền commit sau khi deploy + verify khớp byte).
+
+### 32.5 Việc tiếp theo
+
+1. Kiểm live bằng cloud browser trên URL thật sau deploy (cửa cuối):
+   tap + D-pad ở Map002 hàng 4, đọc nhãn mới góc trên-trái.
+2. G4 tiếp: chọn đội/vũ khí trước trận; `can_challenge` ở demo; tile riêng
+   Map003–018; camera zoom trận; khối chat online đưa lên tab Tin nhắn;
+   server WS auth + giới hạn tốc độ + lịch sử.

@@ -299,6 +299,12 @@ func _process(delta: float) -> void:
 	if _dbg_label != null:
 		# §29.3: nhan debug mac dinh AN — chi hien khi _debug_labels_visible (F9).
 		_dbg_label.visible = not title_open and _debug_labels_visible
+	# Vong 11: cap nhat nhan debug MOI FRAME (ke ca khi an) —
+	# _update_dbg() truoc day chi goi tu moved_to, ma moved_to chay
+	# TRUOC khi queue pop / auto-target clear trong player._process
+	# nen A:/Q: cu hien stale sau khi toi dich (vd A:(10,6) mai sau
+	# khi da toi (10,6)), lam kiem live 21/11 tuong tap-to-move ket.
+	_update_dbg()
 	# Chong-chong nhan o khong gian man hinh (vong 4): chay truoc
 	# _process cua Marker (cha chay truoc con) nen override kip dung
 	# ngay trong frame nay.
@@ -2041,10 +2047,24 @@ func _build_ui() -> void:
 	# debug hien o hien tai + input cuoi, de lan kiem live sau doc
 	# duoc ngay input co toi game khong (ke ca khi camera bam theo
 	# lam vi tri nhan vat tren man hinh gan nhu khong doi).
-	_dbg_label = _mk_label(layer, font, 20, Vector2(24, 1172), "")
-	_dbg_label.size = Vector2(440, 32)
+	# Vong 11: nhan debug DOI LEN GOC TREN-TRAI (24,200), duoi panel
+	# HUD — truoc day o (24,1172) cuoi canvas, bi nhan cua Map002
+	# ("Cua ve Xom Tro Cu" / "Cua di Khu Cong Nhan", kep y<=1200)
+	# che mat (kiem live 21/11). Nen toi + chu sang de doc tren
+	# moi nen (troi/mat tien).
+	_dbg_label = _mk_label(layer, font, 20, Vector2(24, 200), "")
+	_dbg_label.size = Vector2(440, 64)
+	_dbg_label.add_theme_color_override("font_color", Color(1.0, 0.97, 0.88, 1))
 	_dbg_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	_dbg_label.add_theme_constant_override("outline_size", 6)
+	var _dbg_bg := StyleBoxFlat.new()
+	_dbg_bg.bg_color = Color(0.10, 0.10, 0.12, 0.72)
+	_dbg_bg.set_corner_radius_all(6)
+	_dbg_bg.content_margin_left = 10
+	_dbg_bg.content_margin_right = 10
+	_dbg_bg.content_margin_top = 4
+	_dbg_bg.content_margin_bottom = 4
+	_dbg_label.add_theme_stylebox_override("normal", _dbg_bg)
 	_dpad = Control.new()
 	_dpad.position = Vector2.ZERO
 	_dpad.size = Vector2(720, 1280)
@@ -2054,7 +2074,8 @@ func _build_ui() -> void:
 	# ban dau dat ben phai thi nut ◀ de len nhan "Hem tro buoi
 	# sang" + nut ▼ de len sao hotspot (kiem Chromium 20/11) —
 	# ben trai chi de len co/cay trang tri, khong de nhan nao,
-	# khong de hotspot, cach toast (y 1216) + nhan debug (y 1172).
+	# khong de hotspot, cach toast (y 1216); nhan debug vong 11
+	# doi len (24,200) nen khong nam o day nua.
 	_mk_dpad_btn("▲", Vector2(102, 880), Vector2i(0, -1))
 	_mk_dpad_btn("◀", Vector2(48, 934), Vector2i(-1, 0))
 	_mk_dpad_btn("▶", Vector2(156, 934), Vector2i(1, 0))
