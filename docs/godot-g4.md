@@ -3510,7 +3510,27 @@ luồng này code + verify + deploy; luồng kia gen art đất).
   chuyển — hết debug là hết chạm); Map002 vẫn dùng đất ảnh chụp
   + sạp khối be (chờ art Map002).
 
-### 39.4 Deploy — (ghi sau khi push main + gh-pages xong)
+### 39.4 Deploy — XONG (22/11 ~01:45 +07)
+
+- Push main — XONG, commit `0654c7ac` (12 file: sky_effects,
+  night_glow, main.gd, test r17 mới + `.uid`, 2 test cập nhật,
+  run_regression.sh, 2 script/ghi chú artpass17, `.import` đất mới,
+  docs §39). Đối chiếu trước push: head `39bf251f` khớp record;
+  6 file sửa không divergence (remote-at-head vẫn nội dung cũ);
+  5 file mới xác nhận ABSENT trên remote trước khi push.
+- Deploy gh-pages — XONG, 6 lô: `8279590d` (pck 000–019),
+  `1595cbd1` (020–039), `534920c4` (040–059), `e977b838`
+  (060–079), `89a3f84a` (080–086 + versions.json), `5f641feb`
+  (index.html CUỐI — head gh-pages). Staging rebuild
+  `build_gh_pages.py` VERIFY OK; pck `cddb9cd5` (87 chunk),
+  wasm `fc74679e` không đổi. Spot-check 3 chunk (000/043/086)
+  blob SHA remote = local trước khi đẩy index.html.
+- Verify khớp byte từ live: ráp 87 chunk từ
+  `raw.githubusercontent.com` = 11.692.520 byte, SHA
+  `cddb9cd543aea8e7` ✓; `versions.json` live pin `cddb9cd5`;
+  `index.html` live SHA `4c31a5ab8eb8a35f` = staging ✓.
+- Link live: https://tinnt120899.github.io/pho-xo-bo/ (Pages rebuild
+  vài phút sau push).
 
 ### 39.5 Việc tiếp theo
 
