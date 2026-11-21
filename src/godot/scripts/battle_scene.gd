@@ -459,6 +459,58 @@ func _draw_grid() -> void:
 				draw_polyline(PackedVector2Array([diamond[0], diamond[1], diamond[2], diamond[3], diamond[0]]),
 					Color(1, 0.85, 0.2), 3.0)
 
+## --- Nhãn tên đấu sĩ chống chồng (G4 bước 9) ---
+## Tên rộng tới 120px, 2 đấu sĩ kề nhau (cách 32px ngang) vẫn đè nhau
+## dù đã lệch theo chẵn/lẻ x — thấy trên ảnh browser-verify 13
+## ("Cô Tư"/"Bạn Thân"). Tính rect từng tên theo độ rộng chữ thật,
+## rồi đẩy xuống (khe 4px) theo thứ tự y; kẹp đáy ≤ 980 (trên panel
+## hành động y=1000). Trả về Array Dictionary {id, name, rect}.
+const FIGHTER_NAME_GAP := 4.0
+const FIGHTER_NAME_MAX_Y := 980.0
+
+func fighter_name_rects() -> Array:
+	var out: Array = []
+	if font == null or battle.is_empty() or mb == null:
+		return out
+	for f in mb.all_fighters(battle):
+		var c := tile_center(Vector2i(int(f["x"]), int(f["y"]))) + Vector2(0, -4)
+		var nm := str(f.get("name", ""))
+		var w := minf(120.0, font.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x + 8.0)
+		var name_dy := 44.0 if int(f["x"]) % 2 == 0 else 64.0
+		var r := Rect2(c.x - w / 2.0, c.y + name_dy - 20.0, w, 24.0)
+		out.append({"id": str(f.get("id", "")), "name": nm, "rect": r})
+	# Sắp theo y rồi x; đẩy rect chồng xuống dưới rect đã đặt.
+	var order: Array = []
+	for i in range(out.size()):
+		order.append(i)
+	order.sort_custom(func(a: int, b: int) -> bool:
+		var ra: Rect2 = out[a]["rect"]
+		var rb: Rect2 = out[b]["rect"]
+		if absf(ra.position.y - rb.position.y) > 0.01:
+			return ra.position.y < rb.position.y
+		return ra.position.x < rb.position.x)
+	var placed: Array[Rect2] = []
+	for idx in order:
+		var r: Rect2 = out[idx]["rect"]
+		var guard := 0
+		while guard < 24:
+			guard += 1
+			var hit := -1
+			for j in range(placed.size()):
+				if r.grow(FIGHTER_NAME_GAP / 2.0).intersects(placed[j]):
+					hit = j
+					break
+			if hit < 0:
+				break
+			r.position.y = placed[hit].end.y + FIGHTER_NAME_GAP
+			if r.end.y > FIGHTER_NAME_MAX_Y:
+				# Hết chỗ dưới: đặt lên trên rect đang chặn.
+				r.position.y = placed[hit].position.y - r.size.y - FIGHTER_NAME_GAP
+				break
+		out[idx]["rect"] = r
+		placed.append(r)
+	return out
+
 func _draw_fighters() -> void:
 	var act := active_fighter()
 	# 2 lượt vẽ: vòng tròn trước, thanh HP + tên sau — để tên của
@@ -480,18 +532,25 @@ func _draw_fighters() -> void:
 		draw_arc(c, 20, 0, TAU, 32, Color(1, 1, 1, 0.9), 2.0)
 		if not alive:
 			_text(font, c + Vector2(-60, 8), "ngã", 18, Color(1, 1, 1), HORIZONTAL_ALIGNMENT_CENTER, 120)
+	var name_rects := fighter_name_rects()
+	var rect_by_id := {}
+	for nr in name_rects:
+		rect_by_id[str(nr["id"])] = nr["rect"]
 	for f in mb.all_fighters(battle):
 		var c := tile_center(Vector2i(int(f["x"]), int(f["y"]))) + Vector2(0, -4)
 		var alive := bool(f.get("alive", false))
-		# Thanh HP + tên. Tên lệch theo chẵn/lẻ của x để 2 đấu sĩ
-		# chéo nhau không đè nhãn (lỗi thấy trên screenshot thật).
+		# Thanh HP + tên. Tên lấy rect đã chống chồng (xem
+		# fighter_name_rects) — fallback giữ hành vi cũ nếu thiếu.
 		var pct := float(int(f.get("hp", 0))) / maxf(1.0, float(int(f.get("maxHp", 1))))
 		var bar := Rect2(c.x - 22, c.y - 40, 44, 7)
 		draw_rect(bar, Color(0, 0, 0, 0.7))
 		var hp_c := Color(0.3, 0.85, 0.35) if pct > 0.5 else (Color(1, 0.75, 0.2) if pct > 0.25 else Color(1, 0.3, 0.25))
 		draw_rect(Rect2(bar.position, Vector2(44.0 * pct, 7)), hp_c)
 		var name_dy := 44.0 if int(f["x"]) % 2 == 0 else 64.0
-		_text(font, c + Vector2(-60, name_dy), str(f["name"]), 18, Color(1, 1, 1), HORIZONTAL_ALIGNMENT_CENTER, 120)
+		var nr: Rect2 = rect_by_id.get(str(f.get("id", "")),
+			Rect2(c.x - 60, c.y + name_dy - 20.0, 120, 24))
+		_text(font, Vector2(nr.position.x, nr.position.y + 20.0), str(f["name"]), 18,
+			Color(1, 1, 1), HORIZONTAL_ALIGNMENT_CENTER, int(nr.size.x))
 
 func _draw_bottom() -> void:
 	draw_rect(Rect2(16, 1000, 688, 200), Color(0.1, 0.11, 0.15, 0.97))

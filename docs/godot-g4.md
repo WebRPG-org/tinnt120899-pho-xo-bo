@@ -2081,6 +2081,37 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
   trên URL thật** — parent cần chạy kiểm live cuối
   (nhấn D 1 lần / tap điểm cũ) trước khi báo user.
 
+### 25.6 Kiểm live bản 7f8ef9bb — RỚT Ở BƯỚC TẢI (23:10–23:13 +07)
+
+- Browser-task `be62ff52` (cloud browser, 23:10–23:13):
+  `versions.json` live ĐÚNG bản mới (pck `7f8ef9bb`,
+  wasm `fc74679e`) — nhưng mở game thì kẹt ở nút
+  "Đang khởi động game…" **>120 giây**, không chuyển
+  sang "BẮT ĐẦU CHƠI", không hiện thông báo lỗi tải.
+  Dừng ở bước 1 theo luật (kẹt >120s); di chuyển /
+  đổi khung / điện thoại CHƯA kiểm được trên bản này.
+  Không quan sát được console error qua giao diện
+  thường (lỗi nếu có nằm ở quá trình khởi động WASM).
+- Nghịch lý: cùng bản này chạy local staging thì nút
+  bật sau 19,8s (script `check_move_single.py`, ảnh
+  `move-v10/m1-*`, ERRORS 0); `--check-live` OK; 52
+  chunk pck ráp lại từ live khớp SHA từng byte.
+  Chưa rõ gốc kẹt là CDN/proxy chậm thoáng qua lúc
+  23:10 hay môi trường cloud browser — cần kiểm lại,
+  không kết luận "bản mới hỏng tải" từ 1 lần kẹt.
+- Giới hạn chẩn đoán từ VM: probe Playwright local mở
+  thẳng URL live bị `net::ERR_TUNNEL_CONNECTION_FAILED`
+  (egress proxy của VM chặn tunnel của Chromium; curl
+  thì vẫn 200) — **không tự chẩn đoán được lỗi tải
+  live bằng trình duyệt local**; chỉ curl/byte-verify
+  được. Script probe: `visual-check/artpass9/
+  probe_live_load_v10.py`.
+- Chat chính đã tự mở kiểm live mới
+  (browser-task `25039c4d`, lúc ~23:15) — kết quả của
+  lần đó sẽ quyết định: nếu vẫn kẹt tải thì phải chẩn
+  đoán sâu (DevTools network xem chunk/request nào
+  treo); nếu tải được thì kiểm tiếp di chuyển.
+
 ## 25. Vòng 10 — kiểm live 22:09 + quyền lợi giữ sạp G4 bước 8 (20/11 ~22:05–22:47)
 
 ### 25.1 Kiểm live bằng cloud browser trên URL thật — ĐẠT trừ di chuyển
@@ -2200,3 +2231,187 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
   local browser + kiểm live lại bằng bàn phím vật lý giữ D); (2) push
   main (bước 8 + fix di chuyển) + export + deploy gh-pages bản mới;
   (3) kiểm live cuối trên URL thật.
+
+## 26. G4 bước 9 — Nhãn tên đấu sĩ chống chồng — XONG (20/11 ~23:50–00:10)
+
+### 26.1 Lỗi
+
+- Nhãn tên đấu sĩ trong trận MarketBattle còn hơi chồng nhau (ghi từ
+  §13/§20, thấy trên ảnh browser-verify 13: "Cô Tư"/"Bạn Thân").
+  Nguyên nhân: tên rộng tới 120px, 2 đấu sĩ kề nhau chỉ cách 32px
+  ngang (TILE_W 64, iso) — lệch theo chẵn/lẻ x (44 vs 64) chỉ tách
+  được 20px dọc, không đủ cho chữ cao ~22px.
+
+### 26.2 Sửa (`scripts/battle_scene.gd`)
+
+- `fighter_name_rects() -> Array` (mới): tính rect từng tên theo độ
+  rộng chữ thật (`font.get_string_size`, cap 120px) + dy chẵn/lẻ x
+  như cũ; sắp theo y rồi x, đẩy rect chồng xuống dưới rect đã đặt
+  (khe 4px); kẹp đáy ≤ 980 (trên panel hành động y=1000), hết chỗ
+  dưới thì đặt lên trên rect đang chặn. Trả về `{id, name, rect}`.
+- `_draw_fighters` lượt 2: tên vẽ theo rect đã resolve (baseline =
+  rect.y + 20, căn giữa theo `rect.size.x`); fallback giữ hành vi cũ
+  nếu thiếu id. Không sửa luật, không sửa vị trí vòng tròn/HP bar.
+- Test mới `tests/g4_battle_names_test.gd`: **12/12 PASS** — đủ 6
+  nhãn lúc spawn, không chồng; cặp kề (5,4)-(6,4) đúng điểm lỗi cũ;
+  cụm 6 ô kề; tên dài ("Tiểu thương 12") cap 120px; nhãn giữ gần
+  đấu sĩ (≤110px) + trong màn hình + trên panel.
+
+### 26.3 Verify vòng này
+
+- Hồi quy đầy đủ (script 22:45): **1978 PASS / 0 FAIL** (1966 cũ +
+  12 mới); battle scene 43/43, battle AI 34/34, battle main 15/15,
+  battle save 31/31, MarketBattle 123/123 — không regression.
+- Smoke `--headless --quit-after 120` exit 0, 0 error — lưu ý: lần
+  chạy đầu báo parse error ảo `main.gd:2038 _update_dbg() not found`
+  dù hàm CÓ định nghĩa ở dòng 2173; chạy `--headless --import` rồi
+  chạy lại thì hết (đúng bài học cache cũ §8.3 — không sửa code vì nó).
+- Export web vòng này exit 0: pck `bea7de95…` (6.903.908 byte),
+  wasm không đổi `fc74679e…`; HTTP 200 đủ 4 file (cổng 8170),
+  `GODOT_THREADS_ENABLED = false`.
+- **Va chạm song song — export bị ghi đè (ghi 00:05 21/11):** một
+  worker khác (Vòng 10 — D-pad + nhãn debug, xem dưới) sửa
+  `main.gd` 16:58:40, `web_shell.html` 16:57:10, thêm
+  `tests/g4_dpad_test.gd` 16:58:12 rồi export lại lúc 17:00:36 —
+  pck trên đĩa nay là **`bc296e9e…` (6.903.924 byte)**, KHÔNG còn
+  là `bea7de95…` của vòng này. Build hiện tại là cây GỘP (fix
+  nhãn trận vòng này + D-pad Vòng 10); `g4_battle_names_test` có
+  trong pck (grep thấy tên file) nên code vòng này vẫn nằm trong
+  build. Staging rebuild sau đó (VERIFY OK) đã dùng đúng pck
+  `bc296e9e…` hiện tại, khớp byte với build trên đĩa.
+- **Vòng 10 — D-pad + nhãn debug (worker song song, code chưa
+  push trong vòng này):** sau kiểm live 23:14 (nhân vật đứng yên
+  dù phím/tap chạy tốt trên Chromium local — không tái hiện được
+  lỗi live), worker đó thêm ĐƯỜNG INPUT THỨ 2 không phụ thuộc bàn
+  phím: 4 nút mũi tên trên màn hình (`button_down` → `press_dir`,
+  `button_up` → `release_dir`) + nhãn debug hiện ô hiện tại +
+  input cuối, để lần kiểm live sau đọc được ngay input có tới game
+  không. File của họ: `main.gd`, `web_shell.html`,
+  `tests/g4_dpad_test.gd` — vòng này KHÔNG push các file đó (để
+  worker đó tự push), chỉ push 3 file của vòng này.
+- Hồi quy đầy đủ trên cây GỘP (chạy lại sau khi cây ổn định, gồm
+  cả `g4_dpad_test.gd` của Vòng 10): **1990 PASS / 0 FAIL**
+  (1978 cũ + 12 D-pad mới); battle names 12/12, battle scene 43/43,
+  battle AI 34/34, battle main 15/15, battle save 31/31,
+  MarketBattle 123/123, move-input 9/9 — không regression.
+  (Lần chạy 23:5x trước khi gộp là 1978/0 trên cây chưa gộp,
+  không tính cho cây này.)
+- Kiểm tra đường tải live trước deploy: `versions.json` live vẫn
+  pck `7f8ef9bb`; 6 chunk mẫu live (wasm 000/150/292, pck 000/051,
+  img title_bg) đều **200 trong 0,9–1,7s** — đường tải live khỏe
+  lúc 23:47. Vụ kẹt tải >120s ở kiểm live 23:10 (browser-task
+  be62ff52) nhiều khả năng là kẹt thoáng qua ở CDN/proxy hoặc môi
+  trường cloud browser, không phải file trên Pages (byte đã khớp
+  SHA từ trước) — không kết luận "bản mới hỏng tải" từ 1 lần kẹt.
+  Kết quả kiểm live lại (browser-task 25039c4d, mở ~23:15) vẫn CHƯA
+  có trong phiên này — parent/chủ xem kết quả đó để chốt di chuyển
+  trên bản `7f8ef9bb`.
+- **Push main CHƯA xong — service restart 3 lần (00:0x–00:15 21/11):**
+  `github push-files` bị gián đoạn cả 3 lần thử (service restart
+  ngay trong lúc push, đúng kiểu §24.5); đã đối chiếu head remote
+  sau mỗi lần: vẫn `c1f86361…`, không có commit mới nào được tạo,
+  sync record KHÔNG ghi thêm (đúng luật — chưa xác nhận thì không
+  advance). Không retry lần 4 trong vòng này (3 lần cùng lỗi là
+  đủ; retry mù có nguy cơ tạo commit trùng nếu 1 lần thực ra đã
+  lọt). Paths file giữ lại ở
+  `hidden_files/pxb-push-paths-2026-11-21-0010` để vòng sau push
+  lại 1 lệnh. Deploy gh-pages cũng dùng cùng cơ chế push nên
+  cũng CHƯA làm được trong vòng này.
+
+### 26.4 Việc tiếp theo
+
+1. **Push main lại** (paths file đã sẵn ở
+   `hidden_files/pxb-push-paths-2026-11-21-0010` — 4 file vòng
+   này; kiểm tra head vẫn `c1f86361…` trước khi push) **+ deploy
+   gh-pages bản `bc296e9e…`** (staging đã rebuild + VERIFY OK:
+   pck `bc296e9e`, wasm `fc74679e` không đổi, img đủ 3 ảnh, loader
+   cứng đủ marker, icon inline đủ 3 data URI; push pck versioned
+   + index.html cuối, kiểm tra head trước mỗi lô ≤23 file).
+   Lưu ý: deploy này sẽ đưa cả D-pad Vòng 10 lên live (cùng pck
+   gộp) — đúng ý đồ (D-pad là đường input thứ 2 cho kiểm live
+   sau), nhưng worker Vòng 10 vẫn cần push riêng `main.gd` +
+   `web_shell.html` + `g4_dpad_test.gd` lên main trước/sau đó để
+   code trên GitHub khớp build đã deploy.
+2. Animation di chuyển/đánh trận; chọn đội/vũ khí trước trận;
+   `can_challenge` ở demo (xem §20.2).
+3. Tile riêng Map003–018 (đang PROVISIONAL); camera zoom trận
+   MarketBattle (lưới đang nhỏ giữa màn hình).
+4. Khối chat online trong tab Tin nhắn: đưa lên trên / tự cuộn tới
+   tin mới; server WS: auth player_id, giới hạn tốc độ chat, lịch
+   sử cho client mới vào.
+5. Dọn thư mục version pck/wasm cũ trên gh-pages định kỳ.
+
+## 27. Cron 03:45 21/11 — hồi quy + staging OK, push main + deploy CHƯA XONG (3 lần service restart)
+
+### 27.1 Hồi quy cây hiện tại — 37/37 suite, 0 FAIL
+
+- Subagent chạy `bash tools/godot/run_regression.sh` (~04:38 +07,
+  log `~/workspace/regression-move.log`): **37/37 suite OK,
+  0 FAIL — 2079 assert PASS** (tính từ log; v6_geometry_probe
+  không in số đếm, probe server PROBE OK). Mới so với vòng §26:
+  `g4_dpad_test` nay 14/14 (trước 12/12), `g4_battle_names_test`
+  12/12 giữ nguyên.
+- Smoke `--headless --quit-after 120` exit 0, không ERROR.
+- Không sửa code trong vòng này (chỉ chạy test + verify staging).
+
+### 27.2 Staging verify — OK (build `ba8e4a99…`, không phải `bc296e9e…` của §26)
+
+- `build_gh_pages.py --verify-only` exit 0: pck `ba8e4a99`
+  (6.904.868 byte, 52 chunk, khớp byte với `src/godot-build/`),
+  wasm `fc74679e` (293 chunk, 39.514.754 byte, khớp byte),
+  img đủ 3 ảnh khớp byte, loader dùng chunk versioned + đủ 5
+  marker cứng vòng 9, icon inline đủ 3 data URI.
+- Build trên đĩa là bản export 01:04 +07 (sau export 00:00 +07
+  của Vòng 10); không có file code `src/godot/` nào mới hơn
+  export này — pck chứa đúng cây hiện tại (battle names +
+  D-pad Vòng 10).
+- Live lúc này vẫn pck `7f8ef9bb` (curl `versions.json` 10:26
+  +07); wasm `fc74679e` đã có đủ trên gh-pages (curl
+  `wasm/fc74679e/part-000` + `part-292` đều 200) — deploy sau
+  KHÔNG push lại wasm.
+
+### 27.3 Push main — THỬ 3 LẦN, cả 3 đều restart, KHÔNG commit mới
+
+- Push 4 file (paths file
+  `hidden_files/pxb-push-main-2026-11-21-0345`):
+  `src/godot/scripts/battle_scene.gd`,
+  `src/godot/tests/g4_battle_names_test.gd` (+ `.uid`, mới),
+  `docs/godot-g4.md`. Trước mỗi lần đều đối chiếu head main
+  vẫn `c1f86361…`; đối chiếu remote-vs-local: `battle_scene.gd`
+  remote blob `2b0680a1…` ≠ local (đúng — local có fix tên trận),
+  2 file test mới xác nhận ABSENT trên remote (`isError`), docs
+  sync base chính là head nên không lệch được.
+- Cả 3 lần `github push-files` đều bị **service restart giữa
+  chừng** (lần 1 ~21:48 UTC, lần 2 ~23:xx UTC, lần 3 ~01:28
+  UTC); đối chiếu head sau mỗi lần vẫn `c1f86361…`, sync record
+  KHÔNG ghi thêm — đúng luật (chưa xác nhận thì không advance).
+  DỪNG ở 3 lần theo tiền lệ §26.3, không retry lần 4 trong
+  vòng này.
+- **Deploy gh-pages CHƯA làm** (cùng cơ chế push-files, sẽ gặp
+  cùng lỗi restart) — lượt sau làm 1 lần: pck `ba8e4a99` 52
+  chunk chia 3 lô ≤23 file + `index.html` + `versions.json`
+  cuối; kiểm tra head gh-pages (`1ed8f9f8…`) trước mỗi lô.
+- Lưu ý cho lượt sau: build `ba8e4a99` chứa cả code D-pad Vòng
+  10 (`main.gd`/`web_shell.html`/`g4_dpad_test.gd` — worker
+  Vòng 10 tự push theo §26.4, chưa thấy push). Deploy sẽ đưa
+  D-pad lên live trước khi code lên main — sau deploy nhớ đẩy
+  nốt 3 file D-pad lên main để code GitHub khớp build đã
+  deploy, tránh lệch như vụ wasm §22.5.
+- Vòng 10 agent (`3d626c35`) vẫn listed running lúc 21:32 UTC,
+  hoạt động cuối ~21:24 UTC; sau 3 restart không rõ trạng thái
+  — không can thiệp (thuộc chat khác). Staging có thư mục pck
+  lạ `64880480` (17:06 UTC) — dọn sau, không ảnh hưởng deploy.
+
+### 27.4 Việc tiếp theo
+
+1. **Push main lại** (paths file đã sẵn — kiểm tra head vẫn
+   `c1f86361…` trước khi push) **+ deploy gh-pages `ba8e4a99`**
+   (xem §27.3).
+2. **Kiểm live bằng cloud browser trên URL thật sau deploy**
+   (D-pad 4 nút + phím D + tap, đọc nhãn debug ô hiện tại/input
+   cuối) — cửa cuối theo luật AGENTS.md 20/11 23:21; live hiện
+   vẫn bản `7f8ef9bb` nên kiểm lúc này chỉ lặp lại kết quả cũ.
+3. Animation di chuyển/đánh trận; chọn đội/vũ khí trước trận;
+   `can_challenge` ở demo; tile riêng Map003–018; camera zoom
+   trận; khối chat online đưa lên trên tab Tin nhắn; server WS:
+   auth player_id, giới hạn tốc độ chat, lịch sử cho client mới.
