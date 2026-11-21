@@ -2781,6 +2781,11 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
   = staging; `versions.json` qua API blob SHA `7882a5da` = staging, pck
   `a87a871d` (raw.githubusercontent.com vẫn hiện `7dec3410` ngay sau deploy
   do CDN cache — đã biết từ §31, không phải deploy sai).
+- **Kiểm độc lập lại (cron 12:45, 21/11 ~12:55):** ráp lại 52 chunk pck
+  từ live = 6.922.136 byte, SHA `a87a871dc2f9d2ce…` = build local;
+  `index.html` live (Pages) SHA `4fa85edc…` = staging; `versions.json`
+  live (Pages) pin pck `a87a871d` — khớp hết, không cần deploy lại.
+  File ráp ở `~/workspace/live-r11-verify/pck-a87a871d/pck.bin`.
 
 ### 32.5 Việc tiếp theo
 
