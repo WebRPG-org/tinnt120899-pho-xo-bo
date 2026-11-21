@@ -3282,4 +3282,39 @@ sau khi deploy vòng 14b, không gộp chung (đúng lưu ý §35.6).
    §35.6. Việc (b) đã đủ 3/3 trước hạn 21:00 21/11.
 3. Sạp chợ Map002 (khối be thô) — làm khi tới lượt art Map002.
 
-### 37.6 Deploy `b6913210` lên gh-pages — (điền sau khi xong)
+### 37.6 Deploy `b6913210` lên gh-pages — XONG 21/11 ~17:40 +07
+
+- Staging rebuild `build_gh_pages.py`: VERIFY OK; versions.json pin
+  pck `b6913210`, wasm `fc74679e` không đổi, img không đổi.
+- Kiểm tra tiền-push: remote gh-pages `versions.json` pin `cf88493c`
+  ở head `3c7063e6` (đúng trạng thái vòng 14b) — NHƯNG sync record
+  thiếu hẳn entry deploy gh-pages vòng 14 (9d9896a9) + 14b
+  (cf88493c); entry gh-pages mới nhất trong record vẫn là vòng 13
+  (80da1a51). Đối chiếu diff: index.html remote ↔ staging chỉ khác
+  version pck + số chunk (48→49) + fileSizes pck (6473700→6481136)
+  — không có writer khác chen vào. Lấy head đã verify `3c7063e6`
+  làm base; các lô deploy vòng này ghi record đầy đủ trở lại.
+- Push gh-pages 5 lô (mỗi lô ghi sync record ngay sau khi xong):
+  chunk 1/3 `ee628999` (part-000..019), 2/3 `66614a85`
+  (part-020..039), 3/3 `97ee0af1` (part-040..048),
+  versions.json `4fcd9816`, index.html CUỐI `eeb3347c`.
+  Spot-check 3 chunk (000/024/048) blob SHA remote = local.
+- Verify live (curl): versions.json pin `b6913210`; index.html live
+  trỏ pck/b6913210, fileSizes 6481136; tải đủ 49 chunk từ live,
+  ráp lại = 6.481.136 byte, SHA256 `b6913210…` KHỚP TỪNG BYTE với
+  pck local. Link live: https://tinnt120899.github.io/pho-xo-bo/
+- **Hạn chế lần này:** smoke browser trên URL live KHÔNG chạy được
+  từ VM này — Chromium báo `ERR_TUNNEL_CONNECTION_FAILED` (2 lần),
+  trong khi curl cùng máy trả 200. Đây là lỗi đường mạng/proxy của
+  Chromium trong sandbox, không phải lỗi site. Game đã browser-verify
+  trên bản local CÙNG TỪNG BYTE pck + live đã khớp byte — nhưng theo
+  luật "kiểm live bằng cloud browser" thì phần này còn thiếu; vòng
+  sau thử lại live browser khi tunnel ổn.
+- Lưu ý push: lần push main đầu bị service restart cắt giữa chừng
+  (chưa lên, check head vẫn `7b21c4dd` rồi push lại mới xong);
+  lần push versions.json cũng bị restart cắt (chưa lên, check lại
+  rồi push lại). `/tmp` bị xóa sau mỗi restart — manifest phải tạo
+  lại. Và: file `docs/godot-g4.md` 226.162 byte vẫn push qua
+  snapshot-push được (giới hạn thật là 16 MiB tổng, không phải
+  188.416 byte/file như MEMORY.md đang ghi — con số đó là cỡ chunk
+  base64 của build_gh_pages, không phải giới hạn push).
