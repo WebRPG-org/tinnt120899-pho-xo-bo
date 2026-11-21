@@ -3394,13 +3394,27 @@ chưa phải blockout Blender đầy đủ (VM không có Blender).
 
 ### 38.3 Deploy — XONG (22/11 ~01:00 +07)
 
-- Push main: commit `...` (12 file: iso_map.gd, test r16 mới +
-  `.uid`, 2 test cập nhật, run_regression.sh, make_map001_tall.py
-  mới, 2 `.import` mới, 2 script visual-check artpass16, docs §38).
-- Deploy gh-pages: staging rebuild `build_gh_pages.py` VERIFY OK;
-  pck `34bd6889` (xx chunk), wasm `fc74679e` không đổi; push theo
-  lô ≤23 file, `index.html` CUỐI; verify ráp lại từ live khớp SHA.
-- Link live: https://tinnt120899.github.io/pho-xo-bo/
+- Push main — XONG, commit `a1f549e3` (12 file: iso_map.gd, test
+  r16 mới + `.uid`, 2 test cập nhật, run_regression.sh,
+  make_map001_tall.py mới, 2 `.import` mới, 2 script visual-check
+  artpass16, docs §38). Đối chiếu trước push: head `3230d76e`
+  khớp record; commit mới nhất chạm 5 file sửa đều đúng sync base
+  (iso_map/artpass3 `d0b5cbd1`, polish `bb47c522`,
+  run_regression `42dafc2a`, docs `3230d76e`); 7 file mới xác nhận
+  ABSENT trên remote trước khi push.
+- Deploy gh-pages — XONG, 6 lô: `25e7ab71` (pck 000–022),
+  `422d7708` (023–045), `4ee21f4a` (046–068), `5e1d0ca3`
+  (069–074), `27133ed1` (versions.json), `a349ec32` (index.html
+  CUỐI — head gh-pages). Staging rebuild `build_gh_pages.py`
+  VERIFY OK; pck `34bd6889` (75 chunk), wasm `fc74679e` không đổi.
+  Spot-check 3 chunk (000/037/074) blob SHA remote = local trước
+  khi đẩy index.html.
+- Verify khớp byte từ live: ráp 75 chunk từ
+  `raw.githubusercontent.com` = 10.028.440 byte, SHA
+  `34bd6889b567dad8` ✓; `versions.json` live pin `34bd6889`;
+  `index.html` live SHA `102bf8dbff863da7` = staging ✓.
+- Link live: https://tinnt120899.github.io/pho-xo-bo/ (Pages rebuild
+  vài phút sau push).
 
 ### 38.4 Việc tiếp theo
 
