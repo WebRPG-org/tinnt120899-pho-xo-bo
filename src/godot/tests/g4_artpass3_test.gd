@@ -58,7 +58,8 @@ func _on_frame() -> void:
 				_check("panel dien thoai y >= 189", _main._phone_panel.position.y >= 189.0)
 				# 5. SkyEffects ton tai, khung Sang co mat troi (frame 0).
 				_check("skyfx ton tai", _main.iso_map.skyfx != null)
-				_check("khung Sang: anh nen ngay", _main.iso_map._bg_sprite.texture.resource_path.ends_with("bg_map001.png"))
+				# Vong 16: Map001 dung anh nha ong cao thay composite cu.
+				_check("khung Sang: anh nen ngay", _main.iso_map._bg_sprite.texture.resource_path.ends_with("bg_map001_tall.png"))
 				# Mat troi Sang o duoi HUD (the gioi y -140, man hinh
 				# ~245) — khong bi HUD che nhu -195 cu.
 				_check("mat troi Sang duoi HUD", _main.iso_map.skyfx.sun_pos.y > -160.0 and _main.iso_map.skyfx.sun_pos.y < -100.0)
@@ -70,7 +71,7 @@ func _on_frame() -> void:
 			_main._advance_frame()
 			_main._advance_frame()
 			_check("doi khung -> Toi", _main.frame_idx == 2)
-			_check("khung Toi: anh nen dem", _main.iso_map._bg_sprite.texture.resource_path.ends_with("bg_map001_night.png"))
+			_check("khung Toi: anh nen dem", _main.iso_map._bg_sprite.texture.resource_path.ends_with("bg_map001_tall_night.png"))
 			# Vong 5: bo tint rieng nhan vat — lop overlay MUL
 			# thong nhat toi ca nhan vat; tint rieng nhan doi lam
 			# nhan vat thanh bong den (kiem live 14:34). Kiem tra
@@ -121,7 +122,7 @@ func _on_frame() -> void:
 		3:
 			# Ve Sang: anh nen ngay tro lai + tint trang.
 			_main._advance_frame()
-			_check("ve Sang: anh nen ngay", _main.iso_map._bg_sprite.texture.resource_path.ends_with("bg_map001.png"))
+			_check("ve Sang: anh nen ngay", _main.iso_map._bg_sprite.texture.resource_path.ends_with("bg_map001_tall.png"))
 			_check("ve Sang: tint trang tro lai", _main.player._sprite.modulate.r > 0.99)
 			print("G4 ARTPASS3 TEST: %d/%d PASS" % [_pass, _pass + _fail])
 			quit(0 if _fail == 0 else 1)

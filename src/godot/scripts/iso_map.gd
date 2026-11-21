@@ -30,6 +30,7 @@ var night_glow: NightGlow = null  # Dom sang cua so khung Toi.
 var nadia_scene: NadiaScene = null  # Canh ve tay kieu Nadia (chi Map001-002).
 var skyfx: SkyEffects = null  # Mat troi + bong dai theo khung.
 var has_night_bg := false  # Map co anh nen dem rieng de doi khi Toi.
+var has_tall_bg := false  # Vong 16: Map001 dung anh nha ong cao (864x1536).
 var _bg_sprite: Sprite2D = null  # Anh nen mat tien (Map001) / dai troi (Map002+).
 var _bg_day_tex: Texture2D = null
 var _bg_night_tex: Texture2D = null
@@ -203,7 +204,23 @@ func build(data: Dictionary, marker_script: Script, font: Font, p_label_layer: C
 	_bg_day_tex = null
 	_bg_night_tex = null
 	_bg_sprite = null
-	if map_id == 1 and ResourceLoader.exists("res://art/bg_map001.png"):
+	has_tall_bg = false
+	# Vong 16 (Claude viec 1, buoc 1): Map001 dung anh nha ong cao
+	# bg_map001_tall.png (864x1536) thay anh composite cu 1120x630.
+	# Day anh neo o offset.y+20 (nhu cu) — dinh len toi offset.y-1516,
+	# phu kin ca tam nhin khi di len hang tren (camera thay toi
+	# offset.y-777) nen khong can dai troi sky_wide nua. Anh cu giu
+	# lam fallback neu thieu anh cao.
+	if map_id == 1 and ResourceLoader.exists("res://art/bg_map001_tall.png"):
+		_bg_day_tex = load("res://art/bg_map001_tall.png")
+		if ResourceLoader.exists("res://art/bg_map001_tall_night.png"):
+			_bg_night_tex = load("res://art/bg_map001_tall_night.png")
+		_bg_sprite = Sprite2D.new()
+		_bg_sprite.texture = _bg_day_tex
+		_bg_sprite.position = offset + Vector2(0, 20.0 - _bg_day_tex.get_height() / 2.0)
+		add_child(_bg_sprite)
+		has_tall_bg = true
+	elif map_id == 1 and ResourceLoader.exists("res://art/bg_map001.png"):
 		_bg_day_tex = load("res://art/bg_map001.png")
 		if ResourceLoader.exists("res://art/bg_map001_night.png"):
 			_bg_night_tex = load("res://art/bg_map001_night.png")
@@ -229,7 +246,10 @@ func build(data: Dictionary, marker_script: Script, font: Font, p_label_layer: C
 	_sky_ext_day_tex = null
 	_sky_ext_night_tex = null
 	_sky_ext_sprite = null
-	if ResourceLoader.exists("res://art/sky_wide.jpg"):
+	# Vong 16: Map001 dung anh cao thi KHONG ve dai troi mo rong nua —
+	# no se de len tang tren cua anh cao (cung lop, ve sau nen che mat).
+	# Anh cao da phu kin vung troi nhin thay.
+	if not has_tall_bg and ResourceLoader.exists("res://art/sky_wide.jpg"):
 		_sky_ext_day_tex = load("res://art/sky_wide.jpg")
 		if ResourceLoader.exists("res://art/sky_night.jpg"):
 			_sky_ext_night_tex = load("res://art/sky_night.jpg")

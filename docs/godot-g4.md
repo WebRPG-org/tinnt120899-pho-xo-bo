@@ -3318,3 +3318,94 @@ sau khi deploy vòng 14b, không gộp chung (đúng lưu ý §35.6).
   snapshot-push được (giới hạn thật là 16 MiB tổng, không phải
   188.416 byte/file như MEMORY.md đang ghi — con số đó là cỡ chunk
   base64 của build_gh_pages, không phải giới hạn push).
+
+## 38. Vòng 16 — Map001 dựng lại bước 1: ảnh nhà ống cao phủ kín 9:16 (22/11 ~00:30–01:00 +07)
+
+Mục (1) của Claude (§35.6), hạn 12:00 22/11 — làm bước 1 (nền mới),
+chưa phải blockout Blender đầy đủ (VM không có Blender).
+
+### 38.1 Việc làm
+
+- **Ảnh mới** (`src/godot/art/bg_map001_tall.png` 864×1536 + bản đêm
+  `bg_map001_tall_night.png`): gen bằng media image generation
+  (prompt: 3 nhà ống cao 4 tầng, tường vàng cũ, mái ngói, ban công
+  cây, biển PHO BO / CA PHE / TAP HOA, đèn lồng đỏ, vỉa hè — đúng
+  phong cách vẽ tay Nadia), xử lý bằng PIL
+  (`tools/godot/make_map001_tall.py`, tái chạy được): gốc 1152×2048
+  thu về 864×1536 (camera chỉ thấy ~576 đơn vị thế giới ngang nên
+  vẫn >1,3× oversampling; tránh pck phồng thêm ~5MB), bản đêm suy
+  ra từ bản ngày (tối + lạnh toàn cục, giữ 381.184 pixel ấm sáng
+  cửa sổ/đèn lồng; mean ngày 91,5 → đêm 51,9). Bản gốc webp giữ ở
+  `visual-check/artpass16/bg-map001-tall-source.webp`.
+- **Code** (`scripts/iso_map.gd`): Map001 ưu tiên ảnh cao khi có
+  (`has_tall_bg` mới); đáy ảnh neo ở offset.y+20 như ảnh cũ, đỉnh
+  lên tới offset.y-1516 — phủ kín cả tầm nhìn khi đi lên hàng trên
+  (camera thấy tới offset.y-777); **không vẽ dải trời sky_wide cho
+  Map001 nữa** (sẽ đè lên tầng trên của ảnh cao); ảnh composite cũ
+  giữ làm fallback khi thiếu ảnh cao. `set_frame` đổi ngày/đêm dùng
+  chung `_bg_day_tex`/`_bg_night_tex` nên không cần sửa. Wash sáng
+  mặt tiền `_draw_facade_light` giữ nguyên (nay phủ đúng dải mặt
+  tiền tầng trệt của ảnh cao, alpha ≤0,14).
+- **Test mới** `tests/g4_r16_map001_rebuild_test.gd`: **16/16 PASS**
+  — ảnh tồn tại + đúng 864×1536, đêm tối hơn ngày (tỉ lệ 0,57),
+  Map001 `has_tall_bg`, đáy neo offset.y+20, đỉnh vượt tầm nhìn
+  hàng trên, không sky_wide, đổi khung Toi/Sáng đổi đúng ảnh,
+  Map002 không đổi (sky_band + sky_wide).
+- **Test cũ cập nhật** (tiền lệ §12.3 — test lỗi thời so với thay
+  đổi có chủ ý, sửa test không sửa code): `g4_artpass3_test`
+  (3 check tên ảnh nền ngày/đêm → ảnh cao) + `g4_polish_test`
+  (Map001 bg composite + có sky_wide → bg ảnh cao + không sky_wide).
+
+### 38.2 Verify vòng này
+
+- Hồi quy đầy đủ: **45 OK, 0 FAIL** (44 cũ + 1 mới; lần chạy đầu
+  43 OK + 2 FAIL đúng 2 test cũ trên — đã cập nhật, chạy lại đủ).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **10.028.440 byte, SHA `34bd6889…`**
+  (trước 6.481.136 — tăng ~3,5MB do 2 ảnh cao; wasm không đổi
+  `fc74679e…`); HTTP 200 đủ 4 file (cổng 8171).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass16/check_r16.py` +
+  `check_r16_m2.py`, ảnh `r16-01…r16-05`): **0 console error,
+  0 pageerror, 0 request fail.**
+  - Spawn Map001: nhà ống cao 4 tầng phủ kín khung dọc, biển
+    PHO BO / CA PHE / TAP HOA đọc được, không còn dải trời trống.
+  - Đi lên 4 ô tới (4,1): mặt tiền vẫn kín khung, không hở trời.
+  - F ×2 → Tối: ảnh đêm (tối xanh, trăng + sao, cửa sổ ấm còn
+    sáng), nhãn "Hẻm trọ buổi tối" đổi đúng, toast "Ngày 1 •
+    Khung Tối".
+  - Vào Map002 bằng cửa (5,4): đúng Chợ Đầu Mối + toast "Đã sang
+    Chợ Đầu Mối", sky_band + sky_wide như cũ — không hồi quy.
+- **Nit còn lại (không chặn, ghi cho vòng sau):**
+  1. Sao đêm NightGlow vẫn vẽ ở dải cũ (world y −92..−12) nên
+     rơi lên mái hiên/biển hiệu thay vì trời — nhìn như bụi sáng,
+     nhỏ; dời dải sao lên khi làm ánh sáng 23/11.
+  2. Mặt trời Sáng (neo màn hình) đè lên biển PHO BO lúc spawn —
+     dời mặt trời sang phải hoặc xuống thấp hơn.
+  3. Đất iso (ground_wide.jpg, ảnh chụp) vẫn khác phong cách với
+     mặt tiền vẽ tay — đường nối vỉa hè/đất còn thấy; cần art đất
+     riêng cho Map001 ở bước tiếp theo.
+  4. Sạp Chợ Map002 vẫn khối be thô (đã biết, chờ art Map002).
+- **Lưu ý đồng bộ art:** 2 PNG cao chỉ sống ở local + trong pck
+  (snapshot-push chỉ nhận file text) — giống mọi art PNG từ trước;
+  file `.import` (text) đã push thì tương thích cả 2 cỡ ảnh.
+  Clone mới về sẽ fallback về ảnh composite cũ cho tới khi có cơ
+  chế đẩy art nhị phân.
+
+### 38.3 Deploy — XONG (22/11 ~01:00 +07)
+
+- Push main: commit `...` (12 file: iso_map.gd, test r16 mới +
+  `.uid`, 2 test cập nhật, run_regression.sh, make_map001_tall.py
+  mới, 2 `.import` mới, 2 script visual-check artpass16, docs §38).
+- Deploy gh-pages: staging rebuild `build_gh_pages.py` VERIFY OK;
+  pck `34bd6889` (xx chunk), wasm `fc74679e` không đổi; push theo
+  lô ≤23 file, `index.html` CUỐI; verify ráp lại từ live khớp SHA.
+- Link live: https://tinnt120899.github.io/pho-xo-bo/
+
+### 38.4 Việc tiếp theo
+
+1. Map001 bước 2: art đất riêng (khớp mặt tiền vẽ tay) + dời dải
+   sao/mặt trời (nit 1–3 trên).
+2. Nhân vật 6 khung (hạn 20:00 22/11, cần nguồn gen ảnh AI) +
+   ánh sáng + sự sống (23/11) — theo ETA §35.6.
+3. Sạp chợ Map002 (khối be thô) — làm khi tới lượt art Map002.

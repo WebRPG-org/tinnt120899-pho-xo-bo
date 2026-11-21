@@ -69,9 +69,9 @@ func _on_frame() -> void:
 				# (HUD cu tran ca ten ngan, khong chi ten dai) nen
 				# _fit_hud_map phai co xuong 28 — bat bien vua + lon nhat.
 				_check_fit("Map001")
-				# 1. Map001 van co anh composite + sky_wide rieng.
-				_check("Map001: bg composite", _main.iso_map._bg_sprite.texture.resource_path.ends_with("bg_map001.png"))
-				_check("Map001: co sky_wide", _main.iso_map._sky_ext_sprite != null)
+				# 1. Vong 16: Map001 dung anh nha ong cao + KHONG sky_wide nua.
+				_check("Map001: bg anh cao", _main.iso_map._bg_sprite.texture.resource_path.ends_with("bg_map001_tall.png"))
+				_check("Map001: khong sky_wide", _main.iso_map._sky_ext_sprite == null)
 				_main._on_start_pressed()
 				_main.load_map(18, Vector2i(5, 4))
 				_state = 1
