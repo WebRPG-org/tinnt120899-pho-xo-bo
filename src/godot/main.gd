@@ -1581,6 +1581,12 @@ func _phone_panel_style() -> StyleBoxFlat:
 	return s
 
 func _style_button(b: Button, font_size: int = 26) -> void:
+	# Vong 13: moi nut qua day deu FOCUS_NONE — nut giu focus ban
+	# phim thi phim mui ten (ui_*) bi he focus navigation an mat
+	# truoc khi toi _unhandled_input (loi that live 12:56 21/11).
+	# Tat ca 8 cho Button.new() trong main.gd deu goi _style_button
+	# nen 1 dong nay bao phu het, ke ca nut them sau nay.
+	b.focus_mode = Control.FOCUS_NONE
 	b.add_theme_font_size_override("font_size", font_size)
 	b.add_theme_font_override("font", font)
 	b.add_theme_color_override("font_color", Color(1.0, 0.96, 0.88, 1))

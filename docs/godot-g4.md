@@ -2951,3 +2951,79 @@ Test:
 3. Map003+ vẫn dùng vẽ facade cũ chồng 50% (tạm) — sửa khi tới lượt.
 4. Map002 vẫn dùng lại ảnh đất của Map001 (lá/xe đạp/xe đẩy) — cần
    ảnh đất riêng cho chợ khi làm art Map002.
+
+## 34. Vòng 13 — FOCUS_NONE cho mọi nút (21/11 ~14:50–15:30 +07)
+
+### 34.1 Gốc (lỗi thật, tìm được trong báo cáo tái hiện r12)
+
+Báo cáo tái hiện r12 (~14:00) chỉ ra: chỉ nút D-pad có
+`focus_mode = FOCUS_NONE` (`main.gd:2375`); 7 chỗ `Button.new()`
+còn lại — "Bắt đầu chơi", "Đổi khung (F)", "Việc làm",
+"Điện thoại (P)", 9 tab điện thoại, nút hành động điện thoại, nút
+lựa chọn hội thoại — đều giữ `FOCUS_ALL` mặc định. Sau khi bấm
+bằng chuột, nút giữ focus bàn phím và phím mũi tên (`ui_*`) bị hệ
+focus navigation của Godot ăn mất trước khi tới
+`Main._unhandled_input` → mũi tên không đi. F/P vẫn chạy vì không
+phải `ui_*` — đúng triệu chứng live 12:56 (D-pad lên/xuống không
+đi, F/P vẫn nhận). WASD (`KEY_D`...) không phải `ui_*` nên lý
+thuyết vẫn tới được — việc phím D cũng chết trên live chưa giải
+thích hết (nghi bản lai CDN / môi trường checker), nhưng sửa focus
+vẫn bắt buộc. Vòng 12 chưa sửa vì lúc đó đang sửa cùng file.
+
+### 34.2 Sửa
+
+`src/godot/main.gd` — 1 dòng trong `_style_button` (bao phu tất cả
+8 chỗ `Button.new()`, kể cả nút thêm sau này):
+`b.focus_mode = Control.FOCUS_NONE` + comment giải thích. Dòng
+riêng ở nút D-pad giữ nguyên (thừa nhưng vô hại, comment của nó
+đã ghi lý do từ vòng 10).
+
+### 34.3 Test mới `tests/g4_focus_none_test.gd` (13 kiểm)
+
+- Tĩnh: nút Bắt đầu / Đổi khung / Việc làm / Điện thoại (P) /
+  4 nút D-pad / 9 tab điện thoại / nút hành động / 2 nút lựa chọn
+  hội thoại — tất cả `FOCUS_NONE`.
+- Chức năng: `grab_focus()` lên nút HUD rồi kiểm
+  `gui_get_focus_owner() == null` (FOCUS_NONE thì không lấy được
+  focus). Trước sửa: 5/13 PASS, kiểm này FAIL đúng (focus owner =
+  Button — probe xác nhận); sau sửa: **13/13 PASS**.
+- Trung thực về giới hạn: headless KHÔNG tái hiện được việc GUI ăn
+  phím mũi tên (event tiêm qua `Input.parse_input_event` vẫn tới
+  `_unhandled_input` dù nút đang focus — probe `zz_focus_probe`
+  đã xóa; bài học này khớp luật "headless không đáng tin cho di
+  chuyển" trong AGENTS.md). Bước ArrowRight trong test chỉ là kiểm
+  sanity "vẫn đi", không phải bằng chứng sửa — bằng chứng thật phải
+  là kiểm live trên web sau deploy (bấm nút HUD bằng chuột thật rồi
+  bấm mũi tên).
+- `tools/godot/run_regression.sh`: thêm `g4_focus_none_test` →
+  42 suite.
+
+### 34.4 Verify vòng này
+
+- `--check-only --script` cho `main.gd`,
+  `g4_focus_none_test.gd`: exit 0. Scene 120 frame exit 0.
+- Hồi quy đầy đủ: **42 OK, 0 FAIL** (41 cũ + 1 mới).
+- Export web exit 0: pck **6.945.720 byte, SHA `d691d82e…`**,
+  wasm không đổi `fc74679e…`. HTTP 200 đủ 6 file (cổng 8161).
+- Push main — XONG, commit `TODO` (3 file: `main.gd`,
+  test mới + `.uid`, `run_regression.sh`, docs §34). Đối chiếu
+  trước push: TODO.
+- Deploy gh-pages — **GIỮ LẠI (chưa deploy)**: lúc push, kiểm live
+  bản `80da1a51` (§33.6 mục 1) vẫn đang chạy trên cloud browser
+  (task `browser-task:145187af...`, bắt đầu ~14:39) — deploy pck
+  mới giữa chừng sẽ làm checker thấy bản lai và kết quả kiểm mất
+  giá trị. Deploy `d691d82e` ở run sau, ngay khi kết quả kiểm live
+  về (dù pass hay fail đều deploy, vì fix này là đáp án cho triệu
+  chứng "mũi tên chết sau khi bấm nút" nếu kiểm live tái hiện nó).
+
+### 34.5 Việc tiếp theo
+
+1. Deploy pck `d691d82e` lên gh-pages khi kiểm live `80da1a51`
+   xong (đối chiếu `versions.json` + SHA pck như §33.5).
+2. Kiểm live bản mới: bấm nút HUD ("Điện thoại (P)") bằng chuột
+   thật rồi bấm mũi tên — phải đi được ngay, không cần bấm lại
+   canvas; kiểm tương tự sau khi bấm nút "Việc làm" và sau khi
+   đóng hội thoại NPC.
+3. Map003+ vẫn dùng vẽ facade cũ chồng 50% (tạm) — sửa khi tới lượt.
+4. Map002 vẫn dùng lại ảnh đất của Map001 — cần ảnh đất riêng cho
+   chợ khi làm art Map002.
