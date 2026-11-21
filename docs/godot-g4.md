@@ -2925,7 +2925,20 @@ Test:
   không phải lỗi game; đã thử lại đúng điểm (8,6) thì đi được.
   Phải ở (5,4) Map002 là cửa về Map001 (transfer đúng luật) nên
   các bước sau đó của probe chạy ở Map001 — không phải lỗi.
-- Push main + deploy gh-pages: (điền sau khi xong)
+- Push main — **XONG, commit `31f82a77`** (9 file: `main.gd`,
+  `nadia_scene.gd`, test artpass12 + `.uid`, 3 test cập nhật,
+  `run_regression.sh`, docs §33). Đối chiếu trước push: 6 file cũ
+  remote-at-head blob SHA = blob SHA tại sync base (không divergence);
+  2 file mới chưa có trên remote. Sync record 171 entries.
+- Deploy gh-pages — **XONG, 5 lô**: (1) pck 000–016 → `87839c18`;
+  (2) 017–033 → `3770e7af`; (3) 034–051 → `564d39cc`;
+  (4) `versions.json` → `d06d49e2`; (5) `index.html` CUỐI →
+  `6e7c4af7`. Gh-pages head trước deploy `91dfacf4` khớp record.
+- Verify từ live (raw.githubusercontent.com, VM không tới được
+  github.io): ráp lại 52 chunk pck = 6.941.688 byte, SHA
+  **`80da1a51d0c6459b`** = build local; `index.html` live SHA
+  `4e88b570…` = staging; `versions.json` live pin pck `80da1a51`,
+  wasm `fc74679e`. File ráp ở `/tmp/live-r12-verify/pck-80da1a51/`.
 
 ### 33.6 Việc tiếp theo
 
