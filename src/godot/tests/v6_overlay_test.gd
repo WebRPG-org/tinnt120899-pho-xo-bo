@@ -78,10 +78,13 @@ func _on_frame() -> void:
 			var cam: Camera2D = _main._camera
 			var vp := Vector2(720, 1280)
 			var top_left := cam.get_screen_center_position() - vp / (2.0 * cam.zoom)
-			# Khung Sang: mat troi o (170,240) man hinh.
+			# Khung Sang: mat troi o (560,240) man hinh.
+			# Vong 17: doi tu (170,240) sang phai — (170,240) cu de
+			# len mai hien trai + bien PHO BO luc spawn (anh nha ong
+			# cao khong co vung troi that; xem r16-01).
 			var sun_screen: Vector2 = (sky.sun_pos - top_left) * cam.zoom
-			_check("mat troi Sang o vung troi trong (170,240)", sun_screen.distance_to(Vector2(170, 240)) < 4.0)
-			if sun_screen.distance_to(Vector2(170, 240)) >= 4.0:
+			_check("mat troi Sang o vung troi trong (560,240)", sun_screen.distance_to(Vector2(560, 240)) < 4.0)
+			if sun_screen.distance_to(Vector2(560, 240)) >= 4.0:
 				print("  sun_screen: ", sun_screen)
 			_main._advance_frame()
 			_main._advance_frame()

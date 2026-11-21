@@ -124,6 +124,7 @@ var _debug_labels_visible := true  # Vong 12: nhan debug mac dinh HIEN
 	# di chuyen da qua kiem live (luat AGENTS.md 21/11).
 var _last_input := ""  # Vong 10: mo ta input di chuyen gan nhat (vd "D", "cham (9,7)").
 var _camera: Camera2D
+var _ground_sprite: Sprite2D = null  # Vong 17: nen dat (doi texture theo map).
 var _daynight: ColorRect
 var _overlay_layer: CanvasLayer
 var _ui_layer: CanvasLayer
@@ -254,7 +255,20 @@ func load_map(map_id: int, spawn_tile: Vector2i) -> void:
 	_hud_map.text = "Phố Xô Bồ — " + String(_map_by_id(map_id)["name"])
 	_fit_hud_map()
 	_update_hud()
+	_update_ground(map_id)  # Vong 17: Map001 dung dat ve tay rieng.
 	_update_daynight()  # Ap khung hien tai cho map moi (anh dem/tint/mat troi).
+
+## Vong 17: nen dat theo map — Map001 dung ground_map001.png ve tay
+## (khop mat tien nha ong ve tay); map khac giu ground_wide.jpg.
+## Ca 2 anh deu 1440x900 nen scale giu nguyen. Neu thieu file (clone
+## moi chua co art nhi phan — chi co local + trong pck) thi giu anh cu.
+func _update_ground(map_id: int) -> void:
+	if _ground_sprite == null:
+		return
+	if map_id == 1 and ResourceLoader.exists("res://art/ground_map001.png"):
+		_ground_sprite.texture = load("res://art/ground_map001.png") as Texture2D
+	elif ResourceLoader.exists("res://art/ground_wide.jpg"):
+		_ground_sprite.texture = load("res://art/ground_wide.jpg") as Texture2D
 
 func _on_player_moved_to(tile: Vector2i) -> void:
 	_update_dbg()
@@ -2050,11 +2064,12 @@ func _update_character_tint() -> void:
 				mk.set_tint(tint)
 
 func _build_ui() -> void:
-	# Nen dat ve tay (ground_wide.jpg): 1 anh lon co dinh cho moi map,
-	# mep tren la via he co bac them nam duoi chan mat tien — thay cho
-	# hinh thoi IsoMap._draw cu (le toa do + duong noi gat + mang
-	# zigzag). Them o index 0 cua Main (duoi iso_map/player) de
-	# khong che vat; vi tri co dinh vi moi map 12x9 deu cung offset.
+	# Nen dat ve tay: mac dinh ground_wide.jpg (anh chup, dung cho
+	# moi map); Map001 doi sang ground_map001.png ve tay khi co
+	# (_update_ground goi trong load_map) — het lech phong cach voi
+	# mat tien ve tay (nit §38.4 vong 16). Them o index 0 cua Main
+	# (duoi iso_map/player) de khong che vat; vi tri co dinh vi moi
+	# map 12x9 deu cung offset.
 	if ResourceLoader.exists("res://art/ground_wide.jpg"):
 		var gtex := load("res://art/ground_wide.jpg") as Texture2D
 		var g := Sprite2D.new()
@@ -2068,6 +2083,7 @@ func _build_ui() -> void:
 			# nhat (day map world y ~869).
 		add_child(g)
 		move_child(g, 0)
+		_ground_sprite = g
 	# Camera bam nguoi choi, zoom CAMERA_ZOOM de thay het map luc
 	# spawn (dinh mat tien toi day dat + xe dap, vong 7).
 	_camera = Camera2D.new()

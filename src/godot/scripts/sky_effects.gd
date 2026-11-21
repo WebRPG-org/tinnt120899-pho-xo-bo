@@ -31,7 +31,11 @@ func setup_npcs(markers: Array) -> void:
 ## neo theo map nua: neo map thi camera sang phai (khu TAP HOA)
 ## la trang bi cat nua o mep trai, mat troi troi khoi khung
 ## (kiem live 14:34). Toa do man hinh: duoi HUD (~190), tren mai
-## nha — mat troi Sang (170,240), Chieu (330,240), trang (400,240).
+## nha — mat troi Sang (560,240), Chieu (330,240), trang (400,240).
+## Vong 17: mat troi Sang doi tu (170,240) sang (560,240) — o (170,240)
+## mat troi de len mai hien trai + bien PHO BO luc spawn (anh nha ong
+## cao khong co vung troi that; ben phai, tren bien TAP HOA ~390, chi
+## co tuong tang tren — mat troi nam "tren mai nha" nhu trang).
 ## Vong 6: mat troi/trang cu la dia trang phang + quang cung, dan de
 ## len mai nha/bien hieu nhu sticker (kiem live 15:18). Nay ve
 ## shading mem: gradient xuyen tam nhieu vong alpha tang dan vao
@@ -62,8 +66,11 @@ func _process(_delta: float) -> void:
 
 func _draw() -> void:
 	if frame_idx == 0:
-		# Mat troi sang: cao, vang dam — neo camera (170,240).
-		sun_pos = _cam_anchor(Vector2(170, 240))
+		# Mat troi sang: cao, vang dam — neo camera (560,240).
+		# Vong 17: (170,240) cu de len mai hien trai + bien PHO BO
+		# luc spawn; (560,240) o tren tuong tang tren ben phai,
+		# khong de bien nao (TAP HOA o ~y 390 tro xuong).
+		sun_pos = _cam_anchor(Vector2(560, 240))
 		_draw_sun(sun_pos, 38.0,
 			Color(1.0, 0.88, 0.35, 1), Color(1.0, 0.8, 0.3, 1))
 	elif frame_idx == 1:

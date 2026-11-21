@@ -43,9 +43,11 @@ func _on_frame() -> void:
 				_check("co ground_wide.jpg", ResourceLoader.exists("res://art/ground_wide.jpg"))
 				_check("co sky_wide.jpg", ResourceLoader.exists("res://art/sky_wide.jpg"))
 				# 2. Ground sprite cua Main ton tai, mep tren duoi chan mat tien.
+				# Vong 17: Map001 dung ground_map001.png ve tay, map
+				# khac moi dung ground_wide.jpg — chap nhan ca 2.
 				var g: Sprite2D = null
 				for c in _main.get_children():
-					if c is Sprite2D and (c as Sprite2D).texture != null and (c as Sprite2D).texture.resource_path.ends_with("ground_wide.jpg"):
+					if c is Sprite2D and (c as Sprite2D).texture != null and ((c as Sprite2D).texture.resource_path.ends_with("ground_wide.jpg") or (c as Sprite2D).texture.resource_path.ends_with("ground_map001.png")):
 						g = c
 				_check("ground sprite ton tai", g != null)
 				if g != null:

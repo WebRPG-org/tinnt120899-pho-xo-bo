@@ -3419,7 +3419,104 @@ chưa phải blockout Blender đầy đủ (VM không có Blender).
 ### 38.4 Việc tiếp theo
 
 1. Map001 bước 2: art đất riêng (khớp mặt tiền vẽ tay) + dời dải
-   sao/mặt trời (nit 1–3 trên).
+   sao/mặt trời (nit 1–3 trên). — **XONG vong 17, xem §39.**
 2. Nhân vật 6 khung (hạn 20:00 22/11, cần nguồn gen ảnh AI) +
    ánh sáng + sự sống (23/11) — theo ETA §35.6.
 3. Sạp chợ Map002 (khối be thô) — làm khi tới lượt art Map002.
+
+## 39. Vòng 17 — Map001 bước 2: sao/mặt trời neo camera + đất vẽ tay (22/11 ~01:00–01:45 +07)
+
+Nit 1–3 của §38.2, làm xong cả 3 trong 1 vòng (2 luồng song song:
+luồng này code + verify + deploy; luồng kia gen art đất).
+
+### 39.1 Vấn đề gốc (đo bằng mắt trên ảnh r16)
+
+- Ảnh nhà ống cao **không có vùng trời thật nào trong tầm nhìn**:
+  camera (zoom 1.25, look-up −265) lúc spawn thấy tới world y −315,
+  lúc lên hàng trên tới −379; ảnh cao kéo tới −1214 nhưng phần trên
+  không bao giờ vào khung. Nửa trên màn hình lúc nào cũng là mặt tiền.
+- Sao đêm cũ neo theo map (`sky_top.y+200..280` = world y −108..−28)
+  rơi lên mái hiên/biển hiệu — nhìn như bụi sáng trên mái hiên
+  (ảnh r16-03). Mặt trời Sáng neo màn hình (170,240) đè lên mái hiên
+  trái + biển PHO BO lúc spawn (ảnh r16-01).
+- Đất `ground_wide.jpg` là ảnh chụp thật — lệch phong cách với mặt
+  tiền vẽ tay, đường nối vỉa hè/đất còn thấy (ảnh r16-01).
+
+### 39.2 Việc làm
+
+- **Sao đêm neo camera** (`scripts/night_glow.gd`): bỏ hẳn dải sao
+  theo `sky_top`; sao vẽ ở dải màn hình cố định y **208..262**
+  (dưới HUD ~200, trên mái hiên ~280), x 24..696 — cùng thủ thuật
+  như trăng neo camera (400,240) của SkyEffects: "sao trên mái nhà"
+  đọc được như trời đêm. Giữ nguyên số lượng (64 khi `sky_in_image`,
+  36 khi không), cỡ, màu HDR. Thêm `_cam_anchor()` (như SkyEffects)
+  + `_process()` vẽ lại khi camera đổi chỗ (chỉ khi `lit`); biến
+  `star_screen_top/bottom` để test đọc. Trăng Map003+ vẫn vẽ theo
+  map ở `sky_top+(560,250)` (trùng vị trí trăng neo camera lúc
+  spawn nên chỉ thấy 1 trăng — không động vào). `set_sky` giữ lại
+  cho trăng.
+- **Mặt trời Sáng sang phải** (`scripts/sky_effects.gd`):
+  (170,240) → **(560,240)**. Bên phải, trên biển TAP HOA (~y 390
+  trở xuống), chỉ có tường tầng trên — mặt trời nằm "trên mái nhà"
+  như trăng. Chiều (330,240) + trăng (400,240) không đổi.
+- **Đất vẽ tay Map001** (`src/godot/art/ground_map001.png`,
+  1440×900, ~2,4 MB — luồng song song gen bằng media image
+  generation, prompt + xử lý PIL ghi ở
+  `visual-check/artpass17/ground_map001-note.md`): watercolor/
+  gouache, dải vỉa hè đá cũ ~18% trên cùng, dưới là đất hẻm nứt +
+  lá vàng + rêu + vũng nước. Nối vào game (`main.gd`):
+  `_ground_sprite` + `_update_ground(map_id)` gọi trong `load_map`
+  — Map001 dùng `ground_map001.png`, map khác về `ground_wide.jpg`;
+  cả 2 ảnh cùng 1440×900 nên scale giữ nguyên; thiếu file (clone
+  mới chưa có art nhị phân) thì fallback ảnh cũ.
+- **Test cập nhật theo tiền lệ §12.3** (test lỗi thời so với thay
+  đổi có chủ ý): `v6_overlay_test` check mặt trời (170,240) →
+  (560,240); `g4_artpass3_test` check ground sprite chấp nhận cả 2
+  tên file.
+
+### 39.3 Test mới + verify vòng này
+
+- Test mới `tests/g4_r17_sky_test.gd`: **14/14 PASS** — mặt trời
+  Sáng dưới HUD + sang phải (x>350, <550), Chiều giữ vị trí cũ,
+  Tối sao đã vẽ + dải sao dưới HUD/trên mái hiên, trăng không đổi,
+  Map001 đất vẽ tay, sang Map002 về đất cũ, về Map001 lại đất vẽ
+  tay. (Lỗi test lần đầu: đọc `sun_pos` ngay sau `_advance_frame`
+  trong cùng frame — `_draw` chưa chạy; đã sửa thành đọc ở frame
+  sau, như artpass4.)
+- Hồi quy đầy đủ: **46 OK, 0 FAIL** (45 cũ + 1 mới; lần chạy đầu
+  45 OK + 1 FAIL đúng `v6_overlay_test` — test cũ đòi mặt trời
+  (170,240), đã cập nhật, chạy lại đủ). Smoke `--headless
+  --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **11.692.520 byte, SHA `cddb9cd5…`**
+  (trước `34bd6889…` — tăng ~1,66 MB do ảnh đất 2,4 MB);
+  wasm không đổi `fc74679e…`; HTTP 200 đủ 4 file (cổng 8172).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass17/check_r17.py`, ảnh
+  `r17-01…r17-03`): **0 console error, 0 pageerror,
+  0 request fail.**
+  - Spawn Sáng: mặt trời là đĩa vàng tròn + quầng mềm ở góc
+    phải trên, không đè biển/mái hiên trái; biển PHO BO đọc đủ;
+    đất vẽ tay (vỉa hè đá + đất nứt + lá vàng + vũng) khớp phong
+    cách mặt tiền, đường nối vỉa hè/đất hết lộ.
+  - F ×2 → Tối: sao nằm thành dải hẹp ngay dưới HUD/debug, không
+    còn chấm trắng rải trên mái hiên/biển hiệu; trăng vẫn ở giữa
+    trên; đất đêm tối đều, vẫn là tranh vẽ tay.
+  - Về Sáng + sang Map002 bằng cửa (5,4): đúng Chợ Đầu Mối +
+    toast "Đã sang Chợ Đầu Mối", đất về ảnh cũ (đúng thiết kế —
+    chỉ Map001 có đất vẽ tay riêng); mặt trời trên trời thật của
+    Map002. Không hồi quy.
+- Nit còn lại (không chặn): dải sao hơi chạm hộp nhãn debug
+  (nhãn debug tạm thời, mặc định hiện trong giai đoạn sửa di
+  chuyển — hết debug là hết chạm); Map002 vẫn dùng đất ảnh chụp
+  + sạp khối be (chờ art Map002).
+
+### 39.4 Deploy — (ghi sau khi push main + gh-pages xong)
+
+### 39.5 Việc tiếp theo
+
+1. Nhân vật 6 khung (hạn 20:00 22/11, cần nguồn gen ảnh AI) +
+   ánh sáng + sự sống (23/11) — theo ETA §35.6.
+2. Sạp chợ Map002 (khối be thô) + đất vẽ tay Map002 — làm khi tới
+   lượt art Map002.
+3. Kiểm live lại bằng cloud browser khi tunnel ổn (luật kiểm live).
+
