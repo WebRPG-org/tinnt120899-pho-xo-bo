@@ -3166,3 +3166,11 @@ riêng ở nút D-pad giữ nguyên (thừa nhưng vô hại, comment của nó
 
 - 5 PNG đã resize chỉ sống ở **bản local + trong pck** (snapshot-push chỉ nhận file text) — giống mọi art PNG từ trước. File `.import` (text, đã push) thì tương thích cả 2 cỡ ảnh; nhưng **art trên repo main vẫn là bản 512px cũ** — clone mới về sẽ thấy ảnh 512px cho tới khi có cơ chế đẩy art nhị phân. Ghi rõ để vòng sau không tưởng repo đã có ảnh 208px.
 - Ảnh title `char_player.png`/`char_banthan.png` trong `src/godot-build/` cũng đã copy bản 208px mới (45.086 / 53.272 byte) để deploy staging chunk lại với version mới.
+
+### 36.5 Deploy `cf88493c` lên gh-pages — XONG (21/11 ~17:05–17:20 +07)
+
+- Đối chiếu trước deploy: `versions.json` remote pin pck `9d9896a9` tại head `c42d44ab` (= deploy vòng 14); `pck/cf88493c/` chưa tồn tại remote — nối tiếp sạch.
+- Rebuild staging `tools/godot/build_gh_pages.py`: VERIFY OK; pck 48 chunk; img char_player `9639c122`→`5dc7da77`, char_banthan `4750238d`→`a4c96723` (ảnh 208px mới), title_bg không đổi.
+- Deploy 6 lô: `64752ee7` (chunk 000–016), `99340298` (017–033), `3d64de91` (034–047), `9b051eee` (img char 2 file), `061d9861` (`versions.json`), `3c7063e6` (`index.html` CUỐI — head gh-pages).
+- Verify khớp byte từ live: ráp 48 chunk = 6.473.700 byte, SHA `cf88493c56f6edd6` ✓; img chunk char_player 45.086 byte + char_banthan 53.272 byte, đúng magic PNG ✓; `index.html` live SHA `069ae1886a2f5188` = staging ✓; `versions.json` qua API tại head `3c7063e6` pin `cf88493c` + img mới ✓.
+- Link live: https://tinnt120899.github.io/pho-xo-bo/ (Pages rebuild vài phút sau push).
