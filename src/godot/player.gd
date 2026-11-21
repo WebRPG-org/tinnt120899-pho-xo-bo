@@ -85,6 +85,25 @@ func press_dir(d: Vector2i) -> void:
 		return
 	_try_step(d)
 
+## Vong 10b — Buoc 1 o cho D-pad (khong giu): button_down tren web
+## export khong co button_up dang tin — kiem Chromium 20/11:
+## giu nut ▶ (CDP down 800ms + up, ca mouseup tong hop bang JS)
+## nhan vat van di lien tuc den tuong (6,5)->(10,5), khong dung.
+## Ca Input.is_mouse_button_pressed cung ket (mouseup khong toi
+## engine) nen poll 10b cung vo dung. Vi vay D-pad CHI buoc 1 o
+## moi lan bam (giong phim nhan-nha): giu de di lien tuc chi co
+## tren ban phim (keydown/keyup qua _unhandled_input chay tot)
+## va tap-to-move cho quang duong dai.
+func step_dir(d: Vector2i) -> void:
+	if input_blocked or iso_map == null:
+		return
+	_auto_target = Vector2i(-1, -1)
+	if _moving:
+		if _queued_dirs.size() < 8:
+			_queued_dirs.append(d)
+		return
+	_try_step(d)
+
 func release_dir(d: Vector2i) -> void:
 	_held_dirs.erase(d)
 	# Co tinh KHONG xoa _queued_dirs: phim nhan-nha nhanh (down+up

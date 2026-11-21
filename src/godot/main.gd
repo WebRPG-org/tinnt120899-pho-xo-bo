@@ -113,6 +113,10 @@ var _hud_bag: Label
 var _hud_gold: Label
 var _hud_stats: Label
 var _toast: Label
+var _dpad: Control = null  # Vong 10: nut mui ten tren man hinh (di bang cham).
+var _dpad_press_count := 0  # Vong 10b: dem button_down (chan doan click lap).
+var _dbg_label: Label = null  # Vong 10: hien o + input cuoi (kiem chung di chuyen).
+var _last_input := ""  # Vong 10: mo ta input di chuyen gan nhat (vd "D", "cham (9,7)").
 var _camera: Camera2D
 var _daynight: ColorRect
 var _overlay_layer: CanvasLayer
@@ -247,6 +251,7 @@ func load_map(map_id: int, spawn_tile: Vector2i) -> void:
 	_update_daynight()  # Ap khung hien tai cho map moi (anh dem/tint/mat troi).
 
 func _on_player_moved_to(tile: Vector2i) -> void:
+	_update_dbg()
 	_refresh_hotspot_player_flags()
 	var ev := iso_map.event_at(tile)
 	if not ev.is_empty() and String(ev.get("kind", "")) == "door":
@@ -286,6 +291,12 @@ func _process(delta: float) -> void:
 	# Camera bam theo nguoi choi (zoom CAMERA_ZOOM: thay het map luc spawn).
 	if _camera != null and player != null:
 		_camera.position = player.position + CAMERA_LOOK_UP
+	# Vong 10: D-pad chi hien khi dang choi (an khi title / dien
+	# thoai / hoi thoai / tran dau mo — tranh de len panel).
+	if _dpad != null:
+		_dpad.visible = not title_open and not phone_open and not dialogue_open and not battle_open
+	if _dbg_label != null:
+		_dbg_label.visible = not title_open
 	# Chong-chong nhan o khong gian man hinh (vong 4): chay truoc
 	# _process cua Marker (cha chay truoc con) nen override kip dung
 	# ngay trong frame nay.
@@ -374,7 +385,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		var mdir := _key_to_dir(event)
 		if mdir != Vector2i.ZERO and player != null and not battle_open:
 			if event.pressed and not event.echo:
+				# Vong 10: ghi input cuoi cho nhan debug (kiem chung).
+				_last_input = {Vector2i(0, -1): "W", Vector2i(0, 1): "S", Vector2i(-1, 0): "A", Vector2i(1, 0): "D"}.get(mdir, "?")
 				player.press_dir(mdir)
+				_update_dbg()
 			elif not event.pressed:
 				player.release_dir(mdir)
 			return
@@ -418,7 +432,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		# cham anh xa toi o bien bi chan).
 		var wt := _nearest_walkable(tile)
 		if wt != Vector2i(-1, -1):
+			_last_input = "chạm (%d,%d)" % [wt.x, wt.y]
 			player.set_auto_target(wt)
+			_update_dbg()
 
 ## Tim o di duoc gan nhat tu t (BFS tren luoi 12x9) — dung cho
 ## tap-to-move khi diem cham roi vao o bi chan (tuong/mat tien).
@@ -2007,6 +2023,37 @@ func _build_ui() -> void:
 	_toast.add_theme_color_override("font_outline_color", Color(1, 1, 1, 0.95))
 	_toast.add_theme_constant_override("outline_size", 8)
 	_toast.visible = false
+	# Vong 10 — D-pad tren man hinh + nhan debug o/tile:
+	# 3 lan kiem live cloud (16:52, 22:05, 23:14) deu thay nhan vat
+	# dung yen du phim/tap van chay tot tren Chromium local (ca
+	# press nhanh, giu phim, tap, synthetic dispatchEvent) — khong
+	# tai hien duoc loi live bang moi cach nhan tren ban live that.
+	# Goc co the la duong input ban phim cua trinh duyet cloud (focus
+	# / physical_keycode / event tong hop) — khong doan them, them
+	# DUONG INPUT THU 2 khong phu thuoc ban phim: 4 nut mui ten
+	# (button_down -> press_dir, button_up -> release_dir) + nhan
+	# debug hien o hien tai + input cuoi, de lan kiem live sau doc
+	# duoc ngay input co toi game khong (ke ca khi camera bam theo
+	# lam vi tri nhan vat tren man hinh gan nhu khong doi).
+	_dbg_label = _mk_label(layer, font, 20, Vector2(24, 1172), "")
+	_dbg_label.size = Vector2(440, 32)
+	_dbg_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	_dbg_label.add_theme_constant_override("outline_size", 6)
+	_dpad = Control.new()
+	_dpad.position = Vector2.ZERO
+	_dpad.size = Vector2(720, 1280)
+	_dpad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(_dpad)
+	# Vong 10 — D-pad BEN TRAI (x 48-208, y 880-1040, nut 52px):
+	# ban dau dat ben phai thi nut ◀ de len nhan "Hem tro buoi
+	# sang" + nut ▼ de len sao hotspot (kiem Chromium 20/11) —
+	# ben trai chi de len co/cay trang tri, khong de nhan nao,
+	# khong de hotspot, cach toast (y 1216) + nhan debug (y 1172).
+	_mk_dpad_btn("▲", Vector2(102, 880), Vector2i(0, -1))
+	_mk_dpad_btn("◀", Vector2(48, 934), Vector2i(-1, 0))
+	_mk_dpad_btn("▶", Vector2(156, 934), Vector2i(1, 0))
+	_mk_dpad_btn("▼", Vector2(102, 988), Vector2i(0, 1))
+	_update_dbg()
 	_dlg_panel = PanelContainer.new()
 	_dlg_panel.position = Vector2(40, 1280 - 330)
 	_dlg_panel.size = Vector2(640, 300)
@@ -2104,7 +2151,69 @@ func _fmt_vnd(n: int) -> String:
 	return ("-" + out) if n < 0 else out
 
 
+## Vong 10 — D-pad tren man hinh: nut mui ten goi thang
+## player.press_dir/release_dir (khong qua ban phim / focus DOM),
+## nut giu thi di lien tuc (button_down giu), cham nhanh thi di 1 o
+## (press_dir buoc ngay). focus_mode NONE de nut khong giu focus
+## ban phim cua canvas.
+func _mk_dpad_btn(text: String, pos: Vector2, dir: Vector2i) -> void:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	_style_button(b, 34)
+	b.position = pos
+	b.size = Vector2(52, 52)
+	b.modulate = Color(1, 1, 1, 0.88)
+	b.button_down.connect(func() -> void: _dpad_press(dir))
+	b.button_up.connect(func() -> void: _dpad_release(dir))
+	_dpad.add_child(b)
+
+func _dpad_press(dir: Vector2i) -> void:
+	# Vong 10b: dem so lan button_down (chan doan: 1 click chuot
+	# tren Chromium co the kich nhieu lan — thay nhan vat di
+	# 4-7 o sau 1 click ma H/Q/A/MR deu rong).
+	_dpad_press_count += 1
+	# Vong 10b: CHI buoc 1 o (step_dir, khong press_dir) — xem
+	# player.step_dir: button_up / mouseup tren web export khong
+	# dang tin (nhan vat di lien tuc den tuong), nen D-pad khong
+	# giu huong. Bam lap lai de di nhieu o; giu de di lien tuc
+	# chi co tren ban phim.
+	_last_input = {Vector2i(0, -1): "▲", Vector2i(0, 1): "▼", Vector2i(-1, 0): "◀", Vector2i(1, 0): "▶"}.get(dir, "?")
+	if player != null:
+		player.step_dir(dir)
+	_update_dbg()
+
+func _dpad_release(dir: Vector2i) -> void:
+	# Vong 10b: khong con huong giu de nha (step_dir khong ghi
+	# _held_dirs); giu ham de signal button_up van noi duoc.
+	if player != null:
+		player.release_dir(dir)
+
+## Vong 10 — Nhan debug: o hien tai + input di chuyen cuoi + co
+## dang khoa input khong. De kiem live doc duoc ngay input co toi
+## game khong, ke ca khi camera bam theo lam nhan vat gan nhu dung
+## yen tren man hinh.
+func _update_dbg() -> void:
+	if _dbg_label == null:
+		return
+	if player == null:
+		_dbg_label.text = ""
+		return
+	var lock := " • KHÓA" if player.input_blocked else ""
+	_dbg_label.text = "Ô (%d,%d)%s%s" % [player.tile.x, player.tile.y,
+		(" • " + _last_input) if _last_input != "" else "", lock]
+	# Vong 10b — Dong 2 chan doan (tam): luc nao giu (H), queue (Q),
+	# dich tap (A), phim move_right co dang nhan khong (MR). De
+	# phan biet di lien tuc do giu / queue / tap / action ket.
+	var held := ""
+	for k in player._held_dirs.keys():
+		held += str(k) + " "
+	var auto := str(player._auto_target)
+	var mr := "1" if Input.is_action_pressed("move_right") else "0"
+	_dbg_label.text += "\nH:[%s] Q:%d A:%s MR:%s P:%d" % [held, player._queued_dirs.size(), auto, mr, _dpad_press_count]
+
 func _update_hud() -> void:
+	_update_dbg()  # Vong 10: o hien tai luon moi (load_map goi _update_hud).
 	var parts: Array[String] = []
 	for k in inventory.keys():
 		if int(inventory[k]) > 0:

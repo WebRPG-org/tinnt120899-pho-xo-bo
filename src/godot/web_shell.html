@@ -391,10 +391,13 @@ const engine = new Engine(GODOT_CONFIG);
 	// ten khong toi canvas Godot. Click bat ky dau tren trang cung
 	// dua focus ve canvas; phim di chuyen nhan khi focus chua ve
 	// thi keydown nay dua focus ve (nhan sau se toi canvas).
+	// Vong 10: mo rong sang ca F/P/E/B — lan nhan F dau tien o kiem
+	// live 23:14 khong doi khung, nghi do focus chua ve canvas
+	// (phim giao dien truoc day khong duoc dua focus ve).
 	const gameCanvas = document.getElementById('canvas');
 	document.addEventListener('pointerdown', () => { gameCanvas.focus(); }, true);
 	document.addEventListener('keydown', (e) => {
-		if (document.activeElement !== gameCanvas && ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+		if (document.activeElement !== gameCanvas && ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyF', 'KeyP', 'KeyE', 'KeyB'].includes(e.code)) {
 			gameCanvas.focus();
 		}
 	});

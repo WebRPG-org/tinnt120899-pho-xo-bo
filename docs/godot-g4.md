@@ -2415,3 +2415,100 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
    `can_challenge` ở demo; tile riêng Map003–018; camera zoom
    trận; khối chat online đưa lên trên tab Tin nhắn; server WS:
    auth player_id, giới hạn tốc độ chat, lịch sử cho client mới.
+
+## 28. Vòng 10b — "1 click D-pad đi tới Map002" HÓA RA LÀ CỬA (5,4) + đọc nhầm ô — XONG, đã deploy (21/11 ~01:00–04:30 +07)
+
+### 28.1 "Bug" còn lại sau tap-per-tile — đọc nhầm số ô ở cỡ chữ nhỏ
+
+- Sau khi đổi D-pad sang tap-per-tile (`step_dir`, §26), chạy
+  lại `check_dpad2.py` (UP → RIGHT → LEFT → DOWN): RIGHT vẫn
+  "đi tới Map002 (8,4)", LEFT "về (4,4)". Tưởng còn driver lạ.
+- Thêm bộ đếm `_dpad_press_count` (hiện `P:N` ở dòng 2 nhãn
+  debug) + chạy `check_diag.py` (chỉ 1 click RIGHT): **P:1,
+  dừng đúng (5,5)** — 1 click = đúng 1 lần `button_down` = 1 ô.
+  Tap-per-tile HOẠT ĐỘNG.
+- Chạy lại đúng chuỗi e-run (`check_up_then_right.py`, UP rồi
+  RIGHT, chụp mỗi 500ms): i-01 sau UP: `(4,5)`... — SAI. Phóng
+  to nhãn debug 3× mới đọc đúng: **i-01 = `Ô (4,4) • ▲`**
+  (UP ĐÃ đi được, (4,4) đi được — trước đó đọc nhầm thành
+  (4,5) vì chữ nhỏ bị xe đẩy che một phần).
+- Gốc thật: cửa Map001→Map002 ở ô **(5,4)**
+  (`data/maps.json`: `{"kind":"door","tile":[5,4],"to_map":2}`).
+  Từ (4,4), 1 click RIGHT → (5,4) = đúng ô cửa → `_transfer(2)`
+  → spawn Map002 (8,4). HOÀN TOÀN ĐÚNG LUẬT GAME — không có
+  driver lạ nào: mọi ảnh chụp đều `H:[] Q:0 A:(-1,-1) MR:0`,
+  P tăng đúng 1/click. Chuỗi LEFT sau đó (8,4)→(4,4) trên
+  Map002 cũng đọc nhầm tương tự (thực tế là 1 ô, sẽ verify lại
+  bằng zoom trong j-run).
+- Bài học: **không bao giờ đọc ô từ ảnh thu nhỏ** — nhãn debug
+  font 20 ở (24,1172) phải phóng to 3× mới đọc chắc; các kết
+  luận "đi 4–7 ô" ở vòng 10/10b trước khi có zoom đều không
+  đáng tin.
+
+### 28.2 Verify cuối trên staging (build `ba8e4a99`, `check_final.py`)
+
+- D-pad 4 hướng, tránh ô cửa (5,4): DOWN (4,5)→**(4,6)** ▼
+  P:1; LEFT (4,6)→**(3,6)** ◀ P:2; RIGHT (3,6)→**(4,6)** ▶ P:3;
+  UP (4,6)→**(4,5)** ▲ P:4 — đúng 1 ô/click, về đúng spawn.
+- Phím D: (4,5)→**(5,5)** • D (P vẫn 4 — phím không tính vào
+  bộ đếm D-pad). Tap (1000,850): đang đi tới `(9,7)` — nhãn
+  hiện `chạm (9,7)` + `A:(9,7)` giữa đường (auto-target hiện
+  sống trong dòng chẩn đoán). ERRORS: [].
+- Hồi quy đầy đủ (36 suite, `tools/godot/run_regression.sh`):
+  **36 OK, 1 FAIL: `g4_polish_test`** — chạy lẻ 3 lần liên tiếp
+  đều 18/18 PASS → kết luận flake (hết `timeout 120` hoặc
+  tranh tài nguyên trong chuỗi dài), không phải hồi quy do
+  thay đổi vòng 10b. `g4_dpad_test` 14/14 PASS.
+  (Lưu ý: lần chạy hồi quy đầu tiên trong vòng này 0/37 do chạy
+  bản copy `/tmp/run_regression.sh` — `cd ../..` từ /tmp sai
+  đường dẫn Godot; phải chạy từ repo
+  `bash tools/godot/run_regression.sh`.)
+
+### 28.3 Deploy gh-pages — XONG, verify khớp byte từ live
+
+- Push-files 5 lô (paths file `~/workspace/deploy10b-batch*.txt`):
+  (1) pck `ba8e4a99` part 000–016 + `versions.json` →
+  `6eddda03`; (2) part 017–033 → `1795ec8f`; (3) part 034–050
+  → `a5126dd4`; (4) part 051 → `06b2dcc5`; (5) `index.html`
+  CUỐI → `d4b90cdb`. Sync record đã ghi đủ 5 commit.
+- **Lỗi restart ở đường ghi:** 2 lần `push-files` đầu + 3 lần
+  `call-tool list_commits` trước đó đều "service restarted" và
+  KHÔNG có hiệu lực (đối chiếu `versions.json` live vẫn
+  `7f8ef9bb` ở `1ed8f9f8`); lần thử lại sau khi chờ 45s thì
+  thành công (approval `userConfirmationStatus: approved`).
+  `call-read-tool` (đọc) luôn chạy ổn — chỉ đường ghi
+  (`call-tool`/`push-files`) mới restart. Không retry dồn dập;
+  sau mỗi lần restart phải đối chiếu lại live trước khi thử lại.
+  (Cùng lỗi cron 03:45 gặp ở §27.3 khi push main.)
+- Verify từ live (raw.githubusercontent.com): `versions.json`
+  live pin pck **`ba8e4a99`**; `index.html` live trỏ
+  `pck/ba8e4a99`; ráp lại 52 chunk pck từ live = 6.904.868
+  byte, SHA **`ba8e4a99f3bc…`** = đúng SHA build local.
+  wasm không đổi (`fc74679e`).
+- **Live hiện là bản D-pad + nhãn debug 2 dòng**
+  (`Ô (x,y) • <input>` + `H:[...] Q:n A:(x,y) MR:0/1 P:n`).
+  Nhãn debug là tính năng chẩn đoán TẠM — giữ lại cho cửa kiểm
+  live bằng cloud browser, sẽ ẩn sau khi cửa đó qua.
+
+### 28.4 Việc tiếp theo
+
+1. **Kiểm live bằng cloud browser trên URL thật** (cửa cuối theo
+   luật AGENTS.md 20/11 23:21): D-pad 4 nút (mỗi nút 1 ô, đọc
+   nhãn debug phóng to), phím D, tap đất trống; lưu ý cửa (5,4)
+   ngay cạnh spawn — từ (4,4) bấm RIGHT là sang Map002 theo
+   đúng luật, KHÔNG phải lỗi. Chỉ báo chủ khi cửa này qua.
+2. **Push main** các file vòng 10/10b (xem §27.3 + §28.5) để
+   code GitHub khớp build đã deploy.
+3. Ẩn nhãn debug (thêm toggle) sau khi kiểm live qua; rồi tiếp
+   G4: animation di chuyển/đánh trận, chọn đội/vũ khí, `can_challenge`,
+   tile riêng Map003–018, camera trận.
+
+### 28.5 Push main — file vòng 10/10b (ghi để lượt sau đẩy)
+
+- `src/godot/main.gd` (D-pad + nhãn debug 2 dòng + `P` counter),
+  `src/godot/player.gd` (`step_dir`), `src/godot/web_shell.html`
+  (focus recovery thêm F/P/E/B), `src/godot/tests/g4_dpad_test.gd`
+  (mới, 14/14), `tools/godot/run_regression.sh` (mới, 36 suite),
+  `docs/godot-g4.md` (§28) — cộng 3 file cron §27.3 chưa đẩy:
+  `src/godot/scripts/battle_scene.gd`,
+  `src/godot/tests/g4_battle_names_test.gd` (+ `.uid`).
