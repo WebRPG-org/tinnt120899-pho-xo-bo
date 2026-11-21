@@ -3129,3 +3129,12 @@ riêng ở nút D-pad giữ nguyên (thừa nhưng vô hại, comment của nó
 - 3 việc theo thứ tự (chi tiết + tên node trong trang chẩn đoán `41f4047a-8982-81fe-9924-e3926327667b`): (1) Dựng lại Map001: blockout Blender (camera ortho X=60°, Z=45°) → AI vẽ đè → 4 lớp Ground/YSort/Foreground/LightsLayer, phủ kín 9:16 bằng nhà ống cao + tiền cảnh, tắt hẳn vẽ nhà bằng code; (2) Nhân vật 6 khung (trước/sau-3/4 × 3 khung, lật ngang), ảnh 2× cỡ hiển thị, Linear Mipmap, nhãn là Label con của nhân vật, chỉ hiện khi ở gần; (3) Ánh sáng: nền đêm nướng sẵn + sprite phát sáng cộng dồn + CanvasModulate chiều + 3–5 chuyển động nhỏ (hơi nồi phở, biển đung đưa, lá rơi).
 - Center ĐÃ NHẬN + ETA đã ghi trên dòng lúc 15:45 (do main agent ghi — vòng 14 này chạy sau đó): Center tự làm (không giao Muse Editor — bạn ấy giữ giám sát 30 phút + Bộ hiệu ứng hạn 18:00). ETA: (b) việc nhanh trước 21:00 21/11; (1) Map001 trước 12:00 22/11; (2) 6 khung trước 20:00 22/11; (3) ánh sáng 23/11. Làm trọn Map001 trước, không trải nhiều map; mỗi việc xong gửi ảnh điện thoại duyệt; xếp lịch không trễ slot 1Min/Ủa và vòng thử (PV-07).
 - LƯU Ý cho vòng sau: việc (b) "chuyển nhãn NPC sang Label trong thế giới" CHỒNG với fix D vòng 14 (vòng 14 giữ CanvasLayer nhưng sửa drift) — (b) là đổi hẳn kiến trúc nhãn (Label con của Marker trong thế giới + chỉ hiện khi ở gần), phải làm riêng sau khi deploy vòng 14, không gộp chung để tránh phá bộ resolver/artpass tests đang PASS.
+
+### 35.7 Deploy `9d9896a9` lên gh-pages — XONG (21/11 ~16:20–16:35 +07)
+
+- Đối chiếu trước deploy: `versions.json` remote pin đúng pck `d691d82e` tại head `8c1e7d3e` (= deploy vòng 13); `pck/9d9896a9/` chưa tồn tại remote — nối tiếp sạch, không divergence.
+- Rebuild staging `tools/godot/build_gh_pages.py`: VERIFY OK, 52 chunk pck, wasm `fc74679e` không đổi, img không đổi.
+- Deploy 5 lô: `b4077061` (chunk 000–016), `6ca40d07` (017–033), `d87ca6b3` (034–051), `157cd0e6` (`versions.json`), `c42d44ab` (`index.html` CUỐI — head gh-pages).
+- Verify khớp byte từ live: ráp 52 chunk từ `raw.githubusercontent.com` = 6.950.036 byte, SHA `9d9896a97b987031` ✓; `index.html` live SHA `de8c6d44ab176d02` = staging ✓; `versions.json` qua API tại head `c42d44ab` pin `9d9896a9` ✓.
+- Lưu ý CDN (đã biết, §19.8): `versions.json` qua `tinnt120899.github.io` vẫn hiện `d691d82e` ngay sau deploy — Pages CDN cache, repo qua API đã đúng; tải lại sau vài phút sẽ khớp. Không kết luận deploy sai vì curl ngay sau push.
+- Link live: https://tinnt120899.github.io/pho-xo-bo/ (Pages rebuild vài phút sau push).
