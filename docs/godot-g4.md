@@ -2512,3 +2512,64 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
   `docs/godot-g4.md` (§28) — cộng 3 file cron §27.3 chưa đẩy:
   `src/godot/scripts/battle_scene.gd`,
   `src/godot/tests/g4_battle_names_test.gd` (+ `.uid`).
+
+## 29. Kiểm live bản ba8e4a99 — ĐẠT, di chuyển ĐÃ SỬA XONG (21/11 ~11:32–11:38 +07)
+
+### 29.1 Kết quả kiểm live (cloud browser, browser-task 416fb4f8)
+
+- `versions.json` live: pck `ba8e4a99`, wasm `fc74679e` — đúng bản
+  deploy, không phải `7f8ef9bb`. Lưu ý: báo cáo browser ghi thêm
+  field `build: "1759218600"` + `map: "ba8e4a99"` trong
+  `versions.json` — curl trực tiếp từ VM trước và sau kiểm đều
+  KHÔNG thấy 2 field này (chỉ wasm/pck/img), pck vẫn `ba8e4a99`
+  cả 2 cách đo nên không ảnh hưởng kết luận; ghi lại để không ai
+  tưởng `versions.json` đã đổi.
+- Tải vào game: nút BẮT ĐẦU CHƠI bật sau <1 phút (< ngưỡng 120s),
+  vào ngay Map001 Xóm Trọ Cũ, Ngày 1, Khung Sáng. 0 console error /
+  pageerror / failed request.
+- Di chuyển — cả 4 cách đều ĐI ĐƯỢC, xác nhận bằng nhãn debug so
+  ô trước/sau (không chỉ nhìn camera):
+  - D-pad phải: (4,5) → (5,5), đúng 1 ô.
+  - Phím D 1 lần: (5,5) → (6,5), debug hiện input cuối "D".
+  - Mũi tên phải 1 lần: (6,5) → (7,5), debug hiện "→".
+  - Tap đất trống phía phải: (7,5) → (10,2), debug
+    "Ô (10,2) • chạm (10,2)".
+  - 4 nút D-pad hiện đủ ở góc dưới trái canvas.
+- F: Sáng → Chiều (nhãn "Ngày 1 • Khung Chiều", cảnh hoàng hôn,
+  "Hẻm trọ buổi chiều"), nhân vật ở yên (10,2). P: điện thoại mở,
+  đủ 9 tab.
+- 2 lần "site_in_use" thoáng qua (1 khi bấm D-pad, 1 khi nhấn D)
+  — thử lại ngay thì chạy bình thường, không ảnh hưởng kết quả.
+- Trạng thái cuối: ô (10,2), khung Chiều, điện thoại đang mở.
+- **ĐÍNH CHÍNH kết luận 23:14** (3 vòng live báo không đi được):
+  trên bản `ba8e4a99` này di chuyển ĐÃ ĐI ĐƯỢC bằng cả 4 cách.
+  Các vòng sửa 9+/10/10b (queue bước + tap tới ô gần nhất +
+  D-pad + nhãn debug) đã khép lỗi live.
+
+### 29.2 Push + deploy vòng này (cron 09:45) — đã xong trước kiểm live
+
+- Push main `8f477519` (G4 bước 9 + docs §26–27). Deploy
+  gh-pages pck `ba8e4a99` (3 lô của run này: `f375f151` /
+  `5f5e59d9` / `0177ff01`; writer song song đẩy cùng pck 5 lô
+  `6eddda03` / `1795ec8f` / `a5126dd4` / `06b2dcc5` / `d4b90cdb`
+  gồm cả index.html + versions.json nên lô 4 của run này không
+  cần đẩy). Verify byte từ live: ráp 52 chunk pck = 6.904.868
+  byte, SHA `ba8e4a99f3bc…` = build local; index.html live
+  byte-identical staging.
+- Main nay: `8aee35f9` (worker Vòng 10b tự đẩy D-pad +
+  `run_regression.sh` + docs §28) — code GitHub KHỚP build đã
+  deploy, hết lệch §27.3. File ráp pck từ live ở
+  `~/workspace/live-move-verify/pck-ba8e4a99/`.
+
+### 29.3 Việc tiếp theo
+
+1. **Ẩn nhãn debug** (toggle, mặc định ẩn) — nhãn là tính năng
+   chẩn đoán TẠM (§28.3); cửa live đã qua nên ẩn đi trước khi
+   báo chủ. Chu trình: code + test + export + deploy + kiểm
+   live lại.
+2. G4 tiếp: animation di chuyển/đánh trận; chọn đội/vũ khí trước
+   trận; `can_challenge` ở demo; tile riêng Map003–018; camera
+   zoom trận; khối chat online đưa lên trên tab Tin nhắn; server
+   WS auth + giới hạn tốc độ + lịch sử.
+3. Chỉ báo chủ khi nhãn debug đã ẩn + kiểm live lại vẫn đi được
+   (cửa §28.4 mục 1 đã qua — báo chủ ở bước này).
