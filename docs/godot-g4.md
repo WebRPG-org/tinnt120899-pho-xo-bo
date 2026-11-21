@@ -3174,3 +3174,112 @@ riêng ở nút D-pad giữ nguyên (thừa nhưng vô hại, comment của nó
 - Deploy 6 lô: `64752ee7` (chunk 000–016), `99340298` (017–033), `3d64de91` (034–047), `9b051eee` (img char 2 file), `061d9861` (`versions.json`), `3c7063e6` (`index.html` CUỐI — head gh-pages).
 - Verify khớp byte từ live: ráp 48 chunk = 6.473.700 byte, SHA `cf88493c56f6edd6` ✓; img chunk char_player 45.086 byte + char_banthan 53.272 byte, đúng magic PNG ✓; `index.html` live SHA `069ae1886a2f5188` = staging ✓; `versions.json` qua API tại head `3c7063e6` pin `cf88493c` + img mới ✓.
 - Link live: https://tinnt120899.github.io/pho-xo-bo/ (Pages rebuild vài phút sau push).
+
+
+## 37. Vòng 15 — Nhãn NPC sang Label trong thế giới (21/11 ~16:50–17:30 +07)
+
+Mục (b) thứ 3 của Claude (xem §35.6) — hạn trước 21:00 21/11. 2/3 mục
+nhanh đã xong ở vòng 14b (Linear Mipmap + ảnh 208px); mục này làm riêng
+sau khi deploy vòng 14b, không gộp chung (đúng lưu ý §35.6).
+
+### 37.1 Việc làm
+
+- **Nhãn NPC thành Label con của Marker** (`scripts/marker.gd`):
+  `_make_world_label()` — Label con trực tiếp của Marker (Node2D),
+  dùng rect neo thô `_anchor_rect()` (NPC: trên -170, cao 32 world),
+  font 20 world, `z_index = 10` (trên ảnh nền/mặt tiền — cùng kỹ
+  thuật SkyEffects/NightGlow dùng để thoát y-sort của IsoMap),
+  `mouse_filter = IGNORE`. Nhãn hotspot/che tao/cua KHÔNG đổi —
+  vẫn Label trên CanvasLayer layer 1 (resolver vẫn dịch được).
+- **Chỉ hiện khi ở gần** (`main.gd` `_update_npc_labels()`, chạy
+  mỗi frame trước resolver): Manhattan từ ô người chơi tới ô NPC
+  ≤ `Marker.LABEL_NEAR_TILES = 5`. Ngưỡng 5 giữ cả 2 NPC hiện lúc
+  spawn Map001 (Bạn Thân 1 ô, Cô Tư đúng 5 ô) + Map002 (Chị Lệ 5 ô,
+  Anh Hải 2 ô) — ảnh spawn không đổi; xa hơn thì ẩn.
+  Marker giữ `_label_near` (mặc định true để marker đứng lẻ không
+  có Main vẫn hiện như cũ) + `_npc_label_should_show()` (gần +
+  neo trong màn hình) dùng chung cho `_update_label()` và
+  `label_screen_rect()` để 2 chỗ không lệch nhau 1 frame.
+- **Resolver bỏ qua NPC** (`main.gd` `_resolve_label_overlaps()`):
+  không đặt `label_override` cho NPC nữa (dịch là rời neo); rect
+  màn hình của nhãn NPC ghi sẵn vào `placed` để nhãn hotspot/cửa/
+  chế tạo tránh. Obstacle sprite NPC vẫn giữ nguyên.
+- **`label_screen_rect()` cho NPC** nay là rect màn hình thật của
+  Label con (canvas transform × vị trí local), rỗng khi nhãn ẩn.
+  `_anchor_rect()` tách ra từ `label_rect()` (phần kep camera giữ
+  nguyên cho nhãn CanvasLayer).
+- **Test cũ cập nhật** (`g4_artpass4_test.gd`, `g4_artpass5_test.gd`):
+  lấy rect hiển thị thật = override-nếu-có-không-thì-screen-rect
+  (như polish test) để nhãn NPC vẫn được kiểm chồng/đè đầu.
+  `artpass_test.gd` (state 3), `g4_artpass3_test.gd`,
+  `g4_polish_test.gd` đã dùng screen-rect nên không cần sửa;
+  `artpass12_test.gd` chỉ kiểm override (nhãn cửa) nên giữ nguyên.
+
+### 37.2 Lỗi tìm ra khi làm: Label tự tăng lên minimum size
+
+- Test mới rớt 8/63 lần đầu: tâm nhãn lệch +2 world khỏi chân NPC,
+  `size` thành (chu+20, 32) thay vì (chu+16, 26) đã đặt. Nguyên nhân:
+  Label có StyleBoxFlat (content margin 10+10 ngang, 4+4 dọc) nên
+  minimum size = (chu+20, font-cao 24+8=32) — Control tự tăng lên
+  minimum size khi vào tree, chỉ giữ nguyên `position`.
+- Sửa: `_anchor_rect()` cho NPC trả đúng minimum size
+  (`size.x + 20`, `font.get_height(20) + 8`, tâm x = `-w/2` thay vì
+  `-w/2 - 8`). Khe trên đầu NPC còn ~42px màn hình (trước ~50px).
+- Probe `/tmp/pxb_r15_probe.gd` (đã xóa sau khi dùng) đo thật:
+  Cô Tư pos (-37,-170) size (78,32), anchor (74,26);
+  Bạn Thân size (115,32), anchor (111,26); font_h=24.
+
+### 37.3 Test mới + hồi quy
+
+- `tests/g4_r15_label_world_test.gd`: **63/63 PASS** — nhãn NPC
+  là con của Marker, không trên CanvasLayer, z 10, font 20, đúng
+  rect neo, không override; spawn Map001/Map002 cả 2 NPC hiện,
+  tâm X trùng chân NPC, khe trên đầu 40–60px; xa 11 ô / 8 ô thì
+  nhãn ẩn + rect rỗng; nhãn hotspot/chế tạo/cửa vẫn CanvasLayer;
+  nhãn các map không chồng nhau.
+- Hồi quy đầy đủ: **44 OK, 0 FAIL** (43 cũ + 1 mới;
+  `run_regression.sh` thêm `g4_r15_label_world_test`).
+- `--check-only` exit 0 (marker.gd, main.gd sau `--import`);
+  scene Main 120 frame exit 0, 0 ERROR/warning.
+- Export web exit 0 (đúng đường dẫn preset `../godot-build/index.html`,
+  bài học §36.2): pck **6.481.136 byte, SHA `b6913210…`**
+  (trước `cf88493c…` 6.473.700 — tăng nhẹ do code mới),
+  wasm không đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`;
+  HTTP 200 đủ 4 file (cổng 8167).
+
+### 37.4 Browser-verify thật (Chromium 1255 + swiftshader, 720×1280, build b6913210)
+
+- Script mới `visual-check/artpass15/check_r15.py` (tái chạy được).
+- **0 console error, 0 pageerror, 0 request fail.**
+- Đã xem ảnh thật: Map001 spawn (r15-01) — "Bạn Thân" sát trên đầu
+  2 nhân vật, "Cô Tư" sát trên đầu Cô Tư, không chồng nhãn khác;
+  Map002 (r15-03) — "Chị Lệ"/"Anh Hải" sát trên đầu NPC, vị trí
+  nhãn y hệt bản vòng 14 (r14-04) — không hồi quy.
+- **"Sạp rau buổi sáng" hơi chạm đỉnh đầu người chơi lúc vào Chợ:**
+  đã đối chiếu ảnh vòng 14 (r14-04) — Y HỆT, có từ trước (luật
+  vòng 12: giữ y muốn thay vì bay xa khi khe gần nhất quá xa),
+  không phải hồi quy của vòng này.
+- **Flake harness (không phải lỗi game):** lần chạy check_r15.py
+  đầu + probe1 click (500,850)/(200,750)/(480,879) đều không đăng
+  ký (đứng yên ở (4,5), A:(-1,-1)) — nhưng chạy lại Y HỆT bằng
+  script r14b (`check_r14b.py` đổi cổng 8167) thì tap (200,750)
+  đăng ký ngay + đi tới (1,1); probe2/probe3 (cùng cấu trúc r14b)
+  cũng đi được, KỂ CẢ click đúng giữa nhãn "Cô Tư" (480,879) →
+  đăng ký (3,1) + tới (3,1). Headless probe cũng xác nhận logic
+  tap đúng ((500,850) → auto-target (3,1)). Kết luận: 2 lần chạy
+  đầu bị mất click do harness (lần đầu chạy trên build mới export,
+  giống các flake swiftshader đã biết: phím nhấn nhanh bị miss),
+  không phải nhãn nuốt click (`mouse_filter = IGNORE` có tác dụng).
+  Bài học: click không đăng ký ở lần chạy đầu thì CHẠY LẠI y hệt
+  trước khi kết luận game hỏng.
+
+### 37.5 Việc tiếp theo
+
+1. **Deploy gh-pages bản `b6913210`** (staging rebuild + push batch,
+   kiểm tra head gh-pages trước mỗi lô — xem §37.6).
+2. Dựng lại Map001 theo hướng Claude (hạn 12:00 22/11), nhân vật
+   6 khung (20:00 22/11), ánh sáng + sự sống (23/11) — theo ETA
+   §35.6. Việc (b) đã đủ 3/3 trước hạn 21:00 21/11.
+3. Sạp chợ Map002 (khối be thô) — làm khi tới lượt art Map002.
+
+### 37.6 Deploy `b6913210` lên gh-pages — (điền sau khi xong)

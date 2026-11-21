@@ -21,6 +21,15 @@ var label_override := Rect2()  # Main dat sau khi chong-chong o khong
 	# gian man hinh (vong 4, 20/11 14:00): rong = khong dung, tinh
 	# nhu cu bang label_screen_rect().
 
+# Nhan NPC trong the gioi (Claude (b), vong 15, 21/11): Label la con
+# cua Marker (khong phai Control tren CanvasLayer) — di theo NPC khi
+# camera cuon/zoom, khong loi lung tren troi. Chi hien khi nguoi
+# choi o gan (Main tinh khoang cach theo o, xem set_label_near).
+const NPC_LABEL_TOP := -170.0  # Tren dau anh 104px, cach ~40 world.
+const LABEL_NEAR_TILES := 5  # Manhattan <= 5 o moi hien nhan NPC.
+var _label_near := true  # Main dat moi frame theo khoang cach.
+var _label_world := false  # True: _label la con cua Marker (NPC).
+
 # HUD gon (panel cao thuc te ~157px do min-size cua noi dung, day
 # panel y ~173) nen nhan chi can kep duoi y=190px man hinh (truoc
 # day HUD cao 236px nen kep 268px).
@@ -55,22 +64,52 @@ func _ready() -> void:
 		_sprite.setup(cfg)
 		add_child(_sprite)
 	_base_name = String(event_data.get("name", ""))
-	# Nhan tren CanvasLayer rieng (layer 1, duoi HUD): Control o toa do
-	# man hinh, luon nam tren moi Node2D cua the gioi (nhan vat, nha,
-	# troi) — nhan khong bao gio bi nhan vat che nua. Khong co lop
-	# thi fallback ve _draw_name() cu (ve trong _draw cua marker).
-	if label_layer != null and font != null and _base_name != "":
-		_label = Label.new()
-		_label.text = _display_name()
-		_label.add_theme_font_override("font", font)
-		_label.add_theme_font_size_override("font_size", 32)  # 20 world * zoom 1.6.
-		_label.add_theme_color_override("font_color", Color(0.15, 0.12, 0.08, 1))
-		_label.add_theme_stylebox_override("normal", _label_style)
-		_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_label.visible = false
-		label_layer.add_child(_label)
-		tree_exited.connect(_on_tree_exited)
+	# Nhan NPC trong the gioi (vong 15): Label con cua Marker (xem
+	# _make_world_label) — khong can label_layer. Nhan hotspot/
+	# che tao/cua van tren CanvasLayer rieng (layer 1, duoi HUD):
+	# Control o toa do man hinh, luon nam tren moi Node2D cua the
+	# gioi (nhan vat, nha, troi) — nhan khong bao gio bi nhan vat
+	# che nua. Khong co lop thi fallback ve _draw_name() cu (ve
+	# trong _draw cua marker).
+	if font != null and _base_name != "":
+		if String(event_data.get("kind", "")) == "npc":
+			_make_world_label()
+		elif label_layer != null:
+			_label = Label.new()
+			_label.text = _display_name()
+			_label.add_theme_font_override("font", font)
+			_label.add_theme_font_size_override("font_size", 32)  # 20 world * zoom 1.6.
+			_label.add_theme_color_override("font_color", Color(0.15, 0.12, 0.08, 1))
+			_label.add_theme_stylebox_override("normal", _label_style)
+			_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_label.visible = false
+			label_layer.add_child(_label)
+			tree_exited.connect(_on_tree_exited)
 	queue_redraw()
+
+## Tao nhan NPC trong the gioi (vong 15, Claude (b)): Label con cua
+## Marker, dung rect neo tho (_anchor_rect) — khong kep theo camera
+## luc tao (camera con truot); an/hien moi frame theo neo co trong
+## man hinh + nguoi choi co o gan khong (xem _update_label).
+## z_index 10 de nhan luon tren anh nen / mat tien (cung ky thuat
+## SkyEffects/NightGlow dung de thoat y-sort cua IsoMap).
+func _make_world_label() -> void:
+	var r := _anchor_rect()
+	if r.size == Vector2.ZERO:
+		return
+	_label = Label.new()
+	_label.text = _display_name()
+	_label.add_theme_font_override("font", font)
+	_label.add_theme_font_size_override("font_size", 20)  # Don vi world, nhu _draw_name.
+	_label.add_theme_color_override("font_color", Color(0.15, 0.12, 0.08, 1))
+	_label.add_theme_stylebox_override("normal", _label_style)
+	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_label.position = r.position
+	_label.size = r.size
+	_label.z_index = 10
+	_label.visible = false
+	_label_world = true
+	add_child(_label)
 
 func _on_tree_exited() -> void:
 	if _label != null and is_instance_valid(_label):
@@ -127,6 +166,35 @@ func set_frame_name(f: String) -> void:
 		_label.text = _display_name()
 	queue_redraw()
 
+## Main goi moi frame: nhan NPC chi hien khi nguoi choi o gan
+## (Manhattan <= LABEL_NEAR_TILES o) — Claude (b), vong 15.
+## Mac dinh true de marker dung le (khong co Main, vd test
+## artpass7) van hien nhan nhu cu.
+func set_label_near(b: bool) -> void:
+	_label_near = b
+
+## O cua marker tren ban do (tu event_data), de Main tinh khoang cach.
+func tile() -> Vector2i:
+	var t: Array = event_data.get("tile", [0, 0])
+	return Vector2i(int(t[0]), int(t[1]))
+
+## Nhan NPC trong the gioi co nen hien khong: neo (chan NPC) trong
+## vung nhin thay cua camera (+-20 world) VA nguoi choi o gan.
+## Cung vi tu nay dung cho ca _update_label() lan label_screen_rect()
+## de 2 cho khong lech nhau 1 frame.
+func _npc_label_should_show() -> bool:
+	if not _label_near:
+		return false
+	var cam := get_viewport().get_camera_2d()
+	if cam == null:
+		return false
+	var half := get_viewport_rect().size / (2.0 * cam.zoom)
+	var center := cam.get_screen_center_position()
+	var vis_min := center - half
+	var vis_max := center + half
+	var gp := global_position
+	return not (gp.x < vis_min.x - 20 or gp.x > vis_max.x + 20 or gp.y < vis_min.y - 20 or gp.y > vis_max.y + 20)
+
 func _process(delta: float) -> void:
 	_pulse += delta
 	# Ve lai moi frame: nhan kẹp theo camera (khi camera truot theo
@@ -154,21 +222,34 @@ func _draw() -> void:
 func label_screen_rect() -> Rect2:
 	if _label == null:
 		return Rect2()
+	# Nhan NPC trong the gioi (vong 15): rect man hinh = bien doi
+	# canvas ap len vi tri that cua Label con (khong phai cong thuc
+	# CanvasLayer cu — nhan 32px, cao 38px); an (Rect2 rong) khi
+	# nhan dang an (xa nguoi choi / neo ngoai man hinh).
+	if _label_world:
+		if not _npc_label_should_show():
+			return Rect2()
+		var cam := get_viewport().get_camera_2d()
+		if cam == null:
+			return Rect2()
+		var ct := get_viewport().get_canvas_transform()
+		var sp: Vector2 = ct * (global_position + _label.position)
+		return Rect2(sp, _label.size * cam.zoom)
 	var wr := label_rect()
 	if wr.size == Vector2.ZERO:
 		return Rect2()
-	var cam := get_viewport().get_camera_2d()
-	if cam == null:
+	var cam2 := get_viewport().get_camera_2d()
+	if cam2 == null:
 		return Rect2()
 	# label_rect() kep theo the gioi; doi sang man hinh: tam X giu
 	# nguyen, Y giu nguyen (chi doi don vi) — nhan 32px cao 38px.
-	var ct := get_viewport().get_canvas_transform()
-	var sp: Vector2 = ct * (global_position + wr.position)
+	var ct2 := get_viewport().get_canvas_transform()
+	var sp2: Vector2 = ct2 * (global_position + wr.position)
 	var text := _display_name()
 	var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 32).x
 	var w := tw + 20.0
 	var h := 38.0
-	var pos := Vector2(sp.x + (wr.size.x * cam.zoom.x - w) / 2.0, sp.y + (wr.size.y * cam.zoom.y - h) / 2.0)
+	var pos := Vector2(sp2.x + (wr.size.x * cam2.zoom.x - w) / 2.0, sp2.y + (wr.size.y * cam2.zoom.y - h) / 2.0)
 	pos.x = clampf(pos.x, 16.0, 720.0 - 16.0 - w)
 	# Day man hinh toi da y=1200 (truoc 1264): nhan cua ra sat mep
 	# duoi gan bi cat (kiem live 14:34). Resolver kep lai lan nua.
@@ -180,6 +261,11 @@ func label_screen_rect() -> Rect2:
 func _update_label() -> void:
 	if _label == null:
 		return
+	if _label_world:
+		# Nhan trong the gioi: vi tri co dinh theo Marker, chi
+		# cap nhat an/hien (neo trong man hinh + nguoi choi o gan).
+		_label.visible = _npc_label_should_show()
+		return
 	# Uu tien vi tri Main da chong-chong (label_override); neu rong
 	# thi tinh nhu cu.
 	var r := label_override if label_override.size != Vector2.ZERO else label_screen_rect()
@@ -190,10 +276,11 @@ func _update_label() -> void:
 	_label.position = r.position
 	_label.size = r.size
 
-## Hinh chu nhat cua nhan (toa do cuc bo) sau khi da kep trong vung
-## nhin thay cua camera, tru vung HUD tren cung va cach mep ~20px
-## man hinh. Test dung de kiem tra nhan khong bi cat / che.
-func label_rect() -> Rect2:
+## Hinh chu nhat neo THO cua nhan (toa do cuc bo, chua kep theo
+## camera). Nhan NPC trong the gioi dung rect nay lam vi tri that
+## (con cua Marker); label_rect() them buoc kep theo camera cho
+## nhan CanvasLayer (hotspot/craft/door).
+func _anchor_rect() -> Rect2:
 	if font == null:
 		return Rect2()
 	var text := _display_name()
@@ -216,9 +303,20 @@ func label_rect() -> Rect2:
 	#    len y 560-586 luc spawn; khong chong nhan nao sau khi
 	#    hotspot doi len tren.
 	var kind := String(event_data.get("kind", ""))
-	var top := -40.0 if kind == "hotspot" or kind == "craft" else -170.0
+	var top := -40.0 if kind == "hotspot" or kind == "craft" else NPC_LABEL_TOP
 	if kind == "door":
 		top = 130.0
+	# Vong 15: nhan NPC trong the gioi co kich thuoc that = minimum
+	# size cua Label (chu + content margin cua stylebox: 10+10
+	# ngang, 4+4 doc; font cao 24 o co 20) — Label tu tang len
+	# minimum size khi vao tree (do: dat (74,26) thi thanh
+	# (78,32)), nen rect neo phai tinh dung co do ngay tu dau,
+	# neu khong tam nhan lech +2 world khoi chan NPC.
+	var size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20)
+	if kind == "npc":
+		var nw := size.x + 20.0
+		var nh := float(font.get_height(20)) + 8.0
+		return Rect2(-nw / 2.0, NPC_LABEL_TOP, nw, nh)
 	# Vong 14: BO lech chan/le NPC (truoc NPC_PARITY_OFFSET = 40):
 	# lech 40 world = +50px man hinh cho NPC o le, lam nhan
 	# "Anh Hai" (6,3) noi cao hon "Chi Le" (2,2) 50px ngay tu
@@ -226,8 +324,17 @@ func label_rect() -> Rect2:
 	# dau 197px trong khi Chi Le chi 47px (probe 21/11). Tach
 	# nhan NPC ke nhau nay la viec cua resolver
 	# (Main._resolve_label_overlaps), khong can lech san.
-	var size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20)
-	var rect := Rect2(-size.x / 2.0 - 8, top, size.x + 16, 26)
+	# Vong 15: nhan NPC trong the gioi cung khong can lech san —
+	# neo co dinh tren dau tung NPC, khong qua resolver nua.
+	return Rect2(-size.x / 2.0 - 8, top, size.x + 16, 26)
+
+## Hinh chu nhat cua nhan (toa do cuc bo) sau khi da kep trong vung
+## nhin thay cua camera, tru vung HUD tren cung va cach mep ~20px
+## man hinh. Test dung de kiem tra nhan khong bi cat / che.
+func label_rect() -> Rect2:
+	var rect := _anchor_rect()
+	if rect.size == Vector2.ZERO:
+		return Rect2()
 	# Kep nhan trong man hinh hien thi (theo camera that, khong dung
 	# canvas transform — luc tao marker transform chua co camera nen
 	# kep sai va nhan o ria map (vd "Cua ra Cho Dau Moi") bi cat).

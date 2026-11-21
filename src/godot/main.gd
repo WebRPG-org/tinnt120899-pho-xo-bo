@@ -316,7 +316,9 @@ func _process(delta: float) -> void:
 	_update_dbg()
 	# Chong-chong nhan o khong gian man hinh (vong 4): chay truoc
 	# _process cua Marker (cha chay truoc con) nen override kip dung
-	# ngay trong frame nay.
+	# ngay trong frame nay. Cap nhat gan/xa cua nhan NPC truoc
+	# resolver (vong 15) de placed co rect NPC dung trang thai moi.
+	_update_npc_labels()
 	_resolve_label_overlaps()
 	# Nut DOM "Bat dau" tren web (web_shell.html): nut HTML dat
 	# window.__pxb_start = true; poll 4 lan/giay (khong dung signal
@@ -1722,6 +1724,20 @@ func _label_hits_player_or_dpad(r: Rect2, player_rect: Rect2) -> bool:
 			return true
 	return false
 
+## Nhan NPC trong the gioi (vong 15, Claude (b)): chi hien khi
+## nguoi choi o gan (Manhattan <= Marker.LABEL_NEAR_TILES o).
+## Chay truoc _resolve_label_overlaps de rect NPC trong placed la
+## trang thai moi nhat trong frame nay.
+func _update_npc_labels() -> void:
+	if iso_map == null or player == null:
+		return
+	for mk in iso_map.markers:
+		if String(mk.event_data.get("kind", "")) != "npc":
+			continue
+		var mt: Vector2i = (mk as Marker).tile()
+		var d := absi(mt.x - player.tile.x) + absi(mt.y - player.tile.y)
+		(mk as Marker).set_label_near(d <= Marker.LABEL_NEAR_TILES)
+
 func _resolve_label_overlaps() -> void:
 	if iso_map == null:
 		return
@@ -1756,28 +1772,31 @@ func _resolve_label_overlaps() -> void:
 			# (kiem live 14:34). Vat can nho, chi bao ve tam bieu
 			# tuong, khong day nhan di xa.
 			obstacles.append(Rect2(sp + Vector2(-24, -24), Vector2(48, 48)))
+	# Nhan NPC trong the gioi (vong 15): co dinh tren dau NPC,
+	# resolver KHONG dich duoc (dich la roi neo) — chi ghi rect
+	# cua chung vao placed truoc de nhan khac (hotspot/cua/che
+	# tao) tranh; khong dat label_override cho NPC.
+	var placed: Array[Rect2] = []
 	var entries: Array = []
 	for mk in iso_map.markers:
 		var r: Rect2 = mk.label_screen_rect()
-		if r.size != Vector2.ZERO:
-			entries.append({"mk": mk, "rect": r})
-		else:
+		if r.size == Vector2.ZERO:
 			mk.label_override = Rect2()
-	# Nhan NPC truoc (giu tren dau), roi den cac nhan khac; trong
-	# cung loai thi nhan tren truoc (y tang dan) — vong 12b: thu
-	# tu nay giu nhan tren neo dung y muon (vd "Sap rau" Map002
-	# o 818); thu tu nguoc (y giam dan, thu vong 12b) lam nhan
-	# cua day nhan tren xuong toi 556px vi vat can cua cua
-	# che mat khoang trong gan 978. Nhan cua cham nhau 7px
-	# o cuoi map thi xu ly rieng bang luot tach sau vong chinh
-	# (day nhan tren len 19px) chu khong doi thu tu.
+			continue
+		if String(mk.event_data.get("kind", "")) == "npc":
+			placed.append(r)
+			mk.label_override = Rect2()
+		else:
+			entries.append({"mk": mk, "rect": r})
+	# Nhan tren truoc (y tang dan) — vong 12b: thu tu nay giu nhan
+	# tren neo dung y muon (vd "Sap rau" Map002 o 818); thu tu nguoc
+	# (y giam dan, thu vong 12b) lam nhan cua day nhan tren xuong
+	# toi 556px vi vat can cua cua che mat khoang trong gan 978.
+	# Nhan cua cham nhau 7px o cuoi map thi xu ly rieng bang luot
+	# tach sau vong chinh (day nhan tren len 19px) chu khong doi
+	# thu tu.
 	entries.sort_custom(func(a, b):
-		var ka := 0 if String(a["mk"].event_data.get("kind", "")) == "npc" else 1
-		var kb := 0 if String(b["mk"].event_data.get("kind", "")) == "npc" else 1
-		if ka != kb:
-			return ka < kb
 		return a["rect"].position.y < b["rect"].position.y)
-	var placed: Array[Rect2] = []
 	for e in entries:
 		var r: Rect2 = e["rect"]
 		var want_y := r.position.y

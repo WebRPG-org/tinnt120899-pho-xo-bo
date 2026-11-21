@@ -98,6 +98,9 @@ func _on_frame() -> void:
 			# kiem tra intersects() tho (khong grow) vi resolver
 			# chi bao dam cach >= 12px theo doc (vong 5), dich
 			# ngang co the sat 0px.
+			# Vong 15: nhan NPC trong the gioi khong co override
+			# (resolver khong dich) — lay rect man hinh that cua
+			# Label con (label_screen_rect) nhu polish test.
 			var ct := _main.get_viewport().get_canvas_transform()
 			var obstacles: Array[Rect2] = []
 			obstacles.append(_main._sprite_obstacle_rect(ct * _main.player.position))
@@ -106,7 +109,7 @@ func _on_frame() -> void:
 					obstacles.append(_main._sprite_obstacle_rect(ct * mk.global_position))
 			var rects := {}
 			for mk in _main.iso_map.markers:
-				var ov: Rect2 = mk.label_override
+				var ov: Rect2 = mk.label_override if mk.label_override.size != Vector2.ZERO else mk.label_screen_rect()
 				if ov.size != Vector2.ZERO:
 					rects[String(mk.event_data.get("name", ""))] = ov
 			_check("co nhan override hien", rects.size() >= 4, str(rects.size()))

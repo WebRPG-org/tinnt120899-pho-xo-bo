@@ -121,7 +121,10 @@ func _on_frame() -> void:
 					obstacles.append(_main._sprite_obstacle_rect(ct3 * mk.global_position))
 			var rects := {}
 			for mk in _main.iso_map.markers:
-				var ov: Rect2 = mk.label_override
+				# Vong 15: nhan NPC trong the gioi khong co override
+				# (resolver khong dich) — lay rect man hinh that
+				# cua Label con (label_screen_rect) nhu polish test.
+				var ov: Rect2 = mk.label_override if mk.label_override.size != Vector2.ZERO else mk.label_screen_rect()
 				if ov.size != Vector2.ZERO:
 					rects[String(mk.event_data.get("name", ""))] = ov
 			var bad := ""
