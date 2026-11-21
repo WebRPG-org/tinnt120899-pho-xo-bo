@@ -65,6 +65,18 @@ var _ai_done_this_turn := false
 var _end_rect := Rect2(16, 1120, 330, 70)
 var _close_rect := Rect2(374, 1120, 330, 70)
 
+## Animation trận (G4 — chỉ lớp vẽ, KHÔNG sửa luật PxbMarketBattle).
+## Đấu sĩ trước đây nhảy ô tức thì; nay vị trí VẼ (_visual_pos) trượt
+## về ô logic với tốc độ MOVE_ANIM_SPEED, đánh thì lao tới + chớp
+## sáng mục tiêu, hỗ trợ thì vòng xanh lan ra + "+N HP". Mọi fx chỉ
+## đọc battle dict, không ghi vào đó.
+const MOVE_ANIM_SPEED := 420.0
+const ATTACK_ANIM_SECONDS := 0.45
+const SUPPORT_ANIM_SECONDS := 0.6
+var _visual_pos := {}
+var _attack_fx := {}
+var _support_fx := {}
+
 
 ## Gắn logic trận + trận đã tạo (create_battle trả về). Tính offset
 ## lưới từ tâm GRID_CENTER (cùng công thức IsoMap.build).
@@ -89,6 +101,9 @@ func setup(p_mb: PxbMarketBattle, p_battle: Dictionary, p_font: Font, p_font_bol
 	_last_action = "Trận bắt đầu — chạm ô xanh lá để di chuyển."
 	_ai_wait = 0.0
 	_ai_done_this_turn = false
+	_attack_fx = {}
+	_support_fx = {}
+	_sync_visual_pos()
 	if mb != null:
 		mb.turn_changed.connect(_on_turn_changed)
 		mb.battle_finished.connect(_on_battle_finished)
@@ -210,6 +225,91 @@ func supportable_allies() -> Array:
 	return out
 
 
+## --- Animation trận (chỉ lớp vẽ) ---
+
+## Vị trí vẽ hiện tại của 1 đấu sĩ (trượt về ô logic, không nhảy).
+func visual_pos_of(fighter_id: String) -> Vector2:
+	var f := mb.find_fighter(battle, fighter_id) if mb != null and not battle.is_empty() else {}
+	if f.is_empty():
+		return Vector2.ZERO
+	return _visual_pos.get(fighter_id, tile_center(Vector2i(int(f["x"]), int(f["y"]))) + Vector2(0, -4))
+
+## Vị trí vẽ để _draw dùng: vị trí trượt + lao tới/rung khi có fx đánh.
+func fighter_draw_pos(f: Dictionary) -> Vector2:
+	var base := visual_pos_of(str(f.get("id", "")))
+	if _attack_fx.is_empty():
+		return base
+	var phase := clampf(float(_attack_fx.get("t", 0.0)) / ATTACK_ANIM_SECONDS, 0.0, 1.0)
+	if str(f.get("id", "")) == str(_attack_fx.get("attacker_id", "")):
+		var target_pos := visual_pos_of(str(_attack_fx.get("target_id", "")))
+		var to := target_pos - base
+		if to.length() > 1.0:
+			return base + to.normalized() * sin(PI * phase) * minf(28.0, to.length() * 0.45)
+		return base
+	if str(f.get("id", "")) == str(_attack_fx.get("target_id", "")):
+		return base + Vector2(sin(float(_attack_fx.get("t", 0.0)) * 55.0) * 3.0 * (1.0 - phase), 0)
+	return base
+
+## Fx đánh đang chạy ({} nếu không có) — test đọc.
+func attack_fx() -> Dictionary:
+	return _attack_fx
+
+## Fx hỗ trợ đang chạy ({} nếu không có) — test đọc.
+func support_fx() -> Dictionary:
+	return _support_fx
+
+func _start_attack_fx(attacker_id: String, target_id: String, res: Dictionary) -> void:
+	_attack_fx = {
+		"attacker_id": attacker_id, "target_id": target_id, "t": 0.0,
+		"damage": int(res.get("damage", 0)), "dodged": bool(res.get("dodged", false)),
+		"ko": bool(res.get("ko", false)),
+	}
+
+func _start_support_fx(target_id: String, healed: int) -> void:
+	_support_fx = {"target_id": target_id, "t": 0.0, "healed": healed}
+
+## Khởi tạo vị trí vẽ cho đấu sĩ chưa có (về đúng ô logic).
+func _sync_visual_pos() -> void:
+	if mb == null or battle.is_empty():
+		return
+	for f in mb.all_fighters(battle):
+		var fid := str(f.get("id", ""))
+		if not _visual_pos.has(fid):
+			_visual_pos[fid] = tile_center(Vector2i(int(f["x"]), int(f["y"]))) + Vector2(0, -4)
+
+## Đặt ngay vị trí vẽ về ô logic (dùng sau khi dời đấu sĩ bằng tay
+## trong test, hoặc khi cần bỏ qua animation).
+func snap_visual_pos() -> void:
+	if mb == null or battle.is_empty():
+		return
+	for f in mb.all_fighters(battle):
+		_visual_pos[str(f.get("id", ""))] = tile_center(Vector2i(int(f["x"]), int(f["y"]))) + Vector2(0, -4)
+
+## Trượt vị trí vẽ về ô logic + đẩy đồng hồ fx. Gọi mỗi frame và
+## trong simulate_seconds (test headless).
+func _update_visual_pos(delta: float) -> void:
+	_sync_visual_pos()
+	if mb == null or battle.is_empty():
+		return
+	for f in mb.all_fighters(battle):
+		var fid := str(f.get("id", ""))
+		var goal: Vector2 = tile_center(Vector2i(int(f["x"]), int(f["y"]))) + Vector2(0, -4)
+		var cur: Vector2 = _visual_pos.get(fid, goal)
+		var d := goal - cur
+		if d.length() <= 0.5:
+			_visual_pos[fid] = goal
+		else:
+			_visual_pos[fid] = cur + d.normalized() * minf(d.length(), MOVE_ANIM_SPEED * delta)
+	if not _attack_fx.is_empty():
+		_attack_fx["t"] = float(_attack_fx["t"]) + delta
+		if float(_attack_fx["t"]) >= ATTACK_ANIM_SECONDS:
+			_attack_fx = {}
+	if not _support_fx.is_empty():
+		_support_fx["t"] = float(_support_fx["t"]) + delta
+		if float(_support_fx["t"]) >= SUPPORT_ANIM_SECONDS:
+			_support_fx = {}
+
+
 ## --- Hành động (gọi từ click/chạm hoặc test) ---
 ## Trả: "moved" | "attacked" | "supported" | "selected" | "ended" |
 ## "close" | "none".
@@ -234,6 +334,7 @@ func click_tile(tile: Vector2i) -> String:
 					if bool(res.get("ok", false)):
 						_last_action = "%s hỗ trợ %s +%d HP." % [str(f["name"]), str(target["name"]), int(res["healed"])]
 						_selected_id = str(target["id"])
+						_start_support_fx(str(target["id"]), int(res["healed"]))
 						queue_redraw()
 						return "supported"
 			_selected_id = str(target["id"])
@@ -251,6 +352,7 @@ func click_tile(tile: Vector2i) -> String:
 					else:
 						_last_action = "%s đánh %s −%d HP." % [str(f["name"]), str(target["name"]), int(res["damage"])]
 					_selected_id = str(target["id"])
+					_start_attack_fx(str(f["id"]), str(target["id"]), res)
 					queue_redraw()
 					return "attacked"
 		_selected_id = str(target["id"])
@@ -302,6 +404,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## --- Đồng hồ (gọi mỗi khung; test gọi simulate_seconds) ---
 
 func _process(delta: float) -> void:
+	_update_visual_pos(delta)
 	_advance_timers(delta)
 	queue_redraw()
 
@@ -341,7 +444,21 @@ func _run_ai_turn() -> void:
 	var f := active_fighter()
 	if f.is_empty():
 		return
-	var res: Dictionary = mb.ai_take_turn(battle, str(f["id"]))
+	# Chụp HP trước lượt AI để suy ra fx từ chênh lệch (đánh/hỗ trợ):
+	# ai_take_turn chỉ trả chuỗi mô tả, không trả id mục tiêu.
+	var hp_before := {}
+	for e in mb.all_fighters(battle):
+		hp_before[str(e.get("id", ""))] = int(e.get("hp", 0))
+	var actor_id := str(f["id"])
+	var res: Dictionary = mb.ai_take_turn(battle, actor_id)
+	for e in mb.all_fighters(battle):
+		var eid := str(e.get("id", ""))
+		var hp_now := int(e.get("hp", 0))
+		var hp_old: int = hp_before.get(eid, hp_now)
+		if hp_now < hp_old:
+			_start_attack_fx(actor_id, eid, {"damage": hp_old - hp_now})
+		elif hp_now > hp_old:
+			_start_support_fx(eid, hp_now - hp_old)
 	var parts := PackedStringArray()
 	for a in (res.get("actions", []) as Array):
 		parts.append(str(a))
@@ -358,6 +475,7 @@ func simulate_seconds(seconds: float) -> void:
 	var left := seconds
 	while left > 0.0:
 		var step := minf(left, 0.5)
+		_update_visual_pos(step)
 		_advance_timers(step)
 		left -= step
 		if not is_fighting():
@@ -516,7 +634,7 @@ func _draw_fighters() -> void:
 	# 2 lượt vẽ: vòng tròn trước, thanh HP + tên sau — để tên của
 	# đấu sĩ này không bị vòng tròn của đấu sĩ khác đè lên.
 	for f in mb.all_fighters(battle):
-		var c := tile_center(Vector2i(int(f["x"]), int(f["y"]))) + Vector2(0, -4)
+		var c := fighter_draw_pos(f)
 		var alive := bool(f.get("alive", false))
 		var col: Color = _role_color(str(f.get("role", "")))
 		if not alive:
@@ -530,6 +648,11 @@ func _draw_fighters() -> void:
 				Color(1, 0.85, 0.2))
 		draw_circle(c, 20, col)
 		draw_arc(c, 20, 0, TAU, 32, Color(1, 1, 1, 0.9), 2.0)
+		# Chớp sáng khi bị đánh: trắng, ngã thì đỏ, mờ dần theo fx.
+		if not _attack_fx.is_empty() and str(f.get("id", "")) == str(_attack_fx.get("target_id", "")):
+			var aphase := clampf(float(_attack_fx.get("t", 0.0)) / ATTACK_ANIM_SECONDS, 0.0, 1.0)
+			var flash_c := Color(1, 0.3, 0.25) if bool(_attack_fx.get("ko", false)) else Color(1, 1, 1)
+			draw_circle(c, 22, Color(flash_c, (1.0 - aphase) * 0.45))
 		if not alive:
 			_text(font, c + Vector2(-60, 8), "ngã", 18, Color(1, 1, 1), HORIZONTAL_ALIGNMENT_CENTER, 120)
 	var name_rects := fighter_name_rects()
@@ -537,7 +660,7 @@ func _draw_fighters() -> void:
 	for nr in name_rects:
 		rect_by_id[str(nr["id"])] = nr["rect"]
 	for f in mb.all_fighters(battle):
-		var c := tile_center(Vector2i(int(f["x"]), int(f["y"]))) + Vector2(0, -4)
+		var c := fighter_draw_pos(f)
 		var alive := bool(f.get("alive", false))
 		# Thanh HP + tên. Tên lấy rect đã chống chồng (xem
 		# fighter_name_rects) — fallback giữ hành vi cũ nếu thiếu.
@@ -551,6 +674,12 @@ func _draw_fighters() -> void:
 			Rect2(c.x - 60, c.y + name_dy - 20.0, 120, 24))
 		_text(font, Vector2(nr.position.x, nr.position.y + 20.0), str(f["name"]), 18,
 			Color(1, 1, 1), HORIZONTAL_ALIGNMENT_CENTER, int(nr.size.x))
+		# Vòng xanh lan ra + "+N HP" khi được hỗ trợ.
+		if not _support_fx.is_empty() and str(f.get("id", "")) == str(_support_fx.get("target_id", "")):
+			var sphase := clampf(float(_support_fx.get("t", 0.0)) / SUPPORT_ANIM_SECONDS, 0.0, 1.0)
+			draw_arc(c, 22.0 + sphase * 18.0, 0, TAU, 32, Color(0.4, 1.0, 0.5, (1.0 - sphase) * 0.8), 3.0)
+			_text(font, c + Vector2(-60, -72 - sphase * 20.0), "+%d HP" % int(_support_fx.get("healed", 0)),
+				20, Color(0.4, 1.0, 0.5, 1.0 - sphase), HORIZONTAL_ALIGNMENT_CENTER, 120)
 
 func _draw_bottom() -> void:
 	draw_rect(Rect2(16, 1000, 688, 200), Color(0.1, 0.11, 0.15, 0.97))

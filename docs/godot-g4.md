@@ -2609,3 +2609,82 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
 
 1. Điền kết quả kiểm live §30.4; push main (code vòng này + docs §30).
 2. G4 tiếp theo (§29.3 mục 2): animation di chuyển/đánh trận; chọn đội/vũ khí trước trận; `can_challenge` ở demo; tile riêng Map003–018; camera zoom trận; khối chat online đưa lên tab Tin nhắn; server WS auth + giới hạn tốc độ + lịch sử.
+
+## 31. G4 bước 10 — Animation di chuyển/đánh trận MarketBattle — XONG (21/11 ~12:20–13:00 +07)
+
+### 31.1 Sửa (`src/godot/scripts/battle_scene.gd` — chỉ lớp vẽ, KHÔNG sửa luật)
+
+- **Trượt khi di chuyển:** vị trí VẼ `_visual_pos` (mới, theo id đấu sĩ)
+  trượt về ô logic với tốc độ 420 px/s thay vì nhảy tức thì; `_update_visual_pos`
+  gọi mỗi frame (`_process`) + trong `simulate_seconds` (test headless);
+  `snap_visual_pos()` đặt ngay về ô logic (dùng sau khi dời tay trong test).
+  `setup()` khởi tạo vị trí vẽ đúng ô spawn.
+- **Đánh:** `click_tile` "attacked" → `_start_attack_fx` (người đánh, mục tiêu,
+  damage/dodged/ko từ `res` của `mb.attack`); `_fighter_draw_pos` lao người
+  đánh tới 45% khoảng cách (tối đa 28px, theo sin, 0.45s) + rung mục tiêu
+  ±3px; vòng chớp trắng trên mục tiêu (đỏ khi KO), mờ dần.
+- **Hỗ trợ:** `_start_support_fx` → vòng xanh lan ra (22→40px) + chữ "+N HP"
+  bay lên, mờ dần trong 0.6s.
+- **Lượt AI:** `_run_ai_turn` chụp HP trước/sau `ai_take_turn`, suy fx từ
+  chênh lệch (HP giảm = bị đánh, HP tăng = được hỗ trợ) — vì `ai_take_turn`
+  chỉ trả chuỗi mô tả, không trả id mục tiêu.
+- Test mới `tests/g4_battle_anim_test.gd`: **24/24 PASS** — vị trí vẽ còn ở ô
+  cũ ngay sau click, sau 0.1s đã rời ô cũ, sau 0.6s về đúng ô mới; đánh
+  đúng 9 HP (Tank giảm thương, luật không đổi), lao tới >8px giữa animation,
+  fx hết sau 0.45s; hỗ trợ +12 HP, fx hết sau 0.6s; lượt AI đánh trúng A1
+  + thấy fx. (Lỗi test ban đầu: đặt A1 chồng ô (1,4) của A2 nên AI đánh A2
+  thay vì A1 — đã dời A2/A3 ra xa; bài học: đừng để 2 đấu sĩ cùng ô trong
+  setup test.)
+- `tools/godot/run_regression.sh`: thêm `g4_battle_anim_test` → 38 suite + probe.
+
+### 31.2 Verify vòng này
+
+- Hồi quy đầy đủ: **39 OK, 0 FAIL** (38 suite + probe server); battle anim
+  24/24, battle scene 43/43, battle AI 34/34, battle main 15/15, battle save
+  31/31, MarketBattle 123/123, artpass 60/60, G1 419/419, G3 95/95.
+- Smoke `--headless --quit-after 120` exit 0, không ERROR.
+- Export web exit 0: pck **6.918.732 byte, SHA `7dec3410…`**, wasm không đổi
+  `fc74679e…`; HTTP 200 đủ 3 file (cổng 8172).
+- **Browser-verify thật (Chromium 1255 + swiftshader, 720×1280, script
+  `hidden_files/pxb-browser-verify-battle-anim.py`, ảnh
+  `hidden_files/pxb-browser-verify-2026-11-21/34–35`):** engine-start OK,
+  start-clicked OK, B mở trận đúng (BỤI ĐỜI CHỢ CÁ, 100%–100%, Vòng 1/12),
+  click ô xanh (2,3) → log "Bạn di chuyển tới (2,3).", vòng đỏ Bạn sang
+  đúng ô (2,3), ô xanh hết sau khi đi; **0 console error, 0 pageerror**.
+  Lưu ý đo: game chạy ~0.43× thời gian thật trên swiftshader nên ảnh
+  +300ms đã gần tới đích (trượt 2 ô chỉ ~0.17s game) — trượt giữa đường
+  chứng minh bằng headless 24/24 (vị trí vẽ còn ở ô cũ ngay sau click),
+  không bắt được khoảnh khắc giữa đường trên ảnh tĩnh ở tốc độ này.
+  Fx đánh/hỗ trợ chỉ verify headless (địch ở xa, không kịp đưa vào tầm
+  trong 1 lượt kiểm nhanh) — ghi rõ, không nói quá.
+
+### 31.3 Deploy gh-pages — XONG
+
+- Staging `build_gh_pages.py` VERIFY OK (pck `7dec3410` 52 chunk, wasm
+  `fc74679e` không đổi, img đủ 3 ảnh, loader cứng đủ marker, icon inline
+  đủ 3 data URI).
+- Push-files 5 lô (head gh-pages trước deploy `0e0b90e0` theo sync record;
+  live `versions.json` lúc đó vẫn pck `84b8649d`, không lệch): (1) pck
+  000–016 → `cb147518`; (2) 017–033 → `990661d2`; (3) 034–051 →
+  `975fe3b8`; (4) `versions.json` → `6a34974f`; (5) `index.html` CUỐI →
+  `52f246eb`. Sync record đã ghi đủ 5 commit (156 entries). Trước lô 4 đã
+  verify qua API: blob SHA 2 mẫu chunk (part-000 `1680b32d…`, part-051
+  `5dd00342…`) khớp staging (tính theo git blob SHA-1, không phải sha256
+  file — bài học: đừng so sha256 với blob SHA).
+- Verify từ remote (raw.githubusercontent.com, tránh CDN Pages còn cache
+  bản cũ): ráp lại 52 chunk pck = 6.918.732 byte, SHA **`7dec3410b9204115`**
+  = build local; `index.html` SHA `52053681a2e9` = staging;
+  `versions.json` trên branch = pck `7dec3410`. Lưu ý: `versions.json` qua
+  domain Pages vẫn hiện `84b8649d` ngay sau deploy (CDN chậm vài phút như
+  §19.8) — repo đã đúng, không kết luận deploy sai vì CDN.
+
+### 31.4 Push main — (điền sau khi push xong)
+
+### 31.5 Việc tiếp theo
+
+1. G4 tiếp: chọn đội/vũ khí trước trận; `can_challenge` ở demo; tile riêng
+   Map003–018; camera zoom trận; khối chat online đưa lên tab Tin nhắn;
+   server WS auth + giới hạn tốc độ + lịch sử.
+2. Kiểm live bằng cloud browser trên URL thật sau deploy (cửa cuối theo
+   luật AGENTS.md): mở trận bằng B, click ô xanh xem trượt, chờ lượt AI
+   xem địch di chuyển/đánh có animation.
