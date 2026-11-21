@@ -116,6 +116,7 @@ var _toast: Label
 var _dpad: Control = null  # Vong 10: nut mui ten tren man hinh (di bang cham).
 var _dpad_press_count := 0  # Vong 10b: dem button_down (chan doan click lap).
 var _dbg_label: Label = null  # Vong 10: hien o + input cuoi (kiem chung di chuyen).
+var _debug_labels_visible := false  # §29.3: nhan debug mac dinh AN — chi hien khi bat bang F9 (chan doan).
 var _last_input := ""  # Vong 10: mo ta input di chuyen gan nhat (vd "D", "cham (9,7)").
 var _camera: Camera2D
 var _daynight: ColorRect
@@ -296,7 +297,8 @@ func _process(delta: float) -> void:
 	if _dpad != null:
 		_dpad.visible = not title_open and not phone_open and not dialogue_open and not battle_open
 	if _dbg_label != null:
-		_dbg_label.visible = not title_open
+		# §29.3: nhan debug mac dinh AN — chi hien khi _debug_labels_visible (F9).
+		_dbg_label.visible = not title_open and _debug_labels_visible
 	# Chong-chong nhan o khong gian man hinh (vong 4): chay truoc
 	# _process cua Marker (cha chay truoc con) nen override kip dung
 	# ngay trong frame nay.
@@ -409,6 +411,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			_advance_frame()
 		elif event.keycode == KEY_E:
 			_try_interact()
+		elif event.keycode == KEY_F9:
+			# §29.3: F9 bat/tat nhan debug (mac dinh an). Khong mo
+			# tran/dien thoai — chi doi co hien nhan.
+			set_debug_labels_visible(not _debug_labels_visible)
 		return
 	var click_pos := Vector2.INF
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -2188,6 +2194,15 @@ func _dpad_release(dir: Vector2i) -> void:
 	# _held_dirs); giu ham de signal button_up van noi duoc.
 	if player != null:
 		player.release_dir(dir)
+
+## §29.3 — Bat/tat nhan debug. Mac dinh an (cua kiem live 21/11
+## da qua); bat len khi can chan doan di chuyen. Text van duoc
+## _update_dbg() cap nhat ke ca khi an, nen bat len la thay ngay
+## o hien tai + input cuoi, khong can di them buoc nao.
+func set_debug_labels_visible(v: bool) -> void:
+	_debug_labels_visible = v
+	if _dbg_label != null:
+		_dbg_label.visible = v and not title_open
 
 ## Vong 10 — Nhan debug: o hien tai + input di chuyen cuoi + co
 ## dang khoa input khong. De kiem live doc duoc ngay input co toi

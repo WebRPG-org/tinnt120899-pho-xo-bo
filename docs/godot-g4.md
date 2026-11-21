@@ -2573,3 +2573,39 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
    WS auth + giới hạn tốc độ + lịch sử.
 3. Chỉ báo chủ khi nhãn debug đã ẩn + kiểm live lại vẫn đi được
    (cửa §28.4 mục 1 đã qua — báo chủ ở bước này).
+
+## 30. Ẩn nhãn debug mặc định + F9 toggle — XONG CODE + DEPLOY, chờ kiểm live lại (21/11 ~11:45–12:30 +07)
+
+### 30.1 Sửa (`src/godot/main.gd`)
+
+- `_debug_labels_visible := false` (mới, mặc định ẩn); `_dbg_label.visible = not title_open and _debug_labels_visible` trong `_process` (trước chỉ `not title_open`).
+- `set_debug_labels_visible(v)` (mới): đổi cờ + áp visibility ngay (`v and not title_open`).
+- Phím **F9** trong `_unhandled_input` (sau nhánh E): `set_debug_labels_visible(not _debug_labels_visible)`. F9 không đi qua `_key_to_dir` (không phải phím di chuyển), không mở trận/điện thoại.
+- `_update_dbg()` không đổi: text vẫn cập nhật kể cả khi nhãn ẩn, nên bật F9 lên là thấy ngay ô hiện tại + input cuối, không cần đi thêm bước nào. D-pad không bị ảnh hưởng (riêng `_dpad.visible`).
+
+### 30.2 Test + verify headless
+
+- Test mới `tests/g4_debug_toggle_test.gd`: **15/15 PASS** — trước/sau start đều ẩn; F9 bật → hiện (text "(4,5)"), F9 lần 2 → ẩn lại; D-pad phải khi nhãn ẩn vẫn đi (5,5), text cập nhật "(5,5)" dù đang ẩn, P:1; `set_debug_labels_visible(true/false)` trực tiếp đúng.
+- `tests/g4_dpad_test.gd` cập nhật theo mặc định mới: sau start kiểm tra nhãn AN, bấm F9 rồi mới đo D-pad — **15/15 PASS** (trước 14/14).
+- `tools/godot/run_regression.sh`: thêm `g4_debug_toggle_test` → **37 suite + probe = 38 OK, 0 FAIL** (artpass 60/60, G1 selftest 419/419, G3 playtest 95/95, G2 selftest 87/87, MarketBattle 123/123, battle AI 34/34, battle scene 43/43, coord+WASD 16/16, dpad 15/15, debug toggle 15/15, online server 37/37 + probe OK…).
+- `--check-only` main.gd + 2 test đều exit 0; scene Main 120 frame exit 0, không ERROR.
+- Export web exit 0: pck mới **6.908.568 byte, SHA `84b8649dbe547e98…`** (trước `ba8e4a99`), wasm không đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ 4 file (cổng 8171).
+- Lỗi gặp khi export (ghi để không tái phạm): chạy export từ repo root với đường dẫn `src/godot-build/index.html` thì Godot hiểu tương đối theo `--path src/godot` nên báo "Target folder does not exist" — phải `cd src/godot` rồi export `../godot-build/index.html` như docs G0 §3.
+
+### 30.3 Deploy gh-pages — XONG, verify khớp byte từ live
+
+- Staging `build_gh_pages.py` VERIFY OK (pck 52 chunk, wasm 293 chunk không đổi, img không đổi).
+- Push-files 5 lô (source-dir `gh-pages-staging`, head gh-pages trước deploy `0177ff01` đã đối chiếu + remote `versions.json` = pck `ba8e4a99`, không lệch): (1) pck 000–016 → `3cd95d48`; (2) 017–033 → `1fc02d5b`; (3) 034–051 → `165590a5`; (4) `versions.json` → `2575efa3`; (5) `index.html` CUỐI → `0e0b90e0`. Sync record đã ghi đủ 5 commit (150 entries).
+- Verify từ live: `--check-live` **OK** (versions.json pin pck `84b8649d`, wasm/img part-000 đều 200, index.html live khớp staging từng byte); ráp lại 52 chunk pck từ live = 6.908.568 byte, SHA **`84b8649d`** = đúng SHA build local (`~/workspace/live-dbg-verify/pck-84b8649d/`).
+
+### 30.4 Kiểm live lại bản 84b8649d — ĐẠT (cloud browser + Playwright F9, 21/11 ~11:59–12:17)
+
+- **Cloud browser trên URL thật** (browser-task cd43c26a, 11:59–12:12, viewport ngang 1920×999 — cột game ~560px, đáy canvas sát mép viewport): nhãn debug mặc định **ẨN** (ảnh phóng to dải đáy ở cả Map001 Khung Sáng và Map002 Khung Chiều: không còn 2 dòng "Ô (x,y)" / "H:[...] Q:.."); di chuyển **ĐẠT** — D-pad ▶ 1 ô, mũi tên/WASD đúng từng ô, ▶+▲ vào cửa (5,4) → Map002 + toast "Đã sang Chợ Đầu Mối" (lần thử đầu phím phải gửi đúng lúc game vừa vào nên không nhận — không phải lỗi game; thử lại từng bước thì chuyển ngay); tap đất trống gần nhân vật đi được; F Sáng→Chiều, P mở điện thoại đủ 9 tab + đóng được; **0 console error / pageerror / failed request**; nút BẮT ĐẦU CHƠI bật sau vài giây.
+- **Toggle F9 — cloud browser KHÔNG gửi được** (công cụ bàn phím từ chối phím chức năng; Ctrl+Shift+I/J mở DevTools không hiện; không có evaluate/console để dispatch KeyboardEvent) — không phải lỗi game, mà là giới hạn công cụ. Đã khép bằng **Playwright Chromium 1255 local trên staging** (byte-identical live: index.html khớp từng byte, pck SHA `84b8649d` đã verify từ live): script `hidden_files/pxb-browser-verify-f9.py`, bằng chứng `hidden_files/pxb-browser-verify-2026-11-21/` (ảnh 30–33 + strip + `console-f9.json`) — F9 lần 1: dải đáy đổi **3.787 px**, ảnh 31b đọc rõ nhãn **"Ô (4,5)" + "H:[] Q:0 A:(-1, -1) MR:0 P:0"**; F9 lần 2: dải đáy về baseline **0 px khác**; phím D sau toggle vẫn đi được; 0 console error / pageerror.
+- Quan sát mở (không chặn): tap xa phía phải gần vũng nước trên Map002 không di chuyển sau 5s — có thể ô đó bị chặn/ngoài vùng đi được, chưa kết luận tap-to-move hỏng (tap gần đi được; tap live §29.1 (7,5)→(10,2) đã đi được; headless move-input 9/9 gồm tap tới ô gần nhất). Ghi để vòng polish sau xem lại, không coi là bug.
+- **Cửa §29.3 mục 3 đã qua: nhãn debug đã ẩn + kiểm live lại vẫn đi được → báo chủ được.**
+
+### 30.5 Việc tiếp theo
+
+1. Điền kết quả kiểm live §30.4; push main (code vòng này + docs §30).
+2. G4 tiếp theo (§29.3 mục 2): animation di chuyển/đánh trận; chọn đội/vũ khí trước trận; `can_challenge` ở demo; tile riêng Map003–018; camera zoom trận; khối chat online đưa lên tab Tin nhắn; server WS auth + giới hạn tốc độ + lịch sử.
