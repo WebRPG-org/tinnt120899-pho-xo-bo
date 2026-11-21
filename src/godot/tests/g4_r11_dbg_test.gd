@@ -55,7 +55,7 @@ func _on_frame() -> void:
 		0:
 			if _frame >= 3:
 				_check("spawn (4,5)", _main.player.tile == Vector2i(4, 5), str(_main.player.tile))
-				_check("nhan debug mac dinh AN", _main._debug_labels_visible == false)
+				_check("nhan debug mac dinh HIEN (vong 12)", _main._debug_labels_visible == true)
 				_check("nhan debug o goc tren-trai (24,200)", _main._dbg_label.position == Vector2(24, 200), str(_main._dbg_label.position))
 				_main._on_start_pressed()
 				_main.load_map(2, Vector2i(9, 4))

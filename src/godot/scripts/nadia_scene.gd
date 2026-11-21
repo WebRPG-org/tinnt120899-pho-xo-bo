@@ -203,6 +203,10 @@ func _draw_side_walls() -> void:
 				]), Color(0.45, 0.38, 0.28, 0.25))
 
 func _draw_facades() -> void:
+	# Map002 (Cho Dau Moi): day sap rieng (xem _draw_market_row).
+	if map_id == 2:
+		_draw_market_row()
+		return
 	# Day nha mat tien (ty=0): tuong vang, mai ton, bien hieu, cua so
 	# sang am, cua go, may lanh, day phoi. Map 2 la sap cho: mai hien
 	# ke soc + gio hang truoc cua.
@@ -257,6 +261,57 @@ func _draw_facades() -> void:
 		else:
 			_draw_gate(c)
 			_draw_window(c + Vector2(14, 0), h)
+
+## Day sap Cho Dau Moi (vong 12): tuong + mai lien tuc doc hang 0.
+## Cu ve 12 nha rieng 64px, tam cach nhau 32px (iso) nen chong
+## nhau 50% — bien hieu/mai hien bi nha ben che, ca day doc nhu
+## 1 dai sap bi nen (loi kiem live 12:56 21/11). Moi: moi o la 1
+## doan tuong/mai 34px (chong 2px de kin khe bac thang iso), sap
+## chi o o CHAN (tam cach 64px): bien hieu 58px + mai hien 60px
+## vua khit, khong chong; o LE la nha o (cua so + chau hoa).
+func _draw_market_row() -> void:
+	for tx in range(12):
+		var c := tile_center(Vector2i(tx, 0))
+		var h := _hash(tx, 0)
+		var tint: Color = WALL_TINTS[h % WALL_TINTS.size()]
+		var roof: Color = ROOF_COLORS[h % ROOF_COLORS.size()]
+		# Bong do duoi chan tuong (doan 34px).
+		draw_colored_polygon(PackedVector2Array([
+			c + Vector2(-17, 14), c + Vector2(17, 14),
+			c + Vector2(13, 20), c + Vector2(-13, 20),
+		]), Color(0, 0, 0, 0.18))
+		# Tuong (doan 34px) + vet loang.
+		draw_rect(Rect2(c + Vector2(-17, -66), Vector2(34, 82)), tint)
+		draw_colored_polygon(PackedVector2Array([
+			c + Vector2(-14, -66), c + Vector2(-9, -66),
+			c + Vector2(-12, -20), c + Vector2(-15, -20),
+		]), Color(0.45, 0.38, 0.28, 0.18))
+		# Mai ton (doan 34px, xeo vao 5px moi ben tren dinh).
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(c.x - 17, c.y - 66), Vector2(c.x + 17, c.y - 66),
+			Vector2(c.x + 12, c.y - 92), Vector2(c.x - 12, c.y - 92),
+		]), roof)
+		draw_line(Vector2(c.x - 8, c.y - 68), Vector2(c.x - 10, c.y - 90), roof.darkened(0.25), 1.5)
+		draw_line(Vector2(c.x + 8, c.y - 68), Vector2(c.x + 6, c.y - 90), roof.darkened(0.25), 1.5)
+		if h % 3 == 0:
+			# Ong khoi.
+			draw_rect(Rect2(c + Vector2(6, -104), Vector2(10, 14)), Color(0.5, 0.42, 0.35, 1))
+	# Vong 2: bien hieu + sap / cua so (ve sau mai de nam tren).
+	for tx in range(12):
+		var c := tile_center(Vector2i(tx, 0))
+		var h := _hash(tx, 0)
+		if tx % 2 == 0:
+			# Bien hieu go + chu Viet (58px, vua khoang 64px).
+			var text := String(SIGNS_MAP2[h % SIGNS_MAP2.size()])
+			draw_rect(Rect2(c + Vector2(-29, -62), Vector2(58, 13)), Color(0.42, 0.28, 0.16, 1))
+			if font != null:
+				var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+				draw_string(font, Vector2(c.x - tw / 2.0, c.y - 52), text,
+					HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 0.93, 0.70, 1))
+			_draw_shop_front(c, h)
+		else:
+			# Nha o giua 2 sap: cua so + chau hoa (rong 32px, vua doan).
+			_draw_window(c + Vector2(0, 0), h)
 
 ## Mau kinh cua so theo khung (vong 8): ham tinh de test goi truc
 ## tiep duoc — _draw_window dung ham nay.

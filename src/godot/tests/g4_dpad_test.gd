@@ -61,9 +61,11 @@ func _on_frame() -> void:
 			_wait += 1
 			if _wait >= 3:
 				_check("sau start: D-pad hien", _main._dpad.visible)
-				# §29.3: nhan debug mac dinh AN — bat bang F9 truoc
-				# khi cac buoc sau doc o/input tu nhan.
-				_check("sau start: nhan debug AN mac dinh", not _main._dbg_label.visible)
+				# Vong 12: nhan debug mac dinh HIEN tro lai — F9
+				# gio la an/hien (nguoc vong 11). Bam F9 2 lan de
+				# kiem ca 2 chieu toggle, de nhan HIEN cho cac
+				# buoc sau doc o/input tu nhan.
+				_check("sau start: nhan debug HIEN mac dinh (vong 12)", _main._dbg_label.visible)
 				Input.parse_input_event(_key(KEY_F9, true))
 				Input.parse_input_event(_key(KEY_F9, false))
 				_wait = 0
@@ -71,7 +73,15 @@ func _on_frame() -> void:
 		11:
 			_wait += 1
 			if _wait >= 3:
-				_check("F9 bat nhan debug", _main._dbg_label.visible)
+				_check("F9 an nhan debug", not _main._dbg_label.visible)
+				Input.parse_input_event(_key(KEY_F9, true))
+				Input.parse_input_event(_key(KEY_F9, false))
+				_wait = 0
+				_state = 12
+		12:
+			_wait += 1
+			if _wait >= 3:
+				_check("F9 bat lai nhan debug", _main._dbg_label.visible)
 				# Cham nhanh nut PHAI (down+up) -> di 1 o.
 				_dpad_btn(2).emit_signal("button_down")
 				_state = 2

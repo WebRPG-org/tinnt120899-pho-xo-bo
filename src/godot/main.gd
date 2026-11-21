@@ -116,7 +116,12 @@ var _toast: Label
 var _dpad: Control = null  # Vong 10: nut mui ten tren man hinh (di bang cham).
 var _dpad_press_count := 0  # Vong 10b: dem button_down (chan doan click lap).
 var _dbg_label: Label = null  # Vong 10: hien o + input cuoi (kiem chung di chuyen).
-var _debug_labels_visible := false  # §29.3: nhan debug mac dinh AN — chi hien khi bat bang F9 (chan doan).
+var _debug_labels_visible := true  # Vong 12: nhan debug mac dinh HIEN
+	# tro lai (cong cu chan doan duy nhat cua checker) — F9 an/hien.
+	# Truoc day mac dinh an (§29.3) nhung ban deploy a87a871d van
+	# hien (xuat tu source cu) va checker 12:56 khong biet bam F9
+	# nen mat cong cu doc o. Tu nay mac dinh hien, chi an sau khi
+	# di chuyen da qua kiem live (luat AGENTS.md 21/11).
 var _last_input := ""  # Vong 10: mo ta input di chuyen gan nhat (vd "D", "cham (9,7)").
 var _camera: Camera2D
 var _daynight: ColorRect
@@ -297,7 +302,7 @@ func _process(delta: float) -> void:
 	if _dpad != null:
 		_dpad.visible = not title_open and not phone_open and not dialogue_open and not battle_open
 	if _dbg_label != null:
-		# §29.3: nhan debug mac dinh AN — chi hien khi _debug_labels_visible (F9).
+		# Vong 12: nhan debug mac dinh HIEN (xem _debug_labels_visible).
 		_dbg_label.visible = not title_open and _debug_labels_visible
 	# Vong 11: cap nhat nhan debug MOI FRAME (ke ca khi an) —
 	# _update_dbg() truoc day chi goi tu moved_to, ma moved_to chay
@@ -1642,7 +1647,24 @@ func _daynight_color(f: int) -> Color:
 ## nhan vat — kiem live 14:34: "Goc Che Tao" gan cham toc, mep nhan
 ## cham mep nhau khong co khe ho).
 const LABEL_GAP := 12.0
-const LABEL_MAX_DRIFT := 60.0
+# Nhan duoc dich doc toi da 120px khoi vi tri muon (vong 12, truoc
+# 60): 120px ~ 3 chieu cao nhan — van gan neo, doc duoc la cua ai.
+# Qua 120px thi GIU y muon thay vi bay den khoang trong xa (loi
+# Map002 21/11: "Sap rau" bay 212px len troi, "Cua di" bay 606px).
+# 120 du de "Goc Che Tao" (want 978 -> cho trong 1067, cach 89px)
+# tach khoi "Goc phe lieu cho" ma khong bay xa.
+const LABEL_MAX_DRIFT := 120.0
+# Vong 12b: gioi han nhay xa de thoat nhan vat / D-pad — nhan
+# chi duoc nhay toi da 200px (~5 chieu cao nhan) de thoat dau
+# nhan vat / nut D-pad; xa hon thi GIU NEO (nhan o yen, du co
+# che nhan vat 1 chut) vi nhay 200-600px moi la loi "nhan bay
+# len troi" ma kiem live bao. So do thuc te 21/11: thoat D-pad
+# 121px, "Goc Che Tao" Map001 165px, "Hem tro" (11,8) 135px
+# (duoc nhay); "Sap rau" Map002 spawn 249px (KHONG nhay).
+const LABEL_ESCAPE_MAX_DRIFT := 200.0
+# Vong 12: hinh chu nhat nut D-pad (toa do game) — dung chung cho
+# vat can resolver va luat thoat khi nhan de len nut.
+const DPAD_RECT := Rect2(Vector2(48, 880), Vector2(160, 160))
 # Nhan khong xuong qua y=1200 man hinh (truoc 1264): "Cua ra Cho
 # Dau Moi" sat mep duoi gan bi cat (kiem live 14:34); de 80px
 # thoang o day man hinh.
@@ -1655,17 +1677,53 @@ func _sprite_obstacle_rect(screen_pos: Vector2) -> Rect2:
 	# tinh toan, tang them 15px.)
 	return Rect2(screen_pos + Vector2(-48, -165), Vector2(96, 115))
 
+## Vong 12b: nhan co DE LEN nhan vat chinh / nut D-pad khong?
+## Giao nhau phai >= 10px CA 2 chieu moi tinh — quet nhe vai px
+## thi khong dang ke. Chi xet 2 thu "khong duoc che": dau/than
+## nhan vat chinh (tam man hinh) va nut D-pad (nut bam). De len
+## sprite NPC hay icon (vd "Sap rau" Map002 quet dau Anh Hai
+## sau khi camera cuon) thi CHAP NHAN — neo quan trong hon,
+## khong co test nao bat loi do, va nhay xa 200-600px de tranh
+## NPC moi la loi (nhan bay len troi, mat neo).
+func _label_hits_player_or_dpad(r: Rect2, player_rect: Rect2) -> bool:
+	if player_rect.size != Vector2.ZERO:
+		var inter := r.intersection(player_rect)
+		if inter.size.x >= 10.0 and inter.size.y >= 10.0:
+			return true
+	if _dpad != null and _dpad.visible:
+		var inter2 := r.intersection(DPAD_RECT)
+		if inter2.size.x >= 10.0 and inter2.size.y >= 10.0:
+			return true
+	return false
+
 func _resolve_label_overlaps() -> void:
 	if iso_map == null:
 		return
 	var ct := get_viewport().get_canvas_transform()
 	var obstacles: Array[Rect2] = []
+	# Vat can CUNG cho luot tach sau vong chinh: chi nhan vat
+	# chinh + nut D-pad + sprite NPC — KHONG tinh bieu tuong
+	# icon (sao/ban/cua 48px): nhan tach ra duoc phep che icon
+	# vai px (vd "Goc Che Tao" o 1062 che chan icon cua no
+	# 13px) chu khong duoc che dau nhan vat / nut bam. Vong
+	# chinh van tranh ca icon (obstacles day du).
+	var hard_obstacles: Array[Rect2] = []
 	if player != null:
 		obstacles.append(_sprite_obstacle_rect(ct * player.position))
+		hard_obstacles.append(_sprite_obstacle_rect(ct * player.position))
+	# Vong 12: nut D-pad (man hinh, x 48..208, y 880..1040) la vat
+	# can — nhan (vd "Cua ra Cho Dau Moi" khi nguoi choi di xuong
+	# cuoi map, nhan troi len dung hang nut) khong duoc de len nut.
+	# D-pad ve tren lop UI (tren nhan) nen nut van bam duoc, nhung
+	# nhan chui duoi nut thi khong doc duoc.
+	if _dpad != null and _dpad.visible:
+		obstacles.append(DPAD_RECT)
+		hard_obstacles.append(DPAD_RECT)
 	for mk in iso_map.markers:
 		var sp: Vector2 = ct * mk.global_position
 		if String(mk.event_data.get("kind", "")) == "npc":
 			obstacles.append(_sprite_obstacle_rect(sp))
+			hard_obstacles.append(_sprite_obstacle_rect(sp))
 		elif String(mk.event_data.get("kind", "")) in ["hotspot", "craft", "door"]:
 			# Bieu tuong sao/ban/cua (~48x48px man hinh): nhan "Hem
 			# tro buoi toi" khong duoc che mui ten xanh / sao
@@ -1680,7 +1738,13 @@ func _resolve_label_overlaps() -> void:
 		else:
 			mk.label_override = Rect2()
 	# Nhan NPC truoc (giu tren dau), roi den cac nhan khac; trong
-	# cung loai thi nhan tren truoc.
+	# cung loai thi nhan tren truoc (y tang dan) — vong 12b: thu
+	# tu nay giu nhan tren neo dung y muon (vd "Sap rau" Map002
+	# o 818); thu tu nguoc (y giam dan, thu vong 12b) lam nhan
+	# cua day nhan tren xuong toi 556px vi vat can cua cua
+	# che mat khoang trong gan 978. Nhan cua cham nhau 7px
+	# o cuoi map thi xu ly rieng bang luot tach sau vong chinh
+	# (day nhan tren len 19px) chu khong doi thu tu.
 	entries.sort_custom(func(a, b):
 		var ka := 0 if String(a["mk"].event_data.get("kind", "")) == "npc" else 1
 		var kb := 0 if String(b["mk"].event_data.get("kind", "")) == "npc" else 1
@@ -1721,14 +1785,123 @@ func _resolve_label_overlaps() -> void:
 					r.position = cand.position
 					shifted = true
 					break
-			if not shifted and best_y >= 0.0:
-				r.position.y = best_y
+			# Vong 12 (loi Map002 21/11): dich ngang that bai thi
+			# GIU NGUYEN y muon — KHONG ap best_y o xa. Truoc day
+			# fallback ap best_y ke ca khi cach want_y 200-600px
+			# nen "Sap rau buoi sang" (want 818) bi day len 606
+			# va "Cua di Khu Cong Nhan" (want 1162) bi day len
+			# 556 — nhan troi thanh cot o vung troi, mat neo.
+			# Chong len sprite 1 chut van doc duoc; bay xa thi
+			# khong con biet nhan cua ai. (best_y < 0: khong co
+			# khoang trong nao — cung giu y muon nhu cu.)
+			# NGOAI LE vong 12b: neu nhan o y muon DE LEN nhan
+			# vat chinh / nut D-pad dang ke (vd "Goc Che Tao"
+			# Map001 de len dau nhan vat 96x38px; "Cua ra Cho
+			# Dau Moi" o (11,8) de len nut D-pad 97x38px) thi
+			# CHAP NHAN best_y xa — nhung TOI DA 200px
+			# (LABEL_ESCAPE_MAX_DRIFT). Xa hon thi giu neo
+			# (vd "Sap rau" Map002 spawn: best_y 1067 cach
+			# 249px — nhay thi mat neo, dung yen thi chi che
+			# nhan vat tam thoi khi nguoi choi dung o spawn).
+			# De len NPC/icon thi khong tinh (giu neo; xem
+			# _label_hits_player_or_dpad).
+			if not shifted:
+				var p_rect := Rect2()
+				if player != null:
+					p_rect = _sprite_obstacle_rect(ct * player.position)
+				if best_y >= 0.0 and absf(best_y - want_y) <= LABEL_ESCAPE_MAX_DRIFT and _label_hits_player_or_dpad(r, p_rect):
+					r.position.y = best_y
 		else:
 			r.position.y = best_y
 		r.position.x = clampf(r.position.x, 16.0, 704.0 - r.size.x)
 		r.position.y = clampf(r.position.y, 190.0, LABEL_BOTTOM_MAX - r.size.y)
 		placed.append(r)
 		e["mk"].label_override = r
+	# Vong 12b — luot tach nhan con chong nhau: sau vong chinh
+	# van co the con cap nhan chong nhau (vd 2 nhan cua Map002
+	# cham nhau 7px o spawn, 20px o (4,4): nhan duoi kep o day
+	# 1162 khong dich xuong duoc, nhan tren thi vong chinh khong
+	# biet nhan duoi se toi). Day nhan TREN len tren vua du
+	# (chong + LABEL_GAP), mien la khong vuot top 190 va khong
+	# de len vat can CUNG / nhan khac; neu bi 1 nhan khac chan
+	# thi day luon nhan do len 1 nac (cascade 1 cap — vd "Cua
+	# ve" muon len 1112 nhung "Goc Che Tao" o 1081 chan, thi
+	# day "Goc Che Tao" len 1062 truoc); neu khong day len duoc
+	# thi day nhan DUOI xuong (mien khong vuot day 1200). Lap
+	# toi da 3 luot vi 1 lan day co the tao chong moi voi nhan
+	# phia tren.
+	for _pass in range(3):
+		var moved := false
+		for i in range(entries.size()):
+			for j in range(i + 1, entries.size()):
+				var ri: Rect2 = entries[i]["mk"].label_override
+				var rj: Rect2 = entries[j]["mk"].label_override
+				if ri.size == Vector2.ZERO or rj.size == Vector2.ZERO:
+					continue
+				var inter := ri.intersection(rj)
+				if inter.size.x <= 0.0 or inter.size.y <= 0.0:
+					continue
+				var up_i := i if ri.position.y <= rj.position.y else j
+				var dn_i := j if ri.position.y <= rj.position.y else i
+				var up_r: Rect2 = entries[up_i]["mk"].label_override
+				var dn_r: Rect2 = entries[dn_i]["mk"].label_override
+				# Thu day nhan tren len (co cascade 1 cap).
+				var cand_up := Rect2(Vector2(up_r.position.x, dn_r.position.y - up_r.size.y - LABEL_GAP), up_r.size)
+				if cand_up.position.y >= 190.0 and _try_move_up(up_i, cand_up, hard_obstacles, entries):
+					moved = true
+					continue
+				# Khong len duoc: day nhan duoi xuong.
+				var cand_dn := Rect2(Vector2(dn_r.position.x, up_r.end.y + LABEL_GAP), dn_r.size)
+				if cand_dn.end.y <= LABEL_BOTTOM_MAX and not _rect_hits_any(cand_dn, hard_obstacles, entries, dn_i):
+					entries[dn_i]["mk"].label_override = cand_dn
+					moved = true
+		if not moved:
+			break
+
+## Day nhan o idx len vi tri cand (da tinh san): cho phep neu
+## cand khong de len vat can cung / nhan khac; neu chi bi 1
+## nhan khac chan thi day luon nhan do len 1 nac nua (cascade
+## 1 cap) roi moi day nhan nay. Tra false neu khong day duoc.
+func _try_move_up(idx: int, cand: Rect2, hard_obstacles: Array[Rect2], entries: Array) -> bool:
+	var blocker_idx := -1
+	for o in hard_obstacles:
+		if cand.intersects(o):
+			return false
+	for k in range(entries.size()):
+		if k == idx:
+			continue
+		var ov: Rect2 = entries[k]["mk"].label_override
+		if ov.size != Vector2.ZERO and cand.intersects(ov):
+			if blocker_idx >= 0:
+				return false
+			blocker_idx = k
+	if blocker_idx < 0:
+		entries[idx]["mk"].label_override = cand
+		return true
+	# Bi 1 nhan chan: day nhan do len truoc (len tren cand).
+	var blk: Rect2 = entries[blocker_idx]["mk"].label_override
+	var cand_blk := Rect2(Vector2(blk.position.x, cand.position.y - blk.size.y - LABEL_GAP), blk.size)
+	if cand_blk.position.y < 190.0:
+		return false
+	if _rect_hits_any(cand_blk, hard_obstacles, entries, blocker_idx, idx):
+		return false
+	entries[blocker_idx]["mk"].label_override = cand_blk
+	entries[idx]["mk"].label_override = cand
+	return true
+
+## Kiem tra hinh chu nhat co de len vat can (tho, khong grow)
+## hay nhan da dat nao khac (tru nhan o skip_idx / skip_idx2) khong.
+func _rect_hits_any(r: Rect2, obstacles: Array[Rect2], entries: Array, skip_idx: int, skip_idx2: int = -1) -> bool:
+	for o in obstacles:
+		if r.intersects(o):
+			return true
+	for k in range(entries.size()):
+		if k == skip_idx or k == skip_idx2:
+			continue
+		var ov: Rect2 = entries[k]["mk"].label_override
+		if ov.size != Vector2.ZERO and r.intersects(ov):
+			return true
+	return false
 
 ## Top gan nhat trong khoang doc trong (khong de len vat can / nhan
 ## da dat, cach LABEL_GAP). Tra -1 neu khong co khoang trong nao.
@@ -1754,9 +1927,17 @@ func _nearest_free_y(r: Rect2, obstacles: Array[Rect2], placed: Array[Rect2]) ->
 				next_iv.append(iv)
 			else:
 				if b_lo > lo:
-					next_iv.append([lo, minf(hi, b_lo)])
+					# Vong 12: chi them khoang CON LAI hop le
+					# (lo < hi) — cu them ca khoang rong/dao
+					# ([lo, x] voi x <= lo) lam clampf() tra gia
+					# tri vo nghia o _nearest_free_y.
+					var up := minf(hi, b_lo)
+					if up > lo:
+						next_iv.append([lo, up])
 				if b_hi < hi:
-					next_iv.append([maxf(lo, b_hi), hi])
+					var dn := maxf(lo, b_hi)
+					if dn < hi:
+						next_iv.append([dn, hi])
 		intervals = next_iv
 	var best_y := -1.0
 	var best_dist := 1.0e9
@@ -1828,7 +2009,12 @@ func _build_ui() -> void:
 		var g := Sprite2D.new()
 		g.texture = gtex
 		g.scale = Vector2(1400.0 / float(gtex.get_width()), 900.0 / float(gtex.get_height()))
-		g.position = Vector2(360, 730)  # Mep tren o y=280, duoi chan mat tien (~322).
+		g.position = Vector2(360, 700)  # Vong 12: mep tren o y=250
+			# (truoc 280) — chong len day anh troi (world y 252),
+			# kin khe ho 28px giua anh troi va anh dat gay ra dai
+			# toi ngang man hinh o Map002 (kiem live 12:56 21/11).
+			# Day anh xuong toi y=1150, van du sau tam nhin sau
+			# nhat (day map world y ~869).
 		add_child(g)
 		move_child(g, 0)
 	# Camera bam nguoi choi, zoom CAMERA_ZOOM de thay het map luc

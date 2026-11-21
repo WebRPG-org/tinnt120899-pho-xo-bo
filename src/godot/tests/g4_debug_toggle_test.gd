@@ -1,10 +1,11 @@
 extends SceneTree
-## §29.3 — Nhan debug mac dinh AN, bat/tat bang F9:
+## §29.3 (sua vong 12) — Nhan debug mac dinh HIEN, bat/tat bang F9:
 ##   ~/workspace/pho-xo-bo/tools/godot/godot --headless --path src/godot -s res://tests/g4_debug_toggle_test.gd
-## Cua kiem live 21/11 ~11:32 da qua (di chuyen di duoc ca 4 cach
-## tren ban ba8e4a99) nen nhan debug — tinh nang chan doan TAM —
-## phai an di truoc khi bao chu. Mac dinh an; F9 bat len khi can
-## chan doan; text van cap nhat ke ca khi an.
+## Vong 12 dao mac dinh: HIEN thay vi an — checker 12:56 21/11
+## khong biet bam F9 nen mat cong cu doc o; nhan la cong cu chan
+## doan duy nhat cua checker. Chi an lai sau khi di chuyen da qua
+## kiem live (luat AGENTS.md 21/11). F9 van bat/tat; text van cap
+## nhat ke ca khi an.
 
 var _frame := 0
 var _state := 0
@@ -55,15 +56,15 @@ func _on_frame() -> void:
 				# text da co o spawn (cap nhat ke ca khi an).
 				_check("truoc start: nhan debug an", not _main._dbg_label.visible)
 				_check("truoc start: text co o spawn (4,5)", "(4,5)" in _main._dbg_label.text, _main._dbg_label.text)
-				_check("co mac dinh an", _main._debug_labels_visible == false)
+				_check("co mac dinh HIEN (vong 12)", _main._debug_labels_visible == true)
 				_main._on_start_pressed()
 				_wait = 0
 				_state = 1
 		1:
 			_wait += 1
 			if _wait >= 3:
-				# Sau start: VAN an (mac dinh moi) — D-pad thi hien.
-				_check("sau start: nhan debug VAN an (mac dinh)", not _main._dbg_label.visible)
+				# Sau start: HIEN (mac dinh moi) — D-pad thi hien.
+				_check("sau start: nhan debug HIEN (mac dinh)", _main._dbg_label.visible)
 				_check("sau start: D-pad hien", _main._dpad.visible)
 				_press_f9()
 				_wait = 0
@@ -71,7 +72,7 @@ func _on_frame() -> void:
 		2:
 			_wait += 1
 			if _wait >= 3:
-				_check("F9 lan 1: nhan debug hien", _main._dbg_label.visible)
+				_check("F9 lan 1: nhan debug an", not _main._dbg_label.visible)
 				_check("F9 lan 1: text van co (4,5)", "(4,5)" in _main._dbg_label.text, _main._dbg_label.text)
 				_press_f9()
 				_wait = 0
@@ -79,8 +80,8 @@ func _on_frame() -> void:
 		3:
 			_wait += 1
 			if _wait >= 3:
-				_check("F9 lan 2: nhan debug an lai", not _main._dbg_label.visible)
-				# D-pad phai 1 lan KHI nhan dang an -> van di duoc.
+				_check("F9 lan 2: nhan debug hien lai", _main._dbg_label.visible)
+				# D-pad phai 1 lan KHI nhan dang hien -> van di duoc.
 				_dpad_btn(2).emit_signal("button_down")
 				_state = 4
 		4:
@@ -90,15 +91,15 @@ func _on_frame() -> void:
 		5:
 			_wait += 1
 			if not _main.player._moving and _wait >= 3:
-				_check("D-pad khi nhan an -> van di (5,5)", _main.player.tile == Vector2i(5, 5), str(_main.player.tile))
-				_check("text cap nhat (5,5) du dang an", "(5,5)" in _main._dbg_label.text, _main._dbg_label.text)
+				_check("D-pad khi nhan hien -> van di (5,5)", _main.player.tile == Vector2i(5, 5), str(_main.player.tile))
+				_check("text cap nhat (5,5) du dang hien", "(5,5)" in _main._dbg_label.text, _main._dbg_label.text)
 				_check("bo dem D-pad P:1", "P:1" in _main._dbg_label.text, _main._dbg_label.text)
 				_check("D-pad khong bi toggle anh huong", _main._dpad.visible)
 				_main.set_debug_labels_visible(true)
 				_wait = 0
 				_state = 6
 			elif _wait >= 400:
-				_check("D-pad khi nhan an -> van di (5,5)", false, "ket o " + str(_main.player.tile))
+				_check("D-pad khi nhan hien -> van di (5,5)", false, "ket o " + str(_main.player.tile))
 				_state = 99
 		6:
 			_wait += 1

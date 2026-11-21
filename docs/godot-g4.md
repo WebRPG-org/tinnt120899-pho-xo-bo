@@ -2794,3 +2794,147 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
 2. G4 tiếp: chọn đội/vũ khí trước trận; `can_challenge` ở demo; tile riêng
    Map003–018; camera zoom trận; khối chat online đưa lên tab Tin nhắn;
    server WS auth + giới hạn tốc độ + lịch sử.
+
+## 33. Vòng 12 — Hồi quy D-pad + Map002 vỡ hình + nhãn debug ẩn (21/11 ~13:15–15:30 +07)
+
+### 33.1 Kiểm live 12:56–13:14 báo hồi quy so với kiểm 11:33 (pck `a87a871d`)
+
+1. D-pad/phím hỏng lại ở Xóm Trọ Cũ (Lên/Xuống không đi; Phải/Trái
+   thất thường; D/ArrowRight ×3 không đi; F/P vẫn nhận).
+2. Map002 vỡ hình + kẹt nhân vật: nhãn "Cửa đi Khu Công Nhân",
+   "Sạp rau buổi sáng", "Chị Lệ", "Anh Hải" dồn thành cột ở vùng
+   trời; sạp nén thành dải hẹp; dải tối ngang; nhân vật kẹt ở điểm vào.
+3. Nhãn debug không thấy (vòng 11 để mặc định ẩn, checker không biết F9).
+4. Tap ở Xóm Trọ Cũ vẫn đi được — giữ nguyên.
+5. Phụ: NPC Cô Tư / nhãn cửa đè lên vùng D-pad.
+
+### 33.2 Tái hiện (probe Chromium local, đúng bản live `a87a871d`)
+
+- **Lỗi 1 KHÔNG tái hiện:** Map001 D-pad 4 hướng + phím D +
+  ArrowRight + tap đều đi đúng 1 ô, Q:0, 0 lỗi console. Kết luận:
+  triệu chứng live của checker nhiều khả năng là artifact của
+  harness (tọa độ click/viewport) hoặc bản lai CDN, không phải lỗi
+  code — không bịa fix cho lỗi 1, chỉ giữ nguyên + kiểm lại sau deploy.
+- **Lỗi 2 tái hiện ngay khi vào Map002:** 4 nhãn dồn cột ở trời,
+  sạp nén dải hẹp, dải tối ngang. Nhưng D-pad Trái vẫn đi được
+  (5,4)→(4,4) — nhân vật KHÔNG kẹt trên staging; tap Map002 chưa
+  được thử (probe quay về Map001 trước).
+- Dị thường chẩn đoán: bản deploy `a87a871d` hiện nhãn debug mà
+  KHÔNG cần F9, và P đọc 1 sau 1 lần bấm phím — ngược với source
+  lúc đó (mặc định ẩn). Nghĩa là pck deploy được build từ working
+  copy khác source hiện tại ở ít nhất default nhãn debug. P:0 sạch
+  ở probe vòng 12b (bấm nút start bằng selector thay vì tọa độ
+  hardcode) — P:1 trước đó là click lạc vào vùng D-pad, không phải
+  lỗi đếm phím.
+
+### 33.3 Gốc thật (probe headless engine)
+
+- **Nhãn bay lên trời:** `_resolve_label_overlaps` + `_nearest_free_y`
+  khắc khoảng trống dọc bằng vật cản (mỗi cái phồng LABEL_GAP 12);
+  ở Map002 các marker cụm giữa màn hình nên mọi khoảng trống gần y
+  muốn đều bị khắc hết, fallback cũ áp `best_y` dù cách 200–600px
+  ("Sạp rau" want 818 → 606; "Cửa đi" want 1162 → 556). Kèm bug
+  khoảng đảo (`[lo,hi]` với lo > hi) làm `clampf` trả giá trị rác.
+- **Dải tối:** `sky_band.png` (1120×280) ở offset+(0,-190) = y −28..252;
+  ảnh đất ở (360,730) = y 280..1180 → khe 28px (252..280) lộ màu
+  clear tối.
+- **Sạp nén:** `NadiaScene._draw_facades` vẽ 12 mặt tiền 64px tại
+  tâm iso cách nhau 32px → chồng ngang 50% (biển 58px, mái 60px bị
+  hàng xóm che nửa).
+- Map001 không dính vì marker thưa + nền composite vẽ sẵn phủ kín
+  đầu màn hình. NPC không đi lang thang (tĩnh) — chồng D-pad là do
+  camera di chuyển, không phải NPC đi lại.
+
+### 33.4 Sửa
+
+`src/godot/main.gd`:
+- Nhãn debug **hiện mặc định** trở lại (`_debug_labels_visible=true`),
+  F9 vẫn toggle, vị trí (24,200) giữ nguyên.
+- `_resolve_label_overlaps`: thêm rect D-pad `DPAD_RECT (48,880,160,160)`
+  làm vật cản khi D-pad hiện; fallback **giữ nguyên y muốn** khi
+  `best_y` xa (thay vì áp best_y 200–600px) — nhãn có thể chạm sprite
+  1 chút nhưng vẫn neo đúng marker.
+- `_nearest_free_y`: chỉ thêm khoảng còn lại hợp lệ (`up > lo`,
+  `dn < hi`) — không còn khoảng đảo.
+- `LABEL_MAX_DRIFT` 60 → **120.0** (3 chiều cao nhãn, vẫn neo rõ).
+- Ảnh đất (360,730) → **(360,700)**: mép trên 250 chồng lên đáy
+  ảnh trời 252 — hết dải tối. An toàn cho Map001 (nền composite
+  vẫn phủ y −308..322) và Map003+ (cùng sky_band).
+- **Vòng 12b** (sau khi test mới lộ 3 lỗi hồi quy, xem §33.5):
+  - `LABEL_ESCAPE_MAX_DRIFT = 200.0`: nhãn ở y muốn mà đè lên
+    nhân vật chính / nút D-pad đáng kể (giao nhau ≥10px cả 2 chiều)
+    thì được nhảy xa tới 200px (D-pad 121px, "Góc Chế Tạo" Map001
+    165px, "Hẻm trọ" (11,8) 135px); xa hơn thì giữ neo ("Sạp rau"
+    Map002 spawn 249px — nhảy thì mất neo, đứng yên thì chỉ che
+    nhân vật tạm thời ở điểm spawn). Đè lên NPC/icon thì không tính.
+  - Lượt tách nhãn chồng nhau sau vòng chính: đẩy nhãn TRÊN lên
+    (chồng + LABEL_GAP), kèm **cascade 1 cấp** (nhãn chặn cũng được
+    đẩy lên 1 nấc — vd "Cửa về" muốn lên 1112 bị "Góc Chế Tạo" ở
+    1081 chặn thì đẩy "Góc Chế Tạo" lên 1062 trước); không lên
+    được thì đẩy nhãn dưới xuống. Vật cản lượt tách chỉ tính
+    "cứng" (nhân vật + D-pad + sprite NPC, không tính icon 48px).
+    Sửa 2 nhan cửa Map002: spawn tách ra 12px (1112/1162); ở (4,4)
+    sau Trái cũng tách (cascade).
+  - Thứ tự xử lý giữ y tăng dần (thử y giảm dần ở vòng 12b làm
+    "Góc Chế Tạo" Map002 bay xuống 556px vì vật cản của cửa che
+    mất khoảng trống gần 978 — đã hoàn lại).
+
+`src/godot/scripts/nadia_scene.gd`:
+- `_draw_facades` rẽ sang `_draw_market_row()` riêng cho `map_id == 2`:
+  đoạn tường/mái 34px mỗi ô (chồng 2px giấu khe cầu thang iso), shop
+  chỉ ở ô CHẴN (biển 58px + mái 60px vừa khoảng 64px, không chồng),
+  cửa sổ + chậu hoa ở ô LẺ. Map003+ giữ vẽ cũ (tạm, ngoài phạm vi).
+
+Test:
+- Mới `tests/artpass12_test.gd` (14 kiểm): nhãn debug mặc định hiện;
+  Map002 nhãn neo ≤120px (ngoại lệ thoát ≤200px khi y muốn đè lên
+  nhân vật/D-pad), trong màn hình, không đè D-pad, không cặp nào
+  chồng nhau ≥1px (ngưỡng 1px bỏ qua sai số float 0,5px); không dải
+  tối; D-pad Trái Map002; tap tới (8,6) Map002; Map002 (4,4) sau
+  Trái (đúng repro); Map001 (11,8); D-pad Phải nhanh ×3; bộ đếm P:5.
+  Thứ tự test: tap TRƯỚC, bấm Trái SAU — tap từ (4,4) tới (8,6) đi
+  ngang qua cửa (5,4) sẽ transfer về Map001 (không phải tap hỏng).
+- `tests/g4_debug_toggle_test.gd`, `tests/g4_r11_dbg_test.gd`,
+  `tests/g4_dpad_test.gd` cập nhật theo default mới (hiện; F9 2 chiều).
+- `tools/godot/run_regression.sh`: thêm `artpass12_test` → 41 mục.
+
+### 33.5 Verify vòng này
+
+- `--check-only --script` cho `main.gd`, `nadia_scene.gd`,
+  `artpass12_test.gd`: exit 0. Lưu ý: `--check-only` toàn project
+  (không `--script`) treo >45 phút (tiến trình Godot vẫn chạy 5% CPU,
+  không kết thúc) — đã kill và dùng `--script` từng file thay thế;
+  test headless chạy được chứng tỏ code parse tốt. (Cần xem lại sau:
+  có thể do import toàn project.)
+- Hồi quy đầy đủ: **41 OK, 0 FAIL**.
+- Export web exit 0: pck **6.941.688 byte, SHA `80da1a51…`**, wasm
+  không đổi `fc74679e…`.
+- Browser-verify bản mới `80da1a51` (staging `gh-pages-staging`,
+  `verify_fix.py` + `verify_tap_map002.py`, Chromium + swiftshader):
+  0 console error, 0 request fail cả 2 phiên. Map001: nhãn debug
+  hiện mặc định `Ô (4,5)` P:0 (không F9); D-pad Lên (4,4) / Xuống
+  (4,5) / Trái (chặn bởi Bạn Thân, P:3) / Phải (5,5) / phím D (6,5)
+  / ArrowRight (7,5) đều đúng 1 ô; tap → (8,1) `chạm (8,1)`.
+  Map002: vào bằng cửa (5,4) P:2; Trái → (4,4) P:3 (không kẹt);
+  tap → (8,6) `chạm (8,6)` rồi (8,7) — tap trong Chợ đi được;
+  2 nhãn cửa tách nhau (1112/1162, khe 12px) cả ở spawn lẫn sau
+  Trái (cascade vòng 12b); nhãn neo gần marker, sạp đọc được từng
+  biển (RAU CỦ / HOA QUẢ / BÁNH MÌ), không dải tối, không cột
+  nhãn ở trời. Lưu ý probe: tap ở (620,900) trong Map002 ánh xạ
+  ra ngoài map (6,-1) nên không đi — lỗi điểm chạm của probe,
+  không phải lỗi game; đã thử lại đúng điểm (8,6) thì đi được.
+  Phải ở (5,4) Map002 là cửa về Map001 (transfer đúng luật) nên
+  các bước sau đó của probe chạy ở Map001 — không phải lỗi.
+- Push main + deploy gh-pages: (điền sau khi xong)
+
+### 33.6 Việc tiếp theo
+
+1. Kiểm live bằng cloud browser trên URL thật sau deploy (cửa cuối):
+   D-pad 4 hướng + phím D + tap ở cả 2 map, vào Chợ bằng cửa rồi bấm
+   Trái xem còn vỡ hình không, đọc nhãn debug góc trên-trái.
+2. Nếu live tái hiện lỗi 1 (D-pad chết ở Map001): đối chiếu
+   `versions.json` + SHA pck trước (nghi bản lai CDN), rồi mới nghi
+   code.
+3. Map003+ vẫn dùng vẽ facade cũ chồng 50% (tạm) — sửa khi tới lượt.
+4. Map002 vẫn dùng lại ảnh đất của Map001 (lá/xe đạp/xe đẩy) — cần
+   ảnh đất riêng cho chợ khi làm art Map002.
