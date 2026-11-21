@@ -3138,3 +3138,31 @@ riêng ở nút D-pad giữ nguyên (thừa nhưng vô hại, comment của nó
 - Verify khớp byte từ live: ráp 52 chunk từ `raw.githubusercontent.com` = 6.950.036 byte, SHA `9d9896a97b987031` ✓; `index.html` live SHA `de8c6d44ab176d02` = staging ✓; `versions.json` qua API tại head `c42d44ab` pin `9d9896a9` ✓.
 - Lưu ý CDN (đã biết, §19.8): `versions.json` qua `tinnt120899.github.io` vẫn hiện `d691d82e` ngay sau deploy — Pages CDN cache, repo qua API đã đúng; tải lại sau vài phút sẽ khớp. Không kết luận deploy sai vì curl ngay sau push.
 - Link live: https://tinnt120899.github.io/pho-xo-bo/ (Pages rebuild vài phút sau push).
+
+## 36. Vòng 14b — Claude (b) phần nhanh: Linear Mipmap + thu nhỏ nhân vật 208px (21/11 ~16:35–17:00 +07)
+
+### 36.1 Việc làm (2/3 mục nhanh (b) — hạn trước 21:00 21/11)
+
+1. **Default Texture Filter = Linear Mipmap** (`project.godot` [rendering]): thêm `textures/canvas_textures/default_texture_filter=3` (0 Nearest, 1 Linear, 2 Nearest Mipmap, 3 Linear Mipmap). Trước đó không có setting này (mặc định Linear, không mipmap).
+2. **Bật mipmaps khi import** cho 5 ảnh nhân vật: `art/char_*.png.import` `mipmaps/generate=false` → `true` (chỉ 5 file này; ảnh nền/sky hiển thị ~1:1 nên không cần).
+3. **Thu nhỏ sẵn ảnh nhân vật 512px → 208px** (2× cỡ hiển thị 104px): PIL LANCZOS, giữ alpha. `char_player` 260×512→106×208, `char_cotu` 275→112, `char_banthan` 330→134, `char_chile` 233→95, `char_anhhai` 213→87 (đều cao 208). Gốc 512px lưu ở `visual-check/artpass14/orig-512/`.
+   - An toàn vì `character_sprite.gd` tính scale theo `TEX_HEIGHT / texture.get_height()` (không hardcode 512) — hiển thị vẫn đúng 104px.
+   - `.ctex` sau re-import: player 141.858→50.758 byte, banthan 167.334→57.836 byte; tên file `.ctex` không đổi (hash theo params, không theo nội dung ảnh).
+4. **Chưa làm — nhãn NPC sang Label trong thế giới** (mục (b) thứ 3): là đổi hẳn kiến trúc nhãn (Label con của Marker + chỉ hiện khi ở gần), chồng với fix drift vòng 14 nhưng khác hẳn cách làm; làm riêng ở vòng sau, không gộp vào deploy này để khỏi phá bộ resolver/tests đang PASS. Ghi chú cho vòng sau: phải sửa `marker.gd` + `_resolve_label_overlaps` + các artpass test assert `label_screen_rect()`.
+
+### 36.2 Lỗi export — bài học
+
+- Export lần 1 dùng output `../godot-build/index.pck` → pck chỉ **18.146 byte, bắt đầu bằng `<!DOCTYPE html>`**: Godot 4.7.2 viết shell HTML vào đúng đường dẫn được đưa, không phải pck game. **LUẬT: luôn export bằng đường dẫn của preset (`../godot-build/index.html`), không bao giờ đưa đường dẫn `.pck`.**
+- Export lại đúng cách: exit 0, pck **6.473.700 byte, SHA `cf88493c…`** (nhỏ hơn 6.950.036 của vòng 14 — đúng vì ảnh nhân vật đã thu nhỏ), wasm không đổi `fc74679e…`, HTTP 200 đủ 2 file.
+
+### 36.3 Verify
+
+- `--check-only` (character_sprite.gd, marker.gd) exit 0; hồi quy đầy đủ **43 OK, 0 FAIL**.
+- Browser-verify script mới `visual-check/artpass14/check_r14b.py` (bản đổi tên output của check_r14.py): **0 console error, 0 pageerror, 0 request fail**; game vào được, tap/chạm/điện thoại vẫn chạy như vòng 14.
+- Xem ảnh thật: Map001 (r14b-01) + Map002 (r14b-04) — sprite người chơi/Bạn Thân/Cô Tư/Anh Hải/Chị Lệ hiển thị đúng cỡ 104px, không méo/vỡ; nhãn "Anh Hải"/"Chị Lệ" vẫn sát trên đầu NPC (giữ được fix vòng 14). Còn tồn tại từ trước: nhãn "Sạp rau buổi sáng" hơi đè "Anh Hải", "Góc phế liệu chợ" bị cắt ở mép phải — thuộc layout nhãn, không phải do resize.
+- **Giới hạn ảnh trước/sau:** ACK trên dòng đã hẹn "ảnh trước/sau chụp trên điện thoại thật" — VM không có điện thoại thật; ảnh trước/sau ở đây là screenshot Chromium 720×1280 (r14-*.png vs r14b-*.png). Chủ xem trên điện thoại của mình để duyệt cuối.
+
+### 36.4 Lưu ý đồng bộ art
+
+- 5 PNG đã resize chỉ sống ở **bản local + trong pck** (snapshot-push chỉ nhận file text) — giống mọi art PNG từ trước. File `.import` (text, đã push) thì tương thích cả 2 cỡ ảnh; nhưng **art trên repo main vẫn là bản 512px cũ** — clone mới về sẽ thấy ảnh 512px cho tới khi có cơ chế đẩy art nhị phân. Ghi rõ để vòng sau không tưởng repo đã có ảnh 208px.
+- Ảnh title `char_player.png`/`char_banthan.png` trong `src/godot-build/` cũng đã copy bản 208px mới (45.086 / 53.272 byte) để deploy staging chunk lại với version mới.
