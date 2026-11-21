@@ -21,7 +21,6 @@ var label_override := Rect2()  # Main dat sau khi chong-chong o khong
 	# gian man hinh (vong 4, 20/11 14:00): rong = khong dung, tinh
 	# nhu cu bang label_screen_rect().
 
-const NPC_PARITY_OFFSET := 40.0
 # HUD gon (panel cao thuc te ~157px do min-size cua noi dung, day
 # panel y ~173) nen nhan chi can kep duoi y=190px man hinh (truoc
 # day HUD cao 236px nen kep 268px).
@@ -220,13 +219,13 @@ func label_rect() -> Rect2:
 	var top := -40.0 if kind == "hotspot" or kind == "craft" else -170.0
 	if kind == "door":
 		top = 130.0
-	# Nhan NPC ke o chong nhau (vd "Ban Tro" vs "Co Tu"): le cao nhan
-	# theo chan/le cua (tile.x + tile.y) — 2 o ke nhau luon khac chan/le
-	# nen nhan lech nhau 40px doc, khong chong nua.
-	if kind == "npc" and event_data.has("tile"):
-		var t: Array = event_data["tile"]
-		if (int(t[0]) + int(t[1])) % 2 == 1:
-			top -= NPC_PARITY_OFFSET
+	# Vong 14: BO lech chan/le NPC (truoc NPC_PARITY_OFFSET = 40):
+	# lech 40 world = +50px man hinh cho NPC o le, lam nhan
+	# "Anh Hai" (6,3) noi cao hon "Chi Le" (2,2) 50px ngay tu
+	# vi tri muon — cong them drift resolver -100px thi khe tren
+	# dau 197px trong khi Chi Le chi 47px (probe 21/11). Tach
+	# nhan NPC ke nhau nay la viec cua resolver
+	# (Main._resolve_label_overlaps), khong can lech san.
 	var size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20)
 	var rect := Rect2(-size.x / 2.0 - 8, top, size.x + 16, 26)
 	# Kep nhan trong man hinh hien thi (theo camera that, khong dung

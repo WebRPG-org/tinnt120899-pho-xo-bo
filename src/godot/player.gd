@@ -20,6 +20,13 @@ var _from := Vector2.ZERO
 var _to := Vector2.ZERO
 var _t := 0.0
 var _auto_target := Vector2i(-1, -1)
+# Vong 14 — Duong BFS con lai toi _auto_target (khong gom o hien
+# tai, gom dich). Truoc day _step_toward_auto chi thu 2 huong
+# tham lam (theo |dx|/|dy|) nen gap NPC chan 1 trong 2 huong la
+# bo dich ngay (kiem live 21/11 15:20: tap (1,5) tu (4,5) chet
+# o (3,5) — Ban Than dung do). Nay BFS 4 huong tranh vat chan
+# that (NPC/tuong) roi di theo duong ngan nhat.
+var _auto_path: Array[Vector2i] = []
 # Hang buoc da queue: phim nhan trong luc dang buoc (tween 0.15s) —
 # neu khong ghi lai, keyup den truoc khi tween xong se xoa held
 # va buoc do mat han (nhan nhanh lien tiep chi di duoc 1 o).
@@ -51,12 +58,50 @@ func place(p_map: IsoMap, p_tile: Vector2i) -> void:
 	position = iso_map.tile_center(tile)
 	_moving = false
 	_auto_target = Vector2i(-1, -1)
+	_auto_path.clear()
 	_queued_dirs.clear()
 	if _sprite != null:
 		_sprite.moving = false
 
 func set_auto_target(t: Vector2i) -> void:
 	_auto_target = t
+	_auto_path = _find_path(tile, t)
+
+## BFS 4 huong tu `from` toi `to`, chi qua o is_walkable (tranh
+## NPC/tuong). Tra danh sach buoc (khong gom `from`, gom `to`);
+## rong = khong toi duoc (vd dich bi vay kin) hoac da o dich.
+## Luoi 12x9 nen BFS re — chay moi lan dat dich / tinh lai duong.
+func _find_path(from: Vector2i, to: Vector2i) -> Array[Vector2i]:
+	var path: Array[Vector2i] = []
+	if from == to or iso_map == null or not iso_map.is_walkable(to):
+		return path
+	var prev := {from: Vector2i(-999, -999)}
+	var frontier: Array[Vector2i] = [from]
+	while not frontier.is_empty():
+		var nxt: Array[Vector2i] = []
+		for c in frontier:
+			for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var n: Vector2i = c + d
+				if prev.has(n) or not iso_map.is_walkable(n):
+					continue
+				prev[n] = c
+				if n == to:
+					var cur := n
+					while cur != from:
+						path.push_front(cur)
+						cur = prev[cur]
+					return path
+				nxt.append(n)
+		frontier = nxt
+	return path
+
+## Xoa ca dich tu dong lan duong BFS (phim/D-pad bam tay thi huy
+## tap-to-move — truoc day chi xoa _auto_target, duong cu van
+## con (du chua dung toi vi _step_toward_auto chi chay khi co
+## dich, nhung de thong nhat thi xoa ca hai).
+func _clear_auto() -> void:
+	_auto_target = Vector2i(-1, -1)
+	_auto_path.clear()
 
 ## Tint theo khung gio — chuyen tiep xuong CharacterSprite.
 func set_tint(c: Color) -> void:
@@ -78,7 +123,7 @@ func press_dir(d: Vector2i) -> void:
 	_held_dirs[d] = true
 	if input_blocked or iso_map == null:
 		return
-	_auto_target = Vector2i(-1, -1)
+	_clear_auto()
 	if _moving:
 		if _queued_dirs.size() < 8:
 			_queued_dirs.append(d)
@@ -97,7 +142,7 @@ func press_dir(d: Vector2i) -> void:
 func step_dir(d: Vector2i) -> void:
 	if input_blocked or iso_map == null:
 		return
-	_auto_target = Vector2i(-1, -1)
+	_clear_auto()
 	if _moving:
 		if _queued_dirs.size() < 8:
 			_queued_dirs.append(d)
@@ -143,7 +188,7 @@ func _process(delta: float) -> void:
 			# (nhan 1 lan = di 1 o, khong mat buoc khi nhan nhanh).
 			if not _queued_dirs.is_empty():
 				var q: Vector2i = _queued_dirs.pop_front()
-				_auto_target = Vector2i(-1, -1)
+				_clear_auto()
 				_try_step(q)
 		else:
 			position = _from.lerp(_to, _t)
@@ -153,7 +198,7 @@ func _process(delta: float) -> void:
 	# Giu phim de di lien tuc (khong chi nhan 1 lan / lan bam).
 	var dir := _held_dir()
 	if dir != Vector2i.ZERO:
-		_auto_target = Vector2i(-1, -1)
+		_clear_auto()
 		_try_step(dir)
 	elif _auto_target != Vector2i(-1, -1):
 		_step_toward_auto()
@@ -181,18 +226,33 @@ func _held_dir() -> Vector2i:
 
 func _step_toward_auto() -> void:
 	if _auto_target == tile:
-		_auto_target = Vector2i(-1, -1)
+		_clear_auto()
 		return
-	var dx := _auto_target.x - tile.x
-	var dy := _auto_target.y - tile.y
-	var dirs: Array[Vector2i] = []
-	if absi(dx) >= absi(dy):
-		dirs.append(Vector2i(signi(dx), 0))
-		dirs.append(Vector2i(0, signi(dy)))
-	else:
-		dirs.append(Vector2i(0, signi(dy)))
-		dirs.append(Vector2i(signi(dx), 0))
-	for d in dirs:
-		if d != Vector2i.ZERO and _try_step(d):
+	if _auto_path.is_empty():
+		# Tinh lai duong (vd vua chuyen map / NPC doi cho).
+		_auto_path = _find_path(tile, _auto_target)
+	if _auto_path.is_empty():
+		_clear_auto()  # khong co duong: dung lai
+		return
+	# An toan: _try_step dat `tile` = dich ngay khi bat dau tween
+	# nen `tile` luon la o dang buoc toi — duong BFS tinh tu
+	# `tile` khong bao gio lech do dat dich giua chung. Neu duong
+	# cu lech (vd place() quen xoa — khong xay ra, place xoa roi)
+	# thi tinh lai thay vi buoc cheo 2 o.
+	if _tile_dist(_auto_path[0], tile) != 1:
+		_auto_path = _find_path(tile, _auto_target)
+		if _auto_path.is_empty():
+			_clear_auto()
 			return
-	_auto_target = Vector2i(-1, -1)  # ket duong: dung lai
+	var next_tile: Vector2i = _auto_path[0]
+	if not _try_step(next_tile - tile):
+		# Buoc ke bi chan dot ngot: tinh lai 1 lan roi moi bo.
+		_auto_path = _find_path(tile, _auto_target)
+		if _auto_path.is_empty() or not _try_step(_auto_path[0] - tile):
+			_clear_auto()
+			return
+	_auto_path.pop_front()
+
+## Khoang cach Manhattan (dung kiem tra ke o).
+func _tile_dist(a: Vector2i, b: Vector2i) -> int:
+	return absi(a.x - b.x) + absi(a.y - b.y)

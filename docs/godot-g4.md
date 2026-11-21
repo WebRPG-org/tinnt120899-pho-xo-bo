@@ -3076,3 +3076,56 @@ riêng ở nút D-pad giữ nguyên (thừa nhưng vô hại, comment của nó
 - Kết luận: fix focus đã live trên `d691d82e` và kiểm local đạt.
   Còn cần kiểm live bằng cloud browser trên URL thật (§34.5 mục 2:
   bấm nút HUD thật rồi bấm mũi tên) để chốt hẳn.
+
+## 35. Vòng 14 — Tap BFS vòng NPC + chạm ngoài hình thoi + nhãn Map002 hết nổi cao (21/11 ~15:45–16:30 +07)
+
+### 35.1 Việc làm (4 lỗi từ kiểm live 14:55 + §34.6)
+
+1. **Tap-to-move bỏ cuộc khi NPC chặn đường** (vòng 13: tap (200,900) → đích (1,5) nhưng đường qua (3,5) có Bạn Thân → A xóa ngay, không đi).
+   Gốc: `player.gd:_step_toward_auto()` chỉ thử 2 hướng tham lam theo |dx|/|dy|.
+   Sửa (`player.gd`): BFS 4 hướng `_find_path(from, to)` trên lưới 12×9 qua `is_walkable` (tránh NPC/tường), lưu `_auto_path`; `_step_toward_auto()` đi theo đường, tính lại khi bước kế bị chặn; `_clear_auto()` xóa cả đích lẫn đường (phím/D-pad bấm tay hủy tap-walk); guard kề ô (`_tile_dist == 1`) chống đường lệch khi đặt đích giữa tween (không xảy ra vì `_try_step` đặt `tile` = đích ngay khi bắt đầu tween — guard chỉ là lưới an toàn).
+2. **Chạm ngoài hình thoi đất thì im lặng** (vòng 13: (200,750)/(500,700) không đăng ký gì).
+   Sửa (`main.gd` nhánh tap): `world_to_tile` ngoài biên → kẹp về ô trong biên gần nhất (`clampi` 0..11/0..8) rồi `_nearest_walkable` → đi tới ô đi được gần nhất (chạm vào mặt tiền thì đi tới trước cửa hàng đó); không có ô đi được nào thì toast "Chỗ đó không đi được." (thay vì im lặng). Cả nhánh trong biên mà `_nearest_walkable` trả (-1,-1) cũng toast.
+3. **Nhãn debug che tiêu đề điện thoại** (live 14:55: nhãn (24,200) đè panel điện thoại y=216).
+   Sửa (`main.gd`): `_process` + `set_debug_labels_visible` đặt `_dbg_label.visible = ... and not phone_open and not battle_open` (sửa ở `_process` vì nó đặt lại visible mỗi frame — sửa trong `_open_phone` sẽ bị ghi đè).
+4. **Nhãn NPC Map002 nổi cao trên trời** (live 14:55: "Anh Hải"/"Chị Lệ" cách NPC ~70–200px).
+   Gốc đo bằng probe headless (`/tmp/pxb_r14_label_probe*.gd`, đã xóa sau khi dùng):
+   - `Anh Hải` drift **-100px** (want 706 → 606), khe trên đầu **197px**; `Chị Lệ` drift 0, khe 47px.
+   - Chuỗi gây drift: (a) `NPC_PARITY_OFFSET = 40` (marker.gd) đẩy nhãn NPC ô lẻ lên thêm 50px màn hình (Anh Hải (6,3) lẻ, Chị Lệ (2,2) chẵn) — want_y hai nhãn chỉ cách nhau 50px; (b) `_nearest_free_y` tính vật cản khi chồng X chỉ **1px** (mép nhãn Anh Hải chạm mép vật cản sprite Chị Lệ đúng 1px) → cắt hết khoảng dọc gần neo, best_y rơi về 606.
+   Sửa: **bỏ hẳn `NPC_PARITY_OFFSET`** (tách nhãn NPC kề nhau nay là việc của resolver, không cần lệch sẵn — cặp "Bạn Thân"/"Cô Tư" đều chẵn nên lệch này vốn không tách được chúng); **`_nearest_free_y` chỉ tính vật cản khi chồng X ≥ 10px** (cả obstacles lẫn placed — chồng < 10px thì bỏ qua).
+   Sau sửa (probe lại): Anh Hải drift **0**, khe trên đầu **47px** = Chị Lệ; Map001 không đổi (Cô Tư/Bạn Thân drift 0, khe 47px). Còn drift cũ không sửa vòng này: "Góc Chế Tạo" Map001 -132px (main pass, kẹt giữa vật cản người chơi + nhãn Bạn Thân + icon — nhãn vẫn đọc được, không bay lên trời, để nguyên).
+
+### 35.2 Không tái hiện: nền mờ sau điện thoại ở Chợ (live 14:55 mục d)
+
+- Kiểm bằng ảnh thật (r14-05, xem §35.4): mở điện thoại ở Chợ, nền mờ sau panel là **cảnh Chợ hiện tại** (sạp + nhãn "Cửa đi Khu Công Nhân" dưới panel), không có "CA PHE" nào. Code cũng cho thấy `_phone_dim` chỉ là ColorRect đen 0.55 phủ lên map hiện tại; "CA PHE" chỉ tồn tại trong `bg_map001.png`/`title_bg.png` (Map001/title, đã ẩn khi chơi). Kết luận: mục (d) là đọc nhầm của checker (có thể là panel 2 bên desktop hiện tranh title) — không có lỗi để sửa, không bịa fix.
+
+### 35.3 Test mới + hồi quy
+
+- `tests/g4_r14_tap_test.gd`: **15/15 PASS** — spawn (4,5); chạm (200,750)/(500,700) đăng ký đích + ghi "chạm (x,y)" + đích đi được; BFS (4,5)→(1,5) đúng 5 bước, không qua (3,5)/(5,4), tới đích + xóa auto-target, không chuyển map giữa chừng; mở điện thoại → nhãn debug ẩn, đóng → hiện lại.
+  - Bài học test: `tile` được đặt ngay khi bắt đầu tween nên kiểm "tới đích" ngay thì thiếu 1 bước `moved_to` + auto-target chưa xóa — phải chờ 3 frame sau khi hết tween mới assert.
+- Hồi quy đầy đủ: **43 OK, 0 FAIL** (42 cũ + 1 mới; `run_regression.sh` thêm `g4_r14_tap_test`).
+- `--check-only` exit 0 (main.gd, player.gd, marker.gd, test mới — chạy sau `--import` để tránh cache class cũ, bài học §8.3); scene Main 120 frame exit 0, 0 ERROR/warning.
+- Export web exit 0: pck **6.950.036 byte, SHA `9d9896a9…`** (trước `d691d82e…`), wasm không đổi `fc74679e…`; HTTP 200 đủ 2 file (cổng 8166).
+
+### 35.4 Browser-verify thật (Chromium 1255 + swiftshader, 720×1280, build 9d9896a9)
+
+- Script mới `visual-check/artpass14/check_r14.py` (tái chạy được).
+- **Lỗi verify lần 1:** click nút bắt đầu sai tọa độ — script dùng fallback (360,740) của bản staging có DOM overlay, nhưng build thô `src/godot-build` không có `web_shell.html` nên nút "Bắt đầu chơi" là Button trong canvas ở ~(360,1060); click (360,740) trúng panel trên nút, game mãi ở title, 6 ảnh byte-identical. Sửa script click (360,1060) rồi chạy lại. Bài học: **verify build thô ≠ verify staging — nút bắt đầu khác vị trí; ảnh byte-identical liên tiếp = game chưa vào, không phải kết quả.**
+- **Lần 2 — PASS, đã xem ảnh thật, 0 console error, 0 pageerror, 0 request fail:**
+  - Tap (200,750): nhãn debug `Ô (2,4) • chạm (1,1) / A:(1, 1)` — đăng ký đích ngay; 4s sau `Ô (1,1) • chạm (1,1) / A:(-1, -1)` — đã đi tới (1,1) và xóa đích. (r14-02/03)
+  - Map002 lúc vào: "Chị Lệ" + "Anh Hải" nằm sát trên đầu NPC (khe ~47px), không còn chồng thành cột ở vùng trời như ảnh 60-m2-arrival. (r14-04)
+  - Mở điện thoại ở Chợ: tiêu đề "Điện thoại — Danh bạ / Tin nhắn" đọc đủ, **không còn nhãn debug đè lên**; nền mờ là cảnh Chợ. Đóng điện thoại: nhãn debug hiện lại. (r14-05/06)
+- Còn lại (không sửa vòng này): sạp chợ Map002 vẫn là khối hộp be nhỏ/thô (chờ hướng art Claude — xem §35.6); nhãn "Cửa đi Khu Công Nhân" ở sát đáy bị toast đè nhẹ (đã biết từ trước).
+
+### 35.5 Việc tiếp theo
+
+1. **Claude đã trả lời về đồ họa** (dòng Notion `41f4047a-8982-81ff-ac73-d293ef69307e`, xem §35.6) — Center ĐÃ NHẬN + ETA đã ghi trên dòng lúc 15:45 (trước vòng này). Việc nhanh (b) hạn trước 21:00 21/11: Default Texture Filter = Linear Mipmap + bật mipmaps khi import, thu nhỏ sẵn ảnh nhân vật về 208px, chuyển nhãn NPC sang Label trong thế giới; gửi ảnh trước/sau chụp trên điện thoại thật. Làm ở vòng sau ngay sau khi deploy vòng 14 xong.
+2. Dựng lại Map001 (hạn 12:00 22/11), nhân vật 6 khung (20:00 22/11), ánh sáng + sự sống (23/11) — theo ETA đã ghi trên dòng.
+3. Sạp chợ Map002 (khối be thô) — làm khi tới lượt art Map002, sau khi Map001 theo hướng Claude xong.
+
+### 35.6 Claude trả lời — đã nhận (21/11 ~15:45, dòng 41f4047a-8982-81ff-ac73-d293ef69307e)
+
+- Chủ (qua trợ lý Claude) đã chuyển trả lời cho câu hỏi đồ họa Center gửi sáng 21/11. Toàn văn đã đọc tươi (fetch 16:00): chẩn đoán 4 điểm gốc — (1) ảnh nền AI trộn với nhà vẽ bằng code trong `nadia_scene.gd` → hai phong cách đánh nhau; (2) nhân vật 512px thu còn 104px không mipmap → răng cưa, chỉ 1 khung; (3) map iso 12×9 chỉ phủ ~1/3 màn dọc, trời trống; (4) nhãn NPC trên CanvasLayer nên lơ lửng.
+- 3 việc theo thứ tự (chi tiết + tên node trong trang chẩn đoán `41f4047a-8982-81fe-9924-e3926327667b`): (1) Dựng lại Map001: blockout Blender (camera ortho X=60°, Z=45°) → AI vẽ đè → 4 lớp Ground/YSort/Foreground/LightsLayer, phủ kín 9:16 bằng nhà ống cao + tiền cảnh, tắt hẳn vẽ nhà bằng code; (2) Nhân vật 6 khung (trước/sau-3/4 × 3 khung, lật ngang), ảnh 2× cỡ hiển thị, Linear Mipmap, nhãn là Label con của nhân vật, chỉ hiện khi ở gần; (3) Ánh sáng: nền đêm nướng sẵn + sprite phát sáng cộng dồn + CanvasModulate chiều + 3–5 chuyển động nhỏ (hơi nồi phở, biển đung đưa, lá rơi).
+- Center ĐÃ NHẬN + ETA đã ghi trên dòng lúc 15:45 (do main agent ghi — vòng 14 này chạy sau đó): Center tự làm (không giao Muse Editor — bạn ấy giữ giám sát 30 phút + Bộ hiệu ứng hạn 18:00). ETA: (b) việc nhanh trước 21:00 21/11; (1) Map001 trước 12:00 22/11; (2) 6 khung trước 20:00 22/11; (3) ánh sáng 23/11. Làm trọn Map001 trước, không trải nhiều map; mỗi việc xong gửi ảnh điện thoại duyệt; xếp lịch không trễ slot 1Min/Ủa và vòng thử (PV-07).
+- LƯU Ý cho vòng sau: việc (b) "chuyển nhãn NPC sang Label trong thế giới" CHỒNG với fix D vòng 14 (vòng 14 giữ CanvasLayer nhưng sửa drift) — (b) là đổi hẳn kiến trúc nhãn (Label con của Marker trong thế giới + chỉ hiện khi ở gần), phải làm riêng sau khi deploy vòng 14, không gộp chung để tránh phá bộ resolver/artpass tests đang PASS.

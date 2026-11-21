@@ -303,7 +303,11 @@ func _process(delta: float) -> void:
 		_dpad.visible = not title_open and not phone_open and not dialogue_open and not battle_open
 	if _dbg_label != null:
 		# Vong 12: nhan debug mac dinh HIEN (xem _debug_labels_visible).
-		_dbg_label.visible = not title_open and _debug_labels_visible
+		# Vong 14: an khi dien thoai/tran mo — nhan o (24,200) de
+		# len tieu de "Dien thoai" cua panel (panel y=216) (loi
+		# live 21/11 14:55). Sua o day vi _process dat lai
+		# visible moi frame (sua trong _open_phone se bi ghi de).
+		_dbg_label.visible = not title_open and _debug_labels_visible and not phone_open and not battle_open
 	# Vong 11: cap nhat nhan debug MOI FRAME (ke ca khi an) —
 	# _update_dbg() truoc day chi goi tu moved_to, ma moved_to chay
 	# TRUOC khi queue pop / auto-target clear trong player._process
@@ -438,6 +442,20 @@ func _unhandled_input(event: InputEvent) -> void:
 	var world_pos: Vector2 = get_viewport().get_canvas_transform().affine_inverse() * click_pos
 	var tile := iso_map.world_to_tile(world_pos)
 	if not iso_map.in_bounds(tile):
+		# Vong 14 — cham NGOAI hinh thoi dat (troi/mat tien) truoc
+		# day im lang (kiem live 21/11 15:20: (200,750)/(500,700)
+		# khong dang ky gi, A van (-1,-1)). Nay kep ve o trong
+		# bien gan nhat roi di toi o di duoc gan nhat — cham vao
+		# mat tien thi di toi truoc cua hang do; neu khong co o
+		# di duoc nao thi toast thay vi im lang.
+		var clamped := Vector2i(clampi(tile.x, 0, 11), clampi(tile.y, 0, 8))
+		var wt_out := _nearest_walkable(clamped)
+		if wt_out != Vector2i(-1, -1):
+			_last_input = "chạm (%d,%d)" % [wt_out.x, wt_out.y]
+			player.set_auto_target(wt_out)
+			_update_dbg()
+		else:
+			show_toast("Chỗ đó không đi được.")
 		return
 	var ev := iso_map.event_at(tile)
 	if not ev.is_empty() and _tile_dist(tile, player.tile) <= 1:
@@ -452,6 +470,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			_last_input = "chạm (%d,%d)" % [wt.x, wt.y]
 			player.set_auto_target(wt)
 			_update_dbg()
+		else:
+			show_toast("Chỗ đó không đi được.")
 
 ## Tim o di duoc gan nhat tu t (BFS tren luoi 12x9) — dung cho
 ## tap-to-move khi diem cham roi vao o bi chan (tuong/mat tien).
@@ -1913,11 +1933,17 @@ func _rect_hits_any(r: Rect2, obstacles: Array[Rect2], entries: Array, skip_idx:
 ## da dat, cach LABEL_GAP). Tra -1 neu khong co khoang trong nao.
 func _nearest_free_y(r: Rect2, obstacles: Array[Rect2], placed: Array[Rect2]) -> float:
 	var blockers: Array[Rect2] = []
+	# Vong 14: chi tinh vat can / nhan da dat khi chong nhau theo
+	# X >= 10px — truoc day chong 1px cung tinh (vd mep nhan
+	# "Anh Hai" cham mep vat can sprite "Chi Le" dung 1px) lam
+	# cat het khoang doc gan neo, day nhan bay -100px len troi
+	# (probe 21/11). Chong < 10px thi bo qua — nhan lech nhau
+	# vai px van doc duoc, khong dang bay xa.
 	for o in obstacles:
-		if o.end.x > r.position.x and o.position.x < r.end.x:
+		if minf(o.end.x, r.end.x) - maxf(o.position.x, r.position.x) >= 10.0:
 			blockers.append(o)
 	for p in placed:
-		if p.end.x > r.position.x and p.position.x < r.end.x:
+		if minf(p.end.x, r.end.x) - maxf(p.position.x, r.position.x) >= 10.0:
 			blockers.append(p)
 	var top_min := 190.0
 	var top_max := LABEL_BOTTOM_MAX - r.size.y
@@ -2415,7 +2441,7 @@ func _dpad_release(dir: Vector2i) -> void:
 func set_debug_labels_visible(v: bool) -> void:
 	_debug_labels_visible = v
 	if _dbg_label != null:
-		_dbg_label.visible = v and not title_open
+		_dbg_label.visible = v and not title_open and not phone_open and not battle_open
 
 ## Vong 10 — Nhan debug: o hien tai + input di chuyen cuoi + co
 ## dang khoa input khong. De kiem live doc duoc ngay input co toi
