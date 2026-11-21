@@ -2766,8 +2766,21 @@ Live 16:01–16:26 (bản artpass6): chia đôi sáng/tối ĐÃ HẾT, tiêu đ
   nền tối đọc rõ; (9,4)→(10,4) đúng, phải nữa vẫn (10,4); tap → (10,6)
   + nhãn tươi `A:(-1,-1)`; diff ảnh sau tap 11,6% (camera cuộn);
   0 console error.
-- Push main — (điền commit sau khi push).
-- Deploy gh-pages — (điền commit sau khi deploy + verify khớp byte).
+- Push main — **XONG, commit `aaf2b5c5`** (5 file: `main.gd`, test r11 +
+  `.uid`, `run_regression.sh`, docs §32). Lưu ý: lần push đầu bị từ chối
+  "not a fast forward" vì agent §31 push xen vào (`de283d81`, battle anim)
+  — đã đối chiếu lại: `battle_scene.gd` IDENTICAL, `main.gd`/`run_regression.sh`/
+  docs chỉ khác đúng phần r11, rồi push lại từ head mới. Bài học: `list_commits`
+  muốn xem branch khác phải dùng tham số `sha`, không phải `branch`.
+- Deploy gh-pages — **XONG, 5 lô**: (1) pck 000–016 → `dcb80bbc`;
+  (2) 017–033 → `009d5145`; (3) 034–051 → `29e1fdde`;
+  (4) `versions.json` → `e6134e80`; (5) `index.html` CUỐI → `91dfacf4`.
+  Sync record 163 entries.
+- Verify từ remote: ráp lại 52 chunk pck = 6.922.136 byte, SHA
+  **`a87a871dc2f9d2ce`** = build local; `index.html` SHA `4fa85edcea5fc7af`
+  = staging; `versions.json` qua API blob SHA `7882a5da` = staging, pck
+  `a87a871d` (raw.githubusercontent.com vẫn hiện `7dec3410` ngay sau deploy
+  do CDN cache — đã biết từ §31, không phải deploy sai).
 
 ### 32.5 Việc tiếp theo
 
