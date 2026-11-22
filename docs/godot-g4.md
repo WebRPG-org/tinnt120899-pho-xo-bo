@@ -3947,3 +3947,103 @@ sprite sạp riêng, hiện là 1 phần ảnh nền composite).
 5. Chủ vẫn chưa trả lời widget duyệt ảnh walk cycle vòng 18 (gửi
    ~12:52 22/11) — vòng 18 đã lên live, nếu chủ chê thì làm lại
    theo ý chủ ở vòng sau.
+
+## 44. Vòng 22 — Walk cycle 4 NPC + patrol đi lang thang (22/11 ~20:45–21:30 +07)
+
+### 44.1 Art — 24 frame walk cycle NPC (đã có sẵn từ 13:48 22/11)
+
+Art đã được chuẩn bị trước lượt này (artpass22, quy trình y hệt
+vòng 18 — sheet 6 nhân vật/hàng → cắt theo khe trắng, flood fill
+trắng→trong suốt, resize cao 208px): 4 sheet 2736×912 + 24 frame
+`walk_cotu/banthan/chile/anhhai_f0..f5.png` (RGBA, cao 208px) trong
+`src/godot/art/`, ghi chú `visual-check/artpass22/walkcycle-npc-note.md`
+(kiểm bằng mắt: đúng 6 nhân vật/sheet, tư thế chân tiến triển,
+f5 ≈ f0 như vòng 18). Lượt này có spawn subagent gen lại art —
+đã đóng ngay khi thấy art đủ + đúng spec, tránh gen trùng.
+PNG nhị phân chỉ sống local + trong pck (tiền lệ vòng 18); chỉ
+`.import` mới push.
+
+### 44.2 Code — frames NPC + patrol (Main quyết, Marker thực thi)
+
+| File | Đổi |
+|---|---|
+| `scripts/marker.gd` | `NPC_STYLE` thêm `"frames"` 6 đường dẫn/NPC; patrol API: `home_tile`/`patrol_tile()` (ô logic, đổi khi tween xong), `patrol_walk_to(dest, world_pos)` (tween 0.30s/o = 1 chu trình walk cycle, `moving` bật frame, `facing` theo dx; từ chối khi đang bước/cùng ô), `patrol_moving()`, `has_walk_frames()`; tween tiến trong `_process`. |
+| `main.gd` | `_update_npc_patrol(delta)` (gọi mỗi frame sau `_update_npc_labels`): quyết định mỗi 0.5s; NPC nghỉ ngẫu nhiên 4–9s rồi bước sang 1 ô đất trống kề nhà (`_npc_patrol_pick`: đi được + không event + không phải ô người chơi/NPC khác), ở ngoài 2–5s rồi về; **về nhà ngay khi người chơi lại gần (≤5 ô, cùng ngưỡng hiện nhãn) hoặc mở UI/hội thoại/title** — vì `event_at`/`is_walkable` dùng data tĩnh theo ô nhà, tương tác E chỉ đúng khi NPC đứng đúng ô nhà. Lần gặp đầu cũng nghỉ ngẫu nhiên (không cho cả 2 NPC cùng bước ra ngay tick đầu). |
+| `tests/g4_r22_npc_walk_test.gd` (mới) | 41 mục: 4 NPC đủ 6 frame + đổi khung theo nhịp + về frame 0 khi đứng yên; thiếu frame → fallback ảnh đơn; Marker patrol (home, tween 0.30s, đổi ô logic, từ chối lệnh chen/cùng ô, về nhà); pick 20 lần đều ô kề hợp lệ + nhiều hơn 1 đích; Main: xa → bước ra, gần → về nhà, mở hội thoại khi ở ngoài → lệnh về nhà. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r22_npc_walk_test` vào danh sách (nay 46 suite + online). |
+
+### 44.3 Lỗi tìm được khi làm
+
+1. **Test fail giả do `title_open=true` lúc khởi động** — patrol
+   bị chặn theo đúng thiết kế (đứng yên khi title mở) nên test
+   "người chơi xa → NPC bước ra" timeout 30 frame. Sửa test
+   (không sửa game): đặt `_main.title_open = false` như đã bấm
+   Bắt đầu. Bài học: test nào cần game đang chạy phải tắt title
+   trước — ghi nhớ cho test sau.
+2. **Delta headless quá nhỏ làm tween patrol timeout giả** —
+   frame headless chạy nhanh, delta ~1ms nên tween 0.30s cần
+   hàng trăm frame mới xong (state 5 timeout 120 frame lần đầu).
+   Sửa test: khi NPC đang bước thì gọi tay `_process(0.35)` để
+   đẩy nhanh tween (tree cũng gọi `_process` nên chỉ nhanh hơn,
+   không sai lệch). Tiền lệ: test sau có tween thì lái tay như vậy.
+3. **`var t := home + d` không suy được kiểu** (d từ mảng literal
+   không kiểu) — parse error ở `main.gd:1833`. Sửa: `var t:
+   Vector2i = home + d`. Bài học: vòng lặp qua mảng literal
+   Vector2i thì khai kiểu tường minh cho biến dùng `+`.
+
+### 44.4 Verify thật vòng này
+
+- `--check-only` main/marker/test: PASS.
+- Test mới `g4_r22_npc_walk_test`: **41/41 PASS** (lần đầu 37/38
+  do lỗi 1, lần hai 40/41 do lỗi 2 — sửa test, chạy lại PASS hết).
+- Hồi quy đầy đủ `run_regression.sh`: **50 OK, 0 FAIL** (49 cũ +
+  1 mới r22; gồm online server 37/37 + probe OK).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **14.396.484 byte, SHA `a5964dee…`**
+  (trước `b501abd2`, +882KB do 24 frame NPC); wasm không đổi
+  `fc74679e`; `grep -a` thấy `walk_cotu/banthan/chile/anhhai` ×24
+  trong pck; HTTP 200 đủ 6 file (cổng 8176).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass22/check_r22.py`, ảnh `r22-01…03`):
+  **0 console error, 0 pageerror, 0 request fail.**
+  - Spawn Map001: Cô Tư + Bạn Thân đứng ở nhà, nhãn hiện.
+  - Người chơi về (1,1), chờ 12s: cả 2 NPC đã bước ra khỏi ô
+    nhà (Bạn Thân sang trái gần xe đẩy, Cô Tư xuống dưới gần
+    cửa) — nhãn ẩn đúng luật xa >5 ô.
+  - Người chơi về (4,6), chờ 3s: cả 2 NPC về đúng ô nhà, nhãn
+    hiện lại như lúc spawn — patrol về nhà đã thấy bằng mắt.
+
+### 44.5 Deploy — XONG, verify live khớp byte (22/11 ~21:30–22:25 +07)
+
+- Push main 2 lô (không gián đoạn lần nào): lô A code
+  `fa2ccea1` (main/marker/test/run_regression), lô B
+  `84b721bf` (24 `.import` walk NPC + check_r22 + note +
+  slice script). Head main `84b721bf` (trước `c4059abb`).
+  Sync record 216 entries.
+- Staging rebuild `build_gh_pages.py` VERIFY OK: pck
+  `a5964dee` 107 chunk / 14.396.484 byte khớp byte, wasm
+  `fc74679e` 293 chunk không đổi, img khớp, loader đủ.
+- Deploy 7 lô gh-pages: part 000–019 `26f527f0`, 020–039
+  `8a17fb1e`, 040–059 `78e666b0`, 060–079 `271bf7a7`,
+  080–099 `09f2f03d`, 100–106 `6fc7b42e`, versions.json +
+  index.html cuối `b0b97773`. Sync record 223 entries.
+- Verify live bằng byte: `versions.json` live pin `a5964dee`
+  (sau lag Pages ~3 phút); tải + giải base64 + ráp 107 part
+  từ live = **14.396.484 byte, SHA `a5964dee` — khớp đúng
+  từng byte**; index.html live liệt kê part `a5964dee`.
+- **Live nay chạy vòng 22**: walk cycle 4 NPC + patrol đi
+  lang thang. Link: https://tinnt120899.github.io/pho-xo-bo/
+- Lưu ý verify: part `.txt` trên live là base64 — ráp trực
+  tiếp ra 19.195.312 byte, SHA sai; phải `base64 -d` từng
+  part rồi mới ráp (tỉ lệ 4/3 đúng bằng chứng).
+
+### 44.6 Việc tiếp theo
+
+1. Sạp chợ Map002 (khối be thô + biển hiệu nổi) — §42.5 mục 3.
+2. Kiểm live lại bằng cloud browser (luật kiểm live) — bản mới
+   có patrol, cần xem NPC đi lại trên live có mượt không.
+3. Khói nồi phở / biển đung đưa — §42.5 mục 5.
+4. NPC Map003–018 vẫn dùng ảnh đơn + nhún (chỉ 4 NPC Map001–002
+   có walk cycle): khi nào art NPC các khu khác có sheet thì nối
+   `frames` theo đúng mẫu `NPC_STYLE` này (không cần sửa code
+   patrol — `CharacterSprite` tự fallback khi thiếu file).
