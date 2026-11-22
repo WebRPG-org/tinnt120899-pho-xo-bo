@@ -32,6 +32,56 @@ const SIGNS_MAP1 := ["PHỞ BÒ", "CÀ PHÊ", "TẠP HÓA", "CHO THUÊ",
 	"CƠM TẤM", "BÁNH MÌ", "SỬA XE", "CHÁO LÒNG"]
 const SIGNS_MAP2 := ["RAU CỦ", "CÁ TƯƠI", "THỊT HEO", "TRÁI CÂY",
 	"BÁNH MÌ", "GIA VỊ", "HOA QUẢ", "ĐỒ KHÔ"]
+
+## Vong 23 — Sap cho Map002: bien hieu to co mau rieng theo loai hang
+## + hang tren quay dung loai cua sap (khong random theo hash nua).
+## Ly do khong dung sprite tach rieng (§42.5.3): o hang 0 cach nhau
+## 32px man hinh, sprite 64px se bi tuong nha le che 17px moi ben
+## (chi thay ~30px) — phai doi cau truc hang moi dung duoc sprite;
+## ve lai bang code dung buoc iso hien co, de vong sau lam sprite
+## neu doi hang thanh sap cach nhau (o le de trong).
+const STALL_KIND_COLORS := {
+	"rau": Color(0.25, 0.50, 0.25, 1),
+	"ca": Color(0.20, 0.45, 0.60, 1),
+	"thit": Color(0.65, 0.25, 0.22, 1),
+	"trai-cay": Color(0.80, 0.45, 0.15, 1),
+	"banh-mi": Color(0.55, 0.38, 0.20, 1),
+	"gia-vi": Color(0.50, 0.35, 0.55, 1),
+	"hoa-qua": Color(0.75, 0.35, 0.45, 1),
+	"do-kho": Color(0.60, 0.50, 0.30, 1),
+}
+
+## Loai hang theo bien hieu (8 bien SIGNS_MAP2).
+static func stall_goods_kind(sign: String) -> String:
+	match sign:
+		"RAU CỦ":
+			return "rau"
+		"CÁ TƯƠI":
+			return "ca"
+		"THỊT HEO":
+			return "thit"
+		"TRÁI CÂY", "HOA QUẢ":
+			return "trai-cay"
+		"BÁNH MÌ":
+			return "banh-mi"
+		"GIA VỊ":
+			return "gia-vi"
+		"ĐỒ KHÔ":
+			return "do-kho"
+	return "rau"
+
+## Mau nen bien hieu theo loai hang (mac dinh: go nau cu).
+static func stall_sign_color(sign: String) -> Color:
+	return STALL_KIND_COLORS.get(stall_goods_kind(sign), Color(0.42, 0.28, 0.16, 1))
+
+## O chan co sap o hang 0 (vong 12): bien hieu + mai hien + quay.
+static func market_stall_tiles() -> Array:
+	return [0, 2, 4, 6, 8, 10]
+
+## Hang co sap ben o tuong ben (vong 23): hang le la tuong tran
+## (ap phich / cay leo / vet loang) de day sap co nhip, khong dac.
+static func side_stall_rows() -> Array:
+	return [2, 4, 6]
 const WALL_TINTS := [
 	Color(0.93, 0.82, 0.55, 1), Color(0.88, 0.76, 0.50, 1),
 	Color(0.95, 0.87, 0.62, 1), Color(0.85, 0.78, 0.58, 1),
@@ -175,7 +225,11 @@ func _draw_ground() -> void:
 				draw_arc(c + Vector2(0, 2), 7, PI * 0.1, PI * 0.9, 8, Color(1, 1, 1, 0.55), 1.5)
 
 func _draw_side_walls() -> void:
-	# Tuong 2 ben hem: thap, co ap phich / cay leo, khong che tam nhin.
+	# Tuong 2 ben hem: vong 23 — hang chan (2,4,6) la sap ben
+	# (mai hien ke + quay hang + bien nho), hang le la tuong van
+	# go + ap phich/cay leo/vet loang. Truoc day moi hang deu la
+	# hinh chu nhat be phang + ap phich ti hon — doc nhu "khoi be
+	# tho" xep bac thang (anh r20).
 	for ty in range(1, 8):
 		for tx in [0, 11]:
 			var c := tile_center(Vector2i(tx, ty))
@@ -183,14 +237,21 @@ func _draw_side_walls() -> void:
 			var tint: Color = WALL_TINTS[h % WALL_TINTS.size()].darkened(0.08)
 			draw_rect(Rect2(c + Vector2(-32, -30), Vector2(64, 46)), tint)
 			draw_rect(Rect2(c + Vector2(-32, -30), Vector2(64, 5)), tint.lightened(0.15))
+			# Van go ngang + bong canh trai (bot phang).
+			draw_line(c + Vector2(-32, -14), c + Vector2(32, -14), tint.darkened(0.18), 1.0)
+			draw_line(c + Vector2(-32, 2), c + Vector2(32, 2), tint.darkened(0.18), 1.0)
+			draw_rect(Rect2(c + Vector2(-32, -30), Vector2(3, 46)), Color(0, 0, 0, 0.08))
 			# Bong duoi chan tuong.
 			draw_rect(Rect2(c + Vector2(-32, 12), Vector2(64, 4)), Color(0, 0, 0, 0.15))
-			if h % 3 == 0:
-				# Ap phich.
-				draw_rect(Rect2(c + Vector2(-14, -24), Vector2(20, 26)), Color(0.96, 0.94, 0.86, 1))
-				draw_rect(Rect2(c + Vector2(-11, -20), Vector2(14, 4)), Color(0.75, 0.25, 0.2, 1))
-				draw_rect(Rect2(c + Vector2(-11, -13), Vector2(14, 2)), Color(0.3, 0.35, 0.4, 0.8))
-				draw_rect(Rect2(c + Vector2(-11, -8), Vector2(14, 2)), Color(0.3, 0.35, 0.4, 0.8))
+			if ty in side_stall_rows():
+				_draw_side_stall(c, h)
+			elif h % 3 == 0:
+				# Ap phich (to hon truoc: 24x30, co thanh do).
+				draw_rect(Rect2(c + Vector2(-12, -26), Vector2(24, 30)), Color(0.96, 0.94, 0.86, 1))
+				draw_rect(Rect2(c + Vector2(-12, -26), Vector2(24, 6)), Color(0.75, 0.25, 0.2, 1))
+				draw_rect(Rect2(c + Vector2(-9, -16), Vector2(18, 2)), Color(0.3, 0.35, 0.4, 0.8))
+				draw_rect(Rect2(c + Vector2(-9, -11), Vector2(18, 2)), Color(0.3, 0.35, 0.4, 0.8))
+				draw_rect(Rect2(c + Vector2(-9, -6), Vector2(12, 2)), Color(0.3, 0.35, 0.4, 0.8))
 			elif h % 3 == 1:
 				# Cay leo bo tuong.
 				for k in range(4):
@@ -201,6 +262,33 @@ func _draw_side_walls() -> void:
 					c + Vector2(-10, -28), c + Vector2(-2, -28),
 					c + Vector2(-6, -6), c + Vector2(-14, -6),
 				]), Color(0.45, 0.38, 0.28, 0.25))
+
+## Sap ben o tuong ben (vong 23): bien nho + mai hien ke + quay
+## hang + hang theo loai. Bien dung SIGNS_MAP2 theo hash nhu
+## hang 0 (cung cho, cung bien).
+func _draw_side_stall(c: Vector2, h: int) -> void:
+	var text := String(SIGNS_MAP2[h % SIGNS_MAP2.size()])
+	var board_col: Color = stall_sign_color(text)
+	# Bien nho (52x12) sat dinh tuong.
+	draw_rect(Rect2(c + Vector2(-26, -28), Vector2(52, 12)), Color(0, 0, 0, 0.25))
+	draw_rect(Rect2(c + Vector2(-26, -30), Vector2(52, 12)), board_col)
+	draw_rect(Rect2(c + Vector2(-26, -30), Vector2(52, 12)), Color(1.0, 0.93, 0.70, 1), false, 1.0)
+	if font != null:
+		var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+		draw_string(font, Vector2(c.x - tw / 2.0, c.y - 20), text,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 0.93, 0.70, 1))
+	# Mai hien ke soc nho (3 soc, 56px).
+	for k in range(3):
+		var col := Color(0.80, 0.25, 0.20, 1) if k % 2 == 0 else Color(0.98, 0.95, 0.88, 1)
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(c.x - 28 + k * 19, c.y - 16), Vector2(c.x - 9 + k * 19, c.y - 16),
+			Vector2(c.x - 12 + k * 19, c.y - 6), Vector2(c.x - 31 + k * 19, c.y - 6),
+		]), col)
+	draw_rect(Rect2(c + Vector2(-28, -6), Vector2(56, 3)), Color(0.45, 0.30, 0.16, 1))
+	# Quay hang + hang theo loai (dinh quay o y-2).
+	draw_rect(Rect2(c + Vector2(-28, -2), Vector2(56, 14)), Color(0.55, 0.38, 0.22, 1))
+	draw_rect(Rect2(c + Vector2(-28, -2), Vector2(56, 3)), Color(0.65, 0.48, 0.28, 1))
+	_draw_stall_goods(c, stall_goods_kind(text), -2.0)
 
 func _draw_facades() -> void:
 	# Map002 (Cho Dau Moi): day sap rieng (xem _draw_market_row).
@@ -250,9 +338,7 @@ func _draw_facades() -> void:
 			draw_string(font, Vector2(c.x - tw / 2.0, c.y - 52), text,
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 0.93, 0.70, 1))
 		var variant := h % 3
-		if map_id == 2:
-			_draw_shop_front(c, h)
-		elif variant == 0:
+		if variant == 0:
 			_draw_door(c)
 			_draw_window(c + Vector2(0, 0), h)
 		elif variant == 1:
@@ -280,13 +366,17 @@ func _draw_market_row() -> void:
 			c + Vector2(-17, 14), c + Vector2(17, 14),
 			c + Vector2(13, 20), c + Vector2(-13, 20),
 		]), Color(0, 0, 0, 0.18))
-		# Tuong (doan 34px) + vet loang.
+		# Tuong (doan 34px) + van go ngang + vet loang (vong 23:
+		# truoc day tuong chi 1 mau be phang).
 		draw_rect(Rect2(c + Vector2(-17, -66), Vector2(34, 82)), tint)
+		draw_line(c + Vector2(-17, -46), c + Vector2(17, -46), tint.darkened(0.18), 1.0)
+		draw_line(c + Vector2(-17, -26), c + Vector2(17, -26), tint.darkened(0.18), 1.0)
+		draw_rect(Rect2(c + Vector2(-17, -66), Vector2(3, 82)), Color(0, 0, 0, 0.08))
 		draw_colored_polygon(PackedVector2Array([
 			c + Vector2(-14, -66), c + Vector2(-9, -66),
 			c + Vector2(-12, -20), c + Vector2(-15, -20),
 		]), Color(0.45, 0.38, 0.28, 0.18))
-		# Mai ton (doan 34px, xeo vao 5px moi ben tren dinh).
+		# Mai ton (doan 34px, xeo vao 5px moi ben tren dinh) + song mai.
 		draw_colored_polygon(PackedVector2Array([
 			Vector2(c.x - 17, c.y - 66), Vector2(c.x + 17, c.y - 66),
 			Vector2(c.x + 12, c.y - 92), Vector2(c.x - 12, c.y - 92),
@@ -301,14 +391,21 @@ func _draw_market_row() -> void:
 		var c := tile_center(Vector2i(tx, 0))
 		var h := _hash(tx, 0)
 		if tx % 2 == 0:
-			# Bien hieu go + chu Viet (58px, vua khoang 64px).
+			# Bien hieu LON co mau rieng theo loai hang (62x16,
+			# chu 11px, vien kem + bong + 2 dinh) — vong 23: bien
+			# cu 58x13 chu 10px tren tuong be trong nhu "noi".
 			var text := String(SIGNS_MAP2[h % SIGNS_MAP2.size()])
-			draw_rect(Rect2(c + Vector2(-29, -62), Vector2(58, 13)), Color(0.42, 0.28, 0.16, 1))
+			var board_col: Color = stall_sign_color(text)
+			draw_rect(Rect2(c + Vector2(-31, -62), Vector2(62, 16)), Color(0, 0, 0, 0.25))
+			draw_rect(Rect2(c + Vector2(-31, -64), Vector2(62, 16)), board_col)
+			draw_rect(Rect2(c + Vector2(-31, -64), Vector2(62, 16)), Color(1.0, 0.93, 0.70, 1), false, 1.5)
 			if font != null:
-				var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+				var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
 				draw_string(font, Vector2(c.x - tw / 2.0, c.y - 52), text,
-					HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 0.93, 0.70, 1))
-			_draw_shop_front(c, h)
+					HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(1.0, 0.93, 0.70, 1))
+			draw_circle(c + Vector2(-27, -61), 1.5, Color(1, 1, 1, 0.8))
+			draw_circle(c + Vector2(27, -61), 1.5, Color(1, 1, 1, 0.8))
+			_draw_shop_front(c, h, text)
 		else:
 			# Nha o giua 2 sap: cua so + chau hoa (rong 32px, vua doan).
 			_draw_window(c + Vector2(0, 0), h)
@@ -364,26 +461,103 @@ func _draw_gate(c: Vector2) -> void:
 	draw_line(c + Vector2(-30, -8), c + Vector2(-2, -8), Color(0.15, 0.22, 0.26, 1), 2.0)
 	draw_rect(Rect2(c + Vector2(-32, -34), Vector2(32, 4)), Color(0.55, 0.38, 0.24, 1))
 
-func _draw_shop_front(c: Vector2, h: int) -> void:
-	# Sap cho: mai hien ke soc do/trang + quay hang + gio trai cay.
+func _draw_shop_front(c: Vector2, h: int, sign_text: String) -> void:
+	# Sap cho: mai hien ke soc do/trang + vien vo long + 2 cot
+	# chong + quay hang + hang dung loai sap (vong 23: truoc day
+	# chi 3 gio trai cay theo hash, khong theo bien).
 	for k in range(4):
 		var col := Color(0.80, 0.25, 0.20, 1) if k % 2 == 0 else Color(0.98, 0.95, 0.88, 1)
 		draw_colored_polygon(PackedVector2Array([
 			Vector2(c.x - 30 + k * 15, c.y - 48), Vector2(c.x - 15 + k * 15, c.y - 48),
 			Vector2(c.x - 18 + k * 15, c.y - 34), Vector2(c.x - 33 + k * 15, c.y - 34),
 		]), col)
+		# Vien duoi vo long: nua tron cung mau soc, tho xuong
+		# duoi mep mai hien.
+		draw_circle(Vector2(c.x - 22.5 + k * 15, c.y - 34), 7.5, col)
 	draw_rect(Rect2(c + Vector2(-30, -34), Vector2(60, 5)), Color(0.45, 0.30, 0.16, 1))
-	# Quay hang.
+	# 2 cot chong mai hien xuong quay.
+	draw_line(c + Vector2(-28, -32), c + Vector2(-28, -6), Color(0.45, 0.30, 0.16, 1), 2.0)
+	draw_line(c + Vector2(28, -32), c + Vector2(28, -6), Color(0.45, 0.30, 0.16, 1), 2.0)
+	# Quay hang + van go.
 	draw_rect(Rect2(c + Vector2(-28, -6), Vector2(56, 20)), Color(0.55, 0.38, 0.22, 1))
 	draw_rect(Rect2(c + Vector2(-28, -6), Vector2(56, 4)), Color(0.65, 0.48, 0.28, 1))
-	# Gio hang tren quay: rau / trai cay theo hash.
-	var fruit := [Color(0.90, 0.45, 0.15, 1), Color(0.35, 0.65, 0.25, 1), Color(0.95, 0.75, 0.2, 1)]
-	for k in range(3):
-		var bx := c.x - 20 + k * 20
-		draw_arc(Vector2(bx, c.y - 8), 8, 0, PI, 10, Color(0.65, 0.48, 0.28, 1), 2.0)
-		draw_circle(Vector2(bx - 3, c.y - 11), 3.0, fruit[(h + k) % 3])
-		draw_circle(Vector2(bx + 3, c.y - 12), 3.0, fruit[(h + k + 1) % 3])
-		draw_circle(Vector2(bx, c.y - 14), 2.5, fruit[(h + k + 2) % 3])
+	draw_line(c + Vector2(-28, 4), c + Vector2(28, 4), Color(0.45, 0.30, 0.16, 1), 1.0)
+	# Hang tren quay theo loai sap.
+	_draw_stall_goods(c, stall_goods_kind(sign_text), -6.0)
+	# The gia nho tren quay (sap chan).
+	if h % 2 == 0:
+		draw_rect(Rect2(c + Vector2(8, 2), Vector2(12, 8)), Color(0.98, 0.95, 0.85, 1))
+		draw_line(c + Vector2(10, 6), c + Vector2(18, 6), Color(0.75, 0.25, 0.2, 1), 1.0)
+
+## Hang tren quay sap: 3 dong theo loai (vong 23).
+## counter_top = dinh quay (am = tren tam o): hang ngoi tren dinh.
+func _draw_stall_goods(c: Vector2, kind: String, counter_top: float) -> void:
+	var gy := c.y + counter_top - 4.0
+	match kind:
+		"rau":
+			# 3 dong rau xanh (la + cong).
+			for k in range(3):
+				var bx := c.x - 18 + k * 18
+				draw_circle(Vector2(bx, gy), 5.0, Color(0.30, 0.60, 0.22, 1))
+				draw_circle(Vector2(bx - 3, gy - 3), 3.5, Color(0.40, 0.70, 0.25, 1))
+				draw_circle(Vector2(bx + 3, gy - 2), 3.0, Color(0.25, 0.55, 0.20, 1))
+				draw_line(Vector2(bx, gy - 5), Vector2(bx, gy - 9), Color(0.35, 0.55, 0.20, 1), 1.5)
+		"ca":
+			# 2 con ca tren da (than elip + duoi + mat + vien da).
+			for k in range(2):
+				var bx := c.x - 12 + k * 24
+				draw_colored_polygon(PackedVector2Array([
+					Vector2(bx - 9, gy), Vector2(bx + 7, gy - 3),
+					Vector2(bx + 12, gy - 7), Vector2(bx + 12, gy + 1),
+					Vector2(bx + 7, gy + 3),
+				]), Color(0.55, 0.65, 0.75, 1))
+				draw_circle(Vector2(bx - 5, gy - 2), 1.5, Color(0.1, 0.1, 0.1, 1))
+				draw_circle(Vector2(bx - 7, gy + 3), 1.5, Color(1, 1, 1, 0.8))
+				draw_circle(Vector2(bx + 3, gy + 3), 1.5, Color(1, 1, 1, 0.8))
+		"thit":
+			# 3 mieng thit (do hong + mo trang).
+			for k in range(3):
+				var bx := c.x - 18 + k * 18
+				draw_circle(Vector2(bx, gy), 5.0, Color(0.85, 0.45, 0.40, 1))
+				draw_circle(Vector2(bx + 2, gy - 2), 3.0, Color(0.95, 0.65, 0.60, 1))
+		"trai-cay":
+			# 4 qua du mau (cam/vang/hong/xanh).
+			var cols := [Color(0.90, 0.45, 0.15, 1), Color(0.95, 0.75, 0.2, 1),
+				Color(0.85, 0.30, 0.45, 1), Color(0.35, 0.65, 0.25, 1)]
+			for k in range(4):
+				var bx := c.x - 21 + k * 14
+				draw_circle(Vector2(bx, gy - float(k % 2) * 3.0), 4.0, cols[k % 4])
+				draw_line(Vector2(bx, gy - 4 - float(k % 2) * 3.0), Vector2(bx, gy - 7 - float(k % 2) * 3.0), Color(0.30, 0.50, 0.20, 1), 1.0)
+		"banh-mi":
+			# 3 o banh mi (elip nau + vach khia).
+			for k in range(3):
+				var bx := c.x - 18 + k * 18
+				_draw_ellipse(Vector2(bx, gy), 9.0, 4.0, Color(0.75, 0.55, 0.30, 1))
+				draw_line(Vector2(bx - 4, gy - 1), Vector2(bx + 4, gy - 1), Color(0.55, 0.38, 0.20, 1), 1.0)
+		"gia-vi":
+			# 3 lo gia vi (than thuy tinh + nap go + mau trong).
+			var jar_cols := [Color(0.80, 0.25, 0.20, 1), Color(0.95, 0.75, 0.2, 1), Color(0.35, 0.60, 0.25, 1)]
+			for k in range(3):
+				var bx := c.x - 18 + k * 18
+				draw_rect(Rect2(bx - 5, gy - 8, 10, 8), Color(0.95, 0.92, 0.85, 0.9))
+				draw_rect(Rect2(bx - 5, gy - 8, 10, 4), jar_cols[k])
+				draw_rect(Rect2(bx - 4, gy - 11, 8, 3), Color(0.60, 0.45, 0.25, 1))
+		"do-kho":
+			# 2 bao do kho (than bao + nut that).
+			for k in range(2):
+				var bx := c.x - 12 + k * 24
+				draw_circle(Vector2(bx, gy), 6.0, Color(0.75, 0.65, 0.45, 1))
+				draw_circle(Vector2(bx, gy - 5), 3.0, Color(0.80, 0.70, 0.50, 1))
+				draw_line(Vector2(bx - 3, gy - 8), Vector2(bx + 3, gy - 8), Color(0.60, 0.50, 0.30, 1), 1.5)
+		_:
+			# Mac dinh: trai cay nhu cu.
+			_draw_stall_goods(c, "trai-cay", counter_top)
+
+## Elip dac (banh mi, bong): ve bang vong tron de phang.
+func _draw_ellipse(c: Vector2, rx: float, ry: float, col: Color) -> void:
+	draw_set_transform(c, 0.0, Vector2(1.0, ry / rx))
+	draw_circle(Vector2.ZERO, rx, col)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _draw_bottom_fence() -> void:
 	# Hang rao thap mep gan (ty=8): khong che tam nhin, co chau cay.
