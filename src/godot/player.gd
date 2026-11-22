@@ -49,6 +49,16 @@ func _ready() -> void:
 		"hair_style": "ngan",
 		"player": true,
 		"texture": "res://art/char_player.png",  # Anh ve tay (fallback ve code neu thieu file).
+		# Vong 18 — walk cycle 6 khung (thieu file thi ve anh don
+		# o tren, khong crash — CharacterSprite tu fallback).
+		"frames": [
+			"res://art/walk_player_f0.png",
+			"res://art/walk_player_f1.png",
+			"res://art/walk_player_f2.png",
+			"res://art/walk_player_f3.png",
+			"res://art/walk_player_f4.png",
+			"res://art/walk_player_f5.png",
+		],
 	})
 	add_child(_sprite)
 

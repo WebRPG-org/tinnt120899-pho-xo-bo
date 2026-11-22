@@ -127,6 +127,8 @@ var _camera: Camera2D
 var _ground_sprite: Sprite2D = null  # Vong 17: nen dat (doi texture theo map).
 var _daynight: ColorRect
 var _overlay_layer: CanvasLayer
+var _glow_canvas: GlowCanvas = null  # Vong 19: anh sang ADD tren lop MUL.
+var _ambient: AmbientLife = null  # Vong 19: la roi + dom dom.
 var _ui_layer: CanvasLayer
 var _title_panel: PanelContainer
 var _label_layer: CanvasLayer  # Lop nhan tren the gioi (duoi HUD).
@@ -259,14 +261,18 @@ func load_map(map_id: int, spawn_tile: Vector2i) -> void:
 	_update_daynight()  # Ap khung hien tai cho map moi (anh dem/tint/mat troi).
 
 ## Vong 17: nen dat theo map — Map001 dung ground_map001.png ve tay
-## (khop mat tien nha ong ve tay); map khac giu ground_wide.jpg.
-## Ca 2 anh deu 1440x900 nen scale giu nguyen. Neu thieu file (clone
+## (khop mat tien nha ong ve tay); vong 20: Map002 dung
+## ground_map002.png ve tay (san cho dau moi); map khac giu
+## ground_wide.jpg.
+## Ca 3 anh deu 1440x900 nen scale giu nguyen. Neu thieu file (clone
 ## moi chua co art nhi phan — chi co local + trong pck) thi giu anh cu.
 func _update_ground(map_id: int) -> void:
 	if _ground_sprite == null:
 		return
 	if map_id == 1 and ResourceLoader.exists("res://art/ground_map001.png"):
 		_ground_sprite.texture = load("res://art/ground_map001.png") as Texture2D
+	elif map_id == 2 and ResourceLoader.exists("res://art/ground_map002.png"):
+		_ground_sprite.texture = load("res://art/ground_map002.png") as Texture2D
 	elif ResourceLoader.exists("res://art/ground_wide.jpg"):
 		_ground_sprite.texture = load("res://art/ground_wide.jpg") as Texture2D
 
@@ -2019,6 +2025,14 @@ func _update_daynight() -> void:
 		_daynight.color = _daynight_color(frame_idx)
 	if iso_map != null and iso_map.night_glow != null:
 		iso_map.night_glow.set_lit(frame_idx == 2)
+	# Vong 19: anh sang ADD (chi khung Toi, nguon = den + cua so cua
+	# NightGlow) + su song nho theo khung (la roi ca ngay, dom dom
+	# chi dem). Goi moi lan doi khung/doi map — nguon doi theo map.
+	if _glow_canvas != null:
+		_glow_canvas.set_lit(frame_idx == 2)
+		_glow_canvas.set_sources(_glow_sources())
+	if _ambient != null:
+		_ambient.set_frame(frame_idx)
 	if iso_map != null:
 		iso_map.set_frame(frame_idx)
 		_update_character_tint()
@@ -2033,6 +2047,16 @@ func _update_daynight() -> void:
 			if mk.has_method("set_frame"):
 				mk.set_frame(frame_idx)
 		_refresh_hotspot_player_flags()
+
+## Vong 19: nguon sang cho GlowCanvas — den long + cua so sang cua
+## NightGlow (toa do the gioi). Map001-002: spots rong (cua so da
+## sang trong anh dem), chi 1 den long; Map003+: them cua so sang.
+func _glow_sources() -> Array[Vector2]:
+	var out: Array[Vector2] = []
+	if iso_map != null and iso_map.night_glow != null:
+		out.append_array(iso_map.night_glow.lamps)
+		out.append_array(iso_map.night_glow.spots)
+	return out
 
 ## Hotspot nao dang co nguoi choi dung tren o do thi tat quang
 ## sang duoi dat (vong 7). Goi khi doi khung, load map, moi buoc di.
@@ -2065,9 +2089,10 @@ func _update_character_tint() -> void:
 
 func _build_ui() -> void:
 	# Nen dat ve tay: mac dinh ground_wide.jpg (anh chup, dung cho
-	# moi map); Map001 doi sang ground_map001.png ve tay khi co
-	# (_update_ground goi trong load_map) — het lech phong cach voi
-	# mat tien ve tay (nit §38.4 vong 16). Them o index 0 cua Main
+	# moi map); Map001 doi sang ground_map001.png, Map002 doi sang
+	# ground_map002.png ve tay khi co (_update_ground goi trong
+	# load_map) — het lech phong cach voi mat tien ve tay (nit
+	# §38.4 vong 16; vong 20 cho Map002). Them o index 0 cua Main
 	# (duoi iso_map/player) de khong che vat; vi tri co dinh vi moi
 	# map 12x9 deu cung offset.
 	if ResourceLoader.exists("res://art/ground_wide.jpg"):
@@ -2125,6 +2150,16 @@ func _build_ui() -> void:
 	mul.blend_mode = CanvasItemMaterial.BLEND_MODE_MUL
 	_daynight.material = mul
 	_overlay_layer.add_child(_daynight)
+	# Vong 19: anh sang cong don that (ADD) tren lop MUL — GlowCanvas
+	# la con cua _overlay_layer, them SAU _daynight (ve tren lop nhan)
+	# nhung truoc _label_layer/_ui_layer (them sau, cung layer 1)
+	# nen van duoi nhan/HUD.
+	_glow_canvas = GlowCanvas.new()
+	_overlay_layer.add_child(_glow_canvas)
+	# Vong 19: su song nho — la roi + dom dom, Node2D the gioi,
+	# z_index 10 nhu SkyEffects/NightGlow (tren IsoMap, duoi lop MUL).
+	_ambient = AmbientLife.new()
+	add_child(_ambient)
 	# Lop nhan: CanvasLayer rieng, layer 1, tao TRUOC lop HUD nen ve
 	# duoi HUD — nhan luon tren nhan vat + nha (Node2D the gioi o
 	# layer 0), khong bi y-sort che mat nua, khong de len panel dien
