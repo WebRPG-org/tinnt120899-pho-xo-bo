@@ -4074,3 +4074,98 @@ PNG nhị phân chỉ sống local + trong pck (tiền lệ vòng 18); chỉ
   ghi nhận hiện tượng.
 - Lưu ý: cửa sổ checker là khổ ngang 1920×999, canvas game vẫn
   dọc 720×1280 ở giữa (không ép được đúng khổ 720×1280).
+
+## 45. Vòng 23 — Sạp chợ Map002 vẽ lại (22/11 ~21:45–23:30 +07)
+
+Mục 1 §44.6 (§42.5 mục 3): sạp chợ Map002 "khối be thô + biển
+hiệu nổi" (anh r20-02: biển 58×13 chữ 10px trên tường be phang,
+hàng trên quầy chỉ 3 giỏ trái cây theo hash, tường bên 2 cột là
+hình chữ nhật be xếp bậc thang).
+
+### 45.1 Vì sao không dùng sprite tách riêng (§42.5.3)
+
+Đã đo trước khi chọn: ô hàng 0 cách nhau **32px màn hình**
+(`tile_center_raw`: bước x 32px). Sprite sạp 64px sẽ bị tường
+nhà lẻ 2 bên (34px, vẽ sau trong `_draw`) che 17px mỗi bên —
+chỉ thấy ~30px giữa. Muốn dùng sprite phải đổi cấu trúc hàng
+(ô lẻ để trống, sạp cách nhau) — việc 2 vòng (artpass sprite +
+đổi hàng), không phải 1 vòng. Vòng này vẽ lại bằng code đúng
+bước iso hiện có; sprite để vòng sau nếu đổi hàng.
+
+### 45.2 Việc làm
+
+| File | Đổi |
+|---|---|
+| `scripts/nadia_scene.gd` | `STALL_KIND_COLORS` (8 màu biển theo loại hàng) + `stall_goods_kind(sign)` (8 biển → rau/ca/thịt/trái-cây/bánh-mì/gia-vị/hoa-quả/đồ-khô) + `stall_sign_color(sign)` + `market_stall_tiles()` [0,2,4,6,8,10] + `side_stall_rows()` [2,4,6]; `_draw_market_row` vòng 2: biển **62×16 chữ 11px** (cũ 58×13 chữ 10), nền màu theo loại + viền kem + bóng + 2 đinh; vòng 1: tường thêm vân gỗ ngang + bóng cạnh; `_draw_shop_front(c,h,sign)` (thêm tham số biển): mái hiên thêm viền vỏ sò + 2 cột chống, quầy thêm vân gỗ + thẻ giá (sạp chẵn), hàng trên quầy theo loại qua `_draw_stall_goods(c,kind,counter_top)` mới (rau: lá xanh; cá: 2 con trên đá; thịt: miếng đỏ; trái cây: 4 quả đủ màu; bánh mì: ổ elip; gia vị: 3 lọ; đồ khô: 2 bao); `_draw_side_walls`: tường thêm vân gỗ + bóng cạnh, hàng chẵn (2,4,6) thành **sạp bên** (`_draw_side_stall`: biển nhỏ 52×12 chữ 10 + mái hiên kẻ 3 sọc + quầy + hàng theo loại), hàng lẻ giữ áp phích to hơn (24×30) / cây leo / vết loang; nhánh chết `if map_id == 2` trong `_draw_facades` đã bỏ (không bao giờ tới vì return sớm); helper `_draw_ellipse` mới. |
+| `tests/g4_r23_stall_test.gd` (mới) | 10 mục: 8 biển ánh xạ đúng loại + biển lạ về "rau"; 8 màu biển khác nhau alpha 1; chữ biển vừa bảng (rộng nhất "THỊT HEO" 53.0px ≤ 58 ở cỡ 11; cỡ 10 ≤ 48 cho biển bên); nhịp sạp hàng 0 + hàng bên; scene thật Map002 có NadiaScene map_id 2, chạy 60 frame không lỗi, về Map001 map_id 1. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r23_stall_test` (nay 51 suite + online). |
+| `visual-check/artpass23/check_r23.py` (mới, subagent) | Theo mẫu check_r20.py, cổng 8177 + ảnh zoom vùng sạp (clip y=640..1000). |
+
+### 45.3 Verify thật vòng này
+
+- `--check-only` nadia_scene.gd: PASS.
+- Test mới `g4_r23_stall_test`: **10/10 PASS** (lần đầu).
+- Hồi quy đầy đủ: **51 OK, 0 FAIL** (50 cũ + 1 mới r23).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **14.404.944 byte, SHA `e1e4ee94…`**
+  (trước `a5964dee`, +8.460 byte = đúng code vẽ thêm, không art
+  mới); wasm không đổi `fc74679e`; HTTP 200 đủ 6 file (cổng
+  8177). Lưu ý export: lần đầu lỗi `Target folder does not
+  exist: "src/godot-build"` vì đường dẫn export tương đối được
+  hiểu theo `--path src/godot` (thành `src/godot/src/godot-build`)
+  — sửa bằng đường dẫn tuyệt đối (tiền lệ G0 dùng `cd src/godot`
+  + `../godot-build`). Lần import trước đó sinh
+  `g4_r23_stall_test.gd.uid` đúng quy trình.
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass23/check_r23.py`, ảnh
+  `r23-01…r23-04`): **0 console error, 0 pageerror,
+  0 request fail.**
+  - Map002: biển đọc được, có màu riêng (RAU CỦ xanh lá,
+    THỊT HEO đỏ, BÁNH MÌ nâu, HOA QUẢ hồng, CÁ TƯƠI xanh dương,
+    ĐỒ KHÔ nâu vàng); mái hiên viền vỏ sò + cột chống; quầy có
+    hàng đúng loại (trái cây đủ màu, ổ bánh mì); sạp bên 2 cột
+    có biển + mái hiên + quầy (thấy rõ CÁ TƯƠI/ĐỒ KHÔ cột phải).
+  - Map001 tải lại: không hồi quy (nền cao, NPC patrol như cũ).
+  - Còn lại (không sửa vòng này): tường bên vẫn nền be sau sạp
+    (đã có vân gỗ, vẫn phẳng); biển sạp bên cột phải (x=11) bị
+    cắt một phần ở mép canvas 720 — tường cũ cũng bị cắt như vậy.
+
+### 45.4 Deploy — XONG, verify live khớp byte (22/11 ~23:30–23:50 +07)
+
+- Push main 1 lô (không gián đoạn): code + test + check_r23
+  `2a214c4b` (trước `2167689e`). Sync record 226 entries.
+- Staging rebuild `build_gh_pages.py --verify-only` exit 0: pck
+  `e1e4ee94` 107 chunk / 14.404.944 byte khớp byte, wasm
+  `fc74679e` 293 chunk không đổi, img khớp, loader đủ.
+  Đối chiếu trước deploy: gh-pages head `b0b97773`,
+  `versions.json` live pin `a5964dee` (vòng 22), không divergence
+  (list_commits bỏ qua tham số branch nên chỉ dùng được cho main;
+  head gh-pages lấy từ sync record).
+- Deploy 7 lô gh-pages: part 000–019 `880e5b67`, 020–039
+  `94b7b404`, 040–059 `00134b8e`, 060–079 `3f77c6e4`,
+  080–099 `3c81c642`, 100–106 `daaf5950` (lô này chậm ~9 phút),
+  versions.json + index.html cuối `85f190c8`. Sync record 233
+  entries. Không gián đoạn lần nào (khác vòng 18–20).
+- Verify live bằng byte: pin `e1e4ee94` sau lag Pages ~30 giây;
+  tải + giải base64 + ráp 107 part từ live = **14.404.944 byte,
+  SHA `e1e4ee94dae9` — khớp đúng từng byte**; index.html live
+  liệt kê part `e1e4ee94`.
+- **Live nay chạy vòng 23**: sạp chợ Map002 vẽ lại. Link:
+  https://tinnt120899.github.io/pho-xo-bo/
+- Lưu ý verify: lần export đầu lỗi `Target folder does not
+  exist: "src/godot-build"` (xem §45.3) — pck cũ `a5964dee`
+  vẫn nằm trên đĩa tới khi export lại bằng đường dẫn tuyệt đối
+  thì mới ra `e1e4ee94`; đừng nhầm file cũ với bản mới khi đối
+  chiếu SHA.
+
+### 45.5 Việc tiếp theo
+
+1. Khói nồi phở / biển đung đưa — §42.5 mục 5 (cần sprite riêng
+   cho biển/nồi, hiện là 1 phần ảnh nền).
+2. Sprite sạp tách riêng (§45.1): khi nào đổi hàng 0 thành sạp
+   cách nhau (ô lẻ để trống) thì gen 3 sprite sạp (rau/trái cây/
+   cá-thịt) thay code vẽ — vòng 24+.
+3. NPC Map003–018 vẫn ảnh đơn + nhún (chỉ 4 NPC Map001–002 có
+   walk cycle): nối `frames` khi có sheet (theo mẫu vòng 22).
+4. Kiểm live lại bằng cloud browser (luật kiểm live) — bản mới
+   có sạp vẽ lại, cần xem trên live có như local không.
