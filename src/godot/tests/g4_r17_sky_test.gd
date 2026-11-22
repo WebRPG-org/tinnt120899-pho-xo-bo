@@ -86,11 +86,11 @@ func _on_frame() -> void:
 			# mat troi Sang.
 			var sun3: Vector2 = _main.iso_map.skyfx.sun_pos
 			_check("ve Sang: mat troi van sang phai (x > 350)", sun3.x > 350.0, str(sun3))
-			# Doi dat theo map: sang Map002 ve dat cu, ve Map001
-			# lai dat ve tay.
+			# Doi dat theo map: sang Map002 ve dat ve tay rieng
+			# (vong 20), ve Map001 lai dat ve tay.
 			_main.load_map(2, Vector2i(5, 4))
-			_check("Map002: dat ve anh cu ground_wide.jpg",
-				_main._ground_sprite.texture.resource_path.ends_with("ground_wide.jpg"),
+			_check("Map002: dat ve tay ground_map002.png",
+				_main._ground_sprite.texture.resource_path.ends_with("ground_map002.png"),
 				_main._ground_sprite.texture.resource_path)
 			_main.load_map(1, Vector2i(4, 5))
 			_check("ve Map001: dat lai ve tay ground_map001.png",

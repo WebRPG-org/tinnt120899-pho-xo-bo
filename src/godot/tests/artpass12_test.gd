@@ -122,7 +122,10 @@ func _on_frame() -> void:
 				var gtop := 9999.0
 				for c in _main.get_children():
 					var sp := c as Sprite2D
-					if sp != null and sp.texture != null and "ground_wide" in sp.texture.resource_path:
+					# Vong 20: Map002 dung ground_map002.png ve tay
+					# (Map001 ground_map001.png); van la cung sprite
+					# dat 1440x900, chi doi texture — nhan ca 3 ten.
+					if sp != null and sp.texture != null and ("ground_wide" in sp.texture.resource_path or "ground_map001" in sp.texture.resource_path or "ground_map002" in sp.texture.resource_path):
 						gtop = sp.position.y - 450.0
 				var bgbot := -9999.0
 				if _main.iso_map._bg_sprite != null:

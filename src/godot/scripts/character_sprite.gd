@@ -13,6 +13,11 @@ extends Node2D
 ## chi con la fallback khi thieu file (vd chay tren ban cu).
 
 const TEX_HEIGHT := 104.0  # Chieu cao hien thi cua anh (lon hon ban cu 72px de mat doc duoc).
+# Vong 18 — Walk cycle 6 khung (Claude uu tien 2): 6 frame / 0.30s
+# = 2 o tile / chu trinh (moi o 0.15s = 3 frame: cham-dat -> ha
+# thap -> vuot-qua). Chi nguoi choi co frames; NPC giu anh don +
+# nhun nhu cu (chua co sheet rieng).
+const FRAME_TIME := 0.05
 
 var shirt := Color(0.18, 0.44, 0.69, 1)
 var pants := Color(0.16, 0.18, 0.24, 1)
@@ -25,6 +30,9 @@ var facing := 1  # 1 = phai, -1 = trai
 var is_player := false  # Nguoi choi: vong vang duoi chan de nhan ra.
 var texture: Texture2D = null
 var _tex: Sprite2D = null
+var _frames: Array[Texture2D] = []
+var _frame_idx := 0
+var _frame_t := 0.0
 # Bong do theo khung (vong 7): Sang ngan + lech phai (nang tu
 # phai-tren), Chieu dai ve trai (nang thap), Toi mo nhat.
 var _shadow_rx := 14.0
@@ -79,6 +87,39 @@ func setup(cfg: Dictionary) -> void:
 		_tex.scale = Vector2(s, s)
 		_tex.position = Vector2(0, -TEX_HEIGHT / 2.0)
 		add_child(_tex)
+	# Vong 18 — frames walk cycle (chi khi du >= 2 frame nap duoc;
+	# thieu file thi giu nguyen anh don o tren, khong crash).
+	if cfg.has("frames"):
+		var paths: Array = cfg["frames"]
+		for p in paths:
+			var fp := String(p)
+			if ResourceLoader.exists(fp):
+				var ft := load(fp) as Texture2D
+				if ft != null:
+					_frames.append(ft)
+		if _frames.size() >= 2 and _tex != null:
+			_frame_idx = 0
+			_frame_t = 0.0
+			_set_frame_texture(0)
+
+## Co walk cycle frames khong (dung cho test + Main).
+func has_frames() -> bool:
+	return _frames.size() >= 2
+
+func frame_count() -> int:
+	return _frames.size()
+
+func current_frame() -> int:
+	return _frame_idx
+
+func _set_frame_texture(idx: int) -> void:
+	if _tex == null or _frames.is_empty():
+		return
+	_frame_idx = idx % _frames.size()
+	var ft: Texture2D = _frames[_frame_idx]
+	_tex.texture = ft
+	var s := TEX_HEIGHT / float(ft.get_height())
+	_tex.scale = Vector2(s, s)
 	_body_style = StyleBoxFlat.new()
 	_body_style.bg_color = shirt
 	_body_style.corner_radius_top_left = 7
@@ -94,10 +135,26 @@ func _process(delta: float) -> void:
 	if moving:
 		walk_phase += delta * 10.0
 	if _tex != null:
-		# Anh ve tay: nhun + nghieng nhe khi di thay cho walk cycle
-		# chan (anh tinh khong co khung chan); dung yen thi tho nhe.
+		# Vong 18 — co frames: doi khung theo nhip buoc (3 frame /
+		# o tile); dung yen ve frame 0 (tu the dung). Khong co
+		# frames: nhun + nghieng nhe nhu cu (anh tinh 1 khung).
 		var bob := 0.0
-		if moving:
+		if has_frames():
+			if moving:
+				# Tich luy theo buoc FRAME_TIME (tru dan, khong chia
+				# float _frame_t / FRAME_TIME — cong don 0.05 6 lan
+				# co the dung ngay duoi 0.30 lam int() rot xuong 5).
+				_frame_t += delta
+				while _frame_t >= FRAME_TIME:
+					_frame_t -= FRAME_TIME
+					_set_frame_texture(_frame_idx + 1)
+				bob = -absf(sin(walk_phase)) * 1.5
+			else:
+				_frame_t = 0.0
+				if _frame_idx != 0:
+					_set_frame_texture(0)
+				bob = -sin(_t * 2.0) * 0.8
+		elif moving:
 			bob = -absf(sin(walk_phase)) * 2.5
 		else:
 			bob = -sin(_t * 2.0) * 0.8
