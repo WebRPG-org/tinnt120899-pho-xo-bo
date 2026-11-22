@@ -4047,3 +4047,30 @@ PNG nhị phân chỉ sống local + trong pck (tiền lệ vòng 18); chỉ
    có walk cycle): khi nào art NPC các khu khác có sheet thì nối
    `frames` theo đúng mẫu `NPC_STYLE` này (không cần sửa code
    patrol — `CharacterSprite` tự fallback khi thiếu file).
+
+### 44.7 Kiểm live vòng 22 (cloud browser, 22/11 21:29–21:38 +07)
+
+- Game chạy, nút BẮT ĐẦU bấm được, HUD đủ; không thấy console
+  error/pageerror/request fail trong suốt quá trình (checker
+  không mở DevTools nên đây là kết luận quan sát, không phải
+  log console thô).
+- Di chuyển: phím D từ spawn (4,5) → (5,5), đúng 1 ô; W/A/S
+  đều đổi tọa độ đúng từng ô; nhân vật đổi tư thế chân khi đi
+  (walk cycle thấy được).
+- Patrol: người chơi lên (1,1), chờ 12s → cả 2 NPC rời chỗ cũ
+  (Bạn Thân xuống dưới-trái, Cô Tư xuống sát mép dưới); về
+  (4,6), chờ 3s → cả 2 NPC về khu vực spawn, nhãn hiện lại.
+- **Chưa khớp hẳn — ước lượng bằng mắt, chưa xác minh:** checker
+  thấy Cô Tư về lệch ~1 ô sang phải và Bạn Thân chồng lên ô
+  người chơi. Nhưng test headless 41/41 khẳng định
+  `patrol_tile == home` sau khi về, và ảnh local r22-03 cho
+  thấy NPC về đúng vị trí như lúc spawn — nhãn debug chỉ hiện
+  ô NGƯỜI CHƠI nên checker chỉ ước lượng vị trí NPC qua ảnh
+  iso (dễ lệch). Ghi nhận là quan sát chưa xác minh, không sửa
+  code theo ước lượng này; nếu vòng sau thấy lại thì đo bằng
+  số ô thật.
+- Nhãn tên NPC ẩn khi người chơi xa (>5 ô) là **đúng thiết kế
+  vòng 15** (LABEL_NEAR_TILES), không phải lỗi — checker chỉ
+  ghi nhận hiện tượng.
+- Lưu ý: cửa sổ checker là khổ ngang 1920×999, canvas game vẫn
+  dọc 720×1280 ở giữa (không ép được đúng khổ 720×1280).
