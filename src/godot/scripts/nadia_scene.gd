@@ -82,6 +82,35 @@ static func market_stall_tiles() -> Array:
 ## (ap phich / cay leo / vet loang) de day sap co nhip, khong dac.
 static func side_stall_rows() -> Array:
 	return [2, 4, 6]
+
+## Vong 24 — Bien pho dung dua + khoi noi pho (§45.5.1, §42.5.5):
+## bien treo "PHỞ BÒ" duoi mai hien xe do an (o (6,12)) lac nhu
+## con lac; khoi bep bay tu noi pho. Bien tren mat tien Map001
+## nam trong anh composite nen khong lac duoc — bien treo ve bang
+## code nay la vat rieng, khong de len bien trong anh.
+const FOOD_CART_TILE := Vector2i(6, 12)
+const SIGN_TEXT := "PHỞ BÒ"
+const SIGN_BOARD := Vector2(46, 16)
+const SIGN_SWAY_AMP := 0.07
+const SIGN_SWAY_SPEED := 1.4
+const SMOKE_PUFFS := 4
+const SMOKE_RISE := 50.0
+const SMOKE_ALPHA_MAX := 0.5
+
+## Goc lac cua bien treo tai thoi gian t (rad) — con lac sin,
+## bien dung ve 0 o t=0, cuc dai o t = PI/(2*SPEED).
+static func food_cart_sign_angle(t: float) -> float:
+	return sin(t * SIGN_SWAY_SPEED) * SIGN_SWAY_AMP
+
+## Mot cum khoi tai thoi gian t: vi tri (tuong doi noi pho),
+## ban kinh, alpha — khoi bay len + tan dan + lac ngang nhe.
+static func food_cart_smoke_puff(t: float, i: int) -> Dictionary:
+	var ph := fmod(t * 22.0 + float(i) * (SMOKE_RISE / SMOKE_PUFFS), SMOKE_RISE)
+	return {
+		"pos": Vector2(sin(t * 2.0 + float(i) * 2.0) * 5.0, -12.0 - ph),
+		"radius": 3.5 + ph * 0.11,
+		"alpha": SMOKE_ALPHA_MAX * (1.0 - ph / SMOKE_RISE),
+	}
 const WALL_TINTS := [
 	Color(0.93, 0.82, 0.55, 1), Color(0.88, 0.76, 0.50, 1),
 	Color(0.95, 0.87, 0.62, 1), Color(0.85, 0.78, 0.58, 1),
@@ -735,19 +764,32 @@ func _draw_food_cart(c: Vector2) -> void:
 	# 2 banh xe.
 	for wx in [-18.0, 18.0]:
 		draw_arc(c + Vector2(wx, 14), 6, 0, TAU, 12, Color(0.12, 0.12, 0.12, 1), 2.5)
-	# Noi pho + khoi bep bay (dong theo _t).
+	# Noi pho + khoi bep bay (dong theo _t) — vong 24: 4 cum
+	# (cu 3), alpha toi 0.5 (cu 0.35) de thay ro khoi hon.
 	var pot := c + Vector2(-8, -24)
 	draw_arc(pot, 7, 0, PI, 10, Color(0.25, 0.25, 0.28, 1), 2.0)
 	draw_rect(Rect2(pot + Vector2(-7, -9), Vector2(14, 9)), Color(0.35, 0.35, 0.38, 1))
-	for i in range(3):
-		var ph := fmod(_t * 22.0 + float(i) * 15.0, 45.0)
-		var alpha := 0.35 * (1.0 - ph / 45.0)
-		draw_circle(pot + Vector2(sin(_t * 2.0 + float(i) * 2.0) * 4.0, -12 - ph),
-			3.0 + ph * 0.12, Color(1, 1, 1, alpha))
+	for i in range(SMOKE_PUFFS):
+		var puff: Dictionary = food_cart_smoke_puff(_t, i)
+		draw_circle(pot + puff["pos"], puff["radius"], Color(1, 1, 1, puff["alpha"]))
 	# Gio banh + rau tren xe.
 	draw_arc(c + Vector2(14, -8), 7, 0, PI, 10, Color(0.65, 0.48, 0.28, 1), 2.0)
 	draw_circle(Vector2(c.x + 11, c.y - 11), 2.5, Color(0.95, 0.75, 0.2, 1))
 	draw_circle(Vector2(c.x + 17, c.y - 12), 2.5, Color(0.90, 0.45, 0.15, 1))
+	# Bien treo "PHỞ BÒ" đung đưa dưới mái hiên (vòng 24): treo
+	# bằng 2 dây ở mép trước mái hiên, lắc quanh điểm treo theo
+	# food_cart_sign_angle(_t); vẽ sau cùng để nằm trước thân xe.
+	var pivot := c + Vector2(0, -18)
+	draw_set_transform(pivot, food_cart_sign_angle(_t), Vector2.ONE)
+	draw_line(Vector2(-14, 0), Vector2(-14, 12), Color(0.35, 0.25, 0.16, 1), 1.5)
+	draw_line(Vector2(14, 0), Vector2(14, 12), Color(0.35, 0.25, 0.16, 1), 1.5)
+	draw_rect(Rect2(Vector2(-SIGN_BOARD.x / 2.0, 12), SIGN_BOARD), Color(0.45, 0.30, 0.16, 1))
+	draw_rect(Rect2(Vector2(-SIGN_BOARD.x / 2.0, 12), SIGN_BOARD), Color(0.98, 0.95, 0.88, 1), false, 1.5)
+	if font != null:
+		var tw := font.get_string_size(SIGN_TEXT, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+		draw_string(font, Vector2(-tw / 2.0, 12 + SIGN_BOARD.y - 4), SIGN_TEXT,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.98, 0.95, 0.88, 1))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _draw_stools(c: Vector2) -> void:
 	# Ban nhua + ghe dua + ly ca phe sua da.
