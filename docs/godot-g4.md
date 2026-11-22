@@ -3892,3 +3892,58 @@ sprite sạp riêng, hiện là 1 phần ảnh nền composite).
 5. Khói nồi phở / biển đung đưa (mục còn lại của Claude (3)) — cần
    sprite riêng cho biển/nồi (hiện là 1 phần của ảnh nền), để sau
    khi có art tách lớp.
+
+## 43. Vòng 21 — Push hồi + deploy b501abd2 lên live (22/11 ~15:20–16:10 +07)
+
+### 43.1 Chặn push — HỒI sau 8 lần gián đoạn
+
+- Lượt này retry push main gộp r18+r19+r20 (30 file, 450KB,
+  manifest `~/workspace/pxb-push-r18r19r20-paths`): "service restarted
+  while it was running" lần 8 liên tiếp; kiểm tra head main vẫn
+  `33d68d07` (chưa áp dụng). **ĐÃ DỪNG retry lệnh này.**
+- Chẩn đoán bằng lệnh khác: push 1 file `docs/godot-g4.md`
+  (manifest `~/workspace/pxb-push-r21-diag-paths`) → **THÀNH CÔNG**,
+  head `2befc7de`. Không phải do kích thước tuyệt đối (file này
+  ~264KB) — dịch vụ push chập chờn, lúc được lúc không.
+- Chia nhỏ + retry có chừng mực: lô A (6 file code, 120KB) fail 1
+  lần rồi thành công ở retry (`95490677`); lô B (9 file test,
+  36KB, `978e6cf2`) + lô C (14 file .import/visual-check, 31KB,
+  `e5ad341d`) thành công ngay. **Kết luận: push_files không chết
+  hẳn — fail là ngắt quãng, retry 1–2 lần mỗi lô là đủ; không retry
+  vô hạn cùng 1 lệnh.** Sync record ghi đủ 4 commit (entries 203–206).
+- Head main sau vòng này: `e5ad341d` — đủ 30 file vòng 18+19+20
+  (walk cycle 6 khung, GlowCanvas + AmbientLife, đất Map002).
+
+### 43.2 Deploy gh-pages pck b501abd2 — XONG, verify live khớp byte
+
+- Staging đã rebuild từ vòng 20, `build_gh_pages.py --verify-only`
+  exit 0: pck `b501abd2` 101 chunk / 13.514.456 byte khớp byte,
+  wasm `fc74679e` 293 chunk không đổi, img khớp, loader đủ.
+  Đối chiếu trước deploy: gh-pages head `5f641feb`,
+  `versions.json` live pin `cddb9cd5` (vòng 17), không divergence.
+- Deploy 7 lô (manifest `~/workspace/pxb-deploy-b501abd2-batch1..7`):
+  part 000–019 `1f8fa637`, 020–039 `842b0bc1`, 040–059 `6533cb20`,
+  060–079 `5cd568d3`, 080–099 `f4efbf19`, part 100 `55d0a1f5`,
+  versions.json + index.html cuối `0fe30938`. Sync record ghi đủ
+  7 commit (entries 207–213).
+- Verify live bằng byte: lúc đầu `versions.json` live vẫn
+  `cddb9cd5` + part-000 404 (Pages deploy lag ~3 phút) — sau đó
+  pin `b501abd2`; tải + ráp 101 part từ live = **13.514.456 byte,
+  SHA `b501abd2` — khớp đúng từng byte**; index.html live liệt kê
+  đủ 101 part `b501abd2`.
+- Smoke headless sau deploy: `--quit-after 120` exit 0, 0 ERROR
+  (code không đổi từ vòng 20; hồi quy 49/49 + browser-verify r20
+  0 lỗi đã có từ vòng 20, không chạy lại).
+- **Live nay chạy vòng 18+19+20**: walk cycle nhân vật chính,
+  đèn lồng/cửa sổ đêm sáng (GlowCanvas), lá rơi + đom đóm khung
+  Tối, đất vẽ tay Map002. Link: https://tinnt120899.github.io/pho-xo-bo/
+
+### 43.3 Việc tiếp theo
+
+1. Walk cycle cho NPC (Cô Tư/Bạn Thân/Chị Lệ/Anh Hải) — §42.5 mục 2.
+2. Sạp chợ Map002 — §42.5 mục 3.
+3. Kiểm live lại bằng cloud browser khi tunnel ổn (luật kiểm live).
+4. Khói nồi phở / biển đung đưa — §42.5 mục 5.
+5. Chủ vẫn chưa trả lời widget duyệt ảnh walk cycle vòng 18 (gửi
+   ~12:52 22/11) — vòng 18 đã lên live, nếu chủ chê thì làm lại
+   theo ý chủ ở vòng sau.
