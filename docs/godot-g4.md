@@ -3540,3 +3540,355 @@ luồng này code + verify + deploy; luồng kia gen art đất).
    lượt art Map002.
 3. Kiểm live lại bằng cloud browser khi tunnel ổn (luật kiểm live).
 
+## 40. Vòng 18 — Nhân vật 6 khung: walk cycle người chơi (22/11 ~01:45–02:30 +07)
+
+Mục (2) của Claude (§35.6), hạn 20:00 22/11 — làm cho NGƯỜI CHƠI
+trước (NPC chưa có sheet riêng, giữ ảnh đơn + nhún như cũ).
+
+### 40.1 Việc làm
+
+- **Art** (`src/godot/art/walk_player_f0..f5.png`, 119×208, luồng
+  song song gen bằng media image generation): sheet 6 nhân vật 1
+  hàng ngang, gen 1 lần đạt ngay — cùng mặt/tóc đen rối/áo xanh/
+  quần tối/giày trắng với `char_player.png`, tư thế chân xen kẽ
+  hợp lý. PIL tách theo khe trắng thật giữa các nhân vật (chia
+  đều 6 lát đã cắt mất bàn tay f0/f5 + lọt tóc nhân vật kề vào
+  f3/f4 — phát hiện nhờ ảnh kiểm nền magenta, đã sửa), trắng →
+  trong suốt (flood-fill từ biên, ngưỡng ~235, feather 1.5),
+  chuẩn hóa cùng canvas căn giữa ngang để không trượt khi chạy
+  animation. Script `visual-check/artpass18/slice_walkcycle.py`,
+  ghi chú `walkcycle-note.md`. Chỉ ~4 tư thế phân biệt rõ trong
+  6 frame (f5≈f0, f2≈f4); chỉ có mặt trước — đi 4 hướng tạm dùng
+  bộ này + flip ngang.
+- **Code** (`scripts/character_sprite.gd`): cfg thêm `"frames"`
+  (mảng đường dẫn); nạp được ≥2 frame thì chế độ frames — đổi
+  khung mỗi 0.05s khi di chuyển (6 frame / 0.30s = 2 ô tile /
+  chu trình, 3 frame / ô), dừng về frame 0; bob giảm còn 1.5
+  (frame đã có chân động). Thiếu file → fallback ảnh đơn
+  `texture` như cũ, không crash (clone mới chưa có art nhị phân
+  vẫn chạy). `player.gd` nối 6 đường dẫn `walk_player_f*.png`.
+- **Test mới** `tests/g4_r18_walkcycle_test.gd`: **16/16 PASS** —
+  đủ 6 frame, đổi khung 0→1→2→3→5→0 đúng nhịp, dừng về frame 0,
+  frames rác → fallback ảnh đơn, NPC không frames không đổi hành
+  vi, Player trong Main nối frames. **Lỗi tìm ra khi test:** chia
+  float `_frame_t / FRAME_TIME` sau 6 lần cộng 0.05 dừng ngay
+  dưới 0.30 nên `int()` rớt xuống frame 5 thay vì 0 — sửa code
+  thành tích lũy trừ dần (`while _frame_t >= FRAME_TIME`), không
+  chia float; test chạy lại 16/16.
+- **Lỗi export lần đầu (do lệnh sai, không phải game):**
+  `--path src/godot` + đường dẫn tương đối `src/godot-build/...`
+  khiến Godot tìm thư mục đích trong project (`Target folder
+  does not exist`) — export bằng đường dẫn tuyệt đối thì xong.
+  Bài học: export release luôn dùng đường dẫn tuyệt đối hoặc
+  `cd src/godot` + `../godot-build/...` như G0.
+
+### 40.2 Verify vòng này
+
+- Hồi quy đầy đủ: **47 OK, 0 FAIL** (46 cũ + 1 mới); smoke
+  `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **11.898.092 byte, SHA `8f4a2e0a…`**
+  (trước `cddb9cd5…` — tăng ~0,2 MB do 6 frame walk); wasm
+  không đổi `fc74679e…`; HTTP 200 đủ 4 file (cổng 8173).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass18/check_r18.py`, ảnh
+  `r18-01…r18-06`): **0 console error, 0 pageerror, 0 request
+  fail.**
+  - Giữ D: người chơi đi (4,5)→(7,5)→(10,5), tư thế chân KHÁC
+    NHAU rõ giữa 2 ảnh giữa lúc bước (dạng rộng ↔ bắt chéo);
+    thả phím: về tư thế đứng frame 0 tại (10,5).
+  - **Lỗi script lần đầu (không phải game):** `check_r18.py`
+    bấm cửa (5,4) sau khi đã đi tới (10,5) nên ảnh r18-06 vẫn ở
+    Map001 (Ngày 2). Chạy bù `check_r18_m2.py` từ spawn: phải 1
+    + lên 1 → đúng Chợ Đầu Mối + toast "Đã sang Chợ Đầu Mối",
+    Chị Lệ/Anh Hải hiện đủ — không hồi quy.
+- **Lưu ý đồng bộ art:** 6 PNG walk chỉ sống ở local + trong pck
+  (snapshot-push chỉ nhận file text) — giống mọi art PNG từ trước;
+  6 file `.import` (text) đã push thì tương thích. Clone mới về
+  sẽ fallback về ảnh đơn `char_player.png` cho tới khi có cơ chế
+  đẩy art nhị phân.
+
+### 40.3 Deploy — CHẶN (22/11 ~02:30 +07, chưa xong)
+
+- Push main + deploy gh-pages **CHƯA làm được trong vòng này**:
+  `github push-files` bị gián đoạn 4 lần liên tiếp (cả bản đủ 16
+  file lẫn bản nhỏ 4 file code) — lỗi "service restarted while it
+  was running", head main vẫn `33d68d07` sau mỗi lần kiểm tra
+  lại. Connector GitHub vẫn `connected`, read (`list_commits`)
+  chạy bình thường; chỉ đường ghi `push_files` bị gián đoạn.
+  ĐÃ DỪNG retry sau lần 4 (không lặp lại cùng 1 lệnh hỏng).
+- **Retry 22/11 09:31 +07 (vòng sau): lại fail 3 lần nữa** — lần
+  1 bản đủ 16 file, lần 2 bản đủ 16 file, lần 3 bản nhỏ 4 file
+  (`pxb-push-r18a-paths`); cả 3 đều "service restarted", head
+  main vẫn `33d68d07` sau mỗi lần kiểm tra lại, KHÔNG có commit
+  nào áp dụng (đã đối chiếu lại trước mỗi lần retry: head khớp
+  record, 4 file có base không divergence, 11 file mới xác nhận
+  chưa tồn tại remote). Tổng cộng 7 lần push fail liên tiếp.
+  Đường ghi `push_files` đang hỏng phía service — cần chờ hoặc
+  tìm đường ghi khác, không retry vô hạn. DỪNG theo lệnh task.
+- Mọi thứ khác của vòng này đã xong + verify (xem §40.2); code,
+  test, export pck `8f4a2e0a…` đều ở working copy local.
+- Manifest push đã chuẩn bị sẵn (bền, ngoài repo):
+  `~/workspace/pxb-push-r18a-paths` (4 file code/test) +
+  `~/workspace/pxb-push-r18-paths` (đủ 16 file) — vòng sau retry
+  push main trước (đối chiếu lại head + divergence), rồi mới
+  rebuild staging + deploy gh-pages pck `8f4a2e0a…` như §38.3/§39.4.
+- Live site vẫn phục vụ bản vòng 17 (pck `cddb9cd5…`) — không hồi
+  quy, chỉ chưa có walk cycle.
+
+### 40.4 Việc tiếp theo
+
+1. Ánh sáng + sự sống (23/11) — theo ETA §35.6: dải sao đã neo
+   camera (vòng 17), còn nướng sáng đêm + sprite phát sáng cộng
+   dồn + CanvasModulate + chuyển động nhỏ (lá rơi/khói/chim).
+2. Walk cycle cho NPC (Cô Tư/Bạn Thân/Chị Lệ/Anh Hải) — cần sheet
+   riêng từng người; mặt sau/mặt nghiêng cho người chơi (hiện chỉ
+   mặt trước + flip).
+3. Sạp chợ Map002 (khối be thô) + đất vẽ tay Map002 — làm khi tới
+   lượt art Map002.
+4. ~~G4 bước 7: nối PxbOnline sang server Godot mới (§17.2)~~ —
+   **ĐÃ XONG từ commit `e01fa1542a`** (đính chính doc cũ §17.2/§20
+   còn ghi là việc tiếp theo): `PxbOnline` đã có client WebSocket
+   (`WebSocketMultiplayerPeer`, protocol v1) + chat trong điện thoại
+   tab Tin nhắn, test `g4_online_ws_client_test` 49/49, browser-
+   verify chat thật 0 lỗi. Việc online còn lại: auth player_id,
+   giới hạn tốc độ chat, lưu lịch sử chat cho client mới vào
+   (§17.5); server .NET giữ làm tham chiếu.
+
+
+## 41. Vòng 19 — Ánh sáng + sự sống: glow ADD thật + lá rơi/đom đóm (22/11 ~09:45–10:15 +07)
+
+Mục (3) của Claude (§35.6), ETA 23/11 — làm sớm trong lượt cron này
+vì push main vòng 18 bị chặn (xem §41.4) nên chuyển sang việc tiếp
+theo thay vì ngồi chờ.
+
+### 41.1 Việc làm
+
+- **GlowCanvas — ánh sáng cộng dồn THẬT** (`scripts/glow_canvas.gd`,
+  mới): Node2D con của `_overlay_layer`, thêm SAU ColorRect MUL
+  (nên vẽ TRÊN lớp nhân) nhưng TRƯỚC `_label_layer`/`_ui_layer`
+  (cùng layer 1, thêm sau → vẫn dưới nhãn/HUD). Material
+  `BLEND_MODE_ADD`: cộng ánh sáng thật vào ảnh cuối — đèn lồng/
+  cửa sổ sáng hẳn lên rõ rệt mà không cần màu HDR >1.0 như
+  NightGlow (vốn vẽ DƯỚI lớp MUL nên bị nhân tối, phải "xuyên"
+  bằng HDR). Chỉ bật khung Tối; nguồn = `lamps + spots` của
+  NightGlow (tọa độ thế giới → màn hình qua camera, vì CanvasLayer
+  không theo viewport nên tọa độ vẽ là tọa độ màn hình). Vẽ halo
+  mềm 10 vòng alpha giảm dần + tâm sáng, như kỹ thuật đĩa mềm của
+  SkyEffects.
+- **AmbientLife — sự sống nhỏ** (`scripts/ambient_life.gd`, mới):
+  Node2D thế giới, z_index 10 (như SkyEffects/NightGlow), neo theo
+  camera nên phủ kín khung nhìn: 14 lá vàng-xanh rơi chậm (24–42
+  px/s) + lắc ngang, chạm đáy lặp lại từ trên; 10 đom đóm bay lang
+  thang + nhấp nháy, CHỈ khung Tối. Seed RNG cố định 20261122 để
+  test ổn định. `sim_step(delta)` là bước mô phỏng thật — `_process`
+  gọi mỗi frame, test gọi trực tiếp để đo chính xác.
+- **Nối dây** (`main.gd`): tạo 2 node trong `_build_ui()` (sau lớp
+  overlay); `_update_daynight()` gọi `set_lit(frame==2)` +
+  `set_sources(_glow_sources())` + `ambient.set_frame()` — nguồn
+  đổi theo map mỗi lần đổi khung/đổi map. Helper `_glow_sources()`:
+  Map001-002 = 1 đèn lồng (spots rỗng — cửa sổ đã sáng trong ảnh
+  đêm), Map003+ thêm cửa sổ sáng.
+- **Không đổi:** lớp MUL ngày/đêm, NightGlow, SkyEffects, sao/trăng
+  giữ nguyên — vòng này chỉ THÊM 2 node mới, không sửa đường vẽ cũ
+  (rủi ro hồi quy thấp; đã chứng minh bằng hồi quy 48/48 + browser).
+
+### 41.2 Lỗi tìm ra khi làm (ghi để không tái phạm)
+
+1. **GlowCanvas.visible mặc định true:** `set_lit(false)` lần đầu
+   là no-op (lit đã false) nên node vẫn `visible=true` ở khung
+   Sáng — `_draw` trả sớm nên không vẽ gì (vô hại về hình), nhưng
+   test bắt đúng. Sửa: `set_lit` LUÔN gán `visible = on`, `_init`
+   đặt `visible = false`.
+2. **Test đo lá bằng trung bình y + baseline cũ:** lá chạm đáy lặp
+   về y=-30 làm trung bình GIẢM dù lá vẫn rơi — FAIL giả. Sửa:
+   đo 1 lá cụ thể xa đáy (y<1000) trước/sau `sim_step(1.0)`.
+3. **Literal `[]` không kiếu bị từ chối ở tham số `Array[Vector2]`:**
+   `set_sources([Vector2...])` lỗi type, `_state` không bao giờ
+   sang 3 → test lặp state 2 vô hạn tới TIMEOUT (log 4465 dòng,
+   371 lần lặp). Sửa: khai `var src: Array[Vector2] = [...]` rồi
+   truyền. Bài học: lỗi type trong callback `_on_frame` không dừng
+   test — state machine lặp mãi; test nào lặp state phải có guard
+   đếm lần lặp (đã có TIMEOUT 400 frame, nhưng log phình vì mỗi
+   lần lặp in 8 dòng PASS).
+4. **Lá quá nhỏ/mờ trên ảnh thật:** lá 3–6px alpha 0.55 chìm hẳn
+   vào lá vẽ sẵn trên đất. Tăng lên 4.5–8px, alpha 0.7 — vẫn tinh
+   tế, nhìn kỹ thấy lá rơi giữa khung.
+
+### 41.3 Test mới + verify vòng này
+
+- Test mới `tests/g4_r19_lighting_test.gd`: **22/22 PASS** — Glow
+  tồn tại + con của overlay + BLEND ADD, Sáng/Chiều tắt, Tối bật
+  với đúng 1 nguồn/1 halo trong màn hình (Map001), đom đóm chỉ
+  Tối, lá rơi xuống sau 1s mô phỏng, lá chạm đáy lặp từ trên,
+  `set_sources` 2 điểm → 2 halo, về Sáng tắt lại, đủ 14 lá.
+- Hồi quy đầy đủ: **48 OK, 0 FAIL** (47 cũ + 1 mới; chạy 2 lần —
+  lần 2 sau khi tăng cỡ lá, vẫn 48/48).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **11.907.596 byte, SHA `96ef16a9…`**
+  (trước `8f4a2e0a…` — tăng ~9,5KB do 2 script + test mới); wasm
+  không đổi `fc74679e…`; HTTP 200 đủ 2 file (cổng 8174).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass19/check_r19.py`, ảnh
+  `r19-01…r19-04`): **0 console error, 0 pageerror,
+  0 request fail.**
+  - Spawn Sáng: mặt trời + nhà ống + nhân vật như cũ; lá rơi
+    nhỏ vàng-xanh lơ lửng giữa khung (nhìn kỹ mới thấy).
+  - F ×2 → Tối Map001: đèn lồng góc trái dưới có quầng ấm rõ
+    (ADD trên lớp MUL), sao + trăng như cũ, đom đóm lấm tấm.
+  - Về Sáng + sang Map002: đúng Chợ Đầu Mối, không hồi quy.
+  - Tối Map002: trời đêm + trăng + sao, quầng đèn lồng + cửa
+    sổ sáng, NPC/sạp đủ.
+- Staging gh-pages rebuild xong cho pck `96ef16a9` (89 chunk),
+  VERIFY OK — sẵn sàng deploy khi push main hồi (xem §41.4).
+
+### 41.4 Deploy — CHẶN (push-files gián đoạn, như vòng 18)
+
+- Push main vòng 18 retry 2 lần trong lượt này (bản đủ 16 file +
+  bản nhỏ 4 file `pxb-push-r18a-paths`): cả 2 đều "service
+  restarted while it was running"; head main vẫn `33d68d07` sau
+  mỗi lần kiểm tra lại. Cộng vòng 18 = **6 lần gián đoạn liên
+  tiếp**. Connector GitHub `connected`, read (`list_commits`) bình
+  thường; chỉ đường ghi `push_files` bị gián đoạn. **ĐÃ DỪNG
+  retry** sau lần 2 của lượt này (không lặp cùng 1 lệnh hỏng).
+- Hệ quả: live vẫn chạy pck vòng 17 `cddb9cd5` — walk cycle (vòng
+  18) + ánh sáng/sự sống (vòng 19) CHƯA lên live, chỉ có local +
+  export pck `96ef16a9` + staging gh-pages đã rebuild sẵn.
+- Manifests chờ push (bền, ngoài repo): `~/workspace/pxb-push-r18-paths`
+  (16 file vòng 18) + `~/workspace/pxb-push-r18a-paths` (4 file)
+  + `~/workspace/pxb-push-r19-paths` (vòng 19, xem dưới). Lượt sau
+  retry push main trước (đối chiếu lại head + divergence), rồi
+  deploy gh-pages pck `96ef16a9` như §38.3/§39.4 (6 lô: pck
+  89 chunk + versions.json + index.html CUỐI).
+- Chủ CHƯA trả lời widget duyệt ảnh walk cycle vòng 18 (gửi
+  ~12:52 22/11) tại thời điểm vòng này chạy — vòng 19 làm theo
+  ETA Claude đã chốt (ánh sáng 23/11), không phụ thuộc duyệt đó.
+
+### 41.5 Việc tiếp theo
+
+1. Retry push main (vòng 18 + 19) + deploy gh-pages pck `96ef16a9`
+   ngay khi `push_files` hồi — việc chặn duy nhất lúc này.
+2. Walk cycle cho NPC (Cô Tư/Bạn Thân/Chị Lệ/Anh Hải) — cần sheet
+   riêng từng người; mặt sau/mặt nghiêng cho người chơi (hiện chỉ
+   mặt trước + flip).
+3. Sạp chợ Map002 (khối be thô) + đất vẽ tay Map002 — làm khi tới
+   lượt art Map002.
+4. Kiểm live lại bằng cloud browser khi tunnel ổn (luật kiểm live).
+5. Khói nồi phở / biển đung đưa (mục còn lại của Claude (3)) —
+   cần sprite riêng cho biển/nồi (hiện là 1 phần của ảnh nền),
+   để sau khi có art tách lớp.
+
+
+## 42. Vòng 20 — Đất vẽ tay Map002 Chợ Đầu Mối (22/11 ~13:15–15:20 +07)
+
+Mục 3 §41.5 (nửa đầu): sạp chợ Map002 + đất vẽ tay Map002 — làm
+xong nửa đất; sạp (khối be thô) còn lại cho vòng sau (cần tách
+sprite sạp riêng, hiện là 1 phần ảnh nền composite).
+
+### 42.1 Việc làm
+
+- Subagent gen `src/godot/art/ground_map002.png` 1440×900, PNG RGB
+  2.369.876 byte, SHA `377ab722…`: sàn xi măng/đá chợ cũ loang lổ,
+  vết nứt, vệt ẩm, 3 vũng nước phản chiếu, lá rau xanh rơi rải rác,
+  vệt đất cát, dấu bánh xe mờ — watercolor, tông ấm, không chữ /
+  không người / không công trình; vùng giữa thoáng. Hài hòa với
+  `ground_map001.png` nhưng khác rõ (sàn chợ, không phải vỉa hè).
+  Mép trên có 1 hàng đá kè thấp (rìa sàn) — chấp nhận, không gen lại.
+- `main.gd` `_update_ground`: Map002 dùng `ground_map002.png` khi
+  có file (fallback `ground_wide.jpg` nếu clone mới thiếu art nhị
+  phân, như Map001); comment `_build_ui` cập nhật theo.
+- Test mới `tests/g4_r20_map002_ground_test.gd`: Map001 giữ
+  `ground_map001.png`, Map002 dùng `ground_map002.png` 1440×900,
+  Map003 vẫn `ground_wide.jpg`, đi Map002→Map001 đổi đất đúng.
+- Cập nhật test cũ theo tiền lệ §12.3: `g4_r17_sky_test.gd` kỳ vọng
+  Map002 dùng `ground_map002.png` (không còn `ground_wide.jpg`).
+
+### 42.2 Lỗi tìm ra khi làm (ghi để không tái phạm)
+
+1. **PNG mới chưa `.import` thì `ResourceLoader.exists` = false:**
+   test r20 chạy đầu 4/6 PASS — Map002 vẫn `ground_wide.jpg` dù file
+   PNG đã có. Sửa: chạy `godot --headless --import` trước khi test
+   (sinh `ground_map002.png.import`), rồi test 6/6 PASS. Bài học:
+   thêm art nhị phân mới thì import trước, test sau.
+2. **Test cũ tìm sprite đất bằng tên file:** `artpass12_test` tìm
+   `"ground_wide" in texture.resource_path` để đo khe trời/đất —
+   Map002 đổi texture nên `gtop` giữ 9999 → FAIL giả (hồi quy 48 OK,
+   1 FAIL). Sửa: nhận cả 3 tên `ground_wide` / `ground_map001` /
+   `ground_map002` (cùng 1 sprite 1440×900, chỉ đổi texture) →
+   artpass12 14/14 PASS. Bài học: test nào match tên asset thì liệt
+   kê đủ các biến thể khi thêm asset cùng loại.
+3. **Cửa Map001→Map002 ở (5,4), KHÔNG phải (5,8):** check trình
+   duyệt đi Phải + Xuống ×3 tới (5,8) rồi đứng im — (5,8) trên
+   Map001 chỉ là ô thường (cửa (5,8) chỉ có ở Map002 trở đi, đi
+   Map003). Nhãn "Cửa ra Chợ Đầu Mối" nổi trên màn hình không chỉ
+   đúng vị trí ô (nhãn nổi cao ~190px) nên đừng bấm theo nhãn.
+   Sửa: đi Phải + Lên từ spawn (4,5) → (5,4) là cửa thật, chuyển
+   map ngay. Bài học: vị trí cửa lấy từ `maps.json`, không lấy từ
+   vị trí nhãn trên ảnh.
+4. **Nút Start DOM lúc có lúc không:** `get_by_text("BẮT ĐẦU CHƠI")`
+   timeout 5s sau chờ 30s thì lúc được lúc không (lần tải đầu wasm
+   39MB + pck 13MB chưa boot xong); fallback click canvas (360,1060)
+   chạm thành tap di chuyển tới (6,7), làm vị trí spawn không ổn
+   định giữa các lần chạy. Sửa: chờ 45s + retry DOM 3 lần (mỗi lần
+   10s), chỉ fallback canvas khi hết retry; script chọn đường phím
+   theo cách bấm được (`dom`: spawn (4,5) → Phải, Lên; `canvas`:
+   (6,7) → Trái, Lên ×3). Cả 2 lần chạy sau đều bấm DOM được.
+
+### 42.3 Test mới + verify vòng này
+
+- Test mới `g4_r20_map002_ground_test`: **6/6 PASS**.
+- Hồi quy đầy đủ sau khi sửa artpass12: **49 OK, 0 FAIL** (48 cũ +
+  1 mới r20; lần chạy trước khi sửa: 48 OK, 1 FAIL chỉ artpass12,
+  lỗi giả §42.2.2). artpass12 **14/14**, r17 **14/14**.
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **13.514.456 byte, SHA `b501abd2…`**
+  (trước `96ef16a9`, +1,6MB do `ground_map002.png`); wasm không đổi
+  `fc74679e…`; `grep -a` thấy `ground_map002` ×2 trong pck; HTTP 200
+  đủ 2 file (cổng 8175).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass20/check_r20.py`, ảnh
+  `r20-01…r20-03`): **0 console error, 0 pageerror,
+  0 request fail.**
+  - Spawn Sáng Map001: đất vẽ tay ground_map001 như cũ, không hồi quy.
+  - Sang Map002 (Phải + Lên qua cửa (5,4), toast "Đã sang Chợ Đầu
+    Mối"): đất mới hiện rõ — sàn đá nứt + lá rau + vũng nước, thay
+    ảnh chụp cũ; Chị Lệ/Anh Hải + sạp đủ. Sạp vẫn khối be thô + biển
+    hiệu nổi (điểm chưa đẹp đã biết, để vòng sau).
+  - Tải lại về Map001: spawn (4,5), đất ground_map001, không hồi quy.
+- Staging gh-pages rebuild xong cho pck `b501abd2` (101 file),
+  VERIFY OK, `versions.json` pin `b501abd2` — sẵn sàng deploy khi
+  push hồi (xem §42.4).
+
+### 42.4 Deploy — CHẶN (push-files gián đoạn lần 7 liên tiếp)
+
+- Lượt này retry push main 1 lần (gộp r18+r19: 24 file, 423KB,
+  manifest `~/workspace/pxb-push-r18r19-paths`): "service restarted
+  while it was running"; kiểm tra lại head main vẫn `33d68d07`
+  (chưa áp dụng). Đây là lần gián đoạn thứ 7 liên tiếp của
+  `push_files` (6 lần vòng 18+19 + 1 lần lượt này). **ĐÃ DỪNG
+  retry** trong lượt này theo luật vòng 18/19 — không lặp cùng 1
+  lệnh hỏng.
+- Hệ quả: live vẫn chạy pck vòng 17 `cddb9cd5` — walk cycle (vòng
+  18) + ánh sáng/sự sống (vòng 19) + đất Map002 (vòng 20) CHƯA lên
+  live, chỉ có local + export pck `b501abd2` + staging gh-pages đã
+  rebuild sẵn.
+- Manifest chờ push (bền, ngoài repo): `~/workspace/pxb-push-r18r19-paths`
+  (24 file vòng 18+19) + `~/workspace/pxb-push-r18r19r20-paths`
+  (vòng 18+19+20, xem dưới). Lượt sau retry push main trước (đối
+  chiếu lại head + divergence), rồi deploy gh-pages pck `b501abd2`
+  như §38.3/§39.4 (pck 101 file + versions.json + index.html CUỐI).
+  Deploy gh-pages cũng dùng `push_files` nên cùng bị chặn — không
+  thử trong lượt này.
+
+### 42.5 Việc tiếp theo
+
+1. Retry push main (vòng 18+19+20) + deploy gh-pages pck `b501abd2`
+   ngay khi `push_files` hồi — việc chặn duy nhất lúc này.
+2. Walk cycle cho NPC (Cô Tư/Bạn Thân/Chị Lệ/Anh Hải) — cần sheet
+   riêng từng người; mặt sau/mặt nghiêng cho người chơi (hiện chỉ
+   mặt trước + flip).
+3. Sạp chợ Map002 (khối be thô + biển hiệu nổi) — cần sprite sạp
+   tách riêng hoặc vẽ lại nền chợ; làm khi tới lượt art Map002.
+4. Kiểm live lại bằng cloud browser khi tunnel ổn (luật kiểm live).
+5. Khói nồi phở / biển đung đưa (mục còn lại của Claude (3)) — cần
+   sprite riêng cho biển/nồi (hiện là 1 phần của ảnh nền), để sau
+   khi có art tách lớp.
