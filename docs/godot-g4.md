@@ -4152,6 +4152,39 @@ bước iso hiện có; sprite để vòng sau nếu đổi hàng.
   liệt kê part `e1e4ee94`.
 - **Live nay chạy vòng 23**: sạp chợ Map002 vẽ lại. Link:
   https://tinnt120899.github.io/pho-xo-bo/
+- Kiểm live cloud browser lần 1 (22:44–22:52 +07): game chạy,
+  nút Bắt đầu bấm được, không thấy lỗi hiển thị (checker không
+  mở được DevTools nên là kết luận quan sát); di chuyển D/A/S/W
+  đúng từng ô đo bằng nhãn debug (spawn (4,5); D→(5,5); A→(4,5);
+  S→(4,6); W→(4,5)); sang Map002 qua cửa (5,4) được 2 chiều,
+  toast "Đã sang Chợ Đầu Mối"; sạp hàng trên: biển đọc được +
+  màu riêng theo loại, mái hiên kẻ sọc, quầy có hàng đúng loại
+  (nhãn nổi che một phần quầy CÁ TƯƠI/GIA VỊ/ĐỒ KHÔ).
+- Kiểm live bổ sung (22:54–23:05 +07): **sạp bên CÓ trên live**
+  (đính chính kết luận lần 1 "chỉ thấy khối be phẳng" — checker
+  đã bỏ sót vì biển bên nhỏ + bị D-pad/nhãn che): cột trái có
+  biển BÁNH MÌ (nâu) + HOA QUẢ (cam) kèm mái hiên kẻ sọc +
+  quầy; cột phải có BÁNH MÌ, HOA QUẢ, CÁ TƯƠI (xanh dương),
+  ĐỒ KHÔ (ô-liu), GIA VỊ (tím) kèm mái hiên + quầy; khối be
+  phẳng chỉ còn ở phần dưới cột trái (hàng lẻ, cố ý là tường
+  trơn) + phần sau nút D-pad. Khớp ảnh local r23-02.
+- Patrol live: 2 lần kiểm bằng ảnh tĩnh đều "không thấy đi"
+  (đứng (1,7)/(1,8) 24s; đứng (1,1) chụp trước/sau 15s) —
+  **KHÔNG phải lỗi patrol.** Probe headless vòng này
+  (`/tmp/pxb-patrol-probe.gd`, không commit): chạy
+  `Main._process(0.5)` thật 60 lần (= 30s game time), người
+  chơi (1,1): t=10s Cô Tư (7,6) + Bạn Thân (3,6) (đã rời nhà),
+  t=15s về nhà, t=20s lại ra (9,6)/(3,4), t=30s (8,7) —
+  **PASS, patrol chạy đúng chu kỳ** (nhà 4–9s → ra ngoài 2–5s
+  → về nhà). Bài học phương pháp: 2 ảnh tĩnh cách nhau 15s rất
+  dễ cùng bắt lúc NPC ở nhà (~65% thời gian ở nhà) nên không
+  kết luận được patrol hỏng — kiểm patrol phải quay video liên
+  tục hoặc chụp mỗi 2s. Probe local vòng này cũng vậy: ảnh A/B
+  ở (4,1) giống nhau ở vùng NPC, nhưng diff toàn ảnh 20.893 px
+  (khói/lá/nắng động) và probe headless đã chứng minh NPC có đi.
+  Lưu ý probe local: đi Trái trước từ spawn bị Bạn Thân ở (3,5)
+  chặn (ô NPC không đi được) nên người chơi chỉ tới (4,1) —
+  lần sau đi Lên trước rồi mới sang Trái (như check_r22.py).
 - Lưu ý verify: lần export đầu lỗi `Target folder does not
   exist: "src/godot-build"` (xem §45.3) — pck cũ `a5964dee`
   vẫn nằm trên đĩa tới khi export lại bằng đường dẫn tuyệt đối
@@ -4167,5 +4200,113 @@ bước iso hiện có; sprite để vòng sau nếu đổi hàng.
    cá-thịt) thay code vẽ — vòng 24+.
 3. NPC Map003–018 vẫn ảnh đơn + nhún (chỉ 4 NPC Map001–002 có
    walk cycle): nối `frames` khi có sheet (theo mẫu vòng 22).
-4. Kiểm live lại bằng cloud browser (luật kiểm live) — bản mới
-   có sạp vẽ lại, cần xem trên live có như local không.
+4. Kiểm live lại bằng cloud browser — ĐÃ XONG vòng này (§45.4):
+   sạp mới đã thấy trên live, patrol đã chứng minh bằng probe
+   headless (PASS). Bài học phương pháp (ghi để vòng sau không
+   tái phạm): kiểm patrol KHÔNG dùng 2 ảnh tĩnh — dùng video
+   liên tục hoặc chụp mỗi 2s, hoặc probe headless qua
+   `Main._process`; đi từ spawn phải Lên trước rồi mới sang
+   Trái (ô (3,5) là nhà Bạn Thân, chặn đường).
+
+## 46. Vòng 24 — Biển phở đung đưa + khói nồi phở rõ hơn (22/11 ~23:20–00:10 +07)
+
+Mục 1 §45.5 (§42.5 mục 5 — mục còn lại của Claude (3) từ vòng 20):
+khói nồi phở đã có từ trước trong code (`_draw_food_cart`, 3 cụm,
+alpha ≤0.35) nhưng mờ, khó thấy; biển đung đưa chưa có — biển trên
+mặt tiền Map001 nằm trong ảnh composite nên không lắc được.
+
+### 46.1 Việc làm
+
+| File | Đổi |
+|---|---|
+| `scripts/nadia_scene.gd` | Hằng + helper mới: `FOOD_CART_TILE (6,12)`, `SIGN_TEXT "PHỞ BÒ"`, `SIGN_BOARD (46,16)`, `SIGN_SWAY_AMP 0.07 rad (~4°)`, `SIGN_SWAY_SPEED 1.4`, `SMOKE_PUFFS 4`, `SMOKE_RISE 50`, `SMOKE_ALPHA_MAX 0.5`; `food_cart_sign_angle(t)` (sin con lắc, 0 ở t=0, cực đại ở t=PI/(2*SPEED)); `food_cart_smoke_puff(t, i)` (vị trí/bán kính/alpha — bay lên + mờ dần + lắc ngang). `_draw_food_cart`: khói 4 cụm alpha tới 0.5 (cũ 3 cụm 0.35); thêm **biển treo "PHỞ BÒ" đung đưa** dưới mái hiên xe đồ ăn — 2 dây treo + bảng gỗ 46×16 viền kem + chữ 10px, lắc quanh điểm treo ở mép mái hiên bằng `draw_set_transform(pivot, angle)`, vẽ sau cùng để nằm trước thân xe. Biển trên mặt tiền trong ảnh composite giữ nguyên — biển treo này là vật riêng, không đè lên biển trong ảnh. |
+| `tests/g4_r24_smoke_sign_test.gd` (mới) | 15 mục: góc biển 0 ở t=0, +AMP ở t=PI/(2*SPEED), −AMP ở t=3*PI/(2*SPEED), đổi góc theo thời gian, biên độ 0.05–0.10 rad; khói 4 cụm, bay lên, mờ dần, lắc ngang đổi theo t, alpha ≤0.5, bán kính ≤9; chữ "PHỞ BÒ" cỡ 10 rộng 41.0px ≤ 42 (bảng 46); xe đồ ăn ở ô (6,12); scene Map001 chạy 60 frame, `_t` chạy thật. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r24_smoke_sign_test` (nay 52 suite + online). |
+| `visual-check/artpass24/check_r24.py` (mới, subagent) | Theo mẫu check_r23.py, cổng 8178 + ảnh zoom vùng xe (clip y=640..1000) + pixel-diff 2 ảnh cách nhau 1.5s. |
+
+### 46.2 Lỗi tìm ra khi làm (ghi để không tái phạm)
+
+- **`rm -rf src/godot-build` xóa cả asset DOM shell:** export
+  xong, browser-verify lần 1 báo **9 console error 404** —
+  `title_bg.jpg`, `char_player.png`, `char_banthan.png` (mỗi file
+  ×3 lần tải trang). Nguyên nhân: 3 file này không phải do export
+  sinh ra mà do các vòng trước copy tay vào `src/godot-build/`
+  cho `web_shell.html` fetch (`fetchBlobRetry`); `rm -rf` trước
+  export đã xóa chúng. Sửa: khôi phục `title_bg.jpg` bằng cách
+  giải base64 từ staging (`gh-pages-staging/img/title_bg.jpg/260962c1/`,
+  119.190 byte, đúng bản live) + copy 2 PNG từ `src/godot/art/`;
+  chạy lại check → **0 console error, 0 pageerror,
+  0 requestfailed**. **LUẬT: không bao giờ `rm -rf` cả thư mục
+  build — chỉ xóa file export sinh ra (`index.*`, `index.pck`,
+  `index.wasm`), hoặc export đè lên; asset DOM shell
+  (`title_bg.jpg`, `char_*.png`) phải giữ lại.**
+
+### 46.3 Verify thật vòng này
+
+- `--check-only` nadia_scene.gd: PASS.
+- Test mới `g4_r24_smoke_sign_test`: **15/15 PASS** (lần đầu).
+- Hồi quy đầy đủ: **52 OK, 0 FAIL** (51 cũ + 1 mới r24).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR/warning.
+- Export web exit 0: pck **14.409.256 byte, SHA `db28f2c4…`**
+  (trước `e1e4ee94`, +4.312 byte); wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ 4 file (cổng 8178).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass24/check_r24.py`, ảnh
+  `r24-01…r24-04` + crop xe): **0 console error, 0 pageerror,
+  0 requestfailed.** Nhãn debug xác nhận đi xuống tới **Ô (4,8)**
+  sau 3×S. Xem ảnh thật: biển gỗ **"PHỞ BÒ" đọc được** treo dưới
+  mái hiên kẻ sọc đỏ/trắng của xe đồ ăn; **khói trắng thấy được**
+  bay lên từ nồi phở xám trên xe; pixel-diff 2 ảnh zoom cách nhau
+  1.5s = **14.955/460.800 pixel khác** (khói + biển + lá động).
+  Crop phóng to 2 ảnh cách nhau 1.5s: cụm khói ở vị trí khác nhau,
+  biển hơi nghiêng khác nhau.
+
+### 46.4 Deploy — XONG, verify live khớp byte (22/11 ~23:55–00:05 +07)
+
+- Push main 1 lô: code + test + check_r24 `b1267ef1` (trước
+  `00596897`). Sync record 235 entries.
+- Staging rebuild `build_gh_pages.py` exit 0 (VERIFY OK): pck
+  `db28f2c4` 107 chunk / 14.409.256 byte khớp byte, wasm
+  `fc74679e` 293 chunk không đổi, img khớp, loader đủ.
+  Đối chiếu trước deploy: gh-pages head `85f190c8`,
+  `versions.json` live pin `e1e4ee94` (vòng 23), không divergence.
+- Deploy 7 lô gh-pages: part 000–019 `413a82dd`, 020–039
+  `2246e1eb`, 040–059 `54dcfa75`, 060–079 `08834a25`, 080–099
+  `7e87273d`, 100–106 `8322bfcf`, versions.json + index.html cuối
+  `97bdeb66`. Sync record 242 entries. Không gián đoạn lần nào.
+- Verify live bằng byte: pin `db28f2c4` sau lag Pages ~45 giây;
+  tải + giải base64 + ráp 107 part từ live = **14.409.256 byte,
+  SHA `db28f2c4b5f5` — khớp đúng từng byte**; index.html live
+  liệt kê part `db28f2c4`.
+- **Live nay chạy vòng 24**: biển phở đung đưa + khói nồi phở rõ
+  hơn. Link: https://tinnt120899.github.io/pho-xo-bo/
+- **Kiểm live cloud browser — XONG (23/11 00:05–00:12 +07,
+  browser task 4b96032b, 6 phút):** game tải được, nút "BẮT ĐẦU
+  CHƠI" enable sau ~10s rồi bấm được, vào Map001 "Xóm Trọ Cũ"
+  đúng HUD. Di chuyển đọc nhãn debug: spawn (4,5); D→(5,5),
+  A→(4,5), S→(4,6), W→(4,5) — **4 phím đổi đúng từng ô**.
+  Xuống đáy map S×3 → (4,8): thấy xe đồ ăn (mái hiên kẻ sọc
+  đỏ/trắng, 2 bánh, nồi trên nóc), biển gỗ **"PHỞ BÒ" treo dưới
+  mái hiên nghiêng khác nhau qua 3 ảnh cách nhau ~2s** (ngang →
+  nghiêng chiều kim đồng hồ → về ngang, biên độ vài độ, đọc bằng
+  mắt vì xe chỉ ~55px trên màn hình) và **khói trắng bay từ nồi,
+  cụm khói khác vị trí/hình mỗi ảnh**. Không thấy lỗi hiển thị;
+  game chạy liên tục không gián đoạn. Hạn chế: checker không mở
+  được DevTools nên không khẳng định "0 console error" từ live
+  (bản local cùng SHA đã 0 lỗi ở §46.3); trang không hiện số vòng
+  deploy nên "vòng 24" chỉ xác minh qua nội dung tính năng, không
+  qua số phiên bản. Quan sát thêm chưa xác minh: checker thấy
+  biển "PHO BO" quán phía trên + hơi nồi quầy "CÀ PHÊ" cũng đổi
+  giữa 2 ảnh — biển mặt tiền nằm trong ảnh tĩnh nên đổi góc là
+  khó hiểu, có thể checker đọc nhầm khói/overlay; không sửa code
+  theo quan sát này, vòng sau xem lại nếu thấy lại.
+
+### 46.5 Việc tiếp theo
+
+1. Sprite sạp tách riêng (§45.1): khi nào đổi hàng 0 thành sạp
+   cách nhau (ô lẻ để trống) thì gen 3 sprite sạp (rau/trái cây/
+   cá-thịt) thay code vẽ — việc 2 vòng (artpass sprite + đổi hàng).
+2. NPC Map003–018 vẫn ảnh đơn + nhún (chỉ 4 NPC Map001–002 có
+   walk cycle): nối `frames` khi có sheet (theo mẫu vòng 22) —
+   làm theo từng map (Map003: Anh Ba, Chị Sáu trước).
+3. Kiểm live lại bằng cloud browser — ĐANG CHỜ vòng này (§46.4).
