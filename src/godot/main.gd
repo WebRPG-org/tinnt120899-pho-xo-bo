@@ -135,6 +135,8 @@ var _label_layer: CanvasLayer  # Lop nhan tren the gioi (duoi HUD).
 var _phone_notch: Panel  # Notch + thanh home cua khung dien thoai.
 var _phone_homebar: Panel
 var _js_poll := 0.0  # Poll window.__pxb_start (nut DOM "Bat dau").
+var _npc_patrol_wait := {}  # Vong 22: instance_id Marker -> so giay con lai truoc quyet dinh patrol ke.
+var _npc_patrol_tick := 0.0  # Vong 22: tich luy delta, quyet dinh patrol moi 0.5s.
 var title_open := true
 var _dlg_panel: PanelContainer
 var _dlg_name: Label
@@ -339,6 +341,7 @@ func _process(delta: float) -> void:
 	# ngay trong frame nay. Cap nhat gan/xa cua nhan NPC truoc
 	# resolver (vong 15) de placed co rect NPC dung trang thai moi.
 	_update_npc_labels()
+	_update_npc_patrol(delta)
 	_resolve_label_overlaps()
 	# Nut DOM "Bat dau" tren web (web_shell.html): nut HTML dat
 	# window.__pxb_start = true; poll 4 lan/giay (khong dung signal
@@ -1757,6 +1760,96 @@ func _update_npc_labels() -> void:
 		var mt: Vector2i = (mk as Marker).tile()
 		var d := absi(mt.x - player.tile.x) + absi(mt.y - player.tile.y)
 		(mk as Marker).set_label_near(d <= Marker.LABEL_NEAR_TILES)
+
+## Vong 22 — NPC di lang thang (patrol): moi NPC, khi nguoi choi
+## o xa (>5 o, cung nguong hien nhan) va khong mo UI/hoi thoai,
+## thi thoang buoc sang 1 o dat trong ke ben (khong event, khong
+## phai o nguoi choi / NPC khac) roi quay ve nha sau 2-5s. NPC
+## luon ve nha truoc khi nguoi choi lai gan — vi event_at /
+## is_walkable dung data tinh theo o nha (xem iso_map.gd), nen
+## tuong tac E chi dung khi NPC dung dung o nha; di lang thang
+## chi de ban do co suc song khi nhin tu xa. Dung yen khi
+## title/dien thoai/hoi thoai/tran dau mo (tra ve nha neu dang
+## o ngoai). Quyet dinh moi 0.5s, moi NPC nghi ngaunhien 4-9s.
+const NPC_PATROL_NEAR := 5
+const NPC_PATROL_IDLE_MIN := 4.0
+const NPC_PATROL_IDLE_MAX := 9.0
+const NPC_PATROL_AWAY_MIN := 2.0
+const NPC_PATROL_AWAY_MAX := 5.0
+
+func _update_npc_patrol(delta: float) -> void:
+	if iso_map == null or player == null:
+		return
+	_npc_patrol_tick += delta
+	if _npc_patrol_tick < 0.5:
+		return
+	_npc_patrol_tick = 0.0
+	var blocked := dialogue_open or phone_open or battle_open or title_open
+	for mk in iso_map.markers:
+		if String(mk.event_data.get("kind", "")) != "npc":
+			continue
+		var m := mk as Marker
+		if m.patrol_moving():
+			continue  # Cho tween xong moi lenh tiep.
+		var mid := m.get_instance_id()
+		if not _npc_patrol_wait.has(mid):
+			# Lan gap dau: nghi ngau nhien 4-9s truoc khi buoc
+			# (khong cho ca 2 NPC cung buoc ra ngay tick dau).
+			_npc_patrol_wait[mid] = randf_range(NPC_PATROL_IDLE_MIN, NPC_PATROL_IDLE_MAX)
+			continue
+		var wait: float = float(_npc_patrol_wait.get(mid, 0.0))
+		var home := m.home_tile
+		var cur := m.patrol_tile()
+		if home.x < 0:
+			continue  # Marker cu / chua co home (vd test dung le).
+		var near_player := _tile_dist(player.tile, home) <= NPC_PATROL_NEAR
+		if blocked or near_player:
+			if cur != home:
+				m.patrol_walk_to(home, iso_map.tile_center(home))
+			_npc_patrol_wait[mid] = randf_range(NPC_PATROL_IDLE_MIN, NPC_PATROL_IDLE_MAX)
+			continue
+		if wait > 0.0:
+			_npc_patrol_wait[mid] = wait - 0.5
+			continue
+		if cur == home:
+			var dest := _npc_patrol_pick(home)
+			if dest.x < -100:
+				_npc_patrol_wait[mid] = randf_range(NPC_PATROL_IDLE_MIN, NPC_PATROL_IDLE_MAX)
+			elif m.patrol_walk_to(dest, iso_map.tile_center(dest)):
+				_npc_patrol_wait[mid] = randf_range(NPC_PATROL_AWAY_MIN, NPC_PATROL_AWAY_MAX)
+			else:
+				_npc_patrol_wait[mid] = randf_range(NPC_PATROL_IDLE_MIN, NPC_PATROL_IDLE_MAX)
+		else:
+			m.patrol_walk_to(home, iso_map.tile_center(home))
+			_npc_patrol_wait[mid] = randf_range(NPC_PATROL_IDLE_MIN, NPC_PATROL_IDLE_MAX)
+
+## Chon 1 o dat trong ke ben o nha cho NPC buoc sang: di duoc
+## (lop 1 trong + khong NPC tinh) + khong co event nao (khong
+## dung len sao/cua/ban che tao) + khong phai o nguoi choi +
+## khong phai o hien tai cua NPC khac. Het o thi (-999,-999).
+func _npc_patrol_pick(home: Vector2i) -> Vector2i:
+	var cands: Array[Vector2i] = []
+	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		var t: Vector2i = home + d
+		if not iso_map.is_walkable(t):
+			continue
+		if not iso_map.event_at(t).is_empty():
+			continue
+		if t == player.tile:
+			continue
+		var busy := false
+		for mk in iso_map.markers:
+			if String(mk.event_data.get("kind", "")) != "npc":
+				continue
+			if (mk as Marker).patrol_tile() == t:
+				busy = true
+				break
+		if busy:
+			continue
+		cands.append(t)
+	if cands.is_empty():
+		return Vector2i(-999, -999)
+	return cands[randi() % cands.size()]
 
 func _resolve_label_overlaps() -> void:
 	if iso_map == null:

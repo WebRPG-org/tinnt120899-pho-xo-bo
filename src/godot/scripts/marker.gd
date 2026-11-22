@@ -38,11 +38,29 @@ const HUD_BOTTOM_SCREEN := 190.0
 const EDGE_MARGIN_WORLD := 13.0
 
 const NPC_STYLE := {
-	"co-tu": {"shirt": Color(0.56, 0.27, 0.68, 1), "hair_style": "bui", "texture": "res://art/char_cotu.png"},
-	"ban-than": {"shirt": Color(0.25, 0.65, 0.35, 1), "hair_style": "ngan", "texture": "res://art/char_banthan.png"},
-	"chi-le": {"shirt": Color(0.90, 0.45, 0.13, 1), "hair_style": "dai", "texture": "res://art/char_chile.png"},
-	"anh-hai": {"shirt": Color(0.09, 0.63, 0.52, 1), "hair_style": "ngan", "texture": "res://art/char_anhhai.png"},
+	"co-tu": {"shirt": Color(0.56, 0.27, 0.68, 1), "hair_style": "bui", "texture": "res://art/char_cotu.png",
+		"frames": ["res://art/walk_cotu_f0.png", "res://art/walk_cotu_f1.png", "res://art/walk_cotu_f2.png", "res://art/walk_cotu_f3.png", "res://art/walk_cotu_f4.png", "res://art/walk_cotu_f5.png"]},
+	"ban-than": {"shirt": Color(0.25, 0.65, 0.35, 1), "hair_style": "ngan", "texture": "res://art/char_banthan.png",
+		"frames": ["res://art/walk_banthan_f0.png", "res://art/walk_banthan_f1.png", "res://art/walk_banthan_f2.png", "res://art/walk_banthan_f3.png", "res://art/walk_banthan_f4.png", "res://art/walk_banthan_f5.png"]},
+	"chi-le": {"shirt": Color(0.90, 0.45, 0.13, 1), "hair_style": "dai", "texture": "res://art/char_chile.png",
+		"frames": ["res://art/walk_chile_f0.png", "res://art/walk_chile_f1.png", "res://art/walk_chile_f2.png", "res://art/walk_chile_f3.png", "res://art/walk_chile_f4.png", "res://art/walk_chile_f5.png"]},
+	"anh-hai": {"shirt": Color(0.09, 0.63, 0.52, 1), "hair_style": "ngan", "texture": "res://art/char_anhhai.png",
+		"frames": ["res://art/walk_anhhai_f0.png", "res://art/walk_anhhai_f1.png", "res://art/walk_anhhai_f2.png", "res://art/walk_anhhai_f3.png", "res://art/walk_anhhai_f4.png", "res://art/walk_anhhai_f5.png"]},
 }
+
+# Vong 22 — NPC di lang thang (patrol): NPC buoc cham giua o nha
+# (event tile) va 1 o dat trong ke ben roi quay ve; Main quyet
+# dinh luc nao di (xem Main._update_npc_patrol), Marker chi thuc
+# thi tween. 0.30s/o = cham gap doi nguoi choi (0.15s/o), vua
+# 1 chu trinh walk cycle 6 khung (FRAME_TIME 0.05).
+const PATROL_MOVE_TIME := 0.30
+var home_tile := Vector2i(-999, -999)  # O nha (event tile) — noi NPC phai ve khi nguoi choi lai gan.
+var _patrol_tile := Vector2i(-999, -999)  # O logic hien tai (doi khi tween xong).
+var _patrol_moving := false
+var _patrol_from := Vector2.ZERO
+var _patrol_to := Vector2.ZERO
+var _patrol_t := 0.0
+var _patrol_dest := Vector2i(-999, -999)
 
 func _ready() -> void:
 	_label_style = StyleBoxFlat.new()
@@ -63,6 +81,12 @@ func _ready() -> void:
 		_sprite = CharacterSprite.new()
 		_sprite.setup(cfg)
 		add_child(_sprite)
+		# Vong 22 — o nha = o event; NPC patrol quay ve day khi
+		# nguoi choi lai gan (Main tinh theo home, khong theo
+		# vi tri tam thoi — event_at/tuong tac dung data tinh).
+		var ht: Array = event_data.get("tile", [0, 0])
+		home_tile = Vector2i(int(ht[0]), int(ht[1]))
+		_patrol_tile = home_tile
 	_base_name = String(event_data.get("name", ""))
 	# Nhan NPC trong the gioi (vong 15): Label con cua Marker (xem
 	# _make_world_label) — khong can label_layer. Nhan hotspot/
@@ -125,6 +149,41 @@ func set_tint(c: Color) -> void:
 func set_frame(f: int) -> void:
 	if _sprite != null:
 		_sprite.set_frame(f)
+
+## Vong 22 — Patrol: buoc cham sang o `dest` (toa do world cua tam
+## o dich). Tra false neu dang buoc (Main cho tween xong moi lenh
+## tiep — khong chen buoc). Huong mat theo dx; frame walk cycle
+## chay nho _sprite.moving (CharacterSprite tu doi khung 0.05s).
+func patrol_walk_to(dest: Vector2i, world_pos: Vector2) -> bool:
+	if _patrol_moving or _sprite == null:
+		return false
+	if dest == _patrol_tile:
+		return false
+	_patrol_dest = dest
+	_patrol_from = position
+	_patrol_to = world_pos
+	_patrol_t = 0.0
+	_patrol_moving = true
+	_sprite.moving = true
+	var dx := dest.x - _patrol_tile.x
+	if dx < 0:
+		_sprite.facing = -1
+	elif dx > 0:
+		_sprite.facing = 1
+	return true
+
+## NPC co dang buoc patrol khong (Main khong lenh moi khi dang buoc).
+func patrol_moving() -> bool:
+	return _patrol_moving
+
+## O logic hien tai cua NPC (doi ngay khi tween xong, khong phai
+## giua duong — de Main tinh o bi chiem + gan/xa dung o nguyen).
+func patrol_tile() -> Vector2i:
+	return _patrol_tile
+
+## NPC co walk frames khong (dung cho test + Main).
+func has_walk_frames() -> bool:
+	return _sprite != null and _sprite.has_frames()
 
 ## Nguoi choi dung tren o hotspot nay: an quang sang duoi dat (no
 ## doc nhu bong xanh duoi chan nguoi choi) — sao van hien phia tren.
@@ -197,6 +256,19 @@ func _npc_label_should_show() -> bool:
 
 func _process(delta: float) -> void:
 	_pulse += delta
+	# Vong 22 — tien tween patrol (0.30s/o): xong thi doi o logic,
+	# tat moving de sprite ve frame 0 dung yen + nhun nhe.
+	if _patrol_moving:
+		_patrol_t += delta / PATROL_MOVE_TIME
+		if _patrol_t >= 1.0:
+			_patrol_t = 1.0
+			_patrol_moving = false
+			position = _patrol_to
+			_patrol_tile = _patrol_dest
+			if _sprite != null:
+				_sprite.moving = false
+		else:
+			position = _patrol_from.lerp(_patrol_to, _patrol_t)
 	# Ve lai moi frame: nhan kẹp theo camera (khi camera truot theo
 	# nguoi choi, nhan o ria phai dich theo — ve 1 lan luc tao thi
 	# nhan bi cat o mep man hinh).
