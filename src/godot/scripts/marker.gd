@@ -46,6 +46,40 @@ const NPC_STYLE := {
 		"frames": ["res://art/walk_chile_f0.png", "res://art/walk_chile_f1.png", "res://art/walk_chile_f2.png", "res://art/walk_chile_f3.png", "res://art/walk_chile_f4.png", "res://art/walk_chile_f5.png"]},
 	"anh-hai": {"shirt": Color(0.09, 0.63, 0.52, 1), "hair_style": "ngan", "texture": "res://art/char_anhhai.png",
 		"frames": ["res://art/walk_anhhai_f0.png", "res://art/walk_anhhai_f1.png", "res://art/walk_anhhai_f2.png", "res://art/walk_anhhai_f3.png", "res://art/walk_anhhai_f4.png", "res://art/walk_anhhai_f5.png"]},
+	# Vong 25 — Map003 Khu Cong Nhan: Anh Ba (cong nhan xuong, ao
+	# thun xanh duong dam) + Chi Sau (ao ba ba xanh la hoa nho).
+	"anh-ba": {"shirt": Color(0.16, 0.24, 0.45, 1), "hair_style": "ngan", "texture": "res://art/char_anhba.png",
+		"frames": ["res://art/walk_anhba_f0.png", "res://art/walk_anhba_f1.png", "res://art/walk_anhba_f2.png", "res://art/walk_anhba_f3.png", "res://art/walk_anhba_f4.png", "res://art/walk_anhba_f5.png"]},
+	"chi-sau": {"shirt": Color(0.55, 0.72, 0.55, 1), "hair_style": "bui", "texture": "res://art/char_chisau.png",
+		"frames": ["res://art/walk_chisau_f0.png", "res://art/walk_chisau_f1.png", "res://art/walk_chisau_f2.png", "res://art/walk_chisau_f3.png", "res://art/walk_chisau_f4.png", "res://art/walk_chisau_f5.png"]},
+	# Vong 26 — Map004 Ben Xe Mien Dong: Bac Tai (tai xe xe khach
+	# lon tuoi, ao so mi xanh nhat) + Anh Boc Vac (thanh nien khoe,
+	# ao thun trang, khan vat vai).
+	"bac-tai": {"shirt": Color(0.55, 0.75, 0.90, 1), "hair_style": "ngan", "texture": "res://art/char_bactai.png",
+		"frames": ["res://art/walk_bactai_f0.png", "res://art/walk_bactai_f1.png", "res://art/walk_bactai_f2.png", "res://art/walk_bactai_f3.png", "res://art/walk_bactai_f4.png", "res://art/walk_bactai_f5.png"]},
+	"anh-boc-vac": {"shirt": Color(0.95, 0.95, 0.95, 1), "hair_style": "ngan", "texture": "res://art/char_anhbocvac.png",
+		"frames": ["res://art/walk_anhbocvac_f0.png", "res://art/walk_anhbocvac_f1.png", "res://art/walk_anhbocvac_f2.png", "res://art/walk_anhbocvac_f3.png", "res://art/walk_anhbocvac_f4.png", "res://art/walk_anhbocvac_f5.png"]},
+	# Vong 27 — Map005 Lang Dai Hoc: Thay Giao (giao vien trung
+	# nien, ao so mi be, deo kinh) + Sinh Vien Lam Them (nu sinh
+	# vien tre, ao thun vang nhat, toc duoi ngua).
+	"thay-giao": {"shirt": Color(0.85, 0.78, 0.62, 1), "hair_style": "ngan", "texture": "res://art/char_thaygiao.png",
+		"frames": ["res://art/walk_thaygiao_f0.png", "res://art/walk_thaygiao_f1.png", "res://art/walk_thaygiao_f2.png", "res://art/walk_thaygiao_f3.png", "res://art/walk_thaygiao_f4.png", "res://art/walk_thaygiao_f5.png"]},
+	"sinh-vien-lam-them": {"shirt": Color(0.95, 0.85, 0.35, 1), "hair_style": "dai", "texture": "res://art/char_sinhvien.png",
+		"frames": ["res://art/walk_sinhvienlamthem_f0.png", "res://art/walk_sinhvienlamthem_f1.png", "res://art/walk_sinhvienlamthem_f2.png", "res://art/walk_sinhvienlamthem_f3.png", "res://art/walk_sinhvienlamthem_f4.png", "res://art/walk_sinhvienlamthem_f5.png"]},
+	# Vong 28 — Map006 Chung Cu Cu: Cu Dan Chung Cu (nam trung nien,
+	# ao thun xam) + Bac Quan Ly (ong lon tuoi, toc bac, ao so mi
+	# xanh nhat).
+	"cu-dan-chung-cu": {"shirt": Color(0.55, 0.55, 0.58, 1), "hair_style": "ngan", "texture": "res://art/char_cudanchungcu.png",
+		"frames": ["res://art/walk_cudanchungcu_f0.png", "res://art/walk_cudanchungcu_f1.png", "res://art/walk_cudanchungcu_f2.png", "res://art/walk_cudanchungcu_f3.png", "res://art/walk_cudanchungcu_f4.png", "res://art/walk_cudanchungcu_f5.png"]},
+	"bac-quan-ly": {"shirt": Color(0.62, 0.78, 0.85, 1), "hair_style": "ngan", "texture": "res://art/char_bacquanly.png",
+		"frames": ["res://art/walk_bacquanly_f0.png", "res://art/walk_bacquanly_f1.png", "res://art/walk_bacquanly_f2.png", "res://art/walk_bacquanly_f3.png", "res://art/walk_bacquanly_f4.png", "res://art/walk_bacquanly_f5.png"]},
+	# Vong 29 — Map007 Pho Van Phong Nho: Nhan Vien Van Phong (nam
+	# thanh nien, ao so mi trang dai tay, quan tay toi) + Thuc Tap
+	# Sinh (nu tre, ao so mi xanh nhat, toc duoi ngua).
+	"nhan-vien-van-phong": {"shirt": Color(0.95, 0.95, 0.95, 1), "hair_style": "ngan", "texture": "res://art/char_nhanvienvanphong.png",
+		"frames": ["res://art/walk_nhanvienvanphong_f0.png", "res://art/walk_nhanvienvanphong_f1.png", "res://art/walk_nhanvienvanphong_f2.png", "res://art/walk_nhanvienvanphong_f3.png", "res://art/walk_nhanvienvanphong_f4.png", "res://art/walk_nhanvienvanphong_f5.png"]},
+	"thuc-tap-sinh": {"shirt": Color(0.70, 0.82, 0.95, 1), "hair_style": "dai", "texture": "res://art/char_thuctapsinh.png",
+		"frames": ["res://art/walk_thuctapsinh_f0.png", "res://art/walk_thuctapsinh_f1.png", "res://art/walk_thuctapsinh_f2.png", "res://art/walk_thuctapsinh_f3.png", "res://art/walk_thuctapsinh_f4.png", "res://art/walk_thuctapsinh_f5.png"]},
 }
 
 # Vong 22 — NPC di lang thang (patrol): NPC buoc cham giua o nha
