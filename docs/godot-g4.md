@@ -4310,3 +4310,518 @@ mặt tiền Map001 nằm trong ảnh composite nên không lắc được.
    walk cycle): nối `frames` khi có sheet (theo mẫu vòng 22) —
    làm theo từng map (Map003: Anh Ba, Chị Sáu trước).
 3. Kiểm live lại bằng cloud browser — ĐANG CHỜ vòng này (§46.4).
+
+## 47. Vòng 25 — Walk cycle NPC Map003: Anh Ba + Chị Sáu (22/11 ~23:20–00:35 +07, cron 23:45)
+
+Mục 2 §46.5: NPC Map003–018 vẫn ảnh đơn + nhún (chỉ 4 NPC Map001–002
+có walk cycle). Vòng này làm Map003 trước: Anh Ba (4,6) + Chị Sáu
+(8,3), Khu Công Nhân.
+
+### 47.1 Art (subagent, theo đúng quy trình vòng 18/22)
+
+- Ảnh đứng mới `src/godot/art/char_anhba.png` (90×208 RGBA) +
+  `char_chisau.png` (95×208 RGBA): Anh Ba — đàn ông trung niên,
+  công nhân xưởng, tóc đen ngắn, áo thun xanh dương đậm, quần tối,
+  giày thể thao xám; Chị Sáu — phụ nữ trung niên, tóc đen búi thấp,
+  áo bà ba xanh lá nhạt có hoa nhỏ, quần đen, dép quai. Cùng phong
+  cách chibi watercolor/gouache với `char_cotu.png` (dùng làm tham
+  chiếu phong cách). Xử lý trắng → trong suốt bằng flood fill từ
+  biên (ngưỡng vòng 22) + feather r=1.5, cao 208px.
+- Sheet `visual-check/artpass25/walkcycle-sheet-anhba.png` /
+  `walkcycle-sheet-chisau.png` (2736×912, nền trắng trơn): đúng 6
+  nhân vật 1 hàng ngang, cùng mặt/tóc/quần áo/giày, chân tiến triển
+  hợp lý, tay đung đưa — kiểm tra bằng mắt ĐẠT cả 2, không cần gen
+  lại. Hạn chế (chấp nhận như vòng 18/22): chỉ mặt trước; f5≈f0;
+  họa tiết hoa áo bà ba Chị Sáu dao động nhẹ giữa các khung.
+- Cắt frame bằng `visual-check/artpass25/slice_walkcycle_npc_map003.py`
+  (bản sao script vòng 22, NPCS = anhba/chisau): 12 frame RGBA cao
+  208px vào `src/godot/art/` — `walk_anhba_f0..f5` (120×208),
+  `walk_chisau_f0..f5` (129×208). Dải kiểm tra nền magenta
+  `walkcycle-check-magenta-{anhba,chisau}.png`: đủ 6 hình, toàn thân
+  nguyên vẹn, không quầng trắng, không cắt tay/chân, chân xen kẽ
+  chạm đất ↔ bắt chéo. Note: `visual-check/artpass25/walkcycle-npc-map003-note.md`.
+- Lần gen song song đầu tiên cho 2 ảnh đứng bị gián đoạn do service
+  restart, không file nào được tạo; gen lại lần lượt từng ảnh thì
+  thành công ngay.
+
+### 47.2 Code
+
+| File | Đổi |
+|---|---|
+| `scripts/marker.gd` | `NPC_STYLE` thêm `"anh-ba"` (shirt xanh dương đậm (0.16,0.24,0.45), hair "ngan", texture `char_anhba.png`, frames `walk_anhba_f0..f5`) + `"chi-sau"` (shirt xanh lá nhạt (0.55,0.72,0.55), hair "bui", texture `char_chisau.png`, frames `walk_chisau_f0..f5`). Không sửa logic `CharacterSprite`/`Marker` — `setup(cfg)` đã ăn `texture` + `frames` từ vòng 18/22. |
+| `tests/g4_r25_npc_walk_map003_test.gd` (mới) | 29 mục theo mẫu r22: sprite trực tiếp từng NPC (đủ 6 frame, bước 1 đổi frame 1, hết 0.30s về frame 0, đứng yên frame 0); marker đơn lẻ (home_tile đúng (4,6)/(8,3), có walk frames, walk_to 0.30s/o); Main load_map(3) (2 marker có walk frames + đúng nhà, pick patrol từ nhà Anh Ba hợp lệ). |
+| `tools/godot/run_regression.sh` | Thêm `g4_r25_npc_walk_map003_test` (nay 53 suite + online). |
+| `visual-check/artpass25/check_r25.py` (mới) | Theo mẫu check_r22.py, cổng 8179: Map001→Map002 (cửa (5,4))→Map003 (cửa (5,8)), đi xa lên (4,1), chờ patrol 12s, 2 ảnh cách nhau 2s để đo pixel-diff. |
+
+### 47.3 Verify thật vòng này
+
+- Test mới `g4_r25_npc_walk_map003_test`: **29/29 PASS** (lần đầu).
+- Hồi quy đầy đủ: **53 OK, 0 FAIL** (52 cũ + 1 mới r25).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR/warning.
+- Export web exit 0 (đường dẫn tuyệt đối, KHÔNG `rm -rf` build theo
+  luật vòng 24 — asset DOM shell còn nguyên): pck **14.884.728 byte,
+  SHA `af16fef1…`** (trước `db28f2c4`, +475.472 byte = 14 file art
+  mới); wasm không đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`;
+  HTTP 200 đủ 4 file (cổng 8179, gồm `title_bg.jpg`).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass25/check_r25.py`, ảnh `r25-01…r25-04`):
+  **0 console error, 0 pageerror, 0 requestfailed.** Xem ảnh thật:
+  Map003 "Khu Công Nhân" — Anh Ba (áo xanh dương đậm, mặt thật) +
+  Chị Sáu (áo bà ba xanh lá, mặt thật) hiện rõ có nhãn tên, không
+  còn vẽ code; người chơi đi (5,4)→(5,1) đúng ô theo nhãn debug;
+  sau 12s xa nhà, **Chị Sáu đã patrol rời nhà (8,3) lên giữa map**,
+  Anh Ba cũng rời nhà (khuất sau D-pad ở mép trái); pixel-diff 2
+  ảnh Map003 cách nhau 2s = **9.003/921.600 pixel khác** (NPC
+  bob/buộc + lá rơi động).
+
+### 47.4 CHẶN — push main + deploy gh-pages CHƯA XONG (push_files hỏng)
+
+- Push main lô A (4 file code+test) gián đoạn lần 1 ("service
+  restarted while it was running"), head vẫn `333eba2f`; retry lần 2
+  gián đoạn y hệt; push thăm dò 1 file (`marker.gd`) lần 3 cũng gián
+  đoạn — **đường ghi push_files hỏng hẳn lúc này, đường đọc vẫn
+  chạy** (list_commits OK). ĐÃ DỪNG retry trong lượt (theo bài học
+  vòng 21: fail ngắt quãng thì retry 1–2 lần/lô là đủ; 3 lần liên
+  tiếp kể cả file đơn = dịch vụ hỏng, không phải lô lớn).
+- Manifest sẵn sàng: `~/workspace/pxb-push-r25-paths-a` (4 file
+  code+test), `-b` (14 file `.import`), `-c` (4 file text
+  visual-check), probe `pxb-push-r25-probe` (1 file). Sync record
+  KHÔNG đổi (chưa có commit nào được xác nhận).
+- Deploy gh-pages CHƯA làm (cùng đường push_files): staging chưa
+  rebuild — vòng sau rebuild staging cho pck `af16fef1` rồi deploy
+  1 lần sau khi push main hồi.
+- Kiểm live cloud browser CHƯA làm (live vẫn chạy vòng 24
+  `db28f2c4`; kiểm lúc này chỉ xác minh bản cũ, không phải vòng 25).
+- Code + art an toàn ở local, không mất: 14 PNG mới chỉ sống local +
+  trong pck `af16fef1` đã export (như mọi art trước — PNG không push
+  được qua snapshot-push, chỉ `.import` text lên main).
+
+### 47.5 Việc tiếp theo
+
+1. **Retry push main (3 lô r25) → deploy gh-pages pck `af16fef1` →
+   verify live khớp byte → kiểm live cloud browser** (Map003: Anh Ba
+   + Chị Sáu đi patrol bằng art thật).
+2. NPC Map004–018 walk cycle theo từng map (Map004: Bác Tài, Anh Bốc
+   Vác — cần ảnh đứng + sheet mới, theo mẫu vòng này).
+3. Sprite sạp tách riêng (§45.1): đổi hàng 0 thành sạp cách nhau (ô
+   lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
+
+### 47.6 Retry push lần 2 — VẪN CHẶN (cron 07:45, chạy ~08:00–08:20 23/11)
+
+- Retry push main lô A 2 lần + push thăm dò 1 file (marker.gd) 1 lần:
+  cả 3 đều gián đoạn y hệt ("service restarted while it was running"),
+  head main vẫn `333eba2f`, sync record không đổi. Tổng cộng 7 lần
+  gián đoạn liên tiếp cho vòng 25 (4 lần lúc 00:20–00:40 + 3 lần lượt
+  này). Đường đọc vẫn chạy (list_commits OK), auth GitHub connected.
+  **DỪNG retry push trong lượt này** (theo bài học §47.4 — 3 lần liên
+  tiếp kể cả file đơn = dịch vụ hỏng, không phải lô lớn).
+- Đã làm bù trong lượt (không cần push): rebuild staging gh-pages cho
+  pck `af16fef1` (staging trước đó vẫn `db28f2c4` vòng 24) —
+  `build_gh_pages.py` + `--verify-only` đều OK, `versions.json` nay
+  pck `af16fef1`, wasm `fc74679e` không đổi; hồi quy baseline
+  **53 OK, 0 FAIL** (cây hiện tại vẫn xanh trước vòng 26).
+- Deploy gh-pages + kiểm live cloud vẫn CHƯA làm (cùng đường
+  push_files hỏng). Khi dịch vụ hồi: push main 3 lô r25 (manifest
+  `~/workspace/pxb-push-r25-paths-{a,b,c}`) → push docs → deploy
+  staging `af16fef1` (đã rebuild sẵn, chỉ cần push chunk version
+  mới + index.html cuối) → verify live khớp byte → kiểm live cloud.
+
+## 48. Vòng 26 — Walk cycle NPC Map004: Bác Tài + Anh Bốc Vác (23/11 ~08:20 +07, cron 07:45)
+
+Mục 2 §47.5: NPC Map004–018 walk cycle theo từng map. Vòng này làm
+Map004 Bến Xe Miền Đông trước: Bác Tài (3,2) + Anh Bốc Vác (8,6).
+
+### 48.1 Art (subagent, theo đúng quy trình vòng 18/22/25) — XONG
+
+- Thư mục `visual-check/artpass26/`; ảnh đứng + sheet 6 khung cho
+  Bác Tài (tài xế xe khách lớn tuổi, áo sơ mi xanh nhạt) + Anh Bốc
+  Vác (thanh niên khỏe, áo thun trắng, khăn vắt vai); xử lý trắng →
+  trong suốt + cắt frame theo mẫu Vòng 25.
+- File đích: `src/godot/art/char_bactai.png` (97×208) +
+  `char_anhbocvac.png` (90×208), `walk_bactai_f0..f5.png`
+  (115×208) + `walk_anhbocvac_f0..f5.png` (123×208), RGBA.
+- Kiểm tra bằng mắt: sheet Bác Tài gen lại 1 lần (lần 1 chân 6 pha
+  gần như giống nhau); sheet Anh Bốc Vác đạt ngay lần 1; ảnh đứng
+  Anh Bốc Vác gen lại 1 lần (lần 1 thừa vali). Dải magenta sạch,
+  không quầng trắng. Hạn chế: chỉ mặt trước (thực tế 3/4); f5 Bác
+  Tài gần như đứng yên; khăn vai dao động nhẹ giữa các khung. Bài
+  học: prompt sheet Vòng 25 chưa đủ ép 6 pha khác nhau — đã bổ
+  sung mô tả 6 pha rõ rệt vào prompt, dùng luôn cho các vòng sau.
+
+### 48.2 Code + test — XONG
+
+- `marker.gd` NPC_STYLE thêm `"bac-tai"` (áo xanh nhạt
+  (0.55,0.75,0.90), tóc "ngan", texture + frames) +
+  `"anh-boc-vac"` (áo trắng (0.95,0.95,0.95), tóc "ngan").
+  Không sửa logic `CharacterSprite`/`Marker`.
+- Test mới `tests/g4_r26_npc_walk_map004_test.gd`: **29/29 PASS**
+  (theo mẫu r25: sprite trực tiếp từng NPC, marker home_tile
+  (3,2)/(8,6), Main load_map(4) + pick patrol từ nhà Bác Tài).
+- `tools/godot/run_regression.sh` thêm test mới (nay 54 suite).
+
+### 48.3 Verify thật vòng này
+
+- Hồi quy đầy đủ: **54 OK, 0 FAIL** (53 cũ + 1 mới r26).
+- Smoke `--headless --quit-after 120` exit 0.
+- Export web exit 0: pck **15.358.560 byte, SHA `d33bd266…`**
+  (trước `af16fef1`, +473.832 byte = 14 file art mới); wasm không
+  đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ 5
+  file (cổng 8180, gồm `title_bg.jpg`).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass26/check_r26.py`, ảnh `r26-01…r26-05`):
+  **0 console error, 0 pageerror, 0 requestfailed.** Xem ảnh thật:
+  Map004 "Bến Xe Miền Đông" — Bác Tài (áo sơ mi xanh nhạt, tóc
+  điểm bạc) + Anh Bốc Vác (áo thun trắng, khăn vắt vai) hiện rõ
+  có nhãn tên, không còn vẽ code; người chơi đi (5,4)→(10,1) đúng
+  ô theo nhãn debug; sau 12s xa nhà, **cả 2 NPC đều patrol rời
+  nhà** (Bác Tài ra mép trái map, Anh Bốc Vác khuất sau D-pad);
+  pixel-diff 2 ảnh Map004 cách nhau 2s = **26.185**.
+- Lỗi tìm ra khi xem ảnh: không có lỗi chặn — Anh Bốc Vác khuất
+  sau D-pad ở mép trái là do patrol ra sát biên + camera theo
+  người chơi (cosmetic, đã biết từ các vòng trước).
+
+### 48.4 Deploy — CHƯA LÀM (push_files vẫn hỏng)
+
+- Staging đã rebuild cho pck `d33bd266` (`--verify-only` OK).
+- Push main + deploy gh-pages CHƯA làm: đường ghi push_files hỏng
+  từ vòng 25 (7 lần gián đoạn liên tiếp; lượt này đã dừng retry
+  sau 3 lần — xem §47.6). Manifest sẵn sàng cho vòng sau:
+  `~/workspace/pxb-push-r26-paths-{a,b,c}` + `pxb-push-docs-r26`
+  (docs/godot-g4.md + docs/roles-qc.md, gồm cả cập nhật vòng 25
+  chưa push). Khi dịch vụ hồi: push r25 (3 lô) → push r26 (3 lô)
+  → push docs → deploy staging `d33bd266` → verify live khớp byte
+  → kiểm live cloud browser.
+
+### 48.5 Việc tiếp theo
+
+1. **Push main (r25 + r26) + deploy gh-pages pck `d33bd266` →
+   verify live khớp byte → kiểm live cloud browser** (Map004:
+   Bác Tài + Anh Bốc Vác đi patrol bằng art thật).
+2. NPC Map005 walk cycle (Thầy Giáo + Sinh Viên Làm Thêm) theo
+   từng map, mẫu vòng này (prompt sheet đã bổ sung 6 pha rõ rệt).
+3. Sprite sạp tách riêng (§45.1): đổi hàng 0 thành sạp cách nhau
+   (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
+
+## 49. Vòng 27 — Walk cycle NPC Map005: Thầy Giáo + Sinh Viên Làm Thêm (23/11 ~16:15 +07, cron 14:45)
+
+Mục 2 §48.5: NPC Map005–018 walk cycle theo từng map. Vòng này làm
+Map005 Làng Đại Học: Thầy Giáo (3,3) + Sinh Viên Làm Thêm (8,6).
+
+### 49.1 Push/deploy — VẪN CHẶN (thử lại đầu lượt, lần thứ 8)
+
+- Đầu lượt thử push main r25 lô A 1 lần: gián đoạn y hệt
+  ("service restarted while it was running") — tổng 8 lần gián đoạn
+  liên tiếp cho đường ghi push_files (4 lần vòng 25 + 3 lần vòng 26 +
+  1 lần lượt này). Kiểm tra lại head main vẫn `333eba2f`, sync
+  record không đổi — push không áp dụng một phần. **DỪNG retry push
+  trong lượt này** (luật §47.4). Đường đọc vẫn chạy (list_commits OK).
+- Deploy gh-pages + kiểm live cloud vẫn CHƯA làm (cùng đường ghi
+  hỏng). Live vẫn chạy vòng 24 `db28f2c4`.
+
+### 49.2 Art (subagent, theo đúng quy trình vòng 25/26) — XONG, 0 lần gen lại
+
+- Thư mục `visual-check/artpass27/`; ảnh đứng + sheet 6 khung cho
+  Thầy Giáo (giáo viên nam trung niên, đeo kính, áo sơ mi be dài
+  tay, quần dài tối màu) + Sinh Viên Làm Thêm (nữ sinh viên trẻ,
+  tóc đuôi ngựa, áo thun vàng nhạt, quần jeans, giày thể thao
+  trắng); xử lý trắng → trong suốt + cắt frame theo mẫu vòng 26.
+- File đích: `src/godot/art/char_thaygiao.png` (97×208) +
+  `char_sinhvien.png` (92×208), `walk_thaygiao_f0..f5.png`
+  (144×208) + `walk_sinhvienlamthem_f0..f5.png` (120×208, đúng tên
+  theo id `sinh-vien-lam-them` bỏ dấu gạch nối), RGBA.
+- Kiểm tra bằng mắt: 2 ảnh đứng + 2 sheet đều ĐẠT ngay lần đầu
+  (đúng 6 nhân vật, nền trắng trơn, không chữ, không thừa đồ vật,
+  6 pha chân khác nhau rõ); dải magenta sạch, không quầng trắng.
+- Một sửa script so với vòng 26: sheet Sinh Viên có 2 đốm xám lẻ
+  trong nền trắng khiến lần cắt đầu báo 8 run thay vì 6 — đã thêm
+  bộ lọc bỏ run hẹp <20px vào `slice_walkcycle_npc_map005.py`
+  (nhân vật thật rộng 360–460px); lần sửa đầu đặt bộ lọc sau câu
+  raise nên vẫn lỗi — đã sửa lại đặt trước, cắt lại thành công.
+- Hạn chế thấy bằng mắt: chỉ mặt trước (3/4); f5 cả hai gần như
+  tư thế đứng; f1/f2/f3 Sinh Viên là 3 tư thế bắt chéo/khép khá gần
+  nhau, ít sải hơn Thầy Giáo nhưng vẫn phân biệt được khi chạy;
+  đuôi ngựa Sinh Viên hơi lệch sang một bên thay vì chính giữa.
+
+### 49.3 Code + test — XONG
+
+- `marker.gd` NPC_STYLE thêm `"thay-giao"` (áo be
+  (0.85,0.78,0.62), tóc "ngan", texture + frames) +
+  `"sinh-vien-lam-them"` (áo vàng nhạt (0.95,0.85,0.35), tóc
+  "dai", texture + frames). Không sửa logic `CharacterSprite`/
+  `Marker`.
+- Test mới `tests/g4_r27_npc_walk_map005_test.gd`: **29/29 PASS**
+  (theo mẫu r26: sprite trực tiếp từng NPC, marker home_tile
+  (3,3)/(8,6), Main load_map(5) + pick patrol từ nhà Thầy Giáo).
+- `tools/godot/run_regression.sh` thêm test mới (nay 55 suite).
+
+### 49.4 Verify thật vòng này
+
+- Hồi quy đầy đủ: **55 OK, 0 FAIL** (54 cũ + 1 mới r27).
+- Smoke `--headless --quit-after 120` exit 0.
+- Export web exit 0: pck **15.824.284 byte, SHA `986681e7`**
+  (trước `d33bd266`, +465.724 byte = 14 file art mới); wasm không
+  đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ 5
+  file (cổng 8181, gồm `title_bg.jpg`).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass27/check_r27.py`, ảnh `r27-01…r27-06`):
+  **0 console error, 0 pageerror, 0 requestfailed.** Xem ảnh thật:
+  Map005 "Làng Đại Học" — Thầy Giáo (đeo kính, áo sơ mi be) +
+  Sinh Viên Làm Thêm (áo vàng nhạt, tóc đuôi ngựa) hiện rõ có nhãn
+  tên, không còn vẽ code; người chơi đi (5,4)→(10,1) đúng ô theo
+  nhãn debug; sau 12s xa nhà, **cả 2 NPC đều patrol rời nhà**
+  (Thầy Giáo ra mép trái map, Sinh Viên khuất sau D-pad);
+  pixel-diff 2 ảnh Map005 cách nhau 2s = **22.796**.
+- Lỗi tìm ra khi xem ảnh: không có lỗi chặn — Sinh Viên khuất sau
+  D-pad ở mép trái là do patrol ra sát biên + camera theo người
+  chơi (cosmetic, đã biết từ các vòng trước); nhãn "Sinh Viên Làm
+  Thêm" che một phần thân Thầy Giáo khi 2 NPC đứng gần nhau
+  (cosmetic, đã biết).
+
+### 49.5 Deploy — CHƯA LÀM (push_files vẫn hỏng)
+
+- Staging đã rebuild cho pck `986681e7` (`--verify-only` OK).
+- Push main + deploy gh-pages CHƯA làm: đường ghi push_files hỏng
+  từ vòng 25 (8 lần gián đoạn liên tiếp; lượt này đã dừng retry
+  sau 1 lần — xem §49.1). Manifest sẵn sàng cho vòng sau:
+  `~/workspace/pxb-push-r27-paths-{a,b,c}` + `pxb-push-docs-r27`
+  (docs/godot-g4.md + docs/roles-qc.md, gồm cả cập nhật vòng 25/26
+  chưa push). Khi dịch vụ hồi: push r25 (3 lô) → push r26 (3 lô)
+  → push r27 (3 lô) → push docs → deploy staging `986681e7` →
+  verify live khớp byte → kiểm live cloud browser.
+
+### 49.6 Việc tiếp theo
+
+1. **Push main (r25 + r26 + r27) + deploy gh-pages pck `986681e7` →
+   verify live khớp byte → kiểm live cloud browser** (Map005:
+   Thầy Giáo + Sinh Viên Làm Thêm đi patrol bằng art thật).
+2. NPC Map006 walk cycle (Cư Dân Chung Cư + Bác Quản Lý) theo
+   từng map, mẫu vòng này.
+3. Sprite sạp tách riêng (§45.1): đổi hàng 0 thành sạp cách nhau
+   (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
+
+## 50. Vòng 28 — Walk cycle NPC Map006: Cư Dân Chung Cư + Bác Quản Lý (23/11 ~16:45–18:45 +07, cron 16:45)
+
+Mục 2 §49.6: NPC Map006–018 walk cycle theo từng map. Vòng này làm
+Map006 Chung Cư Cũ: Cư Dân Chung Cư (3,6) + Bác Quản Lý (8,3).
+
+### 50.1 Push/deploy — VẪN CHẶN (thử lại đầu lượt, lần thứ 9)
+
+- Đầu lượt thử push main r25 lô A 1 lần: gián đoạn y hệt
+  ("service restarted while it was running") — tổng 9 lần gián đoạn
+  liên tiếp cho đường ghi push_files (4 lần vòng 25 + 3 lần vòng 26 +
+  1 lần vòng 27 + 1 lần lượt này). Kiểm tra lại head main vẫn
+  `333eba2f`, sync record không đổi — push không áp dụng một phần.
+  **DỪNG retry push trong lượt này** (luật §47.4). Đường đọc vẫn chạy
+  (list_commits OK).
+- Deploy gh-pages + kiểm live cloud vẫn CHƯA làm (cùng đường ghi
+  hỏng). Live vẫn chạy vòng 24 `db28f2c4`.
+
+### 50.2 Art (subagent, theo đúng quy trình vòng 25/26/27) — XONG, 0 lần gen lại
+
+- Thư mục `visual-check/artpass28/`; ảnh đứng + sheet 6 khung cho
+  Cư Dân Chung Cư (nam trung niên, áo thun xám, quần kaki tối,
+  dép) + Bác Quản Lý (ông lớn tuổi, tóc bạc, áo sơ mi xanh nhạt
+  ngắn tay, quần dài tối, giày đen); xử lý trắng → trong suốt +
+  cắt frame theo mẫu vòng 27.
+- File đích: `src/godot/art/char_cudanchungcu.png` (90×208) +
+  `char_bacquanly.png` (92×208), `walk_cudanchungcu_f0..f5.png`
+  (canvas chung 132×208) + `walk_bacquanly_f0..f5.png` (canvas
+  chung 128×208), RGBA.
+- Kiểm tra bằng mắt: 2 ảnh đứng + 2 sheet đều ĐẠT ngay lần đầu
+  (đúng 6 nhân vật, nền trắng trơn, không chữ, không thừa đồ vật,
+  6 pha chân khác nhau rõ); dải magenta sạch, không quầng trắng.
+- **Bài học mới — cắt sheet bằng connected component:**
+  cắt sheet Cư Dân lần đầu chỉ tìm được 5 run cột — tay trái giơ
+  cao của hình f0 (nắm đấm x≈460–510) chồng lấn theo chiều ngang
+  với tóc hình f1 (x≈480+), dù hai hình rời nhau trong 2D.
+  `slice_walkcycle_npc_map006.py` đổi sang tách connected
+  component (`scipy.ndimage.label`), mỗi hình mask riêng rồi mới
+  crop — nắm đấm vẫn thuộc về hình f0, không bị cắt sang hình f1.
+  Bộ lọc bỏ component hẹp <20px vẫn đặt TRƯỚC khi kiểm tra đủ 6
+  hình (bài học vòng 27; sheet Cư Dân có 6 đốm 1px).
+- Hạn chế thấy bằng mắt: chỉ mặt trước (3/4); f5 cả hai gần như
+  tư thế đứng; f2/f3/f4 của Bác Quản Lý khá gần nhau (3 tư thế
+  bắt chéo/khép), ít "sải" hơn Cư Dân; tay trái f0 của Cư Dân
+  giơ cao ngang vai — đung đưa mạnh hơn các NPC vòng trước, vẫn
+  trong nhịp đi bộ; áo Bác Quản Lý gen ra kiểu cổ trụ khuy bấm
+  (gần áo dài cách tân) thay vì sơ mi cổ bẻ thường; mặt Cư Dân
+  trông trẻ hơn "trung niên" (~30 tuổi) — cả hai đều chấp nhận
+  được. Chi tiết: `visual-check/artpass28/walkcycle-npc-map006-note.md`.
+
+### 50.3 Code + test — XONG
+
+- `marker.gd` NPC_STYLE thêm `"cu-dan-chung-cu"` (áo xám
+  (0.55,0.55,0.58), tóc "ngan", texture + frames) +
+  `"bac-quan-ly"` (áo xanh nhạt (0.62,0.78,0.85), tóc "ngan",
+  texture + frames). Không sửa logic `CharacterSprite`/
+  `Marker`.
+- Test mới `tests/g4_r28_npc_walk_map006_test.gd`: **29/29 PASS**
+  (theo mẫu r27: sprite trực tiếp từng NPC, marker home_tile
+  (3,6)/(8,3), Main load_map(6) + pick patrol từ nhà Cư Dân).
+- `tools/godot/run_regression.sh` thêm test mới (nay 56 suite).
+- **Lỗi gặp khi test lần đầu (15/29):** `ResourceLoader.exists`
+  báo file art mới không tồn tại dù file đã có trên đĩa — do
+  chưa chạy `--headless --import` nên chưa có file `.import`.
+  Chạy `--import` (tự sinh 14 file `.import`) rồi test lại thì
+  29/29. Đúng bài học §8.3: gặp lỗi lạ thì `--import` trước rồi
+  mới kết luận code hỏng.
+
+### 50.4 Verify thật vòng này
+
+- Hồi quy đầy đủ: **56 OK, 0 FAIL** (55 cũ + 1 mới r28).
+- Smoke `--headless --quit-after 120` exit 0.
+- Export web exit 0: pck **16.291.172 byte, SHA `c6461bde`**
+  (trước `986681e7`, +466.888 byte = 14 file art mới); wasm không
+  đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ 5
+  file (cổng 8182, gồm `title_bg.jpg`).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass28/check_r28.py`, ảnh `r28-01…r28-07`):
+  **0 console error, 0 pageerror, 0 requestfailed.** Xem ảnh thật:
+  Map006 "Chung Cư Cũ" — Cư Dân Chung Cư (áo thun xám) + Bác Quản
+  Lý (áo xanh nhạt, tóc bạc) hiện rõ mặt thật có nhãn tên, không
+  còn vẽ code; người chơi đi (5,4)→(10,1) đúng ô theo nhãn debug;
+  sau 12s xa nhà, **Bác Quản Lý patrol rời nhà ra mép trái map**;
+  pixel-diff 2 ảnh Map006 cách nhau 2s = **4.557**.
+- Lỗi tìm ra khi xem ảnh: không có lỗi chặn — D-pad đè lên cửa
+  ở mép trái khi camera sang phải (cosmetic, đã biết từ các vòng
+  trước); nhãn 2 cửa đáy map xếp chồng dọc, không đè nhau.
+- Staging đã rebuild cho pck `c6461bde` (`build_gh_pages.py`
+  verify OK: wasm 293 chunk + pck 121 chunk khớp byte).
+
+### 50.5 Deploy — CHƯA LÀM (push_files vẫn hỏng)
+
+- Push main + deploy gh-pages CHƯA làm: đường ghi push_files hỏng
+  từ vòng 25 (9 lần gián đoạn liên tiếp; lượt này đã dừng retry
+  sau 1 lần — xem §50.1). Manifest sẵn sàng cho vòng sau:
+  `~/workspace/pxb-push-r28-paths-{a,b,c}` + `pxb-push-docs-r28`
+  (docs/godot-g4.md + docs/roles-qc.md, gồm cả cập nhật vòng
+  25/26/27/28 chưa push). Khi dịch vụ hồi: push r25 (3 lô) →
+  push r26 (3 lô) → push r27 (3 lô) → push r28 (3 lô) → push
+  docs → deploy staging `c6461bde` → verify live khớp byte →
+  kiểm live cloud browser.
+
+### 50.6 Việc tiếp theo
+
+1. **Push main (r25 + r26 + r27 + r28) + deploy gh-pages pck `c6461bde` →
+   verify live khớp byte → kiểm live cloud browser** (Map006:
+   Cư Dân Chung Cư + Bác Quản Lý đi patrol bằng art thật).
+2. NPC Map007 walk cycle (Phố Văn Phòng Nhỏ: 2 NPC của map 7) theo
+   từng map, mẫu vòng này.
+3. Sprite sạp tách riêng (§45.1): đổi hàng 0 thành sạp cách nhau
+   (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
+
+## 51. Vòng 29 — Walk cycle NPC Map007: Nhân Viên Văn Phòng + Thực Tập Sinh (23/11 ~18:45–20:20 +07, cron 18:45)
+
+Mục 2 §49.6: NPC Map006–018 walk cycle theo từng map. Vòng này làm
+Map007 Phố Văn Phòng Nhỏ: Nhân Viên Văn Phòng (3,3) + Thực Tập Sinh (8,6).
+
+### 51.1 Push/deploy — VẪN CHẶN (thử lại đầu lượt, lần thứ 10)
+
+- Đầu lượt thử push main r25 lô A 1 lần: gián đoạn y hệt
+  ("service restarted while it was running") — tổng 10 lần gián đoạn
+  liên tiếp cho đường ghi push_files (4 lần vòng 25 + 3 lần vòng 26 +
+  1 lần vòng 27 + 1 lần vòng 28 + 1 lần lượt này). Kiểm tra lại head
+  main vẫn `333eba2f`, sync record không đổi — push không áp dụng
+  một phần. **DỪNG retry push trong lượt này** (luật §47.4). Đường đọc
+  vẫn chạy (list_commits OK).
+- Deploy gh-pages + kiểm live cloud vẫn CHƯA làm (cùng đường ghi
+  hỏng). Live vẫn chạy vòng 24 `db28f2c4`.
+
+### 51.2 Art (subagent, theo đúng quy trình vòng 25/26/27/28) — XONG
+
+- Thư mục `visual-check/artpass29/`; ảnh đứng + sheet 6 khung cho
+  Nhân Viên Văn Phòng (nam thanh niên, áo sơ mi trắng dài tay, quần
+  tây tối, giày đen) + Thực Tập Sinh (nữ trẻ, áo sơ mi xanh nhạt,
+  quần dài tối, giày đen, tóc đuôi ngựa); xử lý trắng → trong suốt +
+  cắt frame theo mẫu vòng 28 (connected component).
+- File đích: `src/godot/art/char_nhanvienvanphong.png` (90×208) +
+  `char_thuctapsinh.png` (92×208), `walk_nhanvienvanphong_f0..f5.png`
+  (canvas chung 137×208) + `walk_thuctapsinh_f0..f5.png` (canvas
+  chung 138×208), RGBA.
+- Kiểm tra bằng mắt: 2 ảnh đứng ĐẠT ngay lần đầu (0 lần gen lại);
+  sheet Thực Tập Sinh ĐẠT ngay lần đầu; **sheet Nhân Viên lần đầu
+  lỗi** — hình f5 là nữ đi giày cao gót, sai hẳn nhân vật; sửa bằng
+  resume snapshot chỉ vẽ lại hình 6 thành đúng nam nhân viên (áo
+  trắng, quần tối, giày đen, chân khép) — **1 lần gen lại**, 5 hình
+  còn lại giữ nguyên. Dải magenta cả 2 sạch, không quầng trắng.
+- **Bài học mới — ngưỡng lọc đốm khi cắt sheet:** lần cắt đầu sheet
+  Nhân Viên tìm được 8 component thay vì 6 — 2 đốm tối 24–26px lọt
+  qua ngưỡng lọc cũ `MIN_FIG_W = 20`. `slice_walkcycle_npc_map007.py`
+  nâng ngưỡng lên 100 (hình thật rộng 368–421px nên an toàn).
+  Sheet Thực Tập Sinh không có đốm. Bộ lọc vẫn đặt TRƯỚC khi kiểm
+  tra đủ 6 hình (bài học vòng 27/28).
+- Hạn chế thấy bằng mắt: chỉ mặt trước (3/4); f5 cả hai gần như tư
+  thế đứng; f2/f3/f4 khá gần nhau; áo Thực Tập Sinh gen ra kiểu cổ
+  trụ khuy bấm (như Bác Quản Lý vòng 28) thay vì sơ mi cổ bẻ; tay
+  trái f0 Nhân Viên giơ cao ngang vai; mặt Nhân Viên trông trẻ
+  (~20 tuổi); Nhân Viên có khuyên tai vàng nhỏ không có trong mô tả
+  — tất cả chấp nhận được. Chi tiết:
+  `visual-check/artpass29/walkcycle-npc-map007-note.md`.
+
+### 51.3 Code + test — XONG
+
+- `marker.gd` NPC_STYLE thêm `"nhan-vien-van-phong"` (áo trắng
+  (0.95,0.95,0.95), tóc "ngan", texture + frames) +
+  `"thuc-tap-sinh"` (áo xanh nhạt (0.70,0.82,0.95), tóc "dai",
+  texture + frames). Không sửa logic `CharacterSprite`/`Marker`.
+- Test mới `tests/g4_r29_npc_walk_map007_test.gd`: **29/29 PASS**
+  (theo mẫu r28: sprite trực tiếp từng NPC, marker home_tile
+  (3,3)/(8,6), Main load_map(7) + pick patrol từ nhà Nhân Viên
+  Văn Phòng).
+- `tools/godot/run_regression.sh` thêm test mới (nay 57 suite).
+
+### 51.4 Verify thật vòng này
+
+- Hồi quy đầy đủ: **57 OK, 0 FAIL** (56 cũ + 1 mới r29).
+- Smoke `--headless --quit-after 120` exit 0.
+- **Lỗi export lần đầu:** lệnh export dùng đường dẫn
+  `src/godot-build/index.html` (tương đối từ thư mục repo) nên
+  Godot hiểu thành `src/godot/src/godot-build` không tồn tại —
+  export fail, pck trên đĩa vẫn là bản cũ vòng 28 (`c6461bde`).
+  Chạy lại đúng đường dẫn `../godot-build/index.html` (tương đối
+  từ `src/godot`, theo `export_presets.cfg`) thì exit 0. Bài học:
+  luôn kiểm tra SHA pck sau export, đừng tin exit code của lần
+  chạy gộp khi lệnh sau che mất lỗi lệnh trước.
+- Export web exit 0: pck **16.756.776 byte, SHA `e1919a27`**
+  (trước `c6461bde`, +465.604 byte = 14 file art mới); wasm không
+  đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ 5
+  file (cổng 8183, gồm `title_bg.jpg`).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass29/check_r29.py`, ảnh `r29-01…r29-08`):
+  **0 console error, 0 pageerror, 0 requestfailed.** Xem ảnh thật:
+  đi chuỗi Map001→Map007 qua đúng cửa (5,4)/(5,8) từng map; Map007
+  "Phố Văn Phòng Nhỏ" — Nhân Viên Văn Phòng (áo trắng) + Thực Tập
+  Sinh (áo xanh nhạt, tóc đuôi ngựa) hiện rõ mặt thật có nhãn tên,
+  không còn vẽ code; người chơi đi tới (10,1) đúng ô theo nhãn
+  debug; 2 ảnh xa nhà cách nhau 2s pixel-diff = **19.371** (lá rơi
+  + mây + NPC bob, cảnh sống).
+- Lỗi tìm ra khi xem ảnh (cosmetic, không chặn): nhãn "Thực Tập
+  Sinh" đè lên người chơi lúc spawn (người chơi đứng sau nhãn);
+  toast "Đã sang Phố Văn Phòng Nhỏ" đè lên nhãn "Cửa đi Khu Chung
+  Cư Cao Cấp" ở đáy màn hình; D-pad đè lên cửa ở mép trái (đã biết
+  từ các vòng trước).
+- Staging đã rebuild cho pck `e1919a27` (`build_gh_pages.py`:
+  wasm 293 chunk + pck 125 chunk khớp byte, ảnh khớp byte).
+
+### 51.5 Deploy — CHƯA LÀM (push_files vẫn hỏng)
+
+- Push main + deploy gh-pages CHƯA làm: đường ghi push_files hỏng
+  từ vòng 25 (10 lần gián đoạn liên tiếp; lượt này đã dừng retry
+  sau 1 lần — xem §51.1). Manifest sẵn sàng cho vòng sau:
+  `~/workspace/pxb-push-r29-paths-{a,b,c}` + `pxb-push-docs-r29`
+  (docs/godot-g4.md + docs/roles-qc.md, gồm cả cập nhật vòng
+  25/26/27/28/29 chưa push). Khi dịch vụ hồi: push r25 (3 lô) →
+  push r26 (3 lô) → push r27 (3 lô) → push r28 (3 lô) → push r29
+  (3 lô) → push docs → deploy staging `e1919a27` → verify live
+  khớp byte → kiểm live cloud browser.
+
+### 51.6 Việc tiếp theo
+
+1. **Push main (r25 + r26 + r27 + r28 + r29) + deploy gh-pages pck
+   `e1919a27` → verify live khớp byte → kiểm live cloud browser**
+   (Map007: Nhân Viên Văn Phòng + Thực Tập Sinh đi patrol bằng
+   art thật).
+2. NPC Map008 walk cycle (Khu Chung Cư Cao Cấp: 2 NPC của map 8)
+   theo từng map, mẫu vòng này.
+3. Sprite sạp tách riêng (§45.1): đổi hàng 0 thành sạp cách nhau
+   (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
