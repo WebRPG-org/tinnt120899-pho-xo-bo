@@ -80,6 +80,14 @@ const NPC_STYLE := {
 		"frames": ["res://art/walk_nhanvienvanphong_f0.png", "res://art/walk_nhanvienvanphong_f1.png", "res://art/walk_nhanvienvanphong_f2.png", "res://art/walk_nhanvienvanphong_f3.png", "res://art/walk_nhanvienvanphong_f4.png", "res://art/walk_nhanvienvanphong_f5.png"]},
 	"thuc-tap-sinh": {"shirt": Color(0.70, 0.82, 0.95, 1), "hair_style": "dai", "texture": "res://art/char_thuctapsinh.png",
 		"frames": ["res://art/walk_thuctapsinh_f0.png", "res://art/walk_thuctapsinh_f1.png", "res://art/walk_thuctapsinh_f2.png", "res://art/walk_thuctapsinh_f3.png", "res://art/walk_thuctapsinh_f4.png", "res://art/walk_thuctapsinh_f5.png"]},
+	# Vong 30 — Map008 Khu Chung Cu Cao Cap: Cu Dan Cao Cap (nu
+	# trung nien kha gia, ao blouse hong nhat, toc bui cao) + Bao
+	# Ve Chung Cu (nam trung nien, ao so mi xanh dam dong phuc,
+	# mu dong phuc).
+	"cu-dan-cao-cap": {"shirt": Color(0.95, 0.75, 0.80, 1), "hair_style": "bui", "texture": "res://art/char_cudancaocap.png",
+		"frames": ["res://art/walk_cudancaocap_f0.png", "res://art/walk_cudancaocap_f1.png", "res://art/walk_cudancaocap_f2.png", "res://art/walk_cudancaocap_f3.png", "res://art/walk_cudancaocap_f4.png", "res://art/walk_cudancaocap_f5.png"]},
+	"bao-ve-chung-cu": {"shirt": Color(0.15, 0.30, 0.55, 1), "hair_style": "ngan", "texture": "res://art/char_baovechungcu.png",
+		"frames": ["res://art/walk_baovechungcu_f0.png", "res://art/walk_baovechungcu_f1.png", "res://art/walk_baovechungcu_f2.png", "res://art/walk_baovechungcu_f3.png", "res://art/walk_baovechungcu_f4.png", "res://art/walk_baovechungcu_f5.png"]},
 }
 
 # Vong 22 — NPC di lang thang (patrol): NPC buoc cham giua o nha
