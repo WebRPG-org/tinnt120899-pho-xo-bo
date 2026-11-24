@@ -103,6 +103,14 @@ const NPC_STYLE := {
 		"frames": ["res://art/walk_laptrinhvien_f0.png", "res://art/walk_laptrinhvien_f1.png", "res://art/walk_laptrinhvien_f2.png", "res://art/walk_laptrinhvien_f3.png", "res://art/walk_laptrinhvien_f4.png", "res://art/walk_laptrinhvien_f5.png"]},
 	"ky-su-phan-mem": {"shirt": Color(0.85, 0.85, 0.88, 1), "hair_style": "dai", "texture": "res://art/char_kysuphanmem.png",
 		"frames": ["res://art/walk_kysuphanmem_f0.png", "res://art/walk_kysuphanmem_f1.png", "res://art/walk_kysuphanmem_f2.png", "res://art/walk_kysuphanmem_f3.png", "res://art/walk_kysuphanmem_f4.png", "res://art/walk_kysuphanmem_f5.png"]},
+	# Vong 33 — Map011 Pho Tay: Nhan Vien Le Tan (nam tre, ao so
+	# mi trang + gile toi, cam clipboard) + Huong Dan Vien (nu
+	# tre, ao polo xanh duong nhat, toc dai ngang vai, cam co tour
+	# do + ban do).
+	"nhan-vien-le-tan": {"shirt": Color(0.92, 0.92, 0.95, 1), "hair_style": "ngan", "texture": "res://art/char_nhanvienletan.png",
+		"frames": ["res://art/walk_nhanvienletan_f0.png", "res://art/walk_nhanvienletan_f1.png", "res://art/walk_nhanvienletan_f2.png", "res://art/walk_nhanvienletan_f3.png", "res://art/walk_nhanvienletan_f4.png", "res://art/walk_nhanvienletan_f5.png"]},
+	"huong-dan-vien": {"shirt": Color(0.55, 0.75, 0.95, 1), "hair_style": "dai", "texture": "res://art/char_huongdanvien.png",
+		"frames": ["res://art/walk_huongdanvien_f0.png", "res://art/walk_huongdanvien_f1.png", "res://art/walk_huongdanvien_f2.png", "res://art/walk_huongdanvien_f3.png", "res://art/walk_huongdanvien_f4.png", "res://art/walk_huongdanvien_f5.png"]},
 }
 
 # Vong 22 — NPC di lang thang (patrol): NPC buoc cham giua o nha
