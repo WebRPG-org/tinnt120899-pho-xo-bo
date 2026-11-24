@@ -4952,6 +4952,29 @@ Map008 Khu Chung Cư Cao Cấp: Cư Dân Cao Cấp (3,3) + Bảo Vệ Chung Cư 
 - **Staging CHƯA rebuild cho pck `629ad8b8`** (vòng sau rebuild +
   deploy pck này → verify live → kiểm live cloud browser Map008).
 
+### 52.7 Cập nhật 24/11 ~11:30 — DEPLOY `629ad8b8` DỞ DANG (4/8 LÔ), DỪNG THEO LUẬT §47.4
+
+- **Staging rebuild cho pck `629ad8b8` XONG:** `build_gh_pages.py`
+  chạy lại từ build hiện tại, VERIFY OK (pck 128 chunk khớp byte,
+  wasm `fc74679e` + img không đổi, fileSizes khớp); staging
+  versions.json nay pck `629ad8b8`.
+- **Deploy gh-pages pck `629ad8b8` mới 4/8 lô:** b1 chunk 000–015
+  `b19d85f7`, b2 016–031 `c152dfd0`, b3 032–047 `36baa220`, b4
+  048–063 `af9be888` (sync record 276 mục). **Lô b5 (064–079) kẹt:
+  dịch vụ restart 3 lần liên tiếp ngay trong lúc đẩy (lần 1 +
+  retry lần 2 + retry lần 3 đều gián đoạn, head gh-pages vẫn
+  `af9be888`, b5 chưa lên)** — DỪNG retry trong lượt này theo luật
+  §47.4. Live AN TOÀN: versions.json + index.html chưa đẩy nên
+  live vẫn pck `e1919a27` (vòng 29), đã `--check-live` PASS.
+  Manifest b5–b8 + final sẵn tại
+  `~/workspace/pxb-deploy-629ad8b8-b5..b8` + `-final` (NUL đúng).
+  Vòng sau: đẩy tiếp b5–b8 + final → `--check-live` → kiểm live
+  cloud browser Map008.
+- **Vòng 31 ĐÃ BẮT ĐẦU song song:** art walk cycle NPC Map009
+  (Chủ Cửa Hàng + Người Bán Hàng) giao subagent theo mẫu vòng
+  29/30 — thư mục `visual-check/artpass31/`, chỉ art + note,
+  không sửa code; kết quả về sẽ làm code + test + push sau.
+
 ### 52.5 Việc tiếp theo
 
 1. **Đẩy tiếp deploy gh-pages pck `e1919a27` (lô b5–b8 + final) →
@@ -4963,3 +4986,107 @@ Map008 Khu Chung Cư Cao Cấp: Cư Dân Cao Cấp (3,3) + Bảo Vệ Chung Cư 
    từng map, mẫu vòng này.
 4. Sprite sạp tách riêng (§45.1): đổi hàng 0 thành sạp cách nhau
    (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
+
+## 53. Vòng 31 — Walk cycle NPC Map009: Chủ Cửa Hàng + Người Bán Hàng (24/11 ~11:00–14:15 +07, cron 10:45 + handoff art)
+
+Mục 3 §52.5: NPC Map009 walk cycle theo từng map. Vòng này làm
+Map009 Phố Thương Mại: Chủ Cửa Hàng (3,3) + Người Bán Hàng (8,6).
+
+### 53.1 Art (subagent, theo đúng quy trình vòng 29/30) — XONG
+
+- Thư mục `visual-check/artpass31/`; ảnh đứng + sheet 6 khung cho
+  Chủ Cửa Hàng (nam trung niên, áo xanh nhạt, quần tối, giày da,
+  sổ tay nâu, tóc điểm bạc) + Người Bán Hàng (nữ trẻ, áo xanh lá
+  nhạt, váy dài tối, giày bệt, đuôi ngựa, túi giấy); xử lý trắng →
+  trong suốt + cắt frame theo mẫu vòng 29/30 (connected component,
+  MIN_FIG_W=100).
+- File đích: `src/godot/art/char_chucuahang.png` (99×208) +
+  `char_nguoibanhang.png` (109×208), `walk_chucuahang_f0..f5.png`
+  (canvas chung 140×208) + `walk_nguoibanhang_f0..f5.png` (canvas
+  chung 135×208), RGBA.
+- Kiểm tra bằng mắt: 2 ảnh đứng + 2 sheet ĐẠT ngay lần đầu (**0 lần
+  gen lại**); sheet Chủ Cửa Hàng có f0/f1 chồng lấn trục x nhưng tách
+  bằng connected component vẫn đúng (bài học vòng 28). Dải magenta
+  cả 2 sạch, không quầng trắng.
+- Hạn chế thấy bằng mắt: chỉ mặt trước (3/4); f5 gần như tư thế
+  đứng; f2/f3/f4 khá gần nhau; áo cả 2 gen ra cổ trụ khuy bấm thay
+  vì cổ bẻ; chân Người Bán Hàng chỉ lộ từ dưới váy nên nhịp chân
+  ít rõ bằng NPC quần dài; cả 2 đều có khuyên tai vàng nhỏ không có
+  trong mô tả — tất cả chấp nhận được. Chi tiết:
+  `visual-check/artpass31/walkcycle-npc-map009-note.md`.
+- Godot `--headless --import` exit 0 — đủ 14 file `.import` cho
+  14 file art mới (lưu ý subagent: đường dẫn binary là
+  `tools/godot/Godot_v4.7.2-stable_linux.x86_64`, không có file
+  `tools/godot/godot`).
+
+### 53.2 Code + test — XONG
+
+- `marker.gd` NPC_STYLE thêm `"chu-cua-hang"` (áo xanh nhạt
+  (0.70,0.85,0.90), tóc "ngan", texture + frames) +
+  `"nguoi-ban-hang"` (áo xanh lá nhạt (0.75,0.90,0.75), tóc "dai",
+  texture + frames). Không sửa logic `CharacterSprite`/`Marker`.
+- Test mới `tests/g4_r31_npc_walk_map009_test.gd`: **29/29 PASS**
+  (theo mẫu r30: sprite trực tiếp từng NPC, marker home_tile
+  (3,3)/(8,6), Main load_map(9) + pick patrol từ nhà Chủ Cửa Hàng).
+- `tools/godot/run_regression.sh` thêm test mới (nay 59 suite).
+
+### 53.3 Verify thật vòng này
+
+- Hồi quy đầy đủ: **59 OK, 0 FAIL** (58 cũ + 1 mới r31).
+- Smoke `--headless --quit-after 120` exit 0.
+- Export web exit 0: pck **17.682.168 byte, SHA `ea66c202`**
+  (trước `629ad8b8`, +489.012 byte = 14 file art mới); wasm không
+  đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ 5
+  file (cổng 8186).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass31/check_r31.py`, ảnh `r31-01…r31-10`):
+  **0 console error, 0 pageerror, 0 requestfailed.** Xem ảnh thật:
+  đi chuỗi Map001→Map009 qua đúng cửa (5,4)/(5,8) từng map; Map009
+  "Phố Thương Mại" — Chủ Cửa Hàng (áo xanh nhạt, sổ tay) + Người
+  Bán Hàng (áo xanh lá nhạt, váy dài, đuôi ngựa) hiện rõ mặt thật
+  có nhãn tên, không còn vẽ code; người chơi đi tới (10,1) đúng ô
+  theo nhãn debug; cả 2 NPC patrol rời nhà sau 12s; 2 ảnh xa nhà
+  cách nhau 2s pixel-diff = **16.877** (lá rơi + mây + NPC bob,
+  cảnh sống). Lưu ý: Playwright chỉ chạy khi
+  `PYTHONPATH=/home/hatch/.local/lib/python3.12/site-packages`
+  (python3 mặc định không thấy user site-packages).
+- Lỗi tìm ra khi xem ảnh (cosmetic, không chặn): nhãn "Chủ Cửa
+  Hàng" đè lên Người Bán Hàng lúc 2 NPC đứng gần nhau ở spawn
+  (giống vòng 30); Người Bán Hàng khuất một phần sau D-pad ở mép
+  trái (đã biết từ các vòng trước).
+
+### 53.4 Push + Deploy — XONG (gộp, thay cho deploy `629ad8b8` dở)
+
+- **Push main r31 XONG:** lô a (marker.gd + test r31 + .uid +
+  run_regression.sh) `a437ba61` + lô b (14 file .import art
+  Map009) `e8260bdb` + lô c (visual-check artpass31)
+  `e441ff1a` + docs (godot-g4.md §53 + roles-qc.md hiện trạng
+  mới) — head main sau lô docs xem sync record mục cuối.
+- **QUYẾT ĐỊNH GỘP (Bậc 1, lượt này):** pck `629ad8b8` (vòng 30)
+  mới deploy 4/8 lô thì kẹt b5 (§52.7); pck `ea66c202` (vòng 31)
+  chứa toàn bộ nội dung `629ad8b8` + art Map009. Để tránh deploy 2
+  lần liên tiếp trên đường ghi chập chờn, CHỈ deploy `ea66c202` lên
+  live — `629ad8b8` không lên live riêng. Chunk `629ad8b8` b1–b4
+  đã đẩy vẫn nằm trên gh-pages nhưng không được versions.json trỏ
+  tới (mồ côi vô hại — chunk theo version, không ai tải; manifest
+  `pxb-deploy-629ad8b8-b5..b8` + `-final` bỏ, không dùng).
+- **Deploy gh-pages pck `ea66c202` XONG:** staging rebuild VERIFY
+  OK (pck 131 chunk khớp byte, wasm + img không đổi); đẩy 10 lô
+  liên tiếp, phê duyệt về ngay cả 10 lần: b1 chunk 000–015
+  `f0fe2d26`, b2 016–031 `2747a7ae`, b3 032–047 `91f843b3`, b4
+  048–063 `0dcf548b`, b5 064–079 `10b76597`, b6 080–095
+  `38f103e2`, b7 096–111 `9213af8f`, b8 112–127 `a704a8ef`, b9
+  128–130 `805a44c1`, final (versions.json + index.html)
+  `f7114aa9`. Sync record nay 289 mục. **Live đã chuyển sang pck
+  `ea66c202` (vòng 31):** `--check-live` PASS ngay lần đầu sau
+  60s chờ CDN (versions.json live `ea66c202`, index.html khớp
+  staging từng byte).
+
+### 53.5 Việc tiếp theo
+
+1. NPC Map010 walk cycle (Khu Công Nghệ: Lập Trình Viên +
+   Kỹ Sư Phần Mềm) theo từng map, mẫu vòng này.
+2. Sprite sạp tách riêng (§45.1): đổi hàng 0 thành sạp cách nhau
+   (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
+3. Kiểm live cloud browser Map009 (live nay `ea66c202` — kiểm
+   trực tiếp trên link Pages khi cần, không cần deploy lại).
