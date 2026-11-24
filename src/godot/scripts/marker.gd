@@ -95,6 +95,14 @@ const NPC_STYLE := {
 		"frames": ["res://art/walk_chucuahang_f0.png", "res://art/walk_chucuahang_f1.png", "res://art/walk_chucuahang_f2.png", "res://art/walk_chucuahang_f3.png", "res://art/walk_chucuahang_f4.png", "res://art/walk_chucuahang_f5.png"]},
 	"nguoi-ban-hang": {"shirt": Color(0.75, 0.90, 0.75, 1), "hair_style": "dai", "texture": "res://art/char_nguoibanhang.png",
 		"frames": ["res://art/walk_nguoibanhang_f0.png", "res://art/walk_nguoibanhang_f1.png", "res://art/walk_nguoibanhang_f2.png", "res://art/walk_nguoibanhang_f3.png", "res://art/walk_nguoibanhang_f4.png", "res://art/walk_nguoibanhang_f5.png"]},
+	# Vong 32 — Map010 Khu Cong Nghe: Lap Trinh Vien (nam tre, ao
+	# polo xanh navy, deo kinh, cam laptop) + Ky Su Phan Mem (nu
+	# tre, ao blouse trang xam nhat, toc dai ngang vai, cam may
+	# tinh bang).
+	"lap-trinh-vien": {"shirt": Color(0.15, 0.25, 0.45, 1), "hair_style": "ngan", "texture": "res://art/char_laptrinhvien.png",
+		"frames": ["res://art/walk_laptrinhvien_f0.png", "res://art/walk_laptrinhvien_f1.png", "res://art/walk_laptrinhvien_f2.png", "res://art/walk_laptrinhvien_f3.png", "res://art/walk_laptrinhvien_f4.png", "res://art/walk_laptrinhvien_f5.png"]},
+	"ky-su-phan-mem": {"shirt": Color(0.85, 0.85, 0.88, 1), "hair_style": "dai", "texture": "res://art/char_kysuphanmem.png",
+		"frames": ["res://art/walk_kysuphanmem_f0.png", "res://art/walk_kysuphanmem_f1.png", "res://art/walk_kysuphanmem_f2.png", "res://art/walk_kysuphanmem_f3.png", "res://art/walk_kysuphanmem_f4.png", "res://art/walk_kysuphanmem_f5.png"]},
 }
 
 # Vong 22 — NPC di lang thang (patrol): NPC buoc cham giua o nha
