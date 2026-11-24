@@ -88,6 +88,13 @@ const NPC_STYLE := {
 		"frames": ["res://art/walk_cudancaocap_f0.png", "res://art/walk_cudancaocap_f1.png", "res://art/walk_cudancaocap_f2.png", "res://art/walk_cudancaocap_f3.png", "res://art/walk_cudancaocap_f4.png", "res://art/walk_cudancaocap_f5.png"]},
 	"bao-ve-chung-cu": {"shirt": Color(0.15, 0.30, 0.55, 1), "hair_style": "ngan", "texture": "res://art/char_baovechungcu.png",
 		"frames": ["res://art/walk_baovechungcu_f0.png", "res://art/walk_baovechungcu_f1.png", "res://art/walk_baovechungcu_f2.png", "res://art/walk_baovechungcu_f3.png", "res://art/walk_baovechungcu_f4.png", "res://art/walk_baovechungcu_f5.png"]},
+	# Vong 31 — Map009 Pho Thuong Mai: Chu Cua Hang (nam trung
+	# nien, ao xanh nhat, toc diem bac, cam so tay) + Nguoi Ban
+	# Hang (nu tre, ao xanh la nhat, vay dai toi, toc duoi ngua).
+	"chu-cua-hang": {"shirt": Color(0.70, 0.85, 0.90, 1), "hair_style": "ngan", "texture": "res://art/char_chucuahang.png",
+		"frames": ["res://art/walk_chucuahang_f0.png", "res://art/walk_chucuahang_f1.png", "res://art/walk_chucuahang_f2.png", "res://art/walk_chucuahang_f3.png", "res://art/walk_chucuahang_f4.png", "res://art/walk_chucuahang_f5.png"]},
+	"nguoi-ban-hang": {"shirt": Color(0.75, 0.90, 0.75, 1), "hair_style": "dai", "texture": "res://art/char_nguoibanhang.png",
+		"frames": ["res://art/walk_nguoibanhang_f0.png", "res://art/walk_nguoibanhang_f1.png", "res://art/walk_nguoibanhang_f2.png", "res://art/walk_nguoibanhang_f3.png", "res://art/walk_nguoibanhang_f4.png", "res://art/walk_nguoibanhang_f5.png"]},
 }
 
 # Vong 22 — NPC di lang thang (patrol): NPC buoc cham giua o nha
