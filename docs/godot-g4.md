@@ -4803,17 +4803,40 @@ Map007 Phố Văn Phòng Nhỏ: Nhân Viên Văn Phòng (3,3) + Thực Tập Sin
 - Staging đã rebuild cho pck `e1919a27` (`build_gh_pages.py`:
   wasm 293 chunk + pck 125 chunk khớp byte, ảnh khớp byte).
 
-### 51.5 Deploy — CHƯA LÀM (push_files vẫn hỏng)
+### 51.5 Deploy — ĐÃ LÀM MỘT PHẦN (lượt 24/11 00:45, cron 00:45)
 
-- Push main + deploy gh-pages CHƯA làm: đường ghi push_files hỏng
-  từ vòng 25 (10 lần gián đoạn liên tiếp; lượt này đã dừng retry
-  sau 1 lần — xem §51.1). Manifest sẵn sàng cho vòng sau:
-  `~/workspace/pxb-push-r29-paths-{a,b,c}` + `pxb-push-docs-r29`
-  (docs/godot-g4.md + docs/roles-qc.md, gồm cả cập nhật vòng
-  25/26/27/28/29 chưa push). Khi dịch vụ hồi: push r25 (3 lô) →
-  push r26 (3 lô) → push r27 (3 lô) → push r28 (3 lô) → push r29
-  (3 lô) → push docs → deploy staging `e1919a27` → verify live
-  khớp byte → kiểm live cloud browser.
+- **Push main r25→r29 + docs XONG trong lượt này:** đường ghi
+  push_files đã HỒI sau 10 lần gián đoạn liên tiếp — thử thăm dò
+  1 lần đầu lượt thành công ngay (commit `7f008798` lô A r25).
+  Tổng 16 commit, head main nay `4bfe5d46bf5c` (docs r25–29):
+  r25 `7f008798`/`792e3f00`/`6c7b9400`, r26 `df29a7bf`/`27baaf4a`/
+  `9f2512e7`, r27 `2eb3b431`/`4d8f59f2`/`cd8df953`, r28 `7fe17d10`/
+  `9bf2eec8`/`ce450514`, r29 `779c4fe0`/`cd8cd4cd`/`30dcb5c9`,
+  docs `4bfe5d46`. Chi tiết trong
+  `~/workspace/pho-xo-bo.muse-github-snapshot-sync.json` (mục
+  244–259). Lỗi duy nhất: 3 manifest vòng 27 viết bằng `\n` thay
+  vì `\0` nên push-files từ chối — đã sửa sang NUL rồi đẩy lại
+  thành công. Bài học: kiểm tra định dạng manifest bằng `od -c`
+  trước khi đẩy (lô r27 là lô duy nhất sai trong 15 lô).
+- **Deploy gh-pages pck `e1919a27` DỞ DANG:** staging verify OK
+  (`build_gh_pages.py --verify-only` PASS, pck 125 chunk khớp
+  byte); chỉ pck mới (wasm + img trùng version với live nên không
+  đẩy lại). Đã đẩy 4/8 lô pck (chunk 000–063, commit `ecba525b`,
+  `b69296ae`, `2e7c8029`, `8547176c`) — lô 5 (chunk 064–079) bị
+  kẹt vì phê duyệt hết thời gian (userConfirmation timed out sau
+  ~41 phút chạy chuỗi) → **DỪNG deploy theo hướng dẫn, KHÔNG thử
+  lại trong lượt này**. Live KHÔNG ảnh hưởng: index.html +
+  versions.json chưa đẩy nên live vẫn pck `db28f2c4` (vòng 24),
+  đã verify bằng curl versions.json live sau khi dừng.
+- Bài học mới — **giới hạn body MCP 413:** lô 32 chunk (5,76 MB)
+  bị `HTTP 413: request body too large` — giới hạn thực tế nằm
+  giữa 3,6 MB (20 chunk, từng đẩy được) và 5,76 MB; lô deploy an
+  toàn là **16 chunk/lô (~2,88 MB)**. Manifest lô 16-chunk đã
+  tạo: `/tmp/pxb-deploy-e1919a27-b1..b8` (b1–b4 đã đẩy, b5–b8 +
+  final còn lại). Vòng sau: đẩy tiếp b5–b8 + final rồi chạy
+  `build_gh_pages.py --check-live` + kiểm live cloud browser.
+  (Manifest lô 32-chunk cũ `/tmp/pxb-deploy-e1919a27-batch1..4`
+  bỏ, không dùng.)
 
 ### 51.6 Việc tiếp theo
 
@@ -4824,4 +4847,119 @@ Map007 Phố Văn Phòng Nhỏ: Nhân Viên Văn Phòng (3,3) + Thực Tập Sin
 2. NPC Map008 walk cycle (Khu Chung Cư Cao Cấp: 2 NPC của map 8)
    theo từng map, mẫu vòng này.
 3. Sprite sạp tách riêng (§45.1): đổi hàng 0 thành sạp cách nhau
+   (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
+
+## 52. Vòng 30 — Walk cycle NPC Map008: Cư Dân Cao Cấp + Bảo Vệ Chung Cư (24/11 ~01:30–03:00 +07, cron 00:45)
+
+Mục 2 §51.6: NPC Map008 walk cycle theo từng map. Vòng này làm
+Map008 Khu Chung Cư Cao Cấp: Cư Dân Cao Cấp (3,3) + Bảo Vệ Chung Cư (8,6).
+
+### 52.1 Art (subagent, theo đúng quy trình vòng 29) — XONG
+
+- Thư mục `visual-check/artpass30/`; ảnh đứng + sheet 6 khung cho
+  Cư Dân Cao Cấp (nữ trung niên khá giả, blouse hồng nhạt, quần âu
+  trắng, giày bệt đen, tóc búi cao, túi xách nhỏ) + Bảo Vệ Chung Cư
+  (nam trung niên, sơ mi xanh đậm đồng phục có huy hiệu, quần tối,
+  giày đen, mũ đồng phục); xử lý trắng → trong suốt + cắt frame
+  theo mẫu vòng 29 (connected component, MIN_FIG_W=100).
+- File đích: `src/godot/art/char_cudancaocap.png` (78×208) +
+  `char_baovechungcu.png` (97×208), `walk_cudancaocap_f0..f5.png`
+  (canvas chung 111×208) + `walk_baovechungcu_f0..f5.png` (canvas
+  chung 139×208), RGBA.
+- Kiểm tra bằng mắt: 2 ảnh đứng + 2 sheet ĐẠT ngay lần đầu (**0 lần
+  gen lại**); sheet Bảo Vệ có f0/f1 chồng lấn trục x nhưng tách bằng
+  connected component vẫn đúng (bài học vòng 28). Dải magenta cả 2
+  sạch, không quầng trắng.
+- Hạn chế thấy bằng mắt: chỉ mặt trước (3/4); f5 gần như tư thế
+  đứng; f2/f3/f4 khá gần nhau; áo Cư Dân gen ra cổ trụ khuy bấm
+  (kiểu áo dài cách tân) thay vì blouse cổ bẻ; mũ Bảo Vệ dạng kê-pi
+  có huy hiệu thay vì mũ lưỡi trai; tay f0 Bảo Vệ giơ ngang vai —
+  tất cả chấp nhận được. Chi tiết:
+  `visual-check/artpass30/walkcycle-npc-map008-note.md`.
+
+### 52.2 Code + test — XONG
+
+- `marker.gd` NPC_STYLE thêm `"cu-dan-cao-cap"` (áo hồng nhạt
+  (0.95,0.75,0.80), tóc "bui", texture + frames) +
+  `"bao-ve-chung-cu"` (áo xanh đậm (0.15,0.30,0.55), tóc "ngan",
+  texture + frames). Không sửa logic `CharacterSprite`/`Marker`.
+- Test mới `tests/g4_r30_npc_walk_map008_test.gd`: **29/29 PASS**
+  (theo mẫu r29: sprite trực tiếp từng NPC, marker home_tile
+  (3,3)/(8,6), Main load_map(8) + pick patrol từ nhà Cư Dân Cao
+  Cấp).
+- `tools/godot/run_regression.sh` thêm test mới (nay 58 suite).
+
+### 52.3 Verify thật vòng này
+
+- Hồi quy đầy đủ: **58 OK, 0 FAIL** (57 cũ + 1 mới r30).
+- Smoke `--headless --quit-after 120` exit 0.
+- Export web exit 0: pck **17.193.156 byte, SHA `629ad8b8…`**
+  (trước `e1919a27`, +436.380 byte = 14 file art mới); wasm không
+  đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ 5
+  file (cổng 8184, gồm `title_bg.jpg`).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass30/check_r30.py`, ảnh `r30-01…r30-09`):
+  **0 console error, 0 pageerror, 0 requestfailed.** Xem ảnh thật:
+  đi chuỗi Map001→Map008 qua đúng cửa (5,4)/(5,8) từng map; Map008
+  "Khu Chung Cư Cao Cấp" — Cư Dân Cao Cấp (áo hồng nhạt, búi cao,
+  túi xách) + Bảo Vệ Chung Cư (đồng phục xanh đậm, mũ) hiện rõ mặt
+  thật có nhãn tên, không còn vẽ code; người chơi đi tới (10,1)
+  đúng ô theo nhãn debug; cả 2 NPC patrol rời nhà sau 12s xa; 2 ảnh
+  xa nhà cách nhau 2s pixel-diff = **22.953** (lá rơi + mây + NPC
+  bob, cảnh sống).
+- Lỗi tìm ra khi xem ảnh (cosmetic, không chặn): nhãn "Bảo Vệ Chung
+  Cư" đè lên thân Cư Dân lúc 2 NPC đứng gần nhau ở spawn; Bảo Vệ
+  khuất một phần sau D-pad ở mép trái (đã biết từ các vòng trước).
+- Staging CHƯA rebuild cho pck `629ad8b8` (vòng sau rebuild + deploy
+  sau khi deploy `e1919a27` xong).
+
+### 52.4 Push — CHƯA XONG (dịch vụ chập chờn trở lại)
+
+- Thử đẩy main r30 lô A 1 lần cuối lượt: gián đoạn ngay ("service
+  restarted while it was running") — lần gián đoạn đầu tiên kể từ
+  khi dịch vụ hồi đầu lượt (16 commit main + 4 lô deploy đã đẩy
+  thành công trước đó trong lượt). Kiểm tra lại: sync record không
+  đổi (263 mục, chưa có commit r30 nào được xác nhận); lệnh kiểm
+  tra head main cũng gián đoạn theo nên head chưa xác minh được —
+  r30-a có thể đã lên GitHub nhưng chưa có SHA xác nhận nên KHÔNG
+  ghi nhận. **DỪNG retry push trong lượt này** (luật §47.4).
+  Manifest sẵn: `~/workspace/pxb-push-r30-paths-{a,b,c}` +
+  `pxb-push-docs-r30` (docs gồm §51.5 cập nhật deploy + §52 vòng
+  30). Vòng sau: kiểm tra head main trước rồi đẩy tiếp; nếu r30-a
+  đã lên thì chỉ đẩy b/c + docs.
+- Deploy gh-pages pck `e1919a27` vẫn dở dang như §51.5 (lô b5–b8 +
+  final chưa đẩy); staging CHƯA rebuild cho pck `629ad8b8`.
+
+### 52.6 Cập nhật 24/11 ~11:00 — DEPLOY `e1919a27` XONG, PUSH r30 XONG
+
+- **Deploy gh-pages pck `e1919a27` ĐÃ XONG trong lượt này (cron
+  10:45):** manifest lô b5–b8 + final tạo lại (file `/tmp` cũ đã
+  mất sau restart VM — tạo mới tại `~/workspace/pxb-deploy-e1919a27-b5..b8`
+  + `-final`, kiểm `od -c` NUL đúng); đẩy 5 lô liên tiếp, phê duyệt
+  về ngay cả 5 lần (khác hẳn lần trước kẹt 41 phút ở b5): b5 chunk
+  064–079 `93093b70`, b6 080–095 `c7c0f93e`, b7 096–111 `73fbfbff`,
+  b8 112–124 `fda9430d`, final (versions.json + index.html)
+  `829ed44c`. Sync record nay 268 mục. **Live đã chuyển sang pck
+  `e1919a27` (vòng 29):** `--check-live` PASS sau khi chờ CDN lan
+  (lần kiểm đầu FAIL do versions.json live còn cache `db28f2c4`,
+  chunk part-124 404 nhất thời — API gh-pages đã có đủ file, chỉ
+  là CDN chưa lan; kiểm lại sau vài phút thì khớp byte).
+- **Push main r30 XONG trong lượt này:** lô a (marker.gd + test
+  r30 + run_regression.sh) `8d107b0e` + lô b (14 file .import art
+  Map008) `07920614` + lô c (visual-check artpass30) `e38e8544` +
+  docs (godot-g4.md §52.6 + roles-qc.md hiện trạng mới) — head
+  main sau lô docs xem sync record mục cuối.
+- **Staging CHƯA rebuild cho pck `629ad8b8`** (vòng sau rebuild +
+  deploy pck này → verify live → kiểm live cloud browser Map008).
+
+### 52.5 Việc tiếp theo
+
+1. **Đẩy tiếp deploy gh-pages pck `e1919a27` (lô b5–b8 + final) →
+   `--check-live` → kiểm live cloud browser** (cần phê duyệt —
+   lượt này kẹt ở lô b5 do phê duyệt hết thời gian).
+2. Push main r30 (3 lô + docs) + rebuild staging + deploy pck
+   `629ad8b8` → verify live.
+3. NPC Map009 walk cycle (Phố Thương Mại: 2 NPC của map 9) theo
+   từng map, mẫu vòng này.
+4. Sprite sạp tách riêng (§45.1): đổi hàng 0 thành sạp cách nhau
    (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
