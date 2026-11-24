@@ -5090,3 +5090,96 @@ Map009 Phố Thương Mại: Chủ Cửa Hàng (3,3) + Người Bán Hàng (8,6)
    (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
 3. Kiểm live cloud browser Map009 (live nay `ea66c202` — kiểm
    trực tiếp trên link Pages khi cần, không cần deploy lại).
+
+## 54. Vòng 32 — Walk cycle NPC Map010: Lập Trình Viên + Kỹ Sư Phần Mềm (24/11 ~22:45–23:15 +07, cron 22:45)
+
+Mục 1 §53.5: NPC Map010 walk cycle theo từng map. Vòng này làm
+Map010 Khu Công Nghệ: Lập Trình Viên (3,3) + Kỹ Sư Phần Mềm (8,6).
+
+### 54.1 Art (subagent, theo đúng quy trình vòng 29/30/31) — XONG
+
+- Thư mục `visual-check/artpass32/`; ảnh đứng + sheet 6 khung cho
+  Lập Trình Viên (nam trẻ, áo polo xanh navy, quần jeans tối, giày
+  thể thao trắng, tóc đen ngắn, đeo kính, cầm laptop mỏng) + Kỹ Sư
+  Phần Mềm (nữ trẻ, áo blouse trắng xám nhạt, quần âu tối, giày bệt
+  đen, tóc đen dài ngang vai, cầm máy tính bảng); xử lý trắng →
+  trong suốt + cắt frame theo mẫu vòng 31 (connected component,
+  MIN_FIG_W=100).
+- File đích: `src/godot/art/char_laptrinhvien.png` (85×208) +
+  `char_kysuphanmem.png` (99×208), `walk_laptrinhvien_f0..f5.png`
+  (canvas chung 153×208) + `walk_kysuphanmem_f0..f5.png` (canvas
+  chung 181×208), RGBA.
+- Kiểm tra bằng mắt: 2 ảnh đứng + 2 sheet ĐẠT ngay lần đầu (**0 lần
+  gen lại**); sheet Lập Trình Viên có f0/f1 chồng lấn trục x nhưng
+  tách bằng connected component vẫn đúng (bài học vòng 28). Dải
+  magenta cả 2 sạch, không quầng trắng.
+- Hạn chế thấy bằng mắt: chỉ mặt trước (3/4); f5 gần như tư thế
+  đứng; f2/f3/f4 khá gần nhau; blouse Kỹ Sư Phần Mềm cổ trụ khuy
+  bấm thay vì cổ bẻ; laptop/tablet đổi tay theo nhịp đi; khuyên tai
+  vàng nhỏ cả 2 (như vòng 31); sheet Kỹ Sư Phần Mềm tỉ lệ
+  3840×640, nền góc (254,254,254) — slice vẫn tách đúng 6 hình.
+  Tất cả chấp nhận được. Chi tiết:
+  `visual-check/artpass32/walkcycle-npc-map010-note.md`.
+
+### 54.2 Code + test — XONG
+
+- `marker.gd` NPC_STYLE thêm `"lap-trinh-vien"` (áo navy
+  (0.15,0.25,0.45), tóc "ngan", texture + frames) +
+  `"ky-su-phan-mem"` (áo trắng xám (0.85,0.85,0.88), tóc "dai",
+  texture + frames). Không sửa logic `CharacterSprite`/`Marker`.
+- Test mới `tests/g4_r32_npc_walk_map010_test.gd`: **29/29 PASS**
+  (theo mẫu r31: sprite trực tiếp từng NPC, marker home_tile
+  (3,3)/(8,6), Main load_map(10) + pick patrol từ nhà Lập Trình
+  Viên).
+- `tools/godot/run_regression.sh` thêm test mới (nay 60 suite).
+
+### 54.3 Verify thật vòng này
+
+- Hồi quy đầy đủ: **60 OK, 0 FAIL** (59 cũ + 1 mới r32).
+- Smoke `--headless --quit-after 120` exit 0.
+- Export web exit 0: pck **18.163.860 byte, SHA `0d2cf705`**
+  (trước `ea66c202`, +481.692 byte = 14 file art mới); wasm không
+  đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ 6
+  file (cổng 8187).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass32/check_r32.py`, ảnh `r32-01…r32-11`):
+  **0 console error, 0 pageerror, 0 requestfailed.** Xem ảnh thật:
+  đi chuỗi Map001→Map010 qua đúng cửa (5,4)/(5,8) từng map; Map010
+  "Khu Công Nghệ" — Lập Trình Viên (polo navy, kính, laptop) + Kỹ
+  Sư Phần Mềm (blouse trắng xám, máy tính bảng) hiện rõ mặt thật
+  có nhãn tên, không còn vẽ code; người chơi đi tới (10,1) đúng ô
+  theo nhãn debug; cả 2 NPC patrol rời nhà sau 12s; 2 ảnh xa nhà
+  cách nhau 2s pixel-diff = **20.844** (lá rơi + mây + NPC bob,
+  cảnh sống).
+- Lỗi tìm ra khi xem ảnh (cosmetic, không chặn): nhãn "Kỹ Sư Phần
+  Mềm" đè lên thân Lập Trình Viên lúc 2 NPC đứng gần nhau ở spawn
+  (giống vòng 30/31); Kỹ Sư Phần Mềm khuất một phần sau D-pad ở
+  mép trái (đã biết từ các vòng trước).
+
+### 54.4 Push + Deploy — XONG
+
+- **Push main r32 XONG:** lô a (marker.gd + test r32 + .uid +
+  run_regression.sh) `133c0ed9` + lô b (14 file .import art
+  Map010) `3c9fd236` + lô c (visual-check artpass32)
+  `10783ed7` + docs (godot-g4.md §54 + roles-qc.md hiện trạng
+  mới) — head main sau lô docs xem sync record mục cuối.
+- **Deploy gh-pages pck `0d2cf705` XONG:** staging rebuild VERIFY
+  OK (pck 135 chunk khớp byte, wasm + img không đổi); đẩy 10 lô
+  liên tiếp, phê duyệt về ngay cả 10 lần: b1 chunk 000–015
+  `5167b414`, b2 016–031 `7d15832f`, b3 032–047 `8a2257a8`, b4
+  048–063 `5df86a60`, b5 064–079 `3542a4ea`, b6 080–095
+  `ff377cd4`, b7 096–111 `ab0c0272`, b8 112–127 `f0ed5af3`, b9
+  128–134 `472ee58a`, final (versions.json + index.html)
+  `6bfca6ab`. Sync record nay 303 mục. **Live đã chuyển sang pck
+  `0d2cf705` (vòng 32):** `--check-live` PASS ngay lần đầu sau
+  60s chờ CDN (versions.json live `0d2cf705`, index.html khớp
+  staging từng byte).
+
+### 54.5 Việc tiếp theo
+
+1. NPC Map011 walk cycle (Phố Tây: Nhân Viên Lễ Tân + Hướng Dẫn
+   Viên) theo từng map, mẫu vòng này.
+2. Sprite sạp tách riêng (§45.1): đổi hàng 0 thành sạp cách nhau
+   (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
+3. Kiểm live cloud browser Map010 (live nay `0d2cf705` — kiểm
+   trực tiếp trên link Pages khi cần, không cần deploy lại).
