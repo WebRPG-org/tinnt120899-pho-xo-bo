@@ -5424,7 +5424,7 @@ Vườn (8,6).
    khi deploy `aa5e4447` xong — kiểm trực tiếp trên link Pages
    khi cần).
 
-## 57. Vòng 35 — Walk cycle NPC Map013: Nhân Viên Ngân Hàng + Môi Giới Chứng Khoán (25/11 ~08:45–11:00 +07, cron 08:45)
+## 57. Vòng 35 — Walk cycle NPC Map013: Nhân Viên Ngân Hàng + Môi Giới Chứng Khoán (25/11 ~08:45–09:45 +07, cron 08:45)
 
 Mục 1 §56.5: NPC Map013 walk cycle theo từng map. Vòng này làm
 Map013 Quận Tài Chính: Nhân Viên Ngân Hàng (3,3) + Môi Giới
