@@ -5907,16 +5907,16 @@ Resort (8,6).
   dừng driver sau ~10 phút chờ. **Live vẫn `50e9c300` (vòng 37),
   CHƯA lên `b87c03bf`.** Không ghi "live đã lên" khi chưa curl
   lại versions.json live sau lô final (bài học vòng 37).
-- Lô docs (godot-g4 §60 + roles-qc) CHƯA đẩy trong lượt này vì
-  cùng kẹt phê duyệt — file local đã viết xong §60, lượt sau đẩy
-  bù cùng deploy: chạy `python3 /tmp/pxb-deploy-r38.py` (tự bỏ
-  qua lô đã có trong sync, tiếp từ chunk 2/10 + final), rồi đẩy
-  lô docs main (godot-g4.md + roles-qc.md).
+- Lô docs (godot-g4 §60 + roles-qc) ĐÃ đẩy sau đó: `b8d13cb2`
+  (thẻ phê duyệt cũng chờ ~4 phút mới thông, như lô deploy —
+  phê duyệt GitHub trong lượt detached này chậm hẳn so với các
+  lượt trước).
 
 ### 60.5 Việc tiếp theo
 
-1. Đẩy nốt deploy pck `b87c03bf` (chunk 2–10 + final) + lô docs
-   §60, kiểm live `b87c03bf` (xem §60.4).
+1. Đẩy nốt deploy pck `b87c03bf` (chunk 2–10 + final), kiểm live
+   `b87c03bf` (xem §60.4; chạy `python3 /tmp/pxb-deploy-r38.py`,
+   tự bỏ qua lô 1 đã có trong sync).
 2. NPC Map017 walk cycle (Công Viên An Bình: Cô Bán Bánh + Ông
    Lão Tập Thể Dục) theo từng map, mẫu vòng này — nhớ bài học
    vòng 38: đạo cụ dài siết "dựng đứng sát thân" ngay từ lần gen
