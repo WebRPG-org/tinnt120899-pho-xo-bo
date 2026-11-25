@@ -5784,8 +5784,8 @@ Penthouse (8,6).
   PASS (versions.json live `50e9c300`, index.html 200).
 - Lưu ý: lô docs `db1f1484` đẩy TRƯỚC khi §59 được viết (script
   push chạy hết 4 lô trong 1 lần, trong khi docs lúc đó chưa có
-  §59) — đã đẩy bù lô docs2 sau khi viết xong §59, head main sau
-  docs2 xem commit đính chính dưới. Deploy cũng dở dang ở lô b8
+  §59) — đã đẩy bù lô docs2 `b183b0de` sau khi viết xong §59, head
+  main sau docs2 `b183b0de`. Deploy cũng dở dang ở lô b8
   khi hết lượt 10:45 (live vẫn `210e0a19` dù §59.4 bản nháp ghi
   "check-live PASS" — ghi sai, đã đính chính ở đây): b9/b10/final
   đẩy bù trong lượt 11:45, live mới chuyển sang `50e9c300` lúc
