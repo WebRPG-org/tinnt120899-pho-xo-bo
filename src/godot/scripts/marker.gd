@@ -111,6 +111,14 @@ const NPC_STYLE := {
 		"frames": ["res://art/walk_nhanvienletan_f0.png", "res://art/walk_nhanvienletan_f1.png", "res://art/walk_nhanvienletan_f2.png", "res://art/walk_nhanvienletan_f3.png", "res://art/walk_nhanvienletan_f4.png", "res://art/walk_nhanvienletan_f5.png"]},
 	"huong-dan-vien": {"shirt": Color(0.55, 0.75, 0.95, 1), "hair_style": "dai", "texture": "res://art/char_huongdanvien.png",
 		"frames": ["res://art/walk_huongdanvien_f0.png", "res://art/walk_huongdanvien_f1.png", "res://art/walk_huongdanvien_f2.png", "res://art/walk_huongdanvien_f3.png", "res://art/walk_huongdanvien_f4.png", "res://art/walk_huongdanvien_f5.png"]},
+	# Vong 34 — Map012 Khu Biet Thu Ven Song: Bao Ve Biet Thu (nam
+	# trung nien, so mi xanh dam dong phuc bao ve, doi mu, cam den
+	# pin) + Nguoi Lam Vuon (nam lon tuoi, toc bac, doi non la, ao
+	# be/kaki, cam keo cat cay + binh tuoi).
+	"bao-ve-biet-thu": {"shirt": Color(0.12, 0.25, 0.45, 1), "hair_style": "ngan", "texture": "res://art/char_baovebietthu.png",
+		"frames": ["res://art/walk_baovebietthu_f0.png", "res://art/walk_baovebietthu_f1.png", "res://art/walk_baovebietthu_f2.png", "res://art/walk_baovebietthu_f3.png", "res://art/walk_baovebietthu_f4.png", "res://art/walk_baovebietthu_f5.png"]},
+	"nguoi-lam-vuon": {"shirt": Color(0.85, 0.78, 0.60, 1), "hair_style": "ngan", "texture": "res://art/char_nguoilamvuon.png",
+		"frames": ["res://art/walk_nguoilamvuon_f0.png", "res://art/walk_nguoilamvuon_f1.png", "res://art/walk_nguoilamvuon_f2.png", "res://art/walk_nguoilamvuon_f3.png", "res://art/walk_nguoilamvuon_f4.png", "res://art/walk_nguoilamvuon_f5.png"]},
 }
 
 # Vong 22 — NPC di lang thang (patrol): NPC buoc cham giua o nha
