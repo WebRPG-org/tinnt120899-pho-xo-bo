@@ -6057,3 +6057,132 @@ Dục (8,6).
    cố định.
 2. Sprite sạp tách riêng (§45.1): đổi hàng 0 thành sạp cách nhau
    (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
+
+## 62. Vòng 40 — Walk cycle NPC Map018: Chủ Sạp Đêm + Người Bán Hàng Rong (25/11 ~15:23–16:55 +07, cron 15:45)
+
+Mục 1 §61.5: NPC Map018 walk cycle theo từng map. Vòng này làm
+Map018 Phố Đi Bộ – Chợ Đêm: Chủ Sạp Đêm (3,3) + Người Bán Hàng
+Rong (8,6). **Xong walk cycle cả 18 khu (Map001–018).**
+
+### 62.1 Art (subagent, artpass40, 15:23–16:07) — XONG, KHÔNG push/code
+
+- Thư mục `visual-check/artpass40/`; ảnh đứng + sheet 6 khung cho
+  Chủ Sạp Đêm (nữ trung niên, áo bà ba TÍM ĐẬM + tạp dề XANH DƯƠNG
+  + nón lá, cầm ĐÈN LỒNG ĐỎ tay phải + GIỎ HÀNG đầy đồ tay trái) +
+  Người Bán Hàng Rong (nam trung niên, áo thun VÀNG + quần kaki nâu
+  + nón lá, đeo TÚI HÀNG RONG trước ngực + cầm LOA RAO HÀNG đỏ tay
+  phải); xử lý trắng → trong suốt + cắt frame + cleanup mảnh vụn
+  rời mặc định (`cleanup_frames_r40.py`).
+- File đích: `src/godot/art/char_chusapdem.png` (112×208) +
+  `char_nguoibanhangrong.png` (122×208),
+  `walk_chusapdem_f0..f5.png` (canvas chung 116×208) +
+  `walk_nguoibanhangrong_f0..f5.png` (canvas chung 129×208), RGBA.
+- Kiểm tra bằng mắt: 2 ảnh đứng + 6 bản sheet; **ảnh đứng 0 lần gen
+  lại; sheet Người Bán Hàng Rong 0 lần; sheet Chủ Sạp Đêm 4 lần
+  (v1 dùng, v2 thiếu giỏ f0, v3 thiếu giỏ f4, v4 chỉ 5 hình + thiếu
+  giỏ f0, v5 thiếu đèn f0+f3)** — siết mỗi đạo cụ bằng một câu riêng
+  + liệt kê từng hình vẫn không triệt được lỗi rơi đạo cụ (chỉ giảm);
+  v1 là bản duy nhất đủ cả 2 đạo cụ ở cả 6 hình.
+- Cắt sheet — BÀI HỌC MỚI: sheet Chủ Sạp Đêm v1 DÀY (pitch ~365px,
+  6 hình là 1 component liên thông) nên cắt dọc r39 HỎNG (chẻ đèn
+  f1, giỏ f4, mảnh nón/giỏ rơi frame) — phải dùng watershed geodesic
+  mới (`slice_walkcycle_chusapdem_ws.py`, BFS 6 seed thân): đạo cụ
+  giữ nguyên với hình cầm nó. Người Bán Hàng Rong cắt dọc vẫn đúng
+  (1 lần `split_wide_component` tại x=473). Cleanup: chusapdem f0
+  xóa 15px, f3 2px, f5 8px; f1/f2/f4 1 component, không đổi; vendor
+  12 frame không đổi; char_chusapdem xóa 27px vết rời.
+  Debug-white: vùng trắng kín bị xóa chỉ là khe nền giữa 2 bàn chân
+  (f0 731, f4 600 final px), còn lại lớn nhất 41px (<100, giữ).
+- 3 cách sửa vùng chạm giỏ f0/đèn f1 đều LOẠI (cắt x lấy mất đèn f1;
+  cắt màu rách đèn + thủng giỏ f0; xóa hộp frame cuối ăn mép đèn) —
+  giữ bản watershed thuần, chấp nhận mảnh giỏ f0 ~300 final px ở góc
+  dưới-trái frame f1. Bài học: sheet dày + đạo cụ chạm nhau thì gen
+  lại sheet thưa hơn thay vì sửa vùng chạm; KHÔNG sửa vùng chạm 2D
+  bằng ngưỡng x/màu hay xóa hộp. Chi tiết:
+  `visual-check/artpass40/walkcycle-npc-map018-note.md`.
+- Hạn chế (chấp nhận, ghi trong note): đèn f1 bị giỏ f0 che mất mép
+  trái (chỉ ~60% thân đèn lộ ra, vẫn nhận diện rõ); loa đổi tay theo
+  nhịp đi (giống clipboard/bình nước các vòng trước, không phải lỗi);
+  f5 cả hai gần như tư thế đứng; áo bà ba dài che chân Chủ Sạp Đêm.
+
+### 62.2 Code + test — XONG
+
+- `marker.gd` NPC_STYLE thêm `"chu-sap-dem"` (áo tím đậm
+  (0.35,0.20,0.45), tóc "dai", texture + frames) +
+  `"nguoi-ban-hang-rong"` (áo vàng (0.95,0.75,0.20), tóc "ngan",
+  texture + frames). Không sửa logic `CharacterSprite`/`Marker`.
+  Tên file art khớp NPC id bỏ dấu gạch nối ngay khi art về
+  (`chusapdem` / `nguoibanhangrong`).
+- Test mới `tests/g4_r40_npc_walk_map018_test.gd`: **29/29 PASS**
+  (theo mẫu r38: sprite trực tiếp từng NPC, marker home_tile
+  (3,3)/(8,6), Main load_map(18) + pick patrol từ nhà Chủ Sạp Đêm).
+- `tools/godot/run_regression.sh` thêm test mới (nay 68 suite).
+
+### 62.3 Verify thật vòng này
+
+- Hồi quy đầy đủ: **68 OK, 0 FAIL** (67 cũ + 1 mới r40).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **22.058.000 byte, SHA `57c31fc2`**
+  (trước `a6d7e36b`, +525.184 byte = 14 file art mới); wasm không
+  đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ
+  4 file (cổng 8195). `strings index.pck` có 48 tham chiếu
+  walk_chusapdem/walk_nguoibanhangrong.
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass40/check_r40.py`, ảnh `r40-01…r40-19`):
+  **0 console error, 0 pageerror, 0 requestfailed.** Xem ảnh
+  thật: đi chuỗi Map001→Map018 qua đúng cửa (5,4)/(5,8) từng
+  map; Map018 "Phố Đi Bộ – Chợ Đêm" — Chủ Sạp Đêm (nón lá, áo bà
+  ba tím đậm, đèn lồng đỏ + giỏ hàng) + Người Bán Hàng Rong (nón
+  lá, áo vàng, túi hàng rong + loa đỏ) hiện rõ mặt thật có nhãn
+  tên, không còn vẽ code; cả 2 NPC patrol rời nhà sau 12s (Chủ
+  Sạp Đêm ra mép trái, Người Bán Hàng Rong sang gần cửa ở ảnh away);
+  2 ảnh xa nhà cách nhau 2s pixel-diff = **12.376** (lá rơi + mây +
+  NPC bob, cảnh sống). Nhãn "Người Bán Hàng Rong" đè lên thân Chủ
+  Sạp Đêm ở ảnh home — cùng mẫu nhãn neo -170px + hiện trong
+  Manhattan ≤5 ô đã thấy ở Map012/013/014/015/016/017, không phải
+  nhãn sai.
+
+### 62.4 Push + Deploy — XONG TRỌN (main + deploy + docs)
+
+- **Push main r40 XONG:** lô a (marker.gd + test r40 + .uid +
+  run_regression.sh) `19d5ce39` + lô b (14 file .import art
+  Map018) `e1e63a80` + lô c (visual-check artpass40: note + 7
+  script + check_r40.py) `d08404b0` — head main sau lô c
+  `d08404b0`. Sync-base đã xác minh trước push: marker.gd local =
+  remote @51105053 + đúng 8 dòng r40; run_regression.sh = remote +
+  đúng 2 dòng (66→68 suite + tên test); 3 đường dẫn mới kiểm tra
+  vắng mặt trên remote.
+- **Deploy gh-pages pck `57c31fc2` XONG:** staging rebuild VERIFY
+  OK (pck 164 chunk khớp byte, wasm + img không đổi); đẩy 11 lô
+  chunk + 1 lô final: b1 000–015 `dc95ebc0`, b2 016–031
+  `04893697`, b3 032–047 `a41c90ca`, b4 048–063 `217ef159`, b5
+  064–079 `67675540`, b6 080–095 `f496f780`, b7 096–111
+  `f5ba56f5`, b8 112–127 `364c119a`, b9 128–143 `229beaf8`, b10
+  144–159 `0854d025`, b11 160–163 `769d4556` (4 file), final
+  (versions.json + index.html) `90164e6d`. Sync record nay 431 mục.
+  **Sự cố deploy (ghi để không tái phạm):** lô b10 lần đầu driver
+  timeout 300s ở bước chờ phê duyệt và bị kill — nhưng commit ĐÃ
+  lên server; lần chạy lại báo "failed to update reference:
+  Reference cannot be updated" (head đã lệch khỏi base của lần
+  thử lại). Đã đối chiếu: head gh-pages = `0854d025`, blob SHA
+  part-144/151/159 trên remote khớp staging từng byte → ghi sync
+  từ kết quả đã xác minh, KHÔNG đẩy lại. Bài học: driver deploy
+  phải để timeout subprocess ≥1500s (chờ phê duyệt từng lô có thể
+  >5 phút); sau timeout phải kiểm tra head + blob remote trước khi
+  thử lại, không đẩy trùng.
+  **Live đã chuyển sang pck `57c31fc2` (vòng 40):** `--check-live`
+  PASS (versions.json live `57c31fc2`, index.html 200, khớp staging)
+  — lúc đầu vẫn hiện `a6d7e36b` do CDN lag ~3 phút (như vòng 38/39),
+  kiểm lại sau thì PASS.
+- Lô docs (godot-g4 §62 + roles-qc) `TODO` (điền sau khi push).
+
+### 62.5 Việc tiếp theo
+
+1. **Walk cycle 18 khu ĐÃ XONG (Map001–018).** Việc tiếp theo lớn
+   nhất theo user 25/11: **làm lại đồ họa (graphics ~30%)** — bắt
+   đầu từ rà soát art hiện có theo `docs/artpass-20-11.md` +
+   `docs/tileset-plan.md`: sprite sạp tách riêng (§45.1) vẫn treo
+   (đổi hàng 0 thành sạp cách nhau, ô lẻ để trống, gen 3 sprite sạp
+   rau/trái cây/cá-thịt).
+2. Sau art: G2 còn lại (port 17 plugin đã làm tới đâu — xem
+   `docs/godot-g2.md`) rồi G3 đủ 18 khu đã có data, G4 online.
