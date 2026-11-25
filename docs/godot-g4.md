@@ -5423,3 +5423,126 @@ Vườn (8,6).
 3. Kiểm live cloud browser Map012 (live nay `99a445f9` cho tới
    khi deploy `aa5e4447` xong — kiểm trực tiếp trên link Pages
    khi cần).
+
+## 57. Vòng 35 — Walk cycle NPC Map013: Nhân Viên Ngân Hàng + Môi Giới Chứng Khoán (25/11 ~08:45–11:00 +07, cron 08:45)
+
+Mục 1 §56.5: NPC Map013 walk cycle theo từng map. Vòng này làm
+Map013 Quận Tài Chính: Nhân Viên Ngân Hàng (3,3) + Môi Giới
+Chứng Khoán (8,6).
+
+### 57.1 Art (subagent, theo đúng quy trình vòng 29/30/31/32/33/34) — XONG
+
+- Thư mục `visual-check/artpass35/`; ảnh đứng + sheet 6 khung cho
+  Nhân Viên Ngân Hàng (nam trẻ, vest xanh navy + sơ mi xanh nhạt +
+  cà vạt đỏ đậm, quần âu tối, giày da đen, cầm xấp giấy tờ ngân
+  hàng / tablet) + Môi Giới Chứng Khoán (nam, vest xám than + sơ
+  mi xanh bạc hà nhạt + cà vạt tối, đeo kính, giày da đen, cầm
+  điện thoại hiện biểu đồ nến xanh/đỏ + tập hồ sơ); xử lý trắng →
+  trong suốt + cắt frame theo mẫu vòng 34 (connected component,
+  MIN_FIG_W=100, `split_wide_component` MAX_FIG_W=600 + xóa vùng
+  trắng kín ≥100 final px).
+- File đích: `src/godot/art/char_nhanviennganhang.png` (93×208) +
+  `char_moigioichungkhoan.png` (103×208),
+  `walk_nhanviennganhang_f0..f5.png` (canvas chung 153×208) +
+  `walk_moigioichungkhoan_f0..f5.png` (canvas chung 131×208), RGBA.
+- Kiểm tra bằng mắt: 2 ảnh đứng + 2 sheet; **1 lần gen lại** —
+  ảnh đứng Nhân Viên Ngân Hàng lần đầu bị vẽ thành NỮ (tóc búi,
+  bông tai vàng) vì ảnh tham chiếu `char_cotu.png` là nhân vật nữ;
+  gen lại 1 lần với prompt siết giới tính ("MAN, masculine face,
+  short black hair, no earrings, no bun") thì đạt ngay; bản hỏng
+  giữ lại làm hồ sơ
+  (`rejected-female-char-nhanviennganhang-af4428f2.webp`). Ảnh
+  đứng Môi Giới + cả 2 sheet đều đạt ngay lần đầu (0 gen lại).
+  Dải magenta cả 2 sạch, không quầng trắng; zoom 4× kiểm tra giấy
+  tờ/tablet + điện thoại (nến xanh/đỏ + cột khối lượng) + kính
+  gọng đen đều nguyên vẹn. Không có vùng trắng kín ≥100 final px
+  nào bị xóa; vùng trắng kín còn lại chỉ là giấy trắng của xấp
+  tài liệu (15–61 final px, giữ đúng thiết kế). Cả 2 sheet đúng
+  6 hình, không cần tách component rộng.
+- **Bài học mới (ghi trong note):** NPC nam tham chiếu
+  `char_cotu.png` (nữ) phải siết giới tính ngay trong prompt; giấy
+  trắng cầm tay có thể tạo vùng trắng kín thật — NPC nào cầm giấy
+  trắng mà vùng giấy khép kín ≥100 final px thì bước xóa trắng kín
+  sẽ thủng giấy, cần kiểm tra debug-white sau mỗi vòng.
+- Hạn chế thấy bằng mắt: chỉ mặt trước (3/4); f5 gần như tư thế
+  đứng; f2/f3/f4 khá gần nhau; đạo cụ đổi tay theo nhịp đi. Tất
+  cả chấp nhận được. Chi tiết:
+  `visual-check/artpass35/walkcycle-npc-map013-note.md`.
+
+### 57.2 Code + test — XONG
+
+- `marker.gd` NPC_STYLE thêm `"nhan-vien-ngan-hang"` (vest navy
+  (0.12,0.20,0.42), tóc "ngan", texture + frames) +
+  `"moi-gioi-chung-khoan"` (vest xám than (0.30,0.30,0.33), tóc
+  "ngan", texture + frames). Không sửa logic `CharacterSprite`/
+  `Marker`.
+- Test mới `tests/g4_r35_npc_walk_map013_test.gd`: **29/29 PASS**
+  (theo mẫu r34: sprite trực tiếp từng NPC, marker home_tile
+  (3,3)/(8,6), Main load_map(13) + pick patrol từ nhà Nhân Viên
+  Ngân Hàng).
+- `tools/godot/run_regression.sh` thêm test mới (nay 63 suite).
+
+### 57.3 Verify thật vòng này
+
+- Hồi quy đầy đủ: **63 OK, 0 FAIL** (62 cũ + 1 mới r35).
+- Smoke `--headless --quit-after 120` exit 0, không ERROR.
+- Export web exit 0: pck **19.617.968 byte, SHA `2d9ae4e0`**
+  (trước `aa5e4447`, +472.960 byte = 14 file art mới); wasm không
+  đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ 6
+  file (cổng 8190).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass35/check_r35.py`, ảnh `r35-01…r35-14`):
+  **0 console error, 0 pageerror, 0 requestfailed.** Xem ảnh thật:
+  đi chuỗi Map001→Map013 qua đúng cửa (5,4)/(5,8) từng map; Map013
+  "Quận Tài Chính" — Nhân Viên Ngân Hàng (vest navy, sơ mi xanh
+  nhạt, cà vạt đỏ, cầm giấy tờ) + Môi Giới Chứng Khoán (vest xám
+  than, kính, điện thoại) hiện rõ mặt thật có nhãn tên, không còn
+  vẽ code; người chơi đi tới (10,4) đúng ô, cả 2 NPC patrol rời
+  nhà sau 12s; 2 ảnh xa nhà cách nhau 2s pixel-diff = **6.244**
+  (lá rơi + mây + NPC bob, cảnh sống).
+- Lỗi tìm ra khi xem ảnh (cosmetic, không chặn): nhãn "Môi Giới
+  Chứng Khoán" đè lên thân Nhân Viên Ngân Hàng — **đã xác minh
+  KHÔNG phải nhãn sai:** nhãn NPC chỉ hiện khi người chơi trong
+  Manhattan ≤5 ô (`LABEL_NEAR_TILES`=5; lúc chụp người chơi (5,7)
+  cách Nhân Viên Ngân Hàng 6 ô nên nhãn bạn ấy ẩn, cách Môi Giới
+  4 ô nên nhãn bạn ấy hiện); nhãn Môi Giới neo -170px trên đầu
+  bạn ấy nên trong chiếu iso rơi đúng vào vị trí Nhân Viên Ngân
+  Hàng đứng phía trên-trái. Cùng mẫu đã thấy ở Map012 vòng 34
+  (nhãn "Người Làm Vườn" đè lên thân Bảo Vệ, ảnh r35-11 kiểm lại
+  vẫn vậy). Texture/nhãn từng NPC đã đối chiếu đúng file art đứng
+  (`char_nhanviennganhang.png` vest navy + cà vạt đỏ + giấy tờ;
+  `char_moigioichungkhoan.png` vest xám + kính + điện thoại).
+  Người chơi spawn Map013 ở (5,7) thay vì (5,4) — phím giữ lọt
+  sang map mới 3 bước (harness, không phải game); đi xa tới
+  (10,4) đúng ô (phải ×5 + lên ×3 từ (5,7)).
+
+### 57.4 Push + Deploy — XONG
+
+- **Push main r35 XONG:** lô a (marker.gd + test r35 + .uid +
+  run_regression.sh) `50463816` + lô b (14 file .import art
+  Map013) `c809bd70` + lô c (visual-check artpass35)
+  `10c05901` — head main sau lô c `10c05901`.
+- **Deploy gh-pages pck `2d9ae4e0` XONG:** staging rebuild VERIFY
+  OK (pck 146 chunk khớp byte, wasm + img không đổi); đẩy 11 lô
+  liên tiếp: b1 chunk 000–015 `22aec1f5`, b2 016–031 `2f6878be`,
+  b3 032–047 `c107b27e`, b4 048–063 `43819c05`, b5 064–079
+  `e990ba49`, b6 080–095 `fee7a39c`, b7 096–111 `04cff97b`, b8
+  112–127 `c665c8ce`, b9 128–143 `a9ccf828`, b10 144–145
+  `c9855819`, final (versions.json + index.html) `acb5ee1f`.
+  Sync record nay 346 mục. **Live đã chuyển sang pck `2d9ae4e0`
+  (vòng 35):** `--check-live` PASS (versions.json live
+  `2d9ae4e0`, index.html khớp staging từng byte).
+
+### 57.5 Việc tiếp theo
+
+1. NPC Map014 walk cycle (Đảo Thượng Lưu: Quản Gia Đảo + Chủ
+   Biệt Thự Đảo) theo từng map, mẫu vòng này — nhớ copy script
+   slice từ **vòng 34** (có `split_wide_component` + xóa trắng kín
+   theo final px); lưu ý siết giới tính trong prompt khi NPC nam
+   tham chiếu `char_cotu.png` + kiểm tra debug-white nếu NPC cầm
+   giấy trắng.
+2. Sprite sạp tách riêng (§45.1): đổi hàng 0 thành sạp cách nhau
+   (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
+3. Nhãn NPC chỉ hiện trong 5 ô + neo -170px nên nhãn NPC (8,6)
+   dễ đè lên NPC (3,3) trong chiếu iso — cân nhắc cải thiện hiển
+   thị nhãn (việc polish, không chặn).
