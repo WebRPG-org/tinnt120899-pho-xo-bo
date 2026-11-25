@@ -6261,7 +6261,7 @@ import được coi như chưa có sprite, vẽ bằng code. **Luật:** mọi c
 
 ### 63.4 Push + Deploy — XONG
 
-- Push main 3 lô + docs (a `c0c60069`, b `9e8f7e30`, c `a34186dc`).
+- Push main 3 lô + docs (a `c0c60069`, b `9e8f7e30`, c `a34186dc`, docs `d5118c6f`).
   Sync record 446 mục.
 - Deploy gh-pages 9 lô chunk + final `a2baf0dd`: pck `5f2a052f`
   164 part (lô 1–8 × 20 part, lô 9 × 4 part) + versions.json +
