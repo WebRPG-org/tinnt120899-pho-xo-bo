@@ -6186,3 +6186,104 @@ Rong (8,6). **Xong walk cycle cả 18 khu (Map001–018).**
    rau/trái cây/cá-thịt).
 2. Sau art: G2 còn lại (port 17 plugin đã làm tới đâu — xem
    `docs/godot-g2.md`) rồi G3 đủ 18 khu đã có data, G4 online.
+
+## 63. Vòng 41 — Sprite sạp tách riêng Map002 (25/11 ~16:45–17:30 +07, cron 16:45)
+
+Việc tiếp theo lớn nhất theo user 25/11 (làm lại đồ họa, graphics
+~30%): sprite sạp tách riêng §45.1 — đổi hàng 0 thành sạp cách
+nhau (ô lẻ để trống) + gen 3 sprite sạp rau/trái cây/cá-thịt.
+Art làm song song qua subagent (artpass41), code làm cùng lúc.
+
+### 63.1 Art (subagent artpass41) — XONG
+
+- 3 sprite, canvas 64×96 RGBA, nền trong suốt:
+  `stall_rau.png` 9.068 byte (4 rổ mây: bắp cải / rau lá / rau
+  thơm / rau muống), `stall_traicay.png` 8.087 byte (cam, chuối,
+  xoài, thanh long), `stall_cathit.png` 9.754 byte (6 cá trên đá
+  lạnh + thịt đỏ trên thớt gỗ). Mái hiên sọc đỏ/trắng + mép vỏ sò,
+  2 cột chống gỗ, quầy vân gỗ — theo đúng hợp đồng canvas (y 0–33
+  trong suốt cho biển hiệu, mái y 34–52, cột x 2–6 / 58–62, quầy
+  y 76–96); không chữ, không biển, không người.
+- Gen lại: trái cây 1 lần (v1 mái hiên + mặt quầy bị cắt ở mép
+  khung, v2 siết "toàn bộ sạp nằm trong khung, đủ lề 4 phía" thì
+  đạt); rau + cá-thịt 0 lần.
+- Kiểm chứng: nền magenta + zoom 3× (không nền lạ, không quầng
+  xanh ở mép); debug-white (pixel gần-trắng đều là nội dung hợp lệ:
+  sọc trắng mái hiên + đá lạnh); đo file đích: y 0–33 có 0 pixel
+  đục, cột chống ở y=56 tại x 3–5 và 58–61 đúng hợp đồng, mỗi
+  sprite đúng 1 component alpha duy nhất, không mảnh vụn rời.
+  Hạn chế: chỉ mặt trước; cá ở tỉ lệ 1× trong game sẽ nhỏ (đọc rõ
+  ở zoom 3×). Note: `visual-check/artpass41/stall-sprites-note.md`
+  + script `process_stalls_r41.py`.
+
+### 63.2 Code + test — XONG
+
+| File | Đổi |
+|---|---|
+| `scripts/nadia_scene.gd` | `STALL_SPRITE_SIZE` (64, 96) + `STALL_SPRITE_BOTTOM_Y` 14.0 (đáy sprite ở c.y + 14 = đáy quầy) + `STALL_SPRITE_FILES` (3 loại) + `stall_sprite_kind(sign)` (RAU CỦ→rau, TRÁI CÂY/HOA QUẢ→trai-cay, CÁ TƯƠI/THỊT HEO→ca-thit, còn lại "") + `stall_sprite_path(kind)` + `market_gap_tiles()` [1,3,5,7,9,11] + `_load_stall_sprites()` (gọi trong `setup()`, cache dict) + `stall_sprite_texture(kind)`; `_draw_market_row` vòng 1 + vòng 2 bỏ ô lẻ (không tường/mái/cửa sổ — 6 sạp tách rời, mái 34px tách nhau 30px); vòng 2 vẽ sprite trước biển (biển nằm trên vùng trong suốt của sprite), có sprite thì chỉ thêm thẻ giá nhỏ, không sprite thì `_draw_shop_front` như cũ (fallback). |
+| `tests/g4_r41_stall_sprite_test.gd` (mới) | 13 mục: nhịp sạp không đổi [0,2,4,6,8,10] + ô trống [1,3,5,7,9,11] không giao nhau; 5 biển có sprite đúng loại + 3 biển không sprite về ""; đường dẫn sprite + đúng 3 sprite + canvas 64×96 + đáy y +14; scene thật Map002 map_id 2, trạng thái sprite khớp file trên đĩa (có→64×96, thiếu→null), về Map001 map_id 1. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r41_stall_sprite_test` (nay 69 suite). |
+| `visual-check/artpass41/check_r41.py` (mới) | Theo mẫu check_r40.py, cổng 8196 + ảnh zoom vùng sạp (clip y=600..1050). |
+
+**Lỗi tìm được khi nối code (bài học mới):** `FileAccess.file_exists`
++ `load()` LỖI "No loader found for resource" khi PNG đã có trên
+đĩa nhưng chưa có `.import` (art vừa xuất file, chưa import) — hồi
+quy lần 1 rớt đúng 1 suite (68 OK + 1 FAIL r41) vì vậy. Sửa: nạp
+sprite phải dùng `ResourceLoader.exists(path, "Texture2D")` làm điều
+kiện (cả `_load_stall_sprites` lẫn test đều sửa theo) — PNG chưa
+import được coi như chưa có sprite, vẽ bằng code. **Luật:** mọi chỗ
+`load()` file art theo đường dẫn động đều phải kiểm tra bằng
+`ResourceLoader.exists`, không dùng `FileAccess.file_exists`.
+
+### 63.3 Verify thật vòng này
+
+- `--check-only` nadia_scene.gd: PASS.
+- Test mới `g4_r41_stall_sprite_test`: **13/13 PASS** (lúc art chưa
+  có: 0/3 sprite, fallback; lúc art đủ: 3/3 sprite 64×96).
+- Hồi quy đầy đủ: **69 OK, 0 FAIL** (68 cũ + 1 mới r41).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **22.089.360 byte, SHA `5f2a052f…`**
+  (trước `57c31fc2`, +31.360 byte = đúng 3 sprite + code, không art
+  thừa); wasm không đổi `fc74679e`; HTTP 200 đủ 4 file (cổng 8196).
+  Pck chứa đúng 3 texture `.ctex` của stall (kiểm bằng `strings`).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass41/check_r41.py`, ảnh
+  `r41-01-map2` + `r41-02-stall-row-zoom`): **0 console error,
+  0 pageerror, 0 request fail.**
+  - Map002: 6 sạp tách rời nhau (ô lẻ trống, lộ nền đá sau sạp);
+    biển 8 loại đọc được, có màu riêng (RAU CỦ xanh lá, THỊT HEO
+    đỏ, BÁNH MÌ nâu, HOA QUẢ cam, CÁ TƯƠI xanh dương, ĐỒ KHÔ nâu
+    vàng); sạp có sprite hiện hàng đúng loại (cá + thịt đỏ trên
+    quầy), sạp BÁNH MÌ/GIA VỊ/ĐỒ KHÔ vẫn vẽ code (ổ bánh mì trên
+    quầy); NPC Chị Lệ/Anh Hải + cửa 2 chiều bình thường.
+  - Còn lại (không sửa vòng này): nhãn NPC vẫn có thể đè lên sạp
+    (đã biết từ các vòng trước); cá trên sprite ở tỉ lệ 1× nhỏ.
+
+### 63.4 Push + Deploy — XONG
+
+- Push main 3 lô + docs (a `c0c60069`, b `9e8f7e30`, c `a34186dc`).
+  Sync record 446 mục.
+- Deploy gh-pages 9 lô chunk + final `a2baf0dd`: pck `5f2a052f`
+  164 part (lô 1–8 × 20 part, lô 9 × 4 part) + versions.json +
+  index.html cuối; wasm `fc74679e` không đổi (đã có trên live).
+  `--check-live` lần 1 FAIL (CDN còn pin cũ `57c31fc2`, kiểm lại
+  sau ~3 phút thì PASS: live pin `5f2a052f`, part-000 đủ 200,
+  index.html khớp staging). Đối chiếu byte live: tải + giải base64
+  + ráp 164 part từ live = **22.089.360 byte, SHA `5f2a052f4808`
+  — khớp đúng từng byte** với pck local (lần tải đầu bị 503 giữa
+  chừng do xin 164 part liên tục — thêm retry 5 lần, backoff 2s
+  thì qua). **Live nay chạy vòng 41**: sạp chợ Map002 tách riêng
+  + 3 sprite sạp. Link: https://tinnt120899.github.io/pho-xo-bo/
+- Lưu ý phê duyệt: lô b main chờ phê duyệt ~30 phút (lô a 18 giây,
+  lô c ~11 phút, các lô gh-pages 10 giây–7 phút) — phê duyệt đến
+  theo đợt, không đều; không đẩy lại khi đang chờ.
+
+### 63.5 Việc tiếp theo
+
+1. 3 sprite sạp còn lại (bánh-mì / gia-vị / đồ-khô) để cả 8 biển
+   đều có sprite — cùng mẫu vòng này (canvas 64×96, y 0–33 trong
+   suốt, không chữ).
+2. Rà soát art hiện có theo `docs/artpass-20-11.md` +
+   `docs/tileset-plan.md` (tile Map003–018 tái dùng tile nhà trọ là
+   PROVISIONAL, chờ art pass vẽ tile riêng theo khu).
+3. G2 còn lại (xem `docs/godot-g2.md`) rồi G4 online.
