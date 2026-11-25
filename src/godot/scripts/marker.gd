@@ -153,6 +153,14 @@ const NPC_STYLE := {
 		"frames": ["res://art/walk_nhanviensangolf_f0.png", "res://art/walk_nhanviensangolf_f1.png", "res://art/walk_nhanviensangolf_f2.png", "res://art/walk_nhanviensangolf_f3.png", "res://art/walk_nhanviensangolf_f4.png", "res://art/walk_nhanviensangolf_f5.png"]},
 	"quan-ly-resort": {"shirt": Color(0.55, 0.85, 0.75, 1), "hair_style": "dai", "texture": "res://art/char_quanlyresort.png",
 		"frames": ["res://art/walk_quanlyresort_f0.png", "res://art/walk_quanlyresort_f1.png", "res://art/walk_quanlyresort_f2.png", "res://art/walk_quanlyresort_f3.png", "res://art/walk_quanlyresort_f4.png", "res://art/walk_quanlyresort_f5.png"]},
+	# Vong 39 — Map017 Cong Vien An Binh: Co Ban Banh (nu, ao ba ba
+	# hong dao + tap de xanh la + non la, cam gio banh + khay banh)
+	# + Ong Lao Tap The Duc (nam, toc bac, ao thun xanh nhat +
+	# quan the thao xam, khan tap vang cam + binh nuoc xanh).
+	"co-ban-banh": {"shirt": Color(0.93, 0.60, 0.55, 1), "hair_style": "dai", "texture": "res://art/char_cobanbanh.png",
+		"frames": ["res://art/walk_cobanbanh_f0.png", "res://art/walk_cobanbanh_f1.png", "res://art/walk_cobanbanh_f2.png", "res://art/walk_cobanbanh_f3.png", "res://art/walk_cobanbanh_f4.png", "res://art/walk_cobanbanh_f5.png"]},
+	"ong-lao-tap-the-duc": {"shirt": Color(0.55, 0.75, 0.85, 1), "hair_style": "ngan", "texture": "res://art/char_onglaotaptheduc.png",
+		"frames": ["res://art/walk_onglaotaptheduc_f0.png", "res://art/walk_onglaotaptheduc_f1.png", "res://art/walk_onglaotaptheduc_f2.png", "res://art/walk_onglaotaptheduc_f3.png", "res://art/walk_onglaotaptheduc_f4.png", "res://art/walk_onglaotaptheduc_f5.png"]},
 }
 
 # Vong 22 — NPC di lang thang (patrol): NPC buoc cham giua o nha
