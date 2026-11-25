@@ -5384,7 +5384,33 @@ Vườn (8,6).
   đi xa dừng ở (10,2) thay vì (10,1) — 1 lần bấm lên bị miss ở
   FPS thấp, vẫn đủ xa để patrol kích hoạt.
 
-### 56.4 Push + Deploy — (ghi sau khi làm)
+### 56.4 Push + Deploy — XONG
+
+- **Push main r34 XONG:** lô a (marker.gd + test r34 + .uid +
+  run_regression.sh) `c2a212be` + lô b (14 file .import art
+  Map012) `833336e8` + lô c (visual-check artpass34)
+  `f42bdef5` + docs (godot-g4.md §55–56 + roles-qc.md)
+  `74dc0cb0` — head main sau lô docs `74dc0cb0`.
+- **Deploy gh-pages pck `aa5e4447` XONG:** staging rebuild VERIFY
+  OK (pck 142 chunk khớp byte, wasm + img không đổi); đẩy 10 lô
+  liên tiếp: b1 chunk 000–015 `fb438e3d`, b2 016–031 `bbf7c663`,
+  b3 032–047 `40a797f6`, b4 048–063 `151540b9`, b5 064–079
+  `928f4e53`, b6 080–095 `1ff918e2`, b7 096–111 `ac56d5d5`, b8
+  112–127 `a74e24be`, b9 128–141 `357c8e0b`, final
+  (versions.json + index.html) `556f67d3`. Sync record nay 331 mục.
+  **Live đã chuyển sang pck `aa5e4447` (vòng 34):**
+  `--check-live` PASS (versions.json live `aa5e4447`, index.html
+  khớp staging từng byte).
+- Lưu ý: message commit deploy ghi "(§55)" do script deploy copy
+  từ vòng 33 chưa đổi số mục — chỉ sai nhãn, nội dung đúng pck
+  `aa5e4447` vòng 34. Lô final lên GitHub lúc 01:50:18Z nhưng
+  script bị kill (tưởng approval kẹt) trước khi ghi sync record —
+  đã ghi bù thủ công từ SHA commit trên GitHub
+  (`556f67d3…`, đối chiếu message + thời gian), không push lại.
+- Dọn dẹp: thẻ approval deploy lô 1 chờ ~6 phút mới về (lô 2–10
+  về ngay sau đó) — lần sau đợi approval lâu hơn trước khi kết
+  luận kẹt; kiểm tra sync record + head gh-pages trước khi kill
+  script deploy đang chạy.
 
 ### 56.5 Việc tiếp theo
 
