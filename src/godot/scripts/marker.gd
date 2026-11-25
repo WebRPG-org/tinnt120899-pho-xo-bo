@@ -144,6 +144,15 @@ const NPC_STYLE := {
 		"frames": ["res://art/walk_quanlypenthouse_f0.png", "res://art/walk_quanlypenthouse_f1.png", "res://art/walk_quanlypenthouse_f2.png", "res://art/walk_quanlypenthouse_f3.png", "res://art/walk_quanlypenthouse_f4.png", "res://art/walk_quanlypenthouse_f5.png"]},
 	"cu-dan-penthouse": {"shirt": Color(0.05, 0.45, 0.38, 1), "hair_style": "dai", "texture": "res://art/char_cudanpenthouse.png",
 		"frames": ["res://art/walk_cudanpenthouse_f0.png", "res://art/walk_cudanpenthouse_f1.png", "res://art/walk_cudanpenthouse_f2.png", "res://art/walk_cudanpenthouse_f3.png", "res://art/walk_cudanpenthouse_f4.png", "res://art/walk_cudanpenthouse_f5.png"]},
+	# Vong 38 — Map016 Khu San Golf & Resort: Nhan Vien San Golf
+	# (nam, ao polo xanh nhat + quan kaki be + mu luoi trai xanh
+	# navy, cam gay golf + deo tui gay golf mini) + Quan Ly Resort
+	# (nu, blazer xanh mint nhat + vay but chi xanh navy, cam so
+	# dat phong bia da + the phong vang).
+	"nhan-vien-san-golf": {"shirt": Color(0.55, 0.75, 0.90, 1), "hair_style": "ngan", "texture": "res://art/char_nhanviensangolf.png",
+		"frames": ["res://art/walk_nhanviensangolf_f0.png", "res://art/walk_nhanviensangolf_f1.png", "res://art/walk_nhanviensangolf_f2.png", "res://art/walk_nhanviensangolf_f3.png", "res://art/walk_nhanviensangolf_f4.png", "res://art/walk_nhanviensangolf_f5.png"]},
+	"quan-ly-resort": {"shirt": Color(0.55, 0.85, 0.75, 1), "hair_style": "dai", "texture": "res://art/char_quanlyresort.png",
+		"frames": ["res://art/walk_quanlyresort_f0.png", "res://art/walk_quanlyresort_f1.png", "res://art/walk_quanlyresort_f2.png", "res://art/walk_quanlyresort_f3.png", "res://art/walk_quanlyresort_f4.png", "res://art/walk_quanlyresort_f5.png"]},
 }
 
 # Vong 22 — NPC di lang thang (patrol): NPC buoc cham giua o nha

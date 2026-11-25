@@ -19,8 +19,8 @@ var _main: Node = null
 
 const NPC_IDS := ["quan-ly-penthouse", "cu-dan-penthouse"]
 const NPC_TEX := {
-	"quan-ly-penthouse": "res://art/char_quangiadao.png",
-	"cu-dan-penthouse": "res://art/char_chubietthudao.png",
+	"quan-ly-penthouse": "res://art/char_quanlypenthouse.png",
+	"cu-dan-penthouse": "res://art/char_cudanpenthouse.png",
 }
 const NPC_HOME := {
 	"quan-ly-penthouse": Vector2i(3, 3),
