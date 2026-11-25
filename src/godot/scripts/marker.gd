@@ -161,6 +161,14 @@ const NPC_STYLE := {
 		"frames": ["res://art/walk_cobanbanh_f0.png", "res://art/walk_cobanbanh_f1.png", "res://art/walk_cobanbanh_f2.png", "res://art/walk_cobanbanh_f3.png", "res://art/walk_cobanbanh_f4.png", "res://art/walk_cobanbanh_f5.png"]},
 	"ong-lao-tap-the-duc": {"shirt": Color(0.55, 0.75, 0.85, 1), "hair_style": "ngan", "texture": "res://art/char_onglaotaptheduc.png",
 		"frames": ["res://art/walk_onglaotaptheduc_f0.png", "res://art/walk_onglaotaptheduc_f1.png", "res://art/walk_onglaotaptheduc_f2.png", "res://art/walk_onglaotaptheduc_f3.png", "res://art/walk_onglaotaptheduc_f4.png", "res://art/walk_onglaotaptheduc_f5.png"]},
+	# Vong 40 — Map018 Pho Di Bo – Cho Dem: Chu Sap Dem (nu, ao ba ba
+	# tim dam + tap de xanh duong + non la, cam den long do + gio hang)
+	# + Nguoi Ban Hang Rong (nam, ao thun vang + quan kaki nau + non la,
+	# deo tui hang rong truoc nguc + cam loa rao hang do).
+	"chu-sap-dem": {"shirt": Color(0.35, 0.20, 0.45, 1), "hair_style": "dai", "texture": "res://art/char_chusapdem.png",
+		"frames": ["res://art/walk_chusapdem_f0.png", "res://art/walk_chusapdem_f1.png", "res://art/walk_chusapdem_f2.png", "res://art/walk_chusapdem_f3.png", "res://art/walk_chusapdem_f4.png", "res://art/walk_chusapdem_f5.png"]},
+	"nguoi-ban-hang-rong": {"shirt": Color(0.95, 0.75, 0.20, 1), "hair_style": "ngan", "texture": "res://art/char_nguoibanhangrong.png",
+		"frames": ["res://art/walk_nguoibanhangrong_f0.png", "res://art/walk_nguoibanhangrong_f1.png", "res://art/walk_nguoibanhangrong_f2.png", "res://art/walk_nguoibanhangrong_f3.png", "res://art/walk_nguoibanhangrong_f4.png", "res://art/walk_nguoibanhangrong_f5.png"]},
 }
 
 # Vong 22 — NPC di lang thang (patrol): NPC buoc cham giua o nha
