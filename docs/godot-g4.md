@@ -5682,3 +5682,124 @@ Map014 Đảo Thượng Lưu: Quản Gia Đảo (3,3) + Chủ Biệt Thự Đả
 3. Nhãn NPC chỉ hiện trong 5 ô + neo -170px nên nhãn NPC (8,6)
    dễ đè lên NPC (3,3) trong chiếu iso — cân nhắc cải thiện hiển
    thị nhãn (việc polish, không chặn).
+
+## 59. Vòng 37 — Walk cycle NPC Map015: Quản Lý Penthouse + Cư Dân Penthouse (25/11 ~10:45–11:15 +07, cron 10:45)
+
+Mục 1 §58.5: NPC Map015 walk cycle theo từng map. Vòng này làm
+Map015 Khu Penthouse: Quản Lý Penthouse (3,3) + Cư Dân
+Penthouse (8,6).
+
+### 59.1 Art (subagent, theo đúng quy trình vòng 36) — XONG
+
+- Thư mục `visual-check/artpass37/`; ảnh đứng + sheet 6 khung cho
+  Quản Lý Penthouse (nam, vest xám than + sơ mi xanh nhạt + cà vạt
+  đỏ bordeaux, cầm clipboard + thẻ chìa khóa vàng) + Cư Dân
+  Penthouse (nữ, váy dài xanh ngọc lục bảo, cầm túi mua sắm +
+  điện thoại thông minh); xử lý trắng → trong suốt + cắt frame
+  theo mẫu vòng 36 (connected component, MIN_FIG_W=100,
+  MIN_FIG_H=100, `split_wide_component` MAX_FIG_W=600 + xóa vùng
+  trắng kín ≥100 final px).
+- File đích: `src/godot/art/char_quanlypenthouse.png` (102×208) +
+  `char_cudanpenthouse.png` (106×208),
+  `walk_quanlypenthouse_f0..f5.png` (canvas chung 122×208) +
+  `walk_cudanpenthouse_f0..f5.png` (canvas chung 142×208), RGBA.
+- Kiểm tra bằng mắt: 2 ảnh đứng + 2 sheet; **0 lần gen lại** —
+  cả 2 ảnh đứng + cả 2 sheet đạt ngay lần đầu, đạo cụ đủ 6/6 hình
+  cho cả 2 NPC (clipboard + thẻ vàng / túi mua sắm + điện thoại).
+  Bài học vòng 36 phát huy: siết cả 2 đạo cụ cùng lúc NGAY TỪ
+  LẦN GEN ĐẦU thì không tái phạm lỗi thiếu đạo cụ; prompt siết
+  giới tính của Quản Lý Penthouse (nam, mặt nam tính, tóc đen
+  ngắn, không khuyên tai, không búi, không tóc dài) cho nam rõ
+  ràng ngay lần đầu. Slice vòng 36 chạy thẳng, đúng 6
+  component/sheet, không cần `split_wide_component`.
+- Hạn chế (chấp nhận, ghi trong note): Cư Dân f4 tay trái duỗi
+  thẳng cầm điện thoại hơi cứng (1 frame giữa chu kỳ); chân dưới
+  váy dài khó phân biệt pha; túi mua sắm có logo + chữ nhỏ mờ
+  (không đọc được ở kích thước sprite); nhân vật đi dép quai thay
+  vì giày (task không quy định). Tên file thô sheet Quản Lý bị
+  pipeline cắt ngắn stem (`...-quanlypenthous-0-...webp`, thiếu
+  chữ `e`) — đã chuẩn hóa khi chuyển sang `.png`.
+- Chi tiết:
+  `visual-check/artpass37/walkcycle-npc-map015-note.md`.
+
+### 59.2 Code + test — XONG
+
+- `marker.gd` NPC_STYLE thêm `"quan-ly-penthouse"` (vest xám than
+  (0.22,0.24,0.28), tóc "ngan", texture + frames) +
+  `"cu-dan-penthouse"` (váy xanh ngọc (0.05,0.45,0.38), tóc "dai",
+  texture + frames). Không sửa logic `CharacterSprite`/
+  `Marker`. Tên file art khớp NPC id bỏ dấu gạch nối ngay khi art
+  về (`quanlypenthouse` / `cudanpenthouse`) — không tái phạm lỗi
+  vòng 36.
+- Test mới `tests/g4_r37_npc_walk_map015_test.gd`: **29/29 PASS**
+  (theo mẫu r36: sprite trực tiếp từng NPC, marker home_tile
+  (3,3)/(8,6), Main load_map(15) + pick patrol từ nhà Quản Lý
+  Penthouse).
+- `tools/godot/run_regression.sh` thêm test mới (nay 65 suite).
+
+### 59.3 Verify thật vòng này
+
+- Hồi quy đầy đủ: **65 OK, 0 FAIL** (64 cũ + 1 mới r37).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **20.590.412 byte, SHA `50e9c300`**
+  (trước `210e0a19`, +487.604 byte = 14 file art mới); wasm không
+  đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ
+  4 file (cổng 8192).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass37/check_r37.py`, ảnh `r37-01…r37-15`;
+  playwright còn nguyên sau VM restart, không cần cài lại):
+  **0 console error, 0 pageerror, 0 requestfailed.** Xem ảnh
+  thật: đi chuỗi Map001→Map015 qua đúng cửa (5,4)/(5,8) từng
+  map; Map015 "Khu Penthouse" — Quản Lý Penthouse (vest xám than,
+  cầm clipboard) + Cư Dân Penthouse (váy xanh ngọc, cầm túi mua
+  sắm) hiện rõ mặt thật có nhãn tên, không còn vẽ code; cả 2 NPC
+  patrol rời nhà sau 12s (Quản Lý từ giữa map lên mép trên-trái,
+  Cư Dân xuống mép dưới-trái ở ảnh away); 2 ảnh xa nhà cách nhau
+  2s pixel-diff = **5.718** (lá rơi + mây + NPC bob, cảnh sống).
+- Lỗi tìm ra khi xem ảnh (cosmetic, không chặn): người chơi spawn
+  Map015 ở (5,6) thay vì (5,4) — phím giữ lọt sang map mới 2
+  bước (harness, không phải game; cùng mẫu vòng 36); đi xa tới
+  (7,3) (phải ×5 + lên ×3 từ (5,6) nhưng 2 phím phải bị miss —
+  harness, không phải game). Nhãn "Cư Dân Penthouse" đè lên thân
+  người chơi ở ảnh home — cùng mẫu nhãn neo -170px + hiện trong
+  Manhattan ≤5 ô đã thấy ở Map012/013/014, không phải nhãn sai.
+
+### 59.4 Push + Deploy — XONG
+
+- **Push main r37 XONG:** lô a (marker.gd + test r37 + .uid +
+  run_regression.sh) `fe16e095` + lô b (14 file .import art Map015)
+  `fdfc0227` + lô c (visual-check artpass37) `2f87c273` — head main
+  sau lô c `2f87c273` (docs `db1f1484` đẩy trước khi viết §59,
+  xem dưới).
+- **Deploy gh-pages pck `50e9c300` XONG:** staging rebuild VERIFY
+  OK (pck 153 chunk khớp byte, wasm + img không đổi); đẩy 10 lô
+  chunk + 1 lô final: b1 chunk 000–015 `9ba70ff7`, b2 016–031
+  `dcd14119`, b3 032–047 `429b7f0c`, b4 048–063 `bb06acbb`, b5
+  064–079 `0f15f04e`, b6 080–095 `fc26abf27`, b7 096–111
+  `b4ef0737`, b8 112–127 `7d499aeb`, b9 128–143 `b5b4720f`, b10
+  144–152 `ae1109bf` (9 file — staging chỉ có 153 chunk 000–152,
+  không phải 154 như ghi ban đầu), final (versions.json +
+  index.html) `448495c7`. Sync record nay 379 mục.
+  **Live đã chuyển sang pck `50e9c300` (vòng 37):** `--check-live`
+  PASS (versions.json live `50e9c300`, index.html 200).
+- Lưu ý: lô docs `db1f1484` đẩy TRƯỚC khi §59 được viết (script
+  push chạy hết 4 lô trong 1 lần, trong khi docs lúc đó chưa có
+  §59) — đã đẩy bù lô docs2 sau khi viết xong §59, head main sau
+  docs2 xem commit đính chính dưới. Deploy cũng dở dang ở lô b8
+  khi hết lượt 10:45 (live vẫn `210e0a19` dù §59.4 bản nháp ghi
+  "check-live PASS" — ghi sai, đã đính chính ở đây): b9/b10/final
+  đẩy bù trong lượt 11:45, live mới chuyển sang `50e9c300` lúc
+  ~12:10. Bài học: không ghi "live đã lên" khi chưa curl lại
+  versions.json live sau lô final. Ngoài ra có 1 commit chunk 6
+  trùng `7f197799` (retry đẩy lại cùng nội dung, không ghi vào
+  sync — sync chỉ giữ `fc26abf27` cho cùng 16 file).
+
+### 59.5 Việc tiếp theo
+
+1. NPC Map016 walk cycle (Khu Sân Golf & Resort: 2 NPC theo
+   `maps.json` map id 16) theo từng map, mẫu vòng này.
+2. Sprite sạp tách riêng (§45.1): đổi hàng 0 thành sạp cách nhau
+   (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
+3. Nhãn NPC chỉ hiện trong 5 ô + neo -170px nên nhãn NPC (8,6)
+   dễ đè lên NPC (3,3) trong chiếu iso — cân nhắc cải thiện hiển
+   thị nhãn (việc polish, không chặn).
