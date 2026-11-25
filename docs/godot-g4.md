@@ -5803,3 +5803,123 @@ Penthouse (8,6).
 3. Nhãn NPC chỉ hiện trong 5 ô + neo -170px nên nhãn NPC (8,6)
    dễ đè lên NPC (3,3) trong chiếu iso — cân nhắc cải thiện hiển
    thị nhãn (việc polish, không chặn).
+
+## 60. Vòng 38 — Walk cycle NPC Map016: Nhân Viên Sân Golf + Quản Lý Resort (25/11 ~11:45–13:35 +07, cron 11:45)
+
+Mục 1 §59.5: NPC Map016 walk cycle theo từng map. Vòng này làm
+Map016 Khu Sân Golf & Resort: Nhân Viên Sân Golf (3,3) + Quản Lý
+Resort (8,6).
+
+### 60.1 Art (subagent, theo đúng quy trình vòng 37) — XONG
+
+- Thư mục `visual-check/artpass38/`; ảnh đứng + sheet 6 khung cho
+  Nhân Viên Sân Golf (nam, áo polo xanh nhạt + quần kaki be + giày
+  thể thao trắng + mũ lưỡi trai xanh navy, cầm gậy golf + đeo túi
+  gậy golf mini) + Quản Lý Resort (nữ, blazer xanh mint nhạt + váy
+  bút chì xanh navy + giày cao gót đen, cầm sổ đặt phòng bìa da nâu
+  + thẻ phòng vàng); xử lý trắng → trong suốt + cắt frame theo mẫu
+  vòng 37 (connected component, MIN_FIG_W=100, MIN_FIG_H=100,
+  `split_wide_component` MAX_FIG_W=600 + xóa vùng trắng kín ≥100
+  final px) + bước cleanup mảnh vụn rời mới vòng này
+  (`cleanup_frames_r38.py`).
+- File đích: `src/godot/art/char_nhanviensangolf.png` (97×208) +
+  `char_quanlyresort.png` (89×208),
+  `walk_nhanviensangolf_f0..f5.png` (canvas chung 105×208) +
+  `walk_quanlyresort_f0..f5.png` (canvas chung 120×208), RGBA.
+- Kiểm tra bằng mắt: 2 ảnh đứng + 2 sheet; **ảnh đứng 0 lần gen
+  lại; sheet Resort 0 lần; sheet golf 1 lần (v1 → v2)** — v1 lỗi
+  đạo cụ chéo hình: gậy golf chéo sang trái, đầu gậy hình sau nằm
+  bên trái đường cắt nên bị gán nhầm sang hình trước + dải dây đen
+  nối các hình (f1 có 2 đầu gậy, f2 gậy đứt, f3 gậy mất đầu);
+  prompt v2 siết thêm "gậy dựng đứng sát thân, đầu gậy gần bàn
+  chân, không chéo sang hình kế, không vật nào chạm sang hình kế"
+  thì đạt ngay. Bài học mới: NPC cầm đạo cụ DÀI (gậy, ô, cần
+  câu...) thì siết "dựng đứng sát thân" ngay từ lần gen đầu — lỗi
+  chéo hình không sửa được bằng cắt cột; script cleanup mảnh vụn
+  rời (`cleanup_frames_r38.py`: giữ component lớn nhất + ≥5% diện
+  tích, xóa phần còn lại + quầng feather) nên chạy mặc định sau mỗi
+  lần cắt frame. Slice vẫn cần `split_wide_component` (f1+f2 và
+  f2+f3 dính nhau 2D qua túi/mũ — cắt đúng khe, đã kiểm tra bằng
+  mắt từng frame). Đạo cụ đủ 6/6 hình cả 2 NPC.
+- Hạn chế (chấp nhận, ghi trong note): thẻ phòng vàng có chữ nhỏ mờ
+  (không đọc được ở kích thước sprite); váy bút chì ôm che chân
+  (chỉ thấy bàn chân/giày đổi vị trí); f5 cả hai gần như tư thế
+  đứng. Chi tiết:
+  `visual-check/artpass38/walkcycle-npc-map016-note.md`.
+
+### 60.2 Code + test — XONG
+
+- `marker.gd` NPC_STYLE thêm `"nhan-vien-san-golf"` (polo xanh
+  nhạt (0.55,0.75,0.90), tóc "ngan", texture + frames) +
+  `"quan-ly-resort"` (blazer mint (0.55,0.85,0.75), tóc "dai",
+  texture + frames). Không sửa logic `CharacterSprite`/
+  `Marker`. Tên file art khớp NPC id bỏ dấu gạch nối ngay khi art
+  về (`nhanviensangolf` / `quanlyresort`) — không tái phạm lỗi
+  vòng 36.
+- Test mới `tests/g4_r38_npc_walk_map016_test.gd`: **29/29 PASS**
+  (theo mẫu r37: sprite trực tiếp từng NPC, marker home_tile
+  (3,3)/(8,6), Main load_map(16) + pick patrol từ nhà Nhân Viên
+  Sân Golf).
+- Sửa kèm (lỗi copy-paste tìm ra khi viết test r38): test r37
+  `NPC_TEX` trỏ nhầm sang ảnh đứng của vòng 36
+  (`char_quangiadao.png` / `char_chubietthudao.png`) — test vẫn
+  pass 29/29 vì chỉ kiểm tra tồn tại + đổi khung, không kiểm tra
+  đúng ảnh đứng. Đã sửa về đúng 2 file Map015, chạy lại r37:
+  **29/29 PASS** trở lại.
+- `tools/godot/run_regression.sh` thêm test mới (nay 66 suite;
+  sửa luôn chú thích cũ "45 suite").
+
+### 60.3 Verify thật vòng này
+
+- Hồi quy đầy đủ: **66 OK, 0 FAIL** (65 cũ + 1 mới r38).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **21.033.792 byte, SHA `b87c03bf`**
+  (trước `50e9c300`, +443.380 byte = 14 file art mới); wasm không
+  đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ
+  4 file (cổng 8193).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass38/check_r38.py`, ảnh `r38-01…r38-17`;
+  playwright phải cài lại vì VM restart gỡ module — như vòng 36):
+  **0 console error, 0 pageerror, 0 requestfailed.** Xem ảnh
+  thật: đi chuỗi Map001→Map016 qua đúng cửa (5,4)/(5,8) từng
+  map; Map016 "Khu Sân Golf & Resort" — Nhân Viên Sân Golf (mũ
+  navy, polo xanh nhạt, cầm gậy) + Quản Lý Resort (blazer mint,
+  váy navy, cầm sổ) hiện rõ mặt thật có nhãn tên, không còn vẽ
+  code; cả 2 NPC patrol rời nhà sau 12s (golf ra mép trái, resort
+  xuống gần cửa ở ảnh away); 2 ảnh xa nhà cách nhau 2s pixel-diff
+  = **18.769** (lá rơi + mây + NPC bob, cảnh sống). Nhãn "Quản Lý
+  Resort" đè lên thân Nhân Viên Sân Golf ở ảnh home — cùng mẫu
+  nhãn neo -170px + hiện trong Manhattan ≤5 ô đã thấy ở
+  Map012/013/014/015, không phải nhãn sai.
+
+### 60.4 Push + Deploy — main XONG, deploy DỞ (1/11 lô)
+
+- **Push main r38 XONG:** lô a (marker.gd + test r38 + .uid +
+  sửa test r37 + run_regression.sh) `dc3567e3` + lô b (14 file
+  .import art Map016) `83eeb29b` + lô c (visual-check artpass38:
+  note + 4 script + check_r38.py) `3aecd20e` — head main sau lô c
+  `3aecd20e`.
+- **Deploy gh-pages pck `b87c03bf` DỞ:** staging rebuild VERIFY OK
+  (pck 156 chunk khớp byte, wasm + img không đổi); mới đẩy xong
+  lô 1/10 (chunk 000–015) `334b8a06`. Lô 2/10 (chunk 016–031) kẹt
+  ở thẻ phê duyệt `connector-attempt-69da66fb…` (pending từ 13:33
+  +07, background) — lượt detached không có chủ phê duyệt, đã
+  dừng driver sau ~10 phút chờ. **Live vẫn `50e9c300` (vòng 37),
+  CHƯA lên `b87c03bf`.** Không ghi "live đã lên" khi chưa curl
+  lại versions.json live sau lô final (bài học vòng 37).
+- Lô docs (godot-g4 §60 + roles-qc) CHƯA đẩy trong lượt này vì
+  cùng kẹt phê duyệt — file local đã viết xong §60, lượt sau đẩy
+  bù cùng deploy: chạy `python3 /tmp/pxb-deploy-r38.py` (tự bỏ
+  qua lô đã có trong sync, tiếp từ chunk 2/10 + final), rồi đẩy
+  lô docs main (godot-g4.md + roles-qc.md).
+
+### 60.5 Việc tiếp theo
+
+1. Đẩy nốt deploy pck `b87c03bf` (chunk 2–10 + final) + lô docs
+   §60, kiểm live `b87c03bf` (xem §60.4).
+2. NPC Map017 walk cycle (Công Viên An Bình: Cô Bán Bánh + Ông
+   Lão Tập Thể Dục) theo từng map, mẫu vòng này — nhớ bài học
+   vòng 38: đạo cụ dài siết "dựng đứng sát thân" ngay từ lần gen
+   đầu; chạy cleanup mảnh vụn rời mặc định sau cắt frame.
+3. Sprite sạp tách riêng (§45.1): đổi hàng 0 thành sạp cách nhau
+   (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
