@@ -119,6 +119,15 @@ const NPC_STYLE := {
 		"frames": ["res://art/walk_baovebietthu_f0.png", "res://art/walk_baovebietthu_f1.png", "res://art/walk_baovebietthu_f2.png", "res://art/walk_baovebietthu_f3.png", "res://art/walk_baovebietthu_f4.png", "res://art/walk_baovebietthu_f5.png"]},
 	"nguoi-lam-vuon": {"shirt": Color(0.85, 0.78, 0.60, 1), "hair_style": "ngan", "texture": "res://art/char_nguoilamvuon.png",
 		"frames": ["res://art/walk_nguoilamvuon_f0.png", "res://art/walk_nguoilamvuon_f1.png", "res://art/walk_nguoilamvuon_f2.png", "res://art/walk_nguoilamvuon_f3.png", "res://art/walk_nguoilamvuon_f4.png", "res://art/walk_nguoilamvuon_f5.png"]},
+	# Vong 35 — Map013 Quan Tai Chinh: Nhan Vien Ngan Hang (nam
+	# tre, vest xanh navy + so mi xanh nhat + ca vat do dam, cam
+	# giay to ngan hang) + Moi Gioi Chung Khoan (nam, vest xam
+	# than + so mi xanh bac ha nhat, deo kinh, cam dien thoai bieu
+	# do chung khoan + tap ho so).
+	"nhan-vien-ngan-hang": {"shirt": Color(0.12, 0.20, 0.42, 1), "hair_style": "ngan", "texture": "res://art/char_nhanviennganhang.png",
+		"frames": ["res://art/walk_nhanviennganhang_f0.png", "res://art/walk_nhanviennganhang_f1.png", "res://art/walk_nhanviennganhang_f2.png", "res://art/walk_nhanviennganhang_f3.png", "res://art/walk_nhanviennganhang_f4.png", "res://art/walk_nhanviennganhang_f5.png"]},
+	"moi-gioi-chung-khoan": {"shirt": Color(0.30, 0.30, 0.33, 1), "hair_style": "ngan", "texture": "res://art/char_moigioichungkhoan.png",
+		"frames": ["res://art/walk_moigioichungkhoan_f0.png", "res://art/walk_moigioichungkhoan_f1.png", "res://art/walk_moigioichungkhoan_f2.png", "res://art/walk_moigioichungkhoan_f3.png", "res://art/walk_moigioichungkhoan_f4.png", "res://art/walk_moigioichungkhoan_f5.png"]},
 }
 
 # Vong 22 — NPC di lang thang (patrol): NPC buoc cham giua o nha
