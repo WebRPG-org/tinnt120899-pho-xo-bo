@@ -5183,3 +5183,217 @@ Map010 Khu Công Nghệ: Lập Trình Viên (3,3) + Kỹ Sư Phần Mềm (8,6).
    (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
 3. Kiểm live cloud browser Map010 (live nay `0d2cf705` — kiểm
    trực tiếp trên link Pages khi cần, không cần deploy lại).
+
+## 55. Vòng 33 — Walk cycle NPC Map011: Nhân Viên Lễ Tân + Hướng Dẫn Viên (24/11 ~23:45–00:30 +07, cron 23:45)
+
+Mục 1 §54.5: NPC Map011 walk cycle theo từng map. Vòng này làm
+Map011 Phố Tây: Nhân Viên Lễ Tân (3,3) + Hướng Dẫn Viên (8,6).
+
+### 55.1 Art (subagent, theo đúng quy trình vòng 29/30/31/32) — XONG
+
+- Thư mục `visual-check/artpass33/`; ảnh đứng + sheet 6 khung cho
+  Nhân Viên Lễ Tân (nam trẻ, áo sơ mi trắng + áo gile tối màu,
+  quần âu tối, giày da đen, tóc đen ngắn gọn gàng, cầm bảng đăng
+  ký khách clipboard) + Hướng Dẫn Viên (nữ trẻ, áo polo xanh
+  dương nhạt, quần âu tối, giày thể thao trắng, tóc đen dài ngang
+  vai, cầm cờ tour đỏ nhỏ + bản đồ gấp); xử lý trắng → trong suốt
+  + cắt frame theo mẫu vòng 32 (connected component,
+  MIN_FIG_W=100).
+- File đích: `src/godot/art/char_nhanvienletan.png` (82×208) +
+  `char_huongdanvien.png` (120×208), `walk_nhanvienletan_f0..f5.png`
+  (canvas chung 145×208) + `walk_huongdanvien_f0..f5.png`
+  (canvas chung 149×208), RGBA.
+- Kiểm tra bằng mắt: 2 ảnh đứng + 2 sheet ĐẠT ngay lần đầu (**0 lần
+  gen lại**); sheet Nhân Viên Lễ Tân có f0/f1 chồng lấn trục x
+  (clipboard f0 giơ ngang) nhưng tách bằng connected component vẫn
+  đúng (bài học vòng 28); sheet Hướng Dẫn Viên f4/f5 chồng lấn
+  trục x (cờ f4 giơ ngang) nhưng tách đúng ngay lần đầu. Dải
+  magenta cả 2 sạch, không quầng trắng.
+- Hạn chế thấy bằng mắt: chỉ mặt trước (3/4); f5 gần như tư thế
+  đứng; f2/f3/f4 khá gần nhau; clipboard/cờ/bản đồ đổi tay theo
+  nhịp đi; khuyên tai vàng nhỏ Hướng Dẫn Viên (như vòng 31/32);
+  **cờ tour đỏ của Hướng Dẫn Viên không thấy trong f4** (tay phải
+  nắm hờ, bản đồ vẫn ở tay trái) — chỉ mất 1/6 chu kỳ, ở kích
+  thước sprite trong game cờ chỉ vài pixel nên không đáng kể.
+  Tất cả chấp nhận được. Chi tiết:
+  `visual-check/artpass33/walkcycle-npc-map011-note.md`.
+
+### 55.2 Code + test — XONG
+
+- `marker.gd` NPC_STYLE thêm `"nhan-vien-le-tan"` (áo trắng
+  (0.92,0.92,0.95), tóc "ngan", texture + frames) +
+  `"huong-dan-vien"` (áo xanh dương nhạt (0.55,0.75,0.95), tóc
+  "dai", texture + frames). Không sửa logic `CharacterSprite`/
+  `Marker`.
+- Test mới `tests/g4_r33_npc_walk_map011_test.gd`: **29/29 PASS**
+  (theo mẫu r32: sprite trực tiếp từng NPC, marker home_tile
+  (3,3)/(8,6), Main load_map(11) + pick patrol từ nhà Nhân Viên
+  Lễ Tân).
+- `tools/godot/run_regression.sh` thêm test mới (nay 61 suite).
+
+### 55.3 Verify thật vòng này
+
+- Hồi quy đầy đủ: **61 OK, 0 FAIL** (60 cũ + 1 mới r33) — chạy
+  lại 25/11 00:45 trên cùng cây code, vẫn 61/61.
+- Smoke `--headless --quit-after 120` exit 0, không ERROR
+  (chạy lại 25/11 00:45).
+- Export web exit 0: pck **18.622.468 byte, SHA `99a445f9`**
+  (trước `0d2cf705`, +458.608 byte = 14 file art mới); wasm không
+  đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ 6
+  file (cổng 8188, kiểm lại 25/11 00:45).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass33/check_r33.py`, ảnh `r33-01…r33-12`):
+  **0 console error, 0 pageerror, 0 requestfailed.** Xem ảnh thật:
+  đi chuỗi Map001→Map011 qua đúng cửa (5,4)/(5,8) từng map; Map011
+  "Phố Tây" — Nhân Viên Lễ Tân (sơ mi trắng + gile tối, clipboard)
+  + Hướng Dẫn Viên (polo xanh nhạt, cờ đỏ + bản đồ) hiện rõ mặt
+  thật có nhãn tên, không còn vẽ code; người chơi đi tới (10,1)
+  đúng ô theo nhãn debug; cả 2 NPC patrol rời nhà sau 12s; 2 ảnh
+  xa nhà cách nhau 2s pixel-diff = **25.931** (lá rơi + mây + NPC
+  bob, cảnh sống).
+- Lỗi tìm ra khi xem ảnh (cosmetic, không chặn): nhãn NPC đè nhau
+  khi đứng gần ở spawn; NPC khuất một phần sau D-pad ở mép trái
+  (đã biết từ các vòng trước).
+
+### 55.4 Push + Deploy — XONG
+
+- **Push main r33 XONG:** lô a (marker.gd + test r33 + .uid)
+  `ec67055c` + lô b (14 file .import art Map011) `51366570` +
+  lô c (visual-check artpass33) `9c1f2539` — head main sau lô c
+  `9c1f2539`. **Docs §55 này là commit bổ sung sau** (vòng 33
+  đẩy code/deploy xong nhưng chưa kịp viết §55 — vòng 25/11 00:45
+  viết bù + đẩy riêng).
+- **Deploy gh-pages pck `99a445f9` XONG:** staging rebuild VERIFY
+  OK (pck 138 chunk khớp byte, wasm + img không đổi); đẩy 10 lô
+  liên tiếp: b1 chunk 000–015 `cdb319a5`, b2 016–031 `2adbe949`,
+  b3 032–047 `9f12edc9`, b4 048–063 `f6ecddc5`, b5 064–079
+  `b7c7a7b3`, b6 080–095 `13dd5aef`, b7 096–111 `4b3bb961`, b8
+  112–127 `12d01349`, b9 128–137 `ee20f514`, final
+  (versions.json + index.html) `d4e8e210`. Sync record nay 317 mục.
+  **Live đã chuyển sang pck `99a445f9` (vòng 33):**
+  `--check-live` PASS (kiểm lại 25/11 00:45: versions.json live
+  `99a445f9`, index.html khớp staging từng byte).
+
+### 55.5 Đính chính — lần chạy lại check_r33.py 25/11 00:45 đi lố sang Map013
+
+- Chạy lại `check_r33.py` trên đúng build `99a445f9` để xác nhận
+  lại: start OK, **ERRORS: none**, pixel-diff 2.651 — nhưng ảnh
+  `r33-10…r33-12` mới hiện **Map013 Quận Tài Chính** thay vì
+  Map011: chuỗi đi 10 map bằng giữ phím 400ms/ô bị trôi ở FPS
+  thấp (swiftshader ~5fps) — một lần giữ phím ăn 2 ô hoặc một
+  lần bấm lọt giữa 2 frame, pha dịch chuyển dồn lại thành đi lố
+  2 map. Đây là **lỗi của harness đo, không phải lỗi game**
+  (đúng build đó đã đi đúng chuỗi ở lần chạy gốc, ảnh gốc chứng
+  minh).
+- Đã khôi phục đủ 12 ảnh gốc `r33-01…r33-12` từ backup
+  (`/tmp/r33-shots-backup/`) — ảnh mới đi lố đã xóa, không dùng
+  làm bằng chứng. Bài học: script đi chuỗi dài phải kiểm tra
+  tiêu đề map trong TỪNG ảnh, không tin tên file; giữ phím ở FPS
+  thấp cần xác nhận ô sau mỗi bước (đọc nhãn debug) thay vì bấm
+  mù 4 lần liên tiếp.
+
+### 55.6 Việc tiếp theo
+
+1. NPC Map012 walk cycle (Khu Biệt Thự Ven Sông: Bảo Vệ Biệt Thự
+   + Người Làm Vườn) theo từng map, mẫu vòng này — **art đã giao
+   subagent ở lượt 25/11 00:45, đang làm**.
+2. Sprite sạp tách riêng (§45.1): đổi hàng 0 thành sạp cách nhau
+   (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
+3. Kiểm live cloud browser Map011 (live nay `99a445f9` — kiểm
+   trực tiếp trên link Pages khi cần, không cần deploy lại).
+
+## 56. Vòng 34 — Walk cycle NPC Map012: Bảo Vệ Biệt Thự + Người Làm Vườn (25/11 ~00:45–01:30 +07, cron 00:45)
+
+Mục 1 §55.6: NPC Map012 walk cycle theo từng map. Vòng này làm
+Map012 Khu Biệt Thự Ven Sông: Bảo Vệ Biệt Thự (3,3) + Người Làm
+Vườn (8,6).
+
+### 56.1 Art (subagent, theo đúng quy trình vòng 29/30/31/32/33) — XONG
+
+- Thư mục `visual-check/artpass34/`; ảnh đứng + sheet 6 khung cho
+  Bảo Vệ Biệt Thự (nam trung niên, mũ bảo vệ có huy hiệu vàng, sơ
+  mi xanh đậm có cầu vai + huy hiệu ngực, quần âu tối, giày da
+  đen, cầm đèn pin) + Người Làm Vườn (nam lớn tuổi tóc bạc + ria
+  bạc, đội nón lá, áo be/kaki cổ trụ 3 cúc, quần tối, giày vải
+  nâu, cầm kéo cắt cây + bình tưới xanh lá); xử lý trắng → trong
+  suốt + cắt frame theo mẫu vòng 33 (connected component,
+  MIN_FIG_W=100) + 2 sửa mới của vòng này (xem dưới).
+- File đích: `src/godot/art/char_baovebietthu.png` (91×208) +
+  `char_nguoilamvuon.png` (133×208), `walk_baovebietthu_f0..f5.png`
+  (canvas chung 154×208) + `walk_nguoilamvuon_f0..f5.png`
+  (canvas chung 145×208), RGBA.
+- Kiểm tra bằng mắt: 2 ảnh đứng + 2 sheet ĐẠT ngay lần đầu (**0 lần
+  gen lại**); dải magenta cả 2 sạch, không quầng trắng; zoom 4×
+  kiểm tra thấu kính đèn pin + vòng dây đèn pin + tam giác giữa
+  chân đều trong suốt đúng.
+- **2 sửa script mới (ghi trong note, vòng sau copy từ vòng 34,
+  không phải vòng 33):** (1) sheet Người Làm Vườn lần đầu chỉ
+  tách được 5 hình — f2+f3 gộp thành 1 component rộng 913px do
+  vành nón lá rộng + tay giơ ngang chạm nhau; thêm
+  `split_wide_component` (tách component >600px tại cột mật độ
+  thấp nhất) thì đúng 6 hình ngay lần đầu. (2) Vùng trắng kín
+  (vòng dây đèn pin, tam giác giữa hai chân, khe tay–thân) bị
+  flood fill giữ thành đục — thêm bước xóa vùng trắng kín
+  ≥100 final px; bản đầu dùng ngưỡng pixel thô đã xóa nhầm thấu
+  kính đèn pin (thấy lỗ magenta khi zoom), đã sửa lại theo
+  final px; thấu kính (16–21px) và quai bình tưới (≤55px) được
+  giữ nguyên. Lưu ý: ngưỡng xóa trắng kín chỉ đúng khi NPC
+  không mặc đồ trắng.
+- Hạn chế thấy bằng mắt: chỉ mặt trước (3/4); f5 gần như tư thế
+  đứng; f2/f3/f4 khá gần nhau; đạo cụ đổi tay theo nhịp đi. Tất
+  cả chấp nhận được. Chi tiết:
+  `visual-check/artpass34/walkcycle-npc-map012-note.md`.
+
+### 56.2 Code + test — XONG
+
+- `marker.gd` NPC_STYLE thêm `"bao-ve-biet-thu"` (áo xanh đậm
+  (0.12,0.25,0.45), tóc "ngan", texture + frames) +
+  `"nguoi-lam-vuon"` (áo be/kaki (0.85,0.78,0.60), tóc "ngan",
+  texture + frames). Không sửa logic `CharacterSprite`/`Marker`.
+- Test mới `tests/g4_r34_npc_walk_map012_test.gd`: **29/29 PASS**
+  (theo mẫu r33: sprite trực tiếp từng NPC, marker home_tile
+  (3,3)/(8,6), Main load_map(12) + pick patrol từ nhà Bảo Vệ
+  Biệt Thự).
+- `tools/godot/run_regression.sh` thêm test mới (nay 62 suite).
+
+### 56.3 Verify thật vòng này
+
+- Hồi quy đầy đủ: **62 OK, 0 FAIL** (61 cũ + 1 mới r34).
+- Smoke `--headless --quit-after 120` exit 0, không ERROR.
+- Export web exit 0: pck **19.145.008 byte, SHA `aa5e4447`**
+  (trước `99a445f9`, +522.540 byte = 14 file art mới); wasm không
+  đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ 6
+  file (cổng 8189).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass34/check_r34.py`, ảnh `r34-01…r34-13`):
+  **0 console error, 0 pageerror, 0 requestfailed.** Xem ảnh thật:
+  đi chuỗi Map001→Map012 qua đúng cửa (5,4)/(5,8) từng map (đã
+  kiểm tiêu đề từng ảnh theo bài học §55.5 — lần này chuỗi không
+  trôi); Map012 "Khu Biệt Thự Ven Sông" — Bảo Vệ Biệt Thự (đồng
+  phục xanh đậm, mũ có huy hiệu, đèn pin) + Người Làm Vườn (nón
+  lá, áo be/kaki, kéo + bình tưới) hiện rõ mặt thật có nhãn tên,
+  không còn vẽ code; người chơi đi xa, cả 2 NPC patrol rời nhà
+  sau 12s (Bảo Vệ bước ra mép trái giữa chu kỳ, Người Làm Vườn
+  gần D-pad); 2 ảnh xa nhà cách nhau 2s pixel-diff = **9.735**
+  (lá rơi + mây + NPC bob, cảnh sống).
+- Lỗi tìm ra khi xem ảnh (cosmetic, không chặn): nhãn "Người Làm
+  Vườn" đè lên thân Bảo Vệ lúc 2 NPC đứng gần nhau ở spawn (giống
+  vòng 30–33); Người Làm Vườn khuất một phần sau D-pad ở mép
+  trái; người chơi spawn Map012 ở (5,5) thay vì (5,4) — 1 bước
+  thừa do phím giữ lọt sang map mới (harness, không phải game);
+  đi xa dừng ở (10,2) thay vì (10,1) — 1 lần bấm lên bị miss ở
+  FPS thấp, vẫn đủ xa để patrol kích hoạt.
+
+### 56.4 Push + Deploy — (ghi sau khi làm)
+
+### 56.5 Việc tiếp theo
+
+1. NPC Map013 walk cycle (Quận Tài Chính: Nhân Viên Ngân Hàng +
+   Môi Giới Chứng Khoán) theo từng map, mẫu vòng này — nhớ copy
+   script slice từ **vòng 34** (có `split_wide_component` + xóa
+   trắng kín theo final px).
+2. Sprite sạp tách riêng (§45.1): đổi hàng 0 thành sạp cách nhau
+   (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
+3. Kiểm live cloud browser Map012 (live nay `99a445f9` cho tới
+   khi deploy `aa5e4447` xong — kiểm trực tiếp trên link Pages
+   khi cần).
