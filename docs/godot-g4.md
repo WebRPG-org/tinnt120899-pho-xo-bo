@@ -6047,7 +6047,7 @@ Dục (8,6).
   PASS (versions.json live `a6d7e36b`, index.html 200) — lúc đầu
   vẫn hiện `b87c03bf` do CDN lag ~3 phút (như vòng 38), kiểm lại
   sau thì PASS.
-- Lô docs (godot-g4 §61 + roles-qc) `XEM DƯỚI`.
+- Lô docs (godot-g4 §61 + roles-qc) `15f78a38` (đính chính §61.4: xem lô docs2 dưới).
 
 ### 61.5 Việc tiếp theo
 
