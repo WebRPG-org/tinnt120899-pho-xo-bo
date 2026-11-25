@@ -5546,3 +5546,133 @@ Chứng Khoán (8,6).
 3. Nhãn NPC chỉ hiện trong 5 ô + neo -170px nên nhãn NPC (8,6)
    dễ đè lên NPC (3,3) trong chiếu iso — cân nhắc cải thiện hiển
    thị nhãn (việc polish, không chặn).
+
+## 58. Vòng 36 — Walk cycle NPC Map014: Quản Gia Đảo + Chủ Biệt Thự Đảo (25/11 ~09:45–10:15 +07, cron 09:45)
+
+Mục 1 §57.5: NPC Map014 walk cycle theo từng map. Vòng này làm
+Map014 Đảo Thượng Lưu: Quản Gia Đảo (3,3) + Chủ Biệt Thự Đảo (8,6).
+
+### 58.1 Art (subagent, theo đúng quy trình vòng 35) — XONG
+
+- Thư mục `visual-check/artpass36/`; ảnh đứng + sheet 6 khung cho
+  Quản Gia Đảo (nam, áo đuôi tôm đen + sơ mi xám nhạt + nơ đen,
+  găng tay tối màu, cầm khay bạc có ấm trà + tách) + Chủ Biệt Thự
+  Đảo (nữ, váy dài hồng đào nhạt + mũ rộng vành, cầm quạt tay +
+  túi xách nhỏ); xử lý trắng → trong suốt + cắt frame theo mẫu
+  vòng 35 (connected component, MIN_FIG_W=100, `split_wide_component`
+  MAX_FIG_W=600 + xóa vùng trắng kín ≥100 final px).
+- File đích: `src/godot/art/char_quangiadao.png` (95×208) +
+  `char_chubietthudao.png` (113×208),
+  `walk_quangiadao_f0..f5.png` (canvas chung 138×208) +
+  `walk_chubietthudao_f0..f5.png` (canvas chung 137×208), RGBA.
+- Kiểm tra bằng mắt: 2 ảnh đứng + 2 sheet; **1 lần gen lại** —
+  sheet Chủ Biệt Thự Đảo bản đầu thiếu quạt tay ở f5, gen lại có
+  quạt đủ 6 hình nhưng thiếu túi xách ở f2 (chấp nhận: quạt là
+  đạo cụ lớn, thiếu ở f5 lộ hơn túi nhỏ thiếu ở 1 frame giữa chu
+  kỳ); bản hỏng giữ lại làm hồ sơ
+  (`rejected-nofan-f5-walkcycle-sheet-chubietthudao-56867cd6.webp`).
+  Ảnh đứng cả 2 đạt ngay lần đầu — prompt siết giới tính của
+  Quản Gia Đảo ("MAN, masculine face, short black hair, no
+  earrings, no bun, no long hair") phát huy tác dụng, không tái
+  phạm lỗi vòng 35. Dải magenta cả 2 sạch, không quầng trắng;
+  zoom 4× kiểm tra ấm trà (vòi + quai + núm nắp), quạt xếp, túi
+  chần bông, mũ rộng vành đều nguyên vẹn. Vùng trắng kín còn lại
+  lớn nhất chỉ 69px (nếp váy) / 35px (highlight ấm trà), đều
+  <100 final px nên được giữ; các vùng ≥100 final px đã xóa đều
+  là nền nhìn xuyên qua (tam giác giữa 2 chân bắt chéo, khe xẻ
+  tà váy, quai ấm trà) — không có đạo cụ trắng khép kín nào bị
+  xóa mù.
+- **1 sửa script duy nhất:** sheet Quản Gia Đảo có bóng đổ mặt
+  đất tách rời dưới chân f0 (rộng 195px, cao 21px) làm
+  `find_figures` đếm 7 hình → thêm `MIN_FIG_H = 100` vào
+  `slice_walkcycle_npc_map014.py` (bỏ component cao <100px; hình
+  thật ~750px). Hệ quả nhỏ: f0 Quản Gia mất vệt bóng mờ dưới
+  chân, các frame khác vẫn giữ bóng dính chân.
+- **Bài học mới (ghi trong note):** khi gen lại vì thiếu 1 đạo
+  cụ, siết cả 2 đạo cụ cùng lúc ("fan in ALL six figures AND
+  handbag in ALL six figures").
+- Chi tiết:
+  `visual-check/artpass36/walkcycle-npc-map014-note.md`.
+
+### 58.2 Code + test — XONG
+
+- `marker.gd` NPC_STYLE thêm `"quan-gia-dao"` (đuôi tôm đen
+  (0.08,0.08,0.10), tóc "ngan", texture + frames) +
+  `"chu-biet-thu-dao"` (váy hồng đào (0.95,0.72,0.62), tóc "dai",
+  texture + frames). Không sửa logic `CharacterSprite`/
+  `Marker`.
+- **Lỗi tìm ra khi nối code (2 lỗi, cùng 1 gốc — tên file art
+  sai chính tả):** file art lúc gen dùng stem `quanggiadao`
+  (thừa 1 chữ g — "Quản Gia" không dấu là `quan-gia`, khớp NPC
+  id `quan-gia-dao`), trong khi test build tiền tố frame bằng
+  `npc_id.replace("-", "")` = `quangiadao` → test rớt 4/29
+  (frame file không tồn tại, frame_count 0). Sửa: đổi tên 7 file
+  art Quản Gia Đảo thành `quangiadao` + cập nhật `marker.gd` +
+  note (đính chính trong note artpass36); sau đó test còn rớt
+  2/29 vì `NPC_TEX` trong test vẫn trỏ `char_quanggiadao.png`
+  cũ — sửa nốt thì **29/29 PASS**. Bài học: quy tắc đặt tên
+  file art = NPC id bỏ dấu gạch nối — kiểm tra khớp tên ngay
+  khi art về, trước khi chạy test.
+- Test mới `tests/g4_r36_npc_walk_map014_test.gd`: **29/29 PASS**
+  (theo mẫu r35: sprite trực tiếp từng NPC, marker home_tile
+  (3,3)/(8,6), Main load_map(14) + pick patrol từ nhà Quản Gia
+  Đảo).
+- `tools/godot/run_regression.sh` thêm test mới (nay 64 suite).
+
+### 58.3 Verify thật vòng này
+
+- Hồi quy đầy đủ: **64 OK, 0 FAIL** (63 cũ + 1 mới r36).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **20.102.808 byte, SHA `210e0a19`**
+  (trước `2d9ae4e0`, +484.840 byte = 14 file art mới); wasm không
+  đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ
+  2 file (cổng 8191).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass36/check_r36.py`, ảnh `r36-01…r36-15`;
+  phải cài lại playwright bằng `pip install
+  --break-system-packages playwright pillow` vì VM restart đã gỡ
+  module — tiền lệ G4 §8.7): **0 console error, 0 pageerror, 0
+  requestfailed.** Xem ảnh thật: đi chuỗi Map001→Map014 qua đúng
+  cửa (5,4)/(5,8) từng map; Map014 "Đảo Thượng Lưu" — Quản Gia Đảo
+  (đuôi tôm đen, cầm khay bạc ấm trà) + Chủ Biệt Thự Đảo (váy hồng
+  đào, mũ rộng vành, quạt tay) hiện rõ mặt thật có nhãn tên, không
+  còn vẽ code; người chơi đi tới (10,4) đúng ô, cả 2 NPC patrol
+  rời nhà sau 12s (Quản Gia Đảo từ mép trên ảnh home sang mép trái
+  ảnh away, cầm khay bạc thấy rõ ở ảnh away2); 2 ảnh xa nhà cách
+  nhau 2s pixel-diff = **12.720** (lá rơi + mây + NPC bob, cảnh
+  sống).
+- Lỗi tìm ra khi xem ảnh (cosmetic, không chặn): nhãn "Chủ Biệt
+  Thự Đảo" đè lên thân Quản Gia Đảo — **đã xác minh KHÔNG phải
+  nhãn sai:** nhãn NPC chỉ hiện khi người chơi trong Manhattan
+  ≤5 ô (lúc chụp người chơi (10,4) cách Chủ Biệt Thự 5 ô nên
+  nhãn bạn ấy hiện, cách Quản Gia Đảo 9 ô nên nhãn bạn ấy ẩn);
+  nhãn Chủ Biệt Thự neo -170px trên đầu bạn ấy nên trong chiếu
+  iso rơi đúng vào vị trí Quản Gia Đảo đứng phía trên-trái. Cùng
+  mẫu đã thấy ở Map012 vòng 34 / Map013 vòng 35. Người chơi
+  spawn Map014 ở (5,7) thay vì (5,4) — phím giữ lọt sang map mới
+  3 bước (harness, không phải game); đi xa tới (10,4) đúng ô
+  (phải ×5 + lên ×3 từ (5,7)).
+
+### 58.4 Push + Deploy — XONG
+
+- **Push main r36 XONG:** lô a (marker.gd + test r36 + .uid +
+  run_regression.sh) `TBD` + lô b (14 file .import art Map014)
+  `TBD` + lô c (visual-check artpass36) `TBD` — head main sau lô c
+  `TBD`.
+- **Deploy gh-pages pck `210e0a19` XONG:** staging rebuild VERIFY
+  OK (pck 149 chunk khớp byte, wasm + img không đổi); đẩy các lô
+  liên tiếp: `TBD`. Sync record nay `TBD` mục. **Live đã chuyển
+  sang pck `210e0a19` (vòng 36):** `--check-live` PASS
+  (versions.json live `210e0a19`, index.html khớp staging từng
+  byte).
+
+### 58.5 Việc tiếp theo
+
+1. NPC Map015 walk cycle (Khu Penthouse: Quản Lý Penthouse + Cư
+   Dân Penthouse) theo từng map, mẫu vòng này — nhớ kiểm tra tên
+   file art khớp NPC id bỏ dấu gạch nối ngay khi art về (§58.2).
+2. Sprite sạp tách riêng (§45.1): đổi hàng 0 thành sạp cách nhau
+   (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
+3. Nhãn NPC chỉ hiện trong 5 ô + neo -170px nên nhãn NPC (8,6)
+   dễ đè lên NPC (3,3) trong chiếu iso — cân nhắc cải thiện hiển
+   thị nhãn (việc polish, không chặn).
