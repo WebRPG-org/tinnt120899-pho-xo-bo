@@ -6174,7 +6174,7 @@ Rong (8,6). **Xong walk cycle cả 18 khu (Map001–018).**
   PASS (versions.json live `57c31fc2`, index.html 200, khớp staging)
   — lúc đầu vẫn hiện `a6d7e36b` do CDN lag ~3 phút (như vòng 38/39),
   kiểm lại sau thì PASS.
-- Lô docs (godot-g4 §62 + roles-qc) `TODO` (điền sau khi push).
+- Lô docs (godot-g4 §62 + roles-qc) `8a83fce7`.
 
 ### 62.5 Việc tiếp theo
 
