@@ -5892,31 +5892,50 @@ Resort (8,6).
   nhãn neo -170px + hiện trong Manhattan ≤5 ô đã thấy ở
   Map012/013/014/015, không phải nhãn sai.
 
-### 60.4 Push + Deploy — main XONG, deploy DỞ (1/11 lô)
+### 60.4 Push + Deploy — XONG TRỌN (main + deploy + docs)
 
 - **Push main r38 XONG:** lô a (marker.gd + test r38 + .uid +
   sửa test r37 + run_regression.sh) `dc3567e3` + lô b (14 file
   .import art Map016) `83eeb29b` + lô c (visual-check artpass38:
   note + 4 script + check_r38.py) `3aecd20e` — head main sau lô c
   `3aecd20e`.
-- **Deploy gh-pages pck `b87c03bf` DỞ:** staging rebuild VERIFY OK
-  (pck 156 chunk khớp byte, wasm + img không đổi); mới đẩy xong
-  lô 1/10 (chunk 000–015) `334b8a06`. Lô 2/10 (chunk 016–031) kẹt
-  ở thẻ phê duyệt `connector-attempt-69da66fb…` (pending từ 13:33
-  +07, background) — lượt detached không có chủ phê duyệt, đã
-  dừng driver sau ~10 phút chờ. **Live vẫn `50e9c300` (vòng 37),
-  CHƯA lên `b87c03bf`.** Không ghi "live đã lên" khi chưa curl
-  lại versions.json live sau lô final (bài học vòng 37).
-- Lô docs (godot-g4 §60 + roles-qc) ĐÃ đẩy sau đó: `b8d13cb2`
-  (thẻ phê duyệt cũng chờ ~4 phút mới thông, như lô deploy —
-  phê duyệt GitHub trong lượt detached này chậm hẳn so với các
-  lượt trước).
+- **Deploy gh-pages pck `b87c03bf` XONG:** staging rebuild VERIFY
+  OK (pck 156 chunk khớp byte, wasm + img không đổi); đẩy 10 lô
+  chunk + 1 lô final: b1 000–015 `334b8a06`, b2 016–031
+  `52681df6`, b3 032–047 `944aacb2`, b4 048–063 `817892c0`, b5
+  064–079 `8792674b`, b6 080–095 `6b0e0518`, b7 096–111
+  `dc6e1b3f`, b8 112–127 `1b5dd378`, b9 128–143 `a0de51fe`, b10
+  144–155 `a825e000` (12 file), final (versions.json +
+  index.html) `68cafb66`. Sync record nay 399 mục.
+  **Live đã chuyển sang pck `b87c03bf` (vòng 38):** `--check-live`
+  PASS (versions.json live `b87c03bf`, index.html 200) — sau ~3
+  phút CDN lag (lúc đầu vẫn hiện `50e9c300`).
+- Bài học deploy vòng này (3 điểm, ghi để không tái phạm):
+  (1) Phê duyệt GitHub trong lượt detached này chậm theo đợt
+  (mỗi lô chờ 2–13 phút); driver bị kill giữa chừng KHÔNG hủy
+  write phía server — lô đang chờ vẫn hoàn tất sau khi phê
+  duyệt tới (chunk-5/6/7 đều lên remote sau khi driver đã chết),
+  nên sau mỗi lần kill phải kiểm tra remote bằng blob SHA rồi
+  mới chạy tiếp, không đẩy lại mù. (2) URI SHA của
+  `get_file_contents` là HEAD của branch lúc query, KHÔNG phải
+  commit đã thêm file đó — đã ghi nhầm SHA chunk-6 (lấy
+  `dc6e1b3f` là head lúc đó, đúng ra là `6b0e0518`); muốn biết
+  commit thật thì đọc chuỗi `list_commits`, không dùng URI SHA
+  làm sync base cho từng file. (3) Retry tạo commit trùng: b2 có
+  thêm `5b38d91c`, b7 có thêm `8aa93bd7` (cùng nội dung); commit
+  trùng làm head lệch khỏi sync → lô chunk-8 lỗi "not a fast
+  forward" — sửa bằng cách ghi thêm entry cho commit trùng
+  (`8aa93bd7`) rồi đẩy tiếp là thông.
+- Lô docs (godot-g4 §60 + roles-qc) `b8d13cb2` (thẻ phê duyệt
+  cũng chờ ~4 phút mới thông, như lô deploy); đính chính §60.4
+  sau khi deploy xong: xem lô docs2 dưới.
 
 ### 60.5 Việc tiếp theo
 
-1. Đẩy nốt deploy pck `b87c03bf` (chunk 2–10 + final), kiểm live
-   `b87c03bf` (xem §60.4; chạy `python3 /tmp/pxb-deploy-r38.py`,
-   tự bỏ qua lô 1 đã có trong sync).
+1. NPC Map017 walk cycle (Công Viên An Bình: Cô Bán Bánh + Ông
+   Lão Tập Thể Dục) theo từng map, mẫu vòng này — nhớ bài học
+   vòng 38: đạo cụ dài siết "dựng đứng sát thân" ngay từ lần gen
+   đầu; chạy cleanup mảnh vụn rời mặc định sau cắt frame.
 2. NPC Map017 walk cycle (Công Viên An Bình: Cô Bán Bánh + Ông
    Lão Tập Thể Dục) theo từng map, mẫu vòng này — nhớ bài học
    vòng 38: đạo cụ dài siết "dựng đứng sát thân" ngay từ lần gen
