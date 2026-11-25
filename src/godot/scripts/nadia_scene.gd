@@ -25,6 +25,7 @@ var offset := Vector2.ZERO
 
 var _t := 0.0
 var _redraw_acc := 0.0
+var _stall_sprites := {}
 
 # Bien hieu tieng Viet theo khu (chon xac dinh theo hash — khong random).
 # Ten ngan (<= 8 ky tu) de vua bang hieu 58px o co 10.
@@ -73,6 +74,44 @@ static func stall_goods_kind(sign: String) -> String:
 ## Mau nen bien hieu theo loai hang (mac dinh: go nau cu).
 static func stall_sign_color(sign: String) -> Color:
 	return STALL_KIND_COLORS.get(stall_goods_kind(sign), Color(0.42, 0.28, 0.16, 1))
+
+## Vong 41 — Sprite sap tach rieng (§45.1, §62.5): hang 0 doi
+## thanh sap cach nhau (o le de trong, xem market_gap_tiles),
+## 3 sprite rieng theo loai hang (rau / trai-cay / ca-thit).
+## Sprite KHONG co bien hieu/chu — code ve bien + chu len tren
+## nhu cu (1 sprite dung cho 2 bien cung loai: TRAI CAY + HOA QUA,
+## CA TUOI + THIT HEO). Canvas 64x96, day sprite o c.y + 14
+## (day quay), dinh o c.y - 82; vung canvas y 0-33 trong suot de
+## lo mai + bien. Thieu file -> ve bang code nhu cu (fallback).
+const STALL_SPRITE_SIZE := Vector2(64, 96)
+const STALL_SPRITE_BOTTOM_Y := 14.0
+const STALL_SPRITE_FILES := {
+	"rau": "stall_rau",
+	"trai-cay": "stall_traicay",
+	"ca-thit": "stall_cathit",
+}
+
+## Loai sprite theo bien hieu: "" = khong co sprite (ve code).
+static func stall_sprite_kind(sign: String) -> String:
+	match stall_goods_kind(sign):
+		"rau":
+			return "rau"
+		"trai-cay":
+			return "trai-cay"
+		"ca", "thit":
+			return "ca-thit"
+	return ""
+
+## Duong dan res:// cua sprite theo loai ("" neu khong co).
+static func stall_sprite_path(kind: String) -> String:
+	if kind == "" or not STALL_SPRITE_FILES.has(kind):
+		return ""
+	return "res://art/%s.png" % STALL_SPRITE_FILES[kind]
+
+## O le hang 0 nay de trong (vong 41): khong tuong/mai/cua so,
+## de sprite sap 64px khong bi tuong ben che (§45.1).
+static func market_gap_tiles() -> Array:
+	return [1, 3, 5, 7, 9, 11]
 
 ## O chan co sap o hang 0 (vong 12): bien hieu + mai hien + quay.
 static func market_stall_tiles() -> Array:
@@ -132,7 +171,24 @@ func setup(data: Dictionary, p_font: Font, p_offset: Vector2) -> void:
 	map_id = int(data.get("id", 1))
 	font = p_font
 	offset = p_offset
+	_load_stall_sprites()
 	queue_redraw()
+
+## Nap 3 sprite sap (neu co file) — goi 1 lan moi setup().
+## Thieu file -> dict trong, _draw dung ban ve code (fallback).
+func _load_stall_sprites() -> void:
+	_stall_sprites.clear()
+	for kind in STALL_SPRITE_FILES.keys():
+		var path := stall_sprite_path(kind)
+		# ResourceLoader.exists (KHONG phai FileAccess): PNG chua
+		# co .import thi load() loi "No loader found" — phai coi
+		# nhu chua co sprite, ve bang code (fallback).
+		if ResourceLoader.exists(path, "Texture2D"):
+			_stall_sprites[kind] = load(path)
+
+## Texture sprite cua loai (null = chua co file -> ve code).
+func stall_sprite_texture(kind: String) -> Texture2D:
+	return _stall_sprites.get(kind, null) as Texture2D
 
 ## Khung hien tai (IsoMap.set_frame goi): anh sang mat tien doi
 ## theo huong nang — Sang: trai toi dan, phai am nhe (nang tu
@@ -384,8 +440,15 @@ func _draw_facades() -> void:
 ## doan tuong/mai 34px (chong 2px de kin khe bac thang iso), sap
 ## chi o o CHAN (tam cach 64px): bien hieu 58px + mai hien 60px
 ## vua khit, khong chong; o LE la nha o (cua so + chau hoa).
+## Vong 41 (§45.1): o LE nay de trong hoan toan (khong tuong/mai/
+## cua so) — sap tach rieng thanh 6 sap doc lap, cho sprite 64px;
+## mai cua sap chan giu lai (34px, tach roi nhau 30px).
 func _draw_market_row() -> void:
 	for tx in range(12):
+		# Vong 41: o le de trong (§45.1) — khong tuong/mai/ong
+		# khoi, de sprite sap 64px khong bi tuong ben che.
+		if tx % 2 == 1:
+			continue
 		var c := tile_center(Vector2i(tx, 0))
 		var h := _hash(tx, 0)
 		var tint: Color = WALL_TINTS[h % WALL_TINTS.size()]
@@ -415,29 +478,44 @@ func _draw_market_row() -> void:
 		if h % 3 == 0:
 			# Ong khoi.
 			draw_rect(Rect2(c + Vector2(6, -104), Vector2(10, 14)), Color(0.5, 0.42, 0.35, 1))
-	# Vong 2: bien hieu + sap / cua so (ve sau mai de nam tren).
+	# Vong 2: bien hieu + sap (ve sau mai de nam tren). Vong 41:
+	# o le de trong (khong cua so) — sap tach rieng, sprite ve
+	# truoc bien (bien nam tren vung trong suot cua sprite).
 	for tx in range(12):
+		if tx % 2 == 1:
+			continue
 		var c := tile_center(Vector2i(tx, 0))
 		var h := _hash(tx, 0)
-		if tx % 2 == 0:
-			# Bien hieu LON co mau rieng theo loai hang (62x16,
-			# chu 11px, vien kem + bong + 2 dinh) — vong 23: bien
-			# cu 58x13 chu 10px tren tuong be trong nhu "noi".
-			var text := String(SIGNS_MAP2[h % SIGNS_MAP2.size()])
-			var board_col: Color = stall_sign_color(text)
-			draw_rect(Rect2(c + Vector2(-31, -62), Vector2(62, 16)), Color(0, 0, 0, 0.25))
-			draw_rect(Rect2(c + Vector2(-31, -64), Vector2(62, 16)), board_col)
-			draw_rect(Rect2(c + Vector2(-31, -64), Vector2(62, 16)), Color(1.0, 0.93, 0.70, 1), false, 1.5)
-			if font != null:
-				var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
-				draw_string(font, Vector2(c.x - tw / 2.0, c.y - 52), text,
-					HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(1.0, 0.93, 0.70, 1))
-			draw_circle(c + Vector2(-27, -61), 1.5, Color(1, 1, 1, 0.8))
-			draw_circle(c + Vector2(27, -61), 1.5, Color(1, 1, 1, 0.8))
-			_draw_shop_front(c, h, text)
+		# Bien hieu LON co mau rieng theo loai hang (62x16,
+		# chu 11px, vien kem + bong + 2 dinh) — vong 23: bien
+		# cu 58x13 chu 10px tren tuong be trong nhu "noi".
+		var text := String(SIGNS_MAP2[h % SIGNS_MAP2.size()])
+		var board_col: Color = stall_sign_color(text)
+		var sprite := stall_sprite_texture(stall_sprite_kind(text))
+		if sprite != null:
+			# Sprite sap rieng (vong 41): canvas 64x96, day o
+			# c.y + 14; bien ve sau nen nam tren sprite.
+			draw_texture_rect(sprite,
+				Rect2(c + Vector2(-STALL_SPRITE_SIZE.x / 2.0,
+					STALL_SPRITE_BOTTOM_Y - STALL_SPRITE_SIZE.y),
+					STALL_SPRITE_SIZE), false)
+		draw_rect(Rect2(c + Vector2(-31, -62), Vector2(62, 16)), Color(0, 0, 0, 0.25))
+		draw_rect(Rect2(c + Vector2(-31, -64), Vector2(62, 16)), board_col)
+		draw_rect(Rect2(c + Vector2(-31, -64), Vector2(62, 16)), Color(1.0, 0.93, 0.70, 1), false, 1.5)
+		if font != null:
+			var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
+			draw_string(font, Vector2(c.x - tw / 2.0, c.y - 52), text,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(1.0, 0.93, 0.70, 1))
+		draw_circle(c + Vector2(-27, -61), 1.5, Color(1, 1, 1, 0.8))
+		draw_circle(c + Vector2(27, -61), 1.5, Color(1, 1, 1, 0.8))
+		if sprite != null:
+			# Sprite da co mai hien + quay + hang — chi them
+			# the gia nho nhu ban ve code.
+			if h % 2 == 0:
+				draw_rect(Rect2(c + Vector2(8, 2), Vector2(12, 8)), Color(0.98, 0.95, 0.85, 1))
+				draw_line(c + Vector2(10, 6), c + Vector2(18, 6), Color(0.75, 0.25, 0.2, 1), 1.0)
 		else:
-			# Nha o giua 2 sap: cua so + chau hoa (rong 32px, vua doan).
-			_draw_window(c + Vector2(0, 0), h)
+			_draw_shop_front(c, h, text)
 
 ## Mau kinh cua so theo khung (vong 8): ham tinh de test goi truc
 ## tiep duoc — _draw_window dung ham nay.
