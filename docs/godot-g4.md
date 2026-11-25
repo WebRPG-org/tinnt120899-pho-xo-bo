@@ -5942,3 +5942,118 @@ Resort (8,6).
    đầu; chạy cleanup mảnh vụn rời mặc định sau cắt frame.
 3. Sprite sạp tách riêng (§45.1): đổi hàng 0 thành sạp cách nhau
    (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
+
+## 61. Vòng 39 — Walk cycle NPC Map017: Cô Bán Bánh + Ông Lão Tập Thể Dục (25/11 ~13:45–15:00 +07, cron 13:45)
+
+Mục 1 §60.5: NPC Map017 walk cycle theo từng map. Vòng này làm
+Map017 Công Viên An Bình: Cô Bán Bánh (3,3) + Ông Lão Tập Thể
+Dục (8,6).
+
+### 61.1 Art (subagent, theo đúng quy trình vòng 38) — XONG
+
+- Thư mục `visual-check/artpass39/`; ảnh đứng + sheet 6 khung cho
+  Cô Bán Bánh (nữ, áo bà ba hồng đào + tạp dề xanh lá + nón lá,
+  cầm giỏ bánh + khay bánh) + Ông Lão Tập Thể Dục (nam, tóc bạc,
+  áo thun thể thao xanh nhạt + quần thể thao xám + giày thể thao,
+  khăn tập vàng cam vắt vai + bình nước xanh cầm tay); xử lý trắng
+  → trong suốt + cắt frame theo mẫu vòng 38 (connected component,
+  MIN_FIG_W=100, MIN_FIG_H=100, `split_wide_component` MAX_FIG_W=600
+  + xóa vùng trắng kín ≥100 final px) + bước cleanup mảnh vụn rời
+  mặc định (`cleanup_frames_r39.py`).
+- File đích: `src/godot/art/char_cobanbanh.png` (122×208) +
+  `char_onglaotaptheduc.png` (86×208),
+  `walk_cobanbanh_f0..f5.png` (canvas chung 138×208) +
+  `walk_onglaotaptheduc_f0..f5.png` (canvas chung 140×208), RGBA.
+- Kiểm tra bằng mắt: 2 ảnh đứng + 2 sheet; **ảnh đứng 0 lần gen
+  lại; sheet Ông Lão 0 lần; sheet Cô Bán Bánh 2 lần (v1 → v2 →
+  v3)** — v1 thiếu khay ở f1/f3; v2 đủ khay nhưng thiếu giỏ ở f5;
+  v3 siết mỗi đạo cụ bằng một câu riêng ("khay luôn ở tay phải /
+  giỏ luôn ở tay trái trong mọi hình") thì đủ cả 2 đạo cụ ở cả 6
+  hình. Bài học mới: NPC cầm 2 đạo cụ thì siết MỖI đạo cụ bằng
+  MỘT CÂU RIÊNG gắn với tay cầm cố định ngay từ lần gen đầu — câu
+  gộp "cả 2 đạo cụ phải rõ" làm generator bỏ 1 đạo cụ ở vài hình.
+- Cắt sheet: cả 2 sheet tách đúng 6 component riêng, không cần
+  `split_wide_component` (câu siết khoảng trắng giữa các hình đã
+  phát huy). Cleanup: 12 frame không đổi (mỗi frame đúng 1
+  component, không mảnh vụn mép); chỉ xóa 2px vết rời ở
+  `char_onglaotaptheduc.png`. Debug-white: chỉ f3 Cô Bán Bánh xóa
+  123 final px — đã đối chiếu zoom: đó là nền nhìn xuyên qua quai
+  giỏ, không phải bánh; giỏ + khay còn nguyên. Vùng trắng kín còn
+  lại lớn nhất 60–70px (<100, giữ đúng thiết kế: chóp bánh kem,
+  bánh trong giỏ). Bình nước trong của Ông Lão được giữ nguyên,
+  không bị thủng.
+- Hạn chế (chấp nhận, ghi trong note): quần đen + áo bà ba dài che
+  chân Cô Bán Bánh (chủ yếu thấy dép đổi vị trí); giỏ/khay + bình
+  nước đổi bên/đổi tay theo nhịp đi giữa các frame (không phải lỗi,
+  đạo cụ vẫn hiện liên tục cả 6 frame); f5 cả hai gần như tư thế
+  đứng. Chi tiết:
+  `visual-check/artpass39/walkcycle-npc-map017-note.md`.
+
+### 61.2 Code + test — XONG
+
+- `marker.gd` NPC_STYLE thêm `"co-ban-banh"` (áo hồng đào
+  (0.93,0.60,0.55), tóc "dai", texture + frames) +
+  `"ong-lao-tap-the-duc"` (áo xanh nhạt (0.55,0.75,0.85), tóc
+  "ngan", texture + frames). Không sửa logic `CharacterSprite`/
+  `Marker`. Tên file art khớp NPC id bỏ dấu gạch nối ngay khi art
+  về (`cobanbanh` / `onglaotaptheduc`).
+- Test mới `tests/g4_r39_npc_walk_map017_test.gd`: **29/29 PASS**
+  (theo mẫu r38: sprite trực tiếp từng NPC, marker home_tile
+  (3,3)/(8,6), Main load_map(17) + pick patrol từ nhà Cô Bán
+  Bánh).
+- `tools/godot/run_regression.sh` thêm test mới (nay 67 suite).
+
+### 61.3 Verify thật vòng này
+
+- Hồi quy đầy đủ: **67 OK, 0 FAIL** (66 cũ + 1 mới r39).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **21.532.816 byte, SHA `a6d7e36b`**
+  (trước `b87c03bf`, +499.024 byte = 14 file art mới); wasm không
+  đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ
+  4 file (cổng 8194).
+- Playwright phải cài lại vì VM restart gỡ module (như vòng 36/38)
+  — browser Chromium 1255 còn trong cache, chỉ cài lại package pip
+  (`pip3 install --break-system-packages playwright`).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass39/check_r39.py`, ảnh `r39-01…r39-18`):
+  **0 console error, 0 pageerror, 0 requestfailed.** Xem ảnh
+  thật: đi chuỗi Map001→Map017 qua đúng cửa (5,4)/(5,8) từng
+  map; Map017 "Công Viên An Bình" — Cô Bán Bánh (nón lá, áo hồng
+  đào, giỏ + khay bánh) + Ông Lão Tập Thể Dục (tóc bạc, áo xanh
+  nhạt, bình nước xanh) hiện rõ mặt thật có nhãn tên, không còn vẽ
+  code; cả 2 NPC patrol rời nhà sau 12s (Cô Bán Bánh ra mép trái,
+  Ông Lão sang gần cửa ở ảnh away); 2 ảnh xa nhà cách nhau 2s
+  pixel-diff = **25.884** (lá rơi + mây + NPC bob, cảnh sống).
+  Nhãn "Ông Lão Tập Thể Dục" đè lên thân Cô Bán Bánh ở ảnh home —
+  cùng mẫu nhãn neo -170px + hiện trong Manhattan ≤5 ô đã thấy ở
+  Map012/013/014/015/016, không phải nhãn sai.
+
+### 61.4 Push + Deploy — XONG TRỌN (main + deploy + docs)
+
+- **Push main r39 XONG:** lô a (marker.gd + test r39 + .uid +
+  run_regression.sh) `51105053` + lô b (14 file .import art
+  Map017) `1c508d89` + lô c (visual-check artpass39: note + 5
+  script + check_r39.py) `dd4399b4` — head main sau lô c
+  `dd4399b4`.
+- **Deploy gh-pages pck `a6d7e36b` XONG:** staging rebuild VERIFY
+  OK (pck 160 chunk khớp byte, wasm + img không đổi); đẩy 10 lô
+  chunk + 1 lô final: b1 000–015 `46f26bf5`, b2 016–031
+  `75de3782`, b3 032–047 `fd42f28c`, b4 048–063 `f9c81d8c`, b5
+  064–079 `9d4a8d35`, b6 080–095 `194df6bb`, b7 096–111
+  `75766d23`, b8 112–127 `f76cb2e5`, b9 128–143 `0e882325`, b10
+  144–159 `6fe93e85` (16 file), final (versions.json +
+  index.html) `46e4b410`. Sync record nay 414 mục.
+  **Live đã chuyển sang pck `a6d7e36b` (vòng 39):** `--check-live`
+  PASS (versions.json live `a6d7e36b`, index.html 200) — lúc đầu
+  vẫn hiện `b87c03bf` do CDN lag ~3 phút (như vòng 38), kiểm lại
+  sau thì PASS.
+- Lô docs (godot-g4 §61 + roles-qc) `XEM DƯỚI`.
+
+### 61.5 Việc tiếp theo
+
+1. NPC Map018 walk cycle (Phố Đi Bộ – Chợ Đêm: Chủ Sạp Đêm +
+   Người Bán Hàng Rong) theo từng map, mẫu vòng này — nhớ bài học
+   vòng 39: 2 đạo cụ thì siết mỗi đạo cụ một câu riêng gắn tay cầm
+   cố định.
+2. Sprite sạp tách riêng (§45.1): đổi hàng 0 thành sạp cách nhau
+   (ô lẻ để trống) rồi gen 3 sprite sạp (rau/trái cây/cá-thịt).
