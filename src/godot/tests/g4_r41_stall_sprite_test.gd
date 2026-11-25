@@ -7,7 +7,8 @@ extends SceneTree
 ##     2 tap khong giao nhau.
 ##  2. Anh xa bien -> loai sprite: 5 bien co sprite (RAU CU->rau,
 ##     TRAI CAY + HOA QUA->trai-cay, CA TUOI + THIT HEO->ca-thit);
-##     3 bien khong co sprite (BANH MI, GIA VI, DO KHO -> "").
+##     3 bien con lai (BANH MI, GIA VI, DO KHO) co sprite tu vong 42
+##     (xem g4_r42_stall_sprite_test.gd) — test nay chi khoa 5 bien goc.
 ##  3. Duong dan sprite + kich thuoc canvas 64x96 + day y +14.
 ##  4. Canh Map002 ve that khong loi; trang thai sprite khop file
 ##     tren dia (co file -> texture 64x96; thieu file -> null va
@@ -63,11 +64,12 @@ func _on_frame() -> void:
 					if NadiaScene.stall_sprite_kind(sign) != want[sign]:
 						kinds_ok = false
 				_check("5 bien co sprite dung loai", kinds_ok)
-				var none_ok := true
+				# Vong 42: 3 bien con lai nay cung co sprite (khoa o r42).
+				var new_ok := true
 				for sign in ["BÁNH MÌ", "GIA VỊ", "ĐỒ KHÔ"]:
-					if NadiaScene.stall_sprite_kind(sign) != "":
-						none_ok = false
-				_check("3 bien khong co sprite tra ve ''", none_ok)
+					if NadiaScene.stall_sprite_kind(sign) == "":
+						new_ok = false
+				_check("3 bien vong 42 cung co sprite", new_ok)
 				# 3. Duong dan + kich thuoc.
 				_check("duong dan sprite rau/trai-cay/ca-thit",
 					NadiaScene.stall_sprite_path("rau") == "res://art/stall_rau.png"
@@ -76,8 +78,8 @@ func _on_frame() -> void:
 				_check("duong dan rong / loai la tra ve ''",
 					NadiaScene.stall_sprite_path("") == ""
 					and NadiaScene.stall_sprite_path("khong-co") == "")
-				_check("dung 3 sprite dang ky",
-					NadiaScene.STALL_SPRITE_FILES.size() == 3)
+				_check("dung 6 sprite dang ky (3 vong 41 + 3 vong 42)",
+					NadiaScene.STALL_SPRITE_FILES.size() == 6)
 				_check("canvas sprite 64x96, day y +14",
 					NadiaScene.STALL_SPRITE_SIZE == Vector2(64, 96)
 					and NadiaScene.STALL_SPRITE_BOTTOM_Y == 14.0)
@@ -108,7 +110,7 @@ func _on_frame() -> void:
 					else:
 						if tex != null:
 							state_ok = false
-				print("  INFO sprites tren dia: %d/3" % present)
+				print("  INFO sprites tren dia: %d/3 (3 goc vong 41)" % present)
 				_check("sprite khop file tren dia (co->64x96, thieu->null)",
 					state_ok)
 				_main.load_map(1, Vector2i(4, 5))

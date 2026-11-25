@@ -78,6 +78,8 @@ static func stall_sign_color(sign: String) -> Color:
 ## Vong 41 — Sprite sap tach rieng (§45.1, §62.5): hang 0 doi
 ## thanh sap cach nhau (o le de trong, xem market_gap_tiles),
 ## 3 sprite rieng theo loai hang (rau / trai-cay / ca-thit).
+## Vong 42 — them 3 sprite con lai (banh-mi / gia-vi / do-kho):
+## ca 8 bien SIGNS_MAP2 deu co sprite.
 ## Sprite KHONG co bien hieu/chu — code ve bien + chu len tren
 ## nhu cu (1 sprite dung cho 2 bien cung loai: TRAI CAY + HOA QUA,
 ## CA TUOI + THIT HEO). Canvas 64x96, day sprite o c.y + 14
@@ -89,6 +91,9 @@ const STALL_SPRITE_FILES := {
 	"rau": "stall_rau",
 	"trai-cay": "stall_traicay",
 	"ca-thit": "stall_cathit",
+	"banh-mi": "stall_banhmi",
+	"gia-vi": "stall_giavi",
+	"do-kho": "stall_dokho",
 }
 
 ## Loai sprite theo bien hieu: "" = khong co sprite (ve code).
@@ -100,6 +105,12 @@ static func stall_sprite_kind(sign: String) -> String:
 			return "trai-cay"
 		"ca", "thit":
 			return "ca-thit"
+		"banh-mi":
+			return "banh-mi"
+		"gia-vi":
+			return "gia-vi"
+		"do-kho":
+			return "do-kho"
 	return ""
 
 ## Duong dan res:// cua sprite theo loai ("" neu khong co).
@@ -174,7 +185,7 @@ func setup(data: Dictionary, p_font: Font, p_offset: Vector2) -> void:
 	_load_stall_sprites()
 	queue_redraw()
 
-## Nap 3 sprite sap (neu co file) — goi 1 lan moi setup().
+## Nap 6 sprite sap (neu co file) — goi 1 lan moi setup().
 ## Thieu file -> dict trong, _draw dung ban ve code (fallback).
 func _load_stall_sprites() -> void:
 	_stall_sprites.clear()
