@@ -128,6 +128,14 @@ const NPC_STYLE := {
 		"frames": ["res://art/walk_nhanviennganhang_f0.png", "res://art/walk_nhanviennganhang_f1.png", "res://art/walk_nhanviennganhang_f2.png", "res://art/walk_nhanviennganhang_f3.png", "res://art/walk_nhanviennganhang_f4.png", "res://art/walk_nhanviennganhang_f5.png"]},
 	"moi-gioi-chung-khoan": {"shirt": Color(0.30, 0.30, 0.33, 1), "hair_style": "ngan", "texture": "res://art/char_moigioichungkhoan.png",
 		"frames": ["res://art/walk_moigioichungkhoan_f0.png", "res://art/walk_moigioichungkhoan_f1.png", "res://art/walk_moigioichungkhoan_f2.png", "res://art/walk_moigioichungkhoan_f3.png", "res://art/walk_moigioichungkhoan_f4.png", "res://art/walk_moigioichungkhoan_f5.png"]},
+	# Vong 36 — Map014 Dao Thuong Luu: Quan Gia Dao (nam, ao
+	# duoi tom den + so mi xam nhat + no den, cam khay bac co am
+	# tra) + Chu Biet Thu Dao (nu, vay dai hong dao nhat + mu
+	# rong vanh, cam quat tay + tui xach nho).
+	"quan-gia-dao": {"shirt": Color(0.08, 0.08, 0.10, 1), "hair_style": "ngan", "texture": "res://art/char_quangiadao.png",
+		"frames": ["res://art/walk_quangiadao_f0.png", "res://art/walk_quangiadao_f1.png", "res://art/walk_quangiadao_f2.png", "res://art/walk_quangiadao_f3.png", "res://art/walk_quangiadao_f4.png", "res://art/walk_quangiadao_f5.png"]},
+	"chu-biet-thu-dao": {"shirt": Color(0.95, 0.72, 0.62, 1), "hair_style": "dai", "texture": "res://art/char_chubietthudao.png",
+		"frames": ["res://art/walk_chubietthudao_f0.png", "res://art/walk_chubietthudao_f1.png", "res://art/walk_chubietthudao_f2.png", "res://art/walk_chubietthudao_f3.png", "res://art/walk_chubietthudao_f4.png", "res://art/walk_chubietthudao_f5.png"]},
 }
 
 # Vong 22 — NPC di lang thang (patrol): NPC buoc cham giua o nha
