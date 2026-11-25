@@ -5656,15 +5656,21 @@ Map014 Đảo Thượng Lưu: Quản Gia Đảo (3,3) + Chủ Biệt Thự Đả
 ### 58.4 Push + Deploy — XONG
 
 - **Push main r36 XONG:** lô a (marker.gd + test r36 + .uid +
-  run_regression.sh) `TBD` + lô b (14 file .import art Map014)
-  `TBD` + lô c (visual-check artpass36) `TBD` — head main sau lô c
-  `TBD`.
+  run_regression.sh) `1d8823f0` + lô b (14 file .import art Map014)
+  `c0bbb853` + lô c (visual-check artpass36) `3de8252d` — head main sau lô c
+  `3de8252d` (docs `b488f74a`).
 - **Deploy gh-pages pck `210e0a19` XONG:** staging rebuild VERIFY
-  OK (pck 149 chunk khớp byte, wasm + img không đổi); đẩy các lô
-  liên tiếp: `TBD`. Sync record nay `TBD` mục. **Live đã chuyển
-  sang pck `210e0a19` (vòng 36):** `--check-live` PASS
-  (versions.json live `210e0a19`, index.html khớp staging từng
-  byte).
+  OK (pck 149 chunk khớp byte, wasm + img không đổi); đẩy 11 lô
+  liên tiếp: b1 chunk 000–015 `df653cca`, b2 016–031 `3b6dd61b`,
+  b3 032–047 `0a5c0cb8`, b4 048–063 `a5849cf1`, b5 064–079
+  `6859bd40`, b6 080–095 `6ce08fde`, b7 096–111 `23de3563`, b8
+  112–127 `88ee8518`, b9 128–143 `ba7620a3`, b10 144–148
+  `7cd67c1c`, final (versions.json + index.html) `929c84e8`.
+  Sync record nay 363 mục. **Live đã chuyển sang pck `210e0a19`
+  (vòng 36):** `--check-live` PASS (versions.json live `210e0a19`,
+  index.html khớp staging từng byte — lần đầu check ngay sau deploy
+  vẫn thấy bản cũ `2d9ae4e0` do CDN cache, check lại sau ~7 phút thì
+  khớp).
 
 ### 58.5 Việc tiếp theo
 
