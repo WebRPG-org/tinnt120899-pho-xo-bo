@@ -136,6 +136,14 @@ const NPC_STYLE := {
 		"frames": ["res://art/walk_quangiadao_f0.png", "res://art/walk_quangiadao_f1.png", "res://art/walk_quangiadao_f2.png", "res://art/walk_quangiadao_f3.png", "res://art/walk_quangiadao_f4.png", "res://art/walk_quangiadao_f5.png"]},
 	"chu-biet-thu-dao": {"shirt": Color(0.95, 0.72, 0.62, 1), "hair_style": "dai", "texture": "res://art/char_chubietthudao.png",
 		"frames": ["res://art/walk_chubietthudao_f0.png", "res://art/walk_chubietthudao_f1.png", "res://art/walk_chubietthudao_f2.png", "res://art/walk_chubietthudao_f3.png", "res://art/walk_chubietthudao_f4.png", "res://art/walk_chubietthudao_f5.png"]},
+	# Vong 37 — Map015 Khu Penthouse: Quan Ly Penthouse (nam,
+	# vest xam than + so mi xanh nhat + ca vat do bordeaux, cam
+	# clipboard + the chia khoa vang) + Cu Dan Penthouse (nu,
+	# vay dai xanh ngoc luc bao, cam tui mua sam + dien thoai).
+	"quan-ly-penthouse": {"shirt": Color(0.22, 0.24, 0.28, 1), "hair_style": "ngan", "texture": "res://art/char_quanlypenthouse.png",
+		"frames": ["res://art/walk_quanlypenthouse_f0.png", "res://art/walk_quanlypenthouse_f1.png", "res://art/walk_quanlypenthouse_f2.png", "res://art/walk_quanlypenthouse_f3.png", "res://art/walk_quanlypenthouse_f4.png", "res://art/walk_quanlypenthouse_f5.png"]},
+	"cu-dan-penthouse": {"shirt": Color(0.05, 0.45, 0.38, 1), "hair_style": "dai", "texture": "res://art/char_cudanpenthouse.png",
+		"frames": ["res://art/walk_cudanpenthouse_f0.png", "res://art/walk_cudanpenthouse_f1.png", "res://art/walk_cudanpenthouse_f2.png", "res://art/walk_cudanpenthouse_f3.png", "res://art/walk_cudanpenthouse_f4.png", "res://art/walk_cudanpenthouse_f5.png"]},
 }
 
 # Vong 22 — NPC di lang thang (patrol): NPC buoc cham giua o nha
