@@ -12762,3 +12762,168 @@ gửi lại cho ai.
 - Deploy pck `722f0219` len gh-pages — CHUA CHAY, deploy van cho
   chu noi 'day tiep'. Live van r41 pck `5f2a052f`.
 
+
+## §117 — Vòng 96: wrap panel kết quả trận + dò tọa độ đăng ký khóa ngắn — XONG LOCAL, CHƯA PUSH (28/11 ~12:45–14:35 +07, cron 12:45; lượt 13:45 hoàn tất sổ sách + push)
+
+### 117.1 Sửa code — wrap panel kết quả giữa trận
+
+- `scripts/battle_scene.gd`: `result_text()` 1 dòng cỡ 24 vượt 560px
+  nên bị cắt mép phải (ảnh 96-r95: "Đội Chợ Đầu Mố..."). Thêm
+  `wrap_text()` tham lam theo từ, đo bằng font thật;
+  `result_text_lines()` co cỡ chữ 24 -> 20 -> 18 nếu quá 4 dòng;
+  `_draw_result()` vẽ từng dòng cách nhau 32px trong panel
+  (430..730). Từ đơn dài hơn 560px thì cắt cứng theo ký tự.
+
+### 117.2 Test headless mới — 20/20 PASS
+
+- `tests/g4_r96_result_wrap_test.gd` (mới): trường hợp thật r95
+  (đội B thắng, hold đến ngày 34), thắng A, tên đội rất dài, từ đơn
+  dài, hòa không hold, hình học panel (dòng cuối <= 690).
+- Hồi quy đầy đủ: **5285 check, 0 FAIL** (lần sạch thứ 15;
+  +20 so với v95 = test mới r96).
+  Log `hidden_files/regression-2026-11-28-1245-v96.log`.
+
+### 117.3 Export — pck mới `1364ef26`
+
+- Scene 120 frame exit 0, 0 ERROR. Export web exit 0: pck
+  **28.089.092 byte, SHA `1364ef26…`** (trước `722f0219…`,
+  28.082.216), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ 6 file.
+
+### 117.4 Browser-verify — thắng trận + panel giữa đã wrap đúng, ĐĂNG KÝ KHÓA NGẮN LÚC ĐẦU THẤT BẠI DO SAI TỌA ĐỘ CLICK
+
+- r96 (console-r96.json): 8 ca Bán rong -> ví 2.340.000đ; bước
+  enroll đánh dấu ok nhưng ảnh 101 cho thấy ví vẫn 2.340.000đ,
+  điện thoại đã đóng — click đăng ký không trúng nút. 0 console
+  error/pageerror/failed request. Mở trận thất bại (battle-open
+  False, round=None) — lúc đó điện thoại chưa đóng chắc nên phím B
+  không mở được trận.
+- r96b (console-r96b.json): enroll thử 3 lần đều FAIL
+  (money=2.340.000, phone_open=False); trận mở được, replay
+  **landed 36/37, 0 miss, winner=A**, kết quả "Đội Bạn thắng trận!
+  Danh vọng: Đội Bạn +50, Đội Chợ Đầu Mối +10. Giữ sạp
+  sap-cho-dau-moi đến ngày game 8."; server holds có entry
+  [1,8); 0 console error/pageerror/failed request.
+  **Ảnh 122-r96b-battle-result.png: panel kết quả giữa đã wrap
+  đúng 3 dòng, không cắt chữ** — fix V96 có tác dụng thật.
+  NHƯNG cùng ảnh 122 cho thấy dòng `_last_action` ở **panel dưới
+  vẫn bị cắt mép phải** ("...Đội Chợ Đầu Mố...") — việc V97.
+- r96c (probe, không có console-r96c.json — lượt cron 12:45 hết
+  giờ giữa chừng): kết luận probe — nút "Khóa ngắn" tâm y~840
+  (biên nút 812-867), click (360,876) trúng nút "Đóng điện thoại"
+  (876-931) nên đóng phone. Đổi sang (360,840) sau wheel 600 thì
+  **đăng ký THÀNH CÔNG: ví 2.340.000đ -> 340.000đ** (ảnh
+  136-r96c-after-enroll-try3.png; toast "Đang học một khóa ngắn
+  khác rồi." ở ảnh đó là của lần thử trùng thứ 3, không phải lỗi
+  đăng ký). Chưa kịp F x9 kiểm tra tốt nghiệp Sáng +10 trên
+  trình duyệt — việc V97.
+- Bài học: bước verify nào chỉ ghi "xem ảnh" mà không đọc giá trị
+  thì không được tính là đã kiểm chứng — ảnh 101/105/106 cho thấy
+  enroll r96/r96b thực ra chưa hề xảy ra dù step ghi ok.
+
+### 117.5 Việc tiếp theo — Vòng 97
+
+1. Wrap dòng `_last_action` ở panel dưới khi hết trận (ảnh 122).
+2. Browser-verify tốt nghiệp khóa ngắn Sáng +10 với tọa độ đúng
+   (360,840): F x9 -> Ngày 4, Sáng 110, toast tốt nghiệp, tab Bản
+   thân có "Bonus khóa ngắn hạn".
+3. Push main gộp tới r96 (+ r97 khi xong); deploy pck `1364ef26`
+   (r96) / pck mới (r97) — CHƯA CHẠY, deploy vẫn chờ chủ nói
+   "đẩy tiếp". Live vẫn r41 pck `5f2a052f`.
+4. Theo dõi miss `plan-34` (r96b: skip-timeout ở round 13 —
+   lượt địch kết thúc trước khi click tới; r93/r95 cũng gặp).
+5. Chủ chốt trần bonus chỉ số phụ (hiện KHÔNG kẹp STAT_MAX).
+
+## §118 — Vòng 97: wrap dòng kết quả ở panel dưới + verify tốt nghiệp Sáng +10 — XONG (28/11 ~13:45–16:00 +07, cron 13:45)
+
+### 118.1 Sửa code — wrap `_last_action` ở panel dưới
+
+- `scripts/battle_scene.gd`: V96 sửa panel kết quả giữa nhưng dòng
+  `_last_action` ở panel dưới (`_draw_bottom`, y=1104, cỡ 22) vẫn
+  bị cắt mép phải (ảnh 122-r96b). Thêm `bottom_action_lines()`:
+  wrap tối đa 2 dòng cỡ 20 (xuống 18 nếu thừa), dòng 1 ở y=1078,
+  cách nhau 28px, dòng cuối không chạm nút (nút bắt đầu y=1120);
+  khi đang đánh thì giữ 1 dòng y=1104 như cũ. Tên đội cực dài
+  (không có thật) vẫn thừa 2 dòng ở cỡ 18 thì giữ 2 dòng đầu, cắt
+  phần còn lại có dấu "…" — chữ đầy đủ đã có ở panel kết quả
+  giữa, dòng dưới chỉ là log trạng thái nên không được tràn
+  xuống nút. Hằng số: `BOTTOM_TEXT_MAX_W = 656`,
+  `BOTTOM_TEXT_FIRST_Y = 1078`, `BOTTOM_TEXT_LINE_H = 28`,
+  `BOTTOM_MAX_LINES = 2`.
+
+### 118.2 Test headless mới — 21/21 PASS
+
+- `tests/g4_r97_bottom_wrap_test.gd` (mới): trường hợp thật r96b
+  (thắng A, hold đến ngày 8 — 1 dòng cỡ 22 vượt 656px là bug cũ),
+  trường hợp r95 (thắng B, hold 34), tên đội rất dài (cắt có "…",
+  phần giữ là tiền tố câu gốc), câu ngắn 1 dòng cỡ 20, chuỗi
+  rỗng 0 dòng, hình học panel (dòng cuối <= 1110 < 1120).
+- Hồi quy đầy đủ: **5306 check, 0 FAIL** (lần sạch thứ 16;
+  +21 so với v96 = test mới r97).
+  Log `hidden_files/regression-2026-11-28-1345-v97.log`.
+
+### 118.3 Export — pck mới `5ba6fd53`
+
+- Scene 120 frame exit 0, 0 ERROR. Export web exit 0: pck
+  **28.095.648 byte, SHA `5ba6fd53…`** (trước `1364ef26…`,
+  28.089.092), wasm không đổi, `GODOT_THREADS_ENABLED = false`;
+  HTTP 200 đủ 4 file kiểm (cổng 8198).
+
+### 118.4 Browser-verify r97 — WRAP DƯỚI ĐÃ ĐÚNG + TỐT NGHIỆP +10 ĐÃ XÁC MINH, NHƯNG 5 BƯỚC LEDGER FAIL DO SCRIPT TỰ NGẮT WS
+
+- Script `hidden_files/pxb-browser-verify-r97.py` (venv
+  `/tmp/pxb-pw-venv` tạo lại — /tmp bị dọn; Chromium 1255 còn
+  trong cache): server Godot thật cổng 8765, state mới
+  `/tmp/pxb-v97-state.json`, HTTP cổng 8198.
+- **Wrap panel dưới ĐÃ ĐÚNG (ảnh 154-r97-battle-result.png):**
+  panel giữa wrap 3 dòng như V96; panel dưới nay wrap 2 dòng
+  "Đội Bạn thắng trận! Danh vọng: Đội Bạn +50, Đội Chợ Đầu Mối /
+  +10. Giữ sạp sap-cho-dau-moi đến ngày game 11." — đủ chữ,
+  không chạm nút. Trận thắng **landed 36/37, winner=A** (plan-34
+  lại miss 1 click đầu "no-battle" rồi retry trúng — lỗi lặp
+  lại từ r93/r95/r96b, xem §118.5); hold trong game [4,11)
+  (đang ngày game 4 — đúng).
+- **Tốt nghiệp khóa ngắn Sáng +10 ĐÃ XÁC MINH trên trình duyệt
+  thật (lần đầu):** 8 ca Bán rong -> ví 2.340.000đ (ảnh 144);
+  đăng ký khóa ngắn ở (360,840) -> ví 340.000đ + toast "Đã đăng
+  ký khóa ngắn Sáng tạo — xong ngày 4." (ảnh 146); F x9 -> Ngày
+  4, toast **"Xong khóa ngắn hạn: Sáng +10"** (ảnh 149); mở
+  điện thoại tab Bản thân: **Sáng 110** + dòng **"Bonus khóa
+  ngắn hạn: Sáng +10"** (ảnh 151).
+- **5 bước ledger FAIL là LỖI SCRIPT, không phải lỗi game:**
+  `wallet-after-8-shifts` + 3 `enroll-try` + `enroll-shortcourse`
+  đều đọc ledger money=0 trong khi ảnh chụp cho thấy ví trong
+  game đúng (2.340.000đ rồi 340.000đ). Nguyên nhân thật:
+  `ensure_phone_closed` bấm (360,903) để đóng điện thoại, nhưng
+  ở tab Danh bạ sau khi nối chat thì tọa độ đó là nút **"Ngắt
+  kết nối chat"** (ảnh 143: nút này ở y~890-960, nút "Đóng điện
+  thoại" nằm dưới vùng cuộn) — bấm trúng nên client tự ngắt WS
+  (`disconnect_ws()`), server log chỉ có 1 lần + peer rồi - peer,
+  ledger đóng băng ở 0 (sync lúc welcome). Hệ quả: **hold-sync
+  lên server CHƯA được kiểm chứng ở vòng này** (holds {} trong
+  holds-r97.json — trận thắng chỉ có hold offline). Sửa cho
+  script verify sau: đóng điện thoại bằng phím P trước, không
+  bấm tọa độ (360,903) khi đang ở tab Danh bạ; hoặc cuộn nội
+  dung điện thoại xuống cuối rồi mới bấm nút Đóng.
+- **HUD chỉ số phụ refresh chậm (ghi nhận, chưa sửa):** ngay
+  sau toast tốt nghiệp, HUD vẫn hiện "Sáng 100" (ảnh 149/150),
+  chỉ lên 110 khi mở điện thoại (ảnh 151) — chỉ số đã +10 đúng,
+  chỉ nhãn HUD cập nhật muộn. Việc V98.
+- 0 console error / 0 pageerror / 0 failed request (62 bước,
+  6 FAIL: 5 ledger do script + 1 plan-34).
+
+### 118.5 Việc tiếp theo — Vòng 98
+
+1. Push main gộp tới r96+r97 (vòng này); deploy pck `5ba6fd53`
+   — CHƯA CHẠY, deploy vẫn chờ chủ nói "đẩy tiếp". Live vẫn r41
+   pck `5f2a052f`.
+2. Sửa script verify: đóng điện thoại bằng phím P (không bấm
+   (360,903) ở tab Danh bạ); verify lại hold-sync lên server
+   sau thắng trận (cần WS còn nối).
+3. HUD chỉ số phụ refresh ngay khi tốt nghiệp khóa ngắn (không
+   chờ mở điện thoại mới thấy Sáng 110).
+4. Probe miss `plan-34` (lần 4 liên tiếp: click đầu rơi vào lúc
+   chưa có trận/lượt — thêm đợi bridge `open` trước click đầu
+   của plan-34 hoặc retry như các plan khác đã làm).
+5. Trade/auction sau restart server (cần 2 client); chủ chốt
+   trần bonus chỉ số phụ (hiện KHÔNG kẹp STAT_MAX).

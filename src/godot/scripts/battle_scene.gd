@@ -798,7 +798,19 @@ func _draw_bottom() -> void:
 			_text(font, Vector2(32, 1070), "Ô xanh: đi  •  Viền đỏ: đánh  •  Vàng chạm đồng đội kề: +12 HP", 20, Color(0.9, 0.9, 0.85))
 	else:
 		_text(font_bold, Vector2(32, 1036), "Trận đã kết thúc.", 26, Color(1, 0.9, 0.4))
-	_text(font, Vector2(32, 1104), _last_action, 22, Color(0.85, 0.9, 0.85))
+	var over := not battle.is_empty() and not is_fighting()
+	if over and not _last_action.is_empty():
+		# V97: _last_action khi het tran = result_text() dai hon 656px
+		# o co 22 nen bi cat mep phai (anh 122-r96b). Wrap toi da 2 dong
+		# co 20, dong 1 o y=1078, cach nhau 28px de dong cuoi khong
+		# cham nut (nut bat dau y=1120).
+		var bw: Dictionary = bottom_action_lines(_last_action)
+		var y := BOTTOM_TEXT_FIRST_Y
+		for line in (bw["lines"] as PackedStringArray):
+			_text(font, Vector2(32, y), line, int(bw["size"]), Color(0.85, 0.9, 0.85))
+			y += BOTTOM_TEXT_LINE_H
+	else:
+		_text(font, Vector2(32, 1104), _last_action, 22, Color(0.85, 0.9, 0.85))
 	# Nút Kết thúc lượt / Đóng.
 	draw_rect(_end_rect, Color(0.2, 0.45, 0.75) if is_fighting() else Color(0.3, 0.3, 0.32))
 	draw_rect(_end_rect, Color(1, 1, 1, 0.7), false, 2.0)
@@ -812,5 +824,97 @@ func _draw_result() -> void:
 	draw_rect(panel, Color(0.08, 0.09, 0.13, 0.98))
 	draw_rect(panel, Color(1, 0.85, 0.3), false, 3.0)
 	_text(font_bold, panel.position + Vector2(0, 60), "KẾT THÚC TRẬN", 34, Color(1, 0.85, 0.3), HORIZONTAL_ALIGNMENT_CENTER, 600)
-	_text(font, panel.position + Vector2(20, 120), result_text(), 24, Color(1, 1, 1), HORIZONTAL_ALIGNMENT_LEFT, 560)
+	# V96: result_text() dai hon 560px o co 24 (ten doi + danh vong +
+	# giu sap) nen ve 1 dong bi cat o mep phai (anh 96-r95). Wrap theo
+	# do rong that cua font, co co chu neu qua 4 dong.
+	var wrapped: Dictionary = result_text_lines()
+	var lines: PackedStringArray = wrapped["lines"]
+	var size: int = int(wrapped["size"])
+	var y := panel.position.y + 120.0
+	for line in lines:
+		_text(font, Vector2(panel.position.x + 20, y), line, size, Color(1, 1, 1), HORIZONTAL_ALIGNMENT_LEFT, 560)
+		y += RESULT_LINE_H
 	_text(font, panel.position + Vector2(0, 260), "Thua không bị phạt — hết trận hồi đầy HP.", 22, Color(0.85, 0.9, 0.85), HORIZONTAL_ALIGNMENT_CENTER, 600)
+
+
+## --- Wrap ket qua (V96) ---
+## result_text() 1 dong o co 24 vuot 560px nen bi cat mep phai.
+## Wrap tham lam theo tu, do bang font that; neu qua
+## RESULT_MAX_LINES dong thi co co chu xuong (24 -> 20 -> 18).
+const RESULT_TEXT_MAX_W := 560.0
+const RESULT_TEXT_SIZE := 24
+const RESULT_LINE_H := 32.0
+const RESULT_MAX_LINES := 4
+
+
+func wrap_text(text: String, size: int, max_w: float) -> PackedStringArray:
+	var lines := PackedStringArray()
+	if font == null or text.is_empty():
+		if not text.is_empty():
+			lines.append(text)
+		return lines
+	var cur := ""
+	for word in text.split(" "):
+		if word.is_empty():
+			continue
+		var trial := word if cur.is_empty() else cur + " " + word
+		if font.get_string_size(trial, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x <= max_w:
+			cur = trial
+		else:
+			if not cur.is_empty():
+				lines.append(cur)
+				cur = ""
+			# Tu don dai hon max_w: cat cung theo ky tu.
+			var rest := word
+			while font.get_string_size(rest, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > max_w and rest.length() > 1:
+				var cut := 1
+				while cut < rest.length() and font.get_string_size(rest.substr(0, cut + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x <= max_w:
+					cut += 1
+				lines.append(rest.substr(0, cut))
+				rest = rest.substr(cut)
+			cur = rest
+	if not cur.is_empty():
+		lines.append(cur)
+	return lines
+
+
+func result_text_lines() -> Dictionary:
+	var size := RESULT_TEXT_SIZE
+	var lines := wrap_text(result_text(), size, RESULT_TEXT_MAX_W)
+	while lines.size() > RESULT_MAX_LINES and size > 18:
+		size -= 4
+		lines = wrap_text(result_text(), size, RESULT_TEXT_MAX_W)
+	return {"lines": lines, "size": size}
+
+
+## --- Wrap dong hanh dong o panel duoi (V97) ---
+## Khi het tran, _last_action = result_text() dai hon 656px o co 22
+## nen bi cat mep phai (anh 122-r96b). Wrap toi da 2 dong co 20
+## (xuong 18 neu van thua), dong 1 o y=1078, cach nhau 28px de dong
+## cuoi khong cham nut (nut bat dau y=1120).
+const BOTTOM_TEXT_MAX_W := 656.0
+const BOTTOM_TEXT_SIZE := 20
+const BOTTOM_TEXT_FIRST_Y := 1078.0
+const BOTTOM_TEXT_LINE_H := 28.0
+const BOTTOM_MAX_LINES := 2
+
+
+func bottom_action_lines(text: String) -> Dictionary:
+	var size := BOTTOM_TEXT_SIZE
+	var lines := wrap_text(text, size, BOTTOM_TEXT_MAX_W)
+	while lines.size() > BOTTOM_MAX_LINES and size > 18:
+		size -= 2
+		lines = wrap_text(text, size, BOTTOM_TEXT_MAX_W)
+	if lines.size() > BOTTOM_MAX_LINES:
+		# Ten doi cuc dai (khong co that) van thua 2 dong o co 18:
+		# giu 2 dong dau, cat phan con lai co dau "…" — chu day du
+		# da co o panel ket qua giua (_draw_result), day chi la
+		# dong log trang thai nen khong duoc tran xuong nut.
+		var head: PackedStringArray = [lines[0]]
+		var rest := " ".join(lines.slice(1))
+		var cut := rest
+		while not cut.is_empty() and font != null and font.get_string_size(cut + "…", HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > BOTTOM_TEXT_MAX_W:
+			cut = cut.substr(0, cut.length() - 1)
+		head.append(cut + "…")
+		lines = head
+	return {"lines": lines, "size": size}
