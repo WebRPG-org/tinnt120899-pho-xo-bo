@@ -12748,5 +12748,17 @@ gửi lại cho ai.
 4. Panel kết quả trận cắt chữ ở mép phải (ảnh 96-r95) — co chữ /
    xuong dong khi mo tran sau.
 
-### 116.6 Push main — (ghi sau khi push xong)
+### 116.6 Push main — XONG (commit `9eb947cc`, 6 file)
+
+- Push 1 lot: `pxb_marketbattle.gd` (reanchor + khoi can_challenge
+  vong 68 chua len) + `main.gd` + test moi r95 (+ .uid) + docs
+  godot-g4 §116 + roles-qc; manifest
+  `hidden_files/pxb-push-main-r95`; sync record 463 entries.
+- Kiem tra truoc push: head remote `c78062e4` khop sync record;
+  diff raw tai head cho thay local chi hon remote dung phan V95
+  (+ khoi can_challenge vong 68 o marketbattle, chua tung len) —
+  khong mat noi dung remote-only nao. Test moi xac nhan vang mat
+  tren remote (addition).
+- Deploy pck `722f0219` len gh-pages — CHUA CHAY, deploy van cho
+  chu noi 'day tiep'. Live van r41 pck `5f2a052f`.
 
