@@ -12643,7 +12643,8 @@ gửi lại cho ai.
    (thắng → holds có entry → mua dien-thoai-cu -10%).
 2. Tốt nghiệp khóa ngắn Sáng +10; trade/auction sau restart server
    (cần 2 client).
-3. Push main gộp tới r93 + deploy pck `ef840bd0` (staging
+3. Push main gộp tới r93 ĐÃ XONG ở vòng này (commit `2693458c`,
+   13 file); deploy pck `ef840bd0` (staging
    `tools/godot/build_gh_pages.py` rồi verify khớp byte) — CHƯA
    CHẠY, deploy vẫn chờ chủ nói 'đẩy tiếp'. Live vẫn r41
    pck `5f2a052f`.
