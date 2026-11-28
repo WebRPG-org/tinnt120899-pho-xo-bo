@@ -6287,3 +6287,6368 @@ import được coi như chưa có sprite, vẽ bằng code. **Luật:** mọi c
    `docs/tileset-plan.md` (tile Map003–018 tái dùng tile nhà trọ là
    PROVISIONAL, chờ art pass vẽ tile riêng theo khu).
 3. G2 còn lại (xem `docs/godot-g2.md`) rồi G4 online.
+
+## 64. Vòng 42 — 3 sprite sạp còn lại Map002 (25/11 ~18:45–19:30 +07, cron 18:45)
+
+Mục 1 §63.5: 3 sprite sạp còn lại (bánh-mì / gia-vị / đồ-khô) để cả
+8 biển SIGNS_MAP2 đều có sprite. Art làm song song qua subagent
+(artpass42), code làm cùng lúc. Lưu ý: 8 biển → 6 file sprite vì
+2 cặp biển dùng chung 1 sprite (TRÁI CÂY + HOA QUẢ → trai-cay;
+CÁ TƯƠI + THỊT HEO → ca-thit) — không thiếu sprite nào.
+
+### 64.1 Art (subagent artpass42) — XONG
+
+- 3 sprite, canvas 64×96 RGBA, nền trong suốt:
+  `stall_banhmi.png` 9.273 byte (3 chồng bánh mì vàng giòn + chả
+  lụa + pate + rau thơm), `stall_giavi.png` 7.857 byte (4 lọ ớt đỏ/
+  tỏi/hành tím/tiêu đen + gói gia vị), `stall_dokho.png` 9.058 byte
+  (mực/cá/tôm khô trong 3 rổ mây, tông nâu vàng). Mái hiên sọc
+  đỏ/trắng + mép vỏ sò, 2 cột chống gỗ, quầy vân gỗ — theo đúng hợp
+  đồng canvas vòng 41 (y 0–33 trong suốt, mái y 34–52, cột x 2–6 /
+  58–62, quầy y 76–96); không chữ, không biển, không người.
+- Gen lại: gia-vị 1 lần (v1 có tấm nền vàng cam đặc lấp khoảng trống
+  mái–quầy, siết "EMPTY, no backdrop, no wall, no panel" thì đạt);
+  đồ-khô 1 lần (v1 hàng treo lủng lẳng từ mái lấp khoảng trống, siết
+  "NOTHING hangs from the awning" thì đạt); bánh-mì 0 lần.
+- Kiểm chứng: y 0–33 có 0 pixel đục ở cả 3 file; cột chống ở y=56
+  đúng hợp đồng (bánh-mì x 2–4 / 59–61, gia-vị x 4–6 / 57–59, đồ-khô
+  x 4–5 / 58–59; mép mờ alpha của gia-vị chạm x57 nhưng lõi cột
+  alpha>128 là x5 + x58, gọn trong hợp đồng); mỗi sprite đúng 1
+  component alpha duy nhất; nền magenta + zoom 3× (không nền lạ,
+  không quầng xanh ở mép, 0 pixel mép bán-trong-suốt gần màu xanh
+  da trời); debug-white (bánh-mì 268 / gia-vị 326 / đồ-khô 193 px,
+  tất cả trong band mái 34–52, 0 px ở band khác). Note:
+  `visual-check/artpass42/stall-sprites-note.md` + script
+  `process_stalls_r42.py` (adapt từ vòng 41) + `verify_r42.py`.
+- Hạn chế: chỉ mặt trước; lọ gia-vị nhỏ ở tỉ lệ 1× trong game (đọc
+  rõ ở zoom 3×); gia-vị v2 chạm mép trên + dưới khung, đồ-khô v2
+  chạm mép dưới — phần chạm mép là 2 cạnh thẳng trùng đúng biên
+  sprite (mép trên mái → y=34, đáy quầy → y=96), không mất nội dung.
+
+### 64.2 Code + test — XONG
+
+| File | Đổi |
+|---|---|
+| `scripts/nadia_scene.gd` | `STALL_SPRITE_FILES` thêm 3 loại (`banh-mi`→`stall_banhmi`, `gia-vi`→`stall_giavi`, `do-kho`→`stall_dokho`) — nay đủ 6; `stall_sprite_kind` thêm 3 nhánh (banh-mi/gia-vi/do-kho, 1–1 với `stall_goods_kind`); comment vòng 41 cập nhật thành vòng 41+42; `_load_stall_sprites` comment "6 sprite". Không đổi đường vẽ (sprite đã có là vẽ ảnh, thiếu là vẽ code — nay không biển nào thiếu nữa). |
+| `tests/g4_r42_stall_sprite_test.gd` (mới) | 10 mục: 8 biển map đúng loại sprite (gồm 3 biển mới), không biển nào trả về ""; đường dẫn 3 sprite mới + 3 đường dẫn cũ vẫn đúng; đúng 6 sprite đăng ký; canvas 64×96 + đáy y +14; scene thật Map002 map_id 2, trạng thái sprite khớp file trên đĩa (6/6), về Map001 map_id 1. |
+| `tests/g4_r41_stall_sprite_test.gd` (sửa) | 2 check cũ nay sai theo thiết kế mới đã cập nhật: "dung 3 sprite" → "dung 6 sprite (3 vong 41 + 3 vong 42)"; "3 bien khong co sprite" → "3 bien vong 42 cung co sprite" (kiểm ở r42). Còn lại giữ nguyên (5 biển gốc, nhịp sạp, o le). |
+| `tools/godot/run_regression.sh` | Thêm `g4_r42_stall_sprite_test` (nay 70 suite). |
+| `visual-check/artpass42/check_r42.py` (mới) | Theo mẫu check_r41.py, cổng 8197 + ảnh zoom vùng sạp (clip y=600..1050) + crop đáy y=950..1280 (r42-03). |
+
+### 64.3 Verify thật vòng này
+
+- `--check-only` nadia_scene.gd + r42 test: PASS (exit 0).
+- Test mới `g4_r42_stall_sprite_test`: **10/10 PASS** (lúc art chưa
+  có: 3/6 sprite trên đĩa, fallback đúng; lúc art đủ: **6/6**).
+  Test r41 cập nhật: **13/13 PASS**.
+- Hồi quy đầy đủ: **70 OK, 0 FAIL** (69 cũ + 1 mới r42, gồm cả
+  server probe).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **22.118.376 byte, SHA `20e9c8ed…`**
+  (trước `5f2a052f`, +29.016 byte = đúng 3 sprite + code, không art
+  thừa); wasm không đổi `fc74679e`; HTTP 200 đủ 4 file (cổng 8197).
+  Pck chứa đúng 3 texture `.ctex` mới của stall (kiểm bằng `strings`).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass42/check_r42.py`, ảnh
+  `r42-01-map2` + `r42-02-stall-row-zoom` + `r42-03-stall-row-bottom`):
+  **0 console error, 0 pageerror, 0 request fail.**
+  - Map002: 6 sạp tách rời nhau (ô lẻ trống); biển 8 loại đọc được;
+    sạp BÁNH MÌ hiện rõ chồng bánh mì vàng trên quầy dưới mái sọc
+    đỏ/trắng; sạp ĐỒ KHÔ hiện rổ đồ khô nâu vàng dưới biển; sạp
+    GIA VỊ có biển tím + lọ gia vị nhưng bị nhãn "Góc Chế Tạo" che
+    một phần (lỗi nhãn đè sạp đã biết từ các vòng trước, không phải
+    lỗi sprite — texture đã nạp đủ 6/6 theo test headless).
+  - Còn lại (không sửa vòng này): nhãn NPC vẫn có thể đè lên sạp;
+    lọ gia-vị nhỏ ở tỉ lệ 1×.
+
+### 64.4 Push + Deploy — DỞ (main xong, gh-pages 7/10 lô, chờ phê duyệt)
+
+- Push main 3 lô + docs (chưa push docs): a `a4c9b770` (nadia_scene +
+  test r42 + sửa test r41 + run_regression.sh + check_r42.py, 6 paths);
+  b `69d7b06a` (3 .import sprite mới) — **lệnh local timeout 1200s
+  sau khi server đã nhận, đã xác minh nội dung remote khớp và khôi
+  phục record sync từ SHA thật, không đẩy lại**; c `137f9eea` (note +
+  scripts artpass42, 3 paths). Sync record 450 mục.
+- Deploy gh-pages pck `20e9c8ed` (164 part): 7/10 lô đã lên
+  (`b7f7e20e`, `f101a86a`, `cdb23c3c`, `ceffa79d`, `95e4cdce`,
+  `b8b759e6`, `84c2ee21` — part 000–139). Lô 8 (part 140–159) bị
+  timeout vì phê duyệt không được trả lời kịp — **đã kiểm bằng curl
+  live: part-140 trả 404, tức lô 8 thật sự chưa lên, không đẩy lại
+  khi chưa có phê duyệt mới**. Còn lại: lô 9 (part 160–163) + final
+  (versions.json + index.html). Live hiện vẫn chạy bản r41
+  (versions.json pin `5f2a052f`, kiểm bằng curl 200) — đúng, chưa
+  lật sang bản mới.
+- Lô docs (godot-g4 + roles-qc) chưa push — chờ deploy xong mới điền
+  SHA deploy vào §64.4 rồi push 1 lần.
+- **Đính chính vòng 43 (26/11 ~00:05): deploy r42 KHÔNG chờ nữa —
+  pck r43 `936c82ea` chứa toàn bộ nội dung r42 + tile xưởng Map003,
+  nên deploy r43 sẽ thay thế deploy r42 (live nhảy r41 → r43, bỏ qua
+  `20e9c8ed`). Part 000–139 của `20e9c8ed` đã lên gh-pages thành file
+  mồ côi (không hại, dọn định kỳ theo §vòng 8). Lô docs r42 (manifest
+  `pxb-push-main-r42-docs`) KHÔNG push riêng nữa — gộp vào lô docs
+  r43 (manifest `pxb-push-main-r43-docs`, cùng 2 file, đã gồm §64 +
+  §65 + mục roles-qc vòng 42 + 43).**
+- Lưu ý phê duyệt: lô b main timeout 1200s dù server đã nhận (lỗi
+  đã biết: lệnh local chờ xác nhận quá lâu); deploy lô 8 timeout
+  vì phê duyệt không trả lời kịp. Khi phê duyệt đến chậm, kiểm tra
+  head/sync record trước khi đẩy lại — không bao giờ đẩy lại mù.
+
+### 64.5 Việc tiếp theo
+
+1. **Chờ phê duyệt rồi deploy nốt gh-pages vòng 42:** lô 8
+   (part 140–159), lô 9 (part 160–163), final (versions.json +
+   index.html) → kiểm live pin `20e9c8ed` + đối chiếu byte 164 part
+   → điền SHA vào §64.4 → push lô docs.
+2. Rà soát art hiện có theo `docs/artpass-20-11.md` +
+   `docs/tileset-plan.md` (tile Map003–018 tái dùng tile nhà trọ là
+   PROVISIONAL, chờ art pass vẽ tile riêng theo khu).
+3. G2 còn lại (xem `docs/godot-g2.md`) rồi G4 online.
+
+## 65. Vòng 43 — Tile xưởng riêng Map003 Khu Công Nhân (25/11 ~23:45–26/11 00:xx +07, cron 22:45)
+
+Bối cảnh: deploy r42 kẹt phê duyệt (lô 8 timeout ~20:30; thử lại
+~23:45 thì tiến trình bị runtime restart giữa lúc chờ phê duyệt —
+đã xác minh live không đổi, part-140 vẫn 404, sync record 458 mục,
+không đẩy lại mù). Vòng này làm việc mới thay vì ngồi chờ: tile
+xưởng riêng đầu tiên cho 1 map (Map003), thay tile PROVISIONAL
+"nha-tro-bac" (nhà Bắc tái dùng làm xưởng) trong
+`atlas-map001.json` — đúng mục §64.5.2.
+
+### 65.1 Art (subagent artpass43) — XONG, gen 0 lần lại
+
+- Tile `xuong-map003.png` (64×64 RGBA): mái tôn sóng gạch đỏ
+  #B4452F, tường vàng ấm #E8C86A, biển trống khung đỏ KHÔNG chữ,
+  cửa cuốn mở thấy 2 bàn máy + 2 máy may, 2 thùng gỗ bên trái,
+  bánh xe đạp bên phải; không người, không chữ, lề đủ 4 phía
+  (bbox nguồn 1048×885, nền góc lệch tối đa 8,7).
+- Kiểm chứng: 1 component alpha duy nhất (3.105 px); 0 pixel mép
+  bán-trong-suốt gần màu xanh da trời (không quầng xanh); 0 pixel
+  gần-trắng trên debug-white; kiểm bằng mắt ở 1× và zoom 3× đều
+  đọc rõ nhà xưởng, không cắt mép. Note:
+  `visual-check/artpass43/workshop-tile-note.md` + script
+  `process_workshop_r43.py` (tách nền khoảng cách màu + alpha mềm
+  + nearest-fill RGB + resize LANCZOS, theo mẫu vòng 41/42).
+- Tôi kiểm lại bằng mắt: mái tôn đỏ + tường vàng + cửa cuốn mở
+  thấy máy may, đúng palette art-style.md.
+
+### 65.2 Code + test — XONG
+
+| File | Đổi |
+|---|---|
+| `tools/godot/convert_maps.py` | `ATLAS_PNG_OVERRIDE = {3: "atlas-map003.png"}` + `ATLAS_TILE_OVERRIDE` (tile 4 → tên `xuong-may-mai-ton`, source artpass43, hết PROVISIONAL); `convert()` áp override sau khi tính `png_name` + copy sâu `atlas["tiles"]` rồi patch. |
+| `src/godot/data/maps.json` (tạo lại) | Map003: `atlas_png` = `res://tiles/atlas-map003.png`, tile 4 tên mới; Map001/Map004/Map005 không đổi atlas; đủ 18 map. |
+| `src/godot/tiles/atlas-map003.png` (mới, binary — chỉ local + trong pck, KHÔNG push qua snapshot-push) | `visual-check/artpass43/build_atlas_map003.py`: atlas-map001.png đổi cell cột 3 (x=192) thành tile xưởng; kiểm: cell 3 khác 3096 px, 3184 px đục, các cell khác giống hệt. |
+| `src/godot/tiles/atlas-map003.png.import` (mới) | Copy từ `.import` atlas-map001 + `--import` sinh lại. |
+| `src/godot/tests/g4_r43_workshop_tile_test.gd` (mới) | 15 mục: Map003 atlas + tên tile 4 + hết PROVISIONAL; Map001/004/005 không đổi; PNG 512×64; cell 3 khác atlas cũ + có nhà (>800 px đục); cell khác giống hệt; scene thật Map003 (không NadiaScene, lớp tile hiện, atlas đúng file mới) 60 frame + về Map001 map_id 1. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r43_workshop_tile_test` (nay 71 suite). |
+| `visual-check/artpass43/check_r43.py` (mới) | Theo mẫu check_r42.py, cổng 8198 + ảnh Map003 + 2 crop zoom (hàng biên trái + góc dưới-phải). |
+
+### 65.3 Verify thật vòng này
+
+- `--check-only` test r43: PASS (exit 0).
+- Test mới `g4_r43_workshop_tile_test`: **15/15 PASS** (cell 3
+  khác atlas cũ 3068 px theo Godot — PIL đo 3096, lệch do import —
+  vẫn >500; 3184 px đục).
+- Hồi quy đầy đủ: **71 OK, 0 FAIL** (70 cũ + 1 mới r43, gồm cả
+  server probe).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **22.141.660 byte, SHA `936c82ea`**
+  (trước `20e9c8ed`, +23.284 byte = đúng atlas mới + code + test,
+  không art thừa); wasm không đổi `fc74679e`; HTTP 200 đủ 6 file
+  (cổng 8198). Pck chứa `atlas-map003` + `xuong-may-mai-ton`
+  (kiểm bằng `strings`).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass43/check_r43.py`, ảnh
+  `r43-01-map3` + `r43-02-top-row-zoom` + `r43-03-left-edge-zoom` +
+  `r43-04-bottom-right-zoom`): **0 console error, 0 pageerror,
+  0 request fail.**
+  - Đi chuỗi Map001 → Map002 → Map003 đúng cửa: HUD "Khu Công
+    Nhân", toast "Đã sang Khu Công Nhân", NPC Anh Ba + Chị Sáu
+    (walk cycle) + 2 cửa đúng tên.
+  - Tile xưởng hiện rõ ở hàng biên Map003: mái tôn đỏ + tường
+    vàng + cửa cuốn mở thấy máy may + biển trống không chữ — khác
+    hẳn tile nhà trọ cũ (nhà Bắc) và tile nhà nhỏ bên cạnh.
+  - Lưu ý: crop zoom đầu (y=380..760) chụp nhầm vùng trời — đã
+    crop lại đúng vùng biên (trái + dưới-phải) mới thấy tile;
+    lần sau căn crop theo vị trí ô L1 thay vì đoán y.
+  - Bài học: playwright nằm ở `~/.local/lib/python3.12/site-packages`
+    (bản 1.65.2), không phải python3 hệ thống — chạy verify phải
+    thêm `PYTHONPATH=$HOME/.local/lib/python3.12/site-packages`.
+
+### 65.4 Push + Deploy — DỞ (main kẹt phê duyệt, deploy chưa chạy)
+
+- Push main 3 lô: **lô a TIMEOUT 1200s** (chờ phê duyệt, 26/11
+  ~00:15–00:35) — đã xác minh remote main head vẫn `137f9eea`
+  (r42 lot c) + sync record 460 mục, tức lô a CHƯA lên (khác
+  trường hợp lô b r42: timeout nhưng server đã nhận). Thử đẩy lại
+  lô a thì bị chặn: `Error: an equivalent connector write is
+  already running for this request` — **lệnh ghi cũ vẫn đang chạy
+  chờ phê duyệt, KHÔNG được đẩy trùng**. Lô b/c/docs chưa chạy.
+  Lượt sau: kiểm tra remote head + sync record trước khi đẩy gì
+  thêm; chỉ đẩy tiếp khi lệnh ghi cũ đã xong/mất.
+- **Đính chính vòng 44 (26/11 ~01:00): thử đẩy lại lô a lúc 00:42 —
+  lệnh local TIMEOUT 1200s lần nữa; thẻ phê duyệt vẫn đang chờ
+  (`connector-attempt-2451f36d…`, yêu cầu 00:42:32 +07, scope
+  schedule "Pho Xo Bo 24 24 Build"); remote main head vẫn `137f9eea`,
+  tức lô a CHƯA lên. KHÔNG đẩy lại khi thẻ này còn chờ — chờ chủ
+  duyệt hoặc thẻ hết hạn rồi mới thử lại ở lượt sau. Deploy
+  gh-pages r43 chưa chạy (theo thứ tự main → deploy → docs).**
+- Deploy gh-pages pck `936c82ea` (165 part): chưa chạy (chờ main).
+- **Tin mới về deploy r42 (kiểm 26/11 ~00:35): lô 8 + lô 9 ĐÃ LÊN**
+  (sync record +2: `77f70e53` part 140–159, `d07f00f9` part
+  160–163; curl live part-140/159/160/163 đều 200) — tiến trình
+  deploy r42 bị restart giết lúc 23:47 hóa ra vẫn chạy tiếp phía
+  sau và được phê duyệt 2 lô. Chỉ còn lô final r42 (versions.json
+  + index.html) chưa lên; theo đính chính ở §64.4 thì KHÔNG đẩy
+  final r42 riêng nữa — deploy r43 sẽ đưa live từ r41 thẳng lên
+  r43.
+- Live hiện vẫn chạy bản r41 (pin `5f2a052f`).
+
+### 65.5 Việc tiếp theo
+
+1. Deploy xong pck `936c82ea` → kiểm live pin + đối chiếu byte
+   165 part → điền SHA vào §65.4 → push lô docs r43 (gộp cả
+   docs r42, xem §64.4).
+2. Tile riêng tiếp theo: Map004 Bến Xe Miền Đông (đang dùng
+   atlas-map002.png — tile nào PROVISIONAL?) rồi Map005–018 theo
+   `docs/tileset-plan.md`.
+3. Nhãn "Góc Chế Tạo" đè sạp gia-vị Map002 (phát hiện vòng 42,
+   chưa sửa — cần sửa vị trí nhãn craft, không phải sprite).
+4. G2 còn lại rồi G4 online.
+
+## 66. Vòng 44 — Tile nhà chờ Bến Xe riêng Map004 + thử đẩy lại main r43 (26/11 ~00:40–01:05 +07, cron 23:45)
+
+### 66.1 Art (subagent artpass44) — XONG, gen 0 lần lại
+
+- Tile `benxe-map004.png` (64×64 RGBA): mái vòm tôn sóng xanh teal,
+  tường vàng ấm #E8C86A, bảng giờ trống khung nâu KHÔNG chữ trên cửa
+  kính 4 cánh, 4 ghế chờ gỗ trước cửa, 2 cột gạch đỏ 2 bên; không
+  người, không chữ, lề đủ 4 phía, đáy nhà y=62.
+- Kiểm chứng (đo lại bằng PIL): 1.555 px đục, 271 px bán-trong-suốt,
+  0 pixel mép gần màu xanh da trời (không quầng xanh); note
+  `visual-check/artpass44/benxe-tile-note.md` + script
+  `process_benxe_r44.py` (tách nền khoảng cách màu, ngưỡng 40 +
+  ramp alpha mềm 30→50, theo mẫu vòng 43). Gen v1 dùng ngay.
+- Mục tiêu: thay tile 5 "sap-do-mai-xanh" (sạp mái xanh Kenney, 10 ô
+  L1 trên biên Map004) trong `atlas-map002.png` → atlas riêng
+  `atlas-map004.png` (đổi cell cột 4, x=256), theo đúng mẫu vòng 43.
+  Code nối (converter override + maps.json + test) CHƯA làm trong
+  vòng này — `maps.json` đang nằm trong manifest lô a r43 đang chờ
+  phê duyệt nên không được sửa cho tới khi lô a xong/mất.
+
+### 66.2 Push main r43 — KẸT PHÊ DUYỆT (xem §65.4)
+
+- Thử đẩy lại lô a 00:42: local TIMEOUT 1200s; thẻ phê duyệt
+  `connector-attempt-2451f36d…` vẫn chờ; remote head vẫn `137f9eea`;
+  lô a CHƯA lên, lô b/c/docs chưa chạy. KHÔNG đẩy lại khi thẻ còn chờ.
+- Deploy gh-pages pck `936c82ea` (165 part, staging đã verify
+  `--verify-only` PASS, index.html trỏ đúng pck/wasm mới) chưa chạy
+  — theo thứ tự main → deploy → docs, chờ lô a xong rồi mới deploy.
+- Live vẫn chạy bản r41 (pin `5f2a052f`).
+
+### 66.3 Khảo sát lỗi nhãn craft (chỉ đọc, chưa sửa)
+
+- Nhãn "Góc Chế Tạo" ở offset −40 trên icon craft (marker.gd
+  `_draw_craft`, sau sửa §8.6); sạp gia vị vẽ trong nadia_scene.gd
+  (3 lọ gia vị, không phải nhãn). Sửa đúng cần ảnh thật để căn vị
+  trí nhãn so với sprite sạp — để vòng sau, sau khi push/deploy
+  r43 xong.
+
+### 66.4 Việc tiếp theo
+
+1. Chờ thẻ phê duyệt lô a r43 (duyệt hoặc hết hạn) → kiểm remote
+   head + sync record → đẩy nốt lô b/c, deploy pck `936c82ea`,
+   kiểm live pin, push lô docs r43 (gồm §65 + §66).
+2. Nối tile nhà chờ Bến Xe Map004: converter override
+   (`ATLAS_PNG_OVERRIDE[4]`, tile 5 → `nha-cho-ben-xe`) +
+   `atlas-map004.png` (đổi cell cột 4 từ artpass44) + test r44
+   theo mẫu r43, rồi export + browser-verify + deploy.
+   **Tiến độ vòng 45:** atlas + test đã chuẩn bị xong (xem §67);
+   chỉ còn bước nối converter + regen maps.json, CHỜ lô a r43
+   xong/mất.
+3. Sửa nhãn "Góc Chế Tạo" đè sạp gia vị Map002 (cần ảnh thật).
+4. Tile riêng tiếp theo: Map005–018 theo `docs/tileset-plan.md`.
+
+## 67. Vòng 45 — Thử đẩy lại main r43 + chuẩn bị tile Map004 (26/11 ~01:15–01:25 +07, cron 00:45)
+
+### 67.1 Push main r43 — THỬ LẠI LÔ A, ĐANG CHỜ PHÊ DUYỆT
+
+- Thẻ phê duyệt lô a r43 (`connector-attempt-2451f36d…`, yêu cầu
+  00:42:32 +07) đã **TIMED OUT lúc 01:15:03 +07** (xem
+  permissions.history) — không còn thẻ chờ, không còn lệnh ghi
+  tương đương đang chạy. Sync record: remote main head vẫn
+  `137f9eea` (r42 lô c), lô a r43 CHƯA lên.
+- Theo §66.4 bước 1, thử đẩy lại lô a lúc ~01:16:
+  `pxb-push-main-r43.py 1 3` (lô a+b+c, dừng khi 1 lô lỗi; lô
+  docs chạy riêng sau deploy) — tiến trình nền, timeout 1200s
+  cho mỗi lệnh ghi, đang chờ phê duyệt mới của chủ.
+- Nếu lô a được duyệt → đẩy nốt lô b/c, deploy pck `936c82ea`,
+  kiểm live pin, push lô docs r43 (gồm §65 + §66 + §67).
+  Nếu lại timeout → ghi nhận, không đẩy trùng khi thẻ còn chờ.
+
+### 67.2 Chuẩn bị tile Map004 (không xung đột với lô a đang chờ)
+
+- **Không sửa file nào trong manifest lô a** (convert_maps.py,
+  maps.json, test r43, run_regression.sh, check_r43.py,
+  build_atlas_map003.py).
+- `visual-check/artpass44/build_atlas_map004.py` (mới, theo mẫu
+  r43): `atlas-map004.png` = atlas-map002.png đổi cell cột 4
+  (x=256) thành tile nhà chờ Bến Xe (`benxe-map004.png`).
+  Kiểm: cell 4 khác 1824 px, 2857 px đục, các cell khác giống
+  hệt; file 512×64 RGBA, MD5 `7f85efde…` (tính lại 2 lần giống
+  nhau). `.import` copy từ atlas-map002 + `--headless --import`
+  exit 0.
+- Test mới `src/godot/tests/g4_r44_benxe_tile_test.gd` (15 mục,
+  theo mẫu r43): Map004 → atlas-map004.png, tile 5 →
+  `nha-cho-ben-xe`, Map001/002/005 không đổi atlas; cell 4
+  khác >500 + đục >800 + cell khác giống hệt; scene Map004
+  (không NadiaScene, lớp tile hiện, atlas mới) 60 frame + về
+  Map001 map_id 1.
+- **Kiểm chứng âm trước khi nối converter: 12/15 PASS** — đúng
+  3 FAIL ở các check nối `maps.json` (Map004 vẫn atlas-map002,
+  tile 5 vẫn `sap-do-mai-xanh`, scene atlas cũ); phần PNG +
+  scene đều PASS (cell 4 khác 1810 px theo Godot, 2857 px
+  đục). Test đã chứng minh phát hiện đúng trạng thái chưa nối.
+
+### 67.3 Sửa nhãn "Góc Chế Tạo" đè biển "GIA VỊ" Map002 — XONG (code + test, chưa export)
+
+- **Khảo sát bằng ảnh thật** (script mới
+  `visual-check/artpass45/check_craft_label.py`, theo mẫu
+  check_r42.py; serve pck r43 `936c82ea` cổng 8199, Chromium
+  1255 + swiftshader, 0 console error/pageerror/requestfail):
+  ảnh `r45-01-map2.png` + crop zoom `r45-03/-04/-05/-06`.
+  Đo bằng PIL + xem ảnh: nhãn "Góc Chế Tạo" (x 287–520,
+  y 1057–1097) che mất "GI" của biển "GIA VỊ" (biển 52×12
+  của sạp bên tường, chỉ còn "A VỊ").
+- **Nguyên nhân:** biển sạp do NadiaScene vẽ (nền), resolver
+  không biết tới nên không tránh; nhãn craft neo giữa ô
+  (7,5), biển nằm ngay phải nhãn. Tương đối giữa nhãn và
+  biển không đổi khi camera cuộn (cả hai neo theo ô thế
+  giới) nên dịch cố định là đủ.
+- **Sửa:**
+  1. `marker.gd`: thêm `var map_id` (IsoMap đặt lúc tạo
+     marker) + const `CRAFT_LABEL_SHIFT_MAP2 := 48.0`; trong
+     `label_screen_rect()`, nhãn craft trên Map002 dịch trái
+     48px màn hình trước khi kẹp mép (mép phải 520 → 472,
+     biển bắt đầu ~x500, khe ~28px > LABEL_GAP 12).
+     Map001 không đổi.
+  2. `nadia_scene.gd`: phương thức mới
+     `stall_sign_screen_rects()` — rect màn hình 12 biển
+     sạp (6 biển hàng Map002 62×16 + 6 biển sạp bên 52×12),
+     cùng số đo với `_draw_market_row`/`_draw_side_stall`
+     (biển treo xe đồ ăn (6,12) không tính vì nó lắc theo
+     thời gian). **Cổng đúng theo code vẽ:** biển hàng chỉ
+     Map002, biển sạp bên chỉ khi `map_id != 1` (Map001 có
+     tường trong ảnh composite sẵn, không có sạp bên code).
+  3. `main.gd`: đưa rect biển vào `obstacles` của resolver
+     (vòng chính, KHÔNG vào `hard_obstacles`) để resolver tự
+     dịch nhãn khi có khoang trống trong vòng 120px.
+- **Hai lần sửa sai trong vòng 45 (bài học, đã sửa xong):**
+  1. Đã thử mở rộng cửa thoát: nhãn đè biển đáng kể thì
+     nhảy tối đa 200px — **phải bỏ**: nhảy xa phá vỡ bắt
+     buộc neo ≤120px (artpass12: "Sạp rau" rời neo −161px;
+     artpass4/5: "Hẻm trọ buổi tối" nhảy lên đè đầu nhân
+     vật). Biển che nhẹ thì chấp nhận; chỉ trường hợp nào
+     có khoang trống trong vòng 120px thì resolver tự dịch.
+  2. `stall_sign_screen_rects()` lúc đầu trả biển sạp bên
+     trên MỌI map — **sai**: Map001 không vẽ sạp bên code,
+     rect "ma" đẩy nhãn "Hẻm trọ buổi tối" lên đè đầu nhân
+     vật (artpass4/5 hỏng). Đã cổng `map_id != 1` theo đúng
+     `_draw_side_walls()`.
+  Sau 2 sửa: artpass12 14/14, artpass4 19/19, artpass5
+  17/17, polish 19/19. Hồi quy đầy đủ chạy lại sau 2 sửa
+  (xem log `~/workspace/regression-move.log`).
+- **Test mới trong `g4_polish_test.gd`** (nay 19 mục):
+  `_sign_screen_rects()` (tính độc lập từ hằng số NadiaScene
+  + canvas transform) + `_labels_vs_signs()` — nhãn
+  hotspot/craft/door không được đè biển sạp. Chạy:
+  **19/19 PASS**.
+- **Phát hiện thêm khi test (đã xác minh bằng ảnh thật):**
+  - Nhãn NPC "Anh Hải" đè 2 biển HOA QUẢ + RAU CỦ (nhãn
+    kẹp giữa 2 biển; dịch dọc/ngang đều không thoát —
+    lên 50 world thì vướng biển trên, xuống 52 thì che
+    đầu NPC; xem §67.4).
+  - Hotspot "Sạp rau buổi sáng" đè biển THỊT HEO 15×20px:
+    khoang trống gần nhất cách 210px > LABEL_ESCAPE_MAX_DRIFT
+    200 (tường chắn: 6 biển hàng + sprite NPC + nhân vật
+    liền nhau 661–1062) nên resolver giữ neo theo đúng
+    triết lý cũ (đè nhẹ còn đọc được, bay xa thì mất neo).
+    Ghi ngoại lệ có tên trong test, không giấu.
+- **Chưa làm:** export + browser-verify lại (xem §67.5).
+- **Export + browser-verify XONG (sau 2 sửa, ~02:40 +07):**
+  hồi quy đầy đủ **71/71 OK** (log
+  `~/workspace/regression-move.log`); `--check-only` 5 file
+  đổi OK; smoke `--quit-after 120` exit 0; export web exit 0,
+  pck mới MD5 `17077f4c` (22.165.836 byte — thay pck r43
+  `936c82ea` vì có code sửa nhãn). Browser-verify bằng
+  `check_craft_label.py` trên build mới: **0 console /
+  page / request error**; ảnh `r45-03` mới: biển "GIA VỊ"
+  hiện đủ chữ, nhãn "Góc Chế Tạo" đã dịch trái, khe rõ;
+  "Sạp rau" vẫn che "TH" của biển THỊT HEO (ngoại lệ đã
+  ghi); "Anh Hải" vẫn đè 2 biển (vấn đề biết §67.4).
+
+### 67.4 Vấn đề biết: nhãn "Anh Hải" đè biển — CHƯA SỬA (cần dời NPC, chờ lô a xong)
+
+- Đo: nhãn Anh Hải (world y −10..24, x 46..146, neo trên
+  đầu) đè biển HOA QUẢ ô (2,0) (y −16..0) và RAU CỦ ô
+  (4,0) (y 16..32); test headless đo giao nhau 60×12,5px.
+  Ảnh thật r45-05/-06: chữ "HOA QUẢ" mất "Ả", biển RAU CỦ
+  bị che mép trên.
+- Vì sao không sửa bằng resolver: nhãn NPC là nhãn thế giới
+  cố định, resolver KHÔNG dịch được (ghi rõ trong code);
+  dịch dọc ±50 world đều vướng (lên thì vào biển trên,
+  xuống thì che đầu NPC); dịch ngang ±123 world thì rời
+  neo; đổi NPC_LABEL_TOP toàn cục thì đổi mọi nhãn NPC.
+- **Hướng sửa đã kiểm chứng bằng số:** dời ô nhà Anh Hải
+  (6,3) → (6,5) (đất L0=1/L1=0, đi được như ô cũ; hàng
+  xóm (6,4)/(5,5)/(6,6) trống cho patrol; nhãn ở (6,5)
+  không chạm bất kỳ biển hàng/biển bên nào — đã tính đủ
+  12 rect biển). Thực hiện bằng override trong converter
+  (theo mẫu ADDED_DOORS) + regen maps.json + test + export
+  + browser-verify. **CHƯA làm được trong vòng này** vì
+  converter + maps.json đang nằm trong manifest lô a r43
+  chờ phê duyệt.
+- Ngoại lệ "Sạp rau buổi sáng" đè biển THỊT HEO 15×20px:
+  giữ nguyên (lý do ở §67.3), test bỏ qua riêng nhãn này
+  có ghi chú.
+
+### 67.5 Việc tiếp theo
+
+1. Chờ kết quả đẩy lô a r43 (duyệt/timeout) → làm tiếp theo
+   §67.1.
+2. Sau khi lô a xong/mất: nối converter r44 + regen maps.json +
+   chạy lại test r44 (kỳ vọng 15/15) + dời ô nhà Anh Hải
+   (6,3)→(6,5) theo §67.4 + export + browser-verify
+   (craft + sạp rau + Anh Hải) + deploy.
+   **Lưu ý: deploy dùng pck MỚI `17077f4c` (đã có fix
+   craft), không dùng pck r43 `936c82ea` nữa — staging
+   r43 đã verify cho pck cũ, cần regen staging/deploy từ
+   pck mới (sau khi nối r44 + sửa Anh Hải xong thì export
+   lại pck cuối rồi deploy một lần).**
+3. Tile riêng tiếp theo: Map005–018 theo `docs/tileset-plan.md`.
+
+## 68. Vòng 46 — Nối tile Map004 + dời Anh Hải sang (9,1) (26/11 ~02:45–03:15 +07, cron 01:45)
+
+### 68.1 Push main r43 — KẾT QUẢ: TIMEOUT LẦN 3, LÔ A CHƯA LÊN
+
+- Thẻ phê duyệt lô a r43 (`connector-attempt-7ce2b183…`, yêu cầu
+  01:17:10 +07) **TIMED OUT lúc 02:43:19 +07** (xem
+  permissions.history) — không còn thẻ chờ, không còn lệnh ghi
+  tương đương đang chạy, không còn tiến trình push nào sống.
+- Sync record vẫn 460 mục; remote main head vẫn `137f9eea` (r42 lô c)
+  — lô a r43 CHƯA lên sau 3 lần thử (00:15, 00:42, 01:17).
+- Theo §67.5 bước 2, lô a coi như "mất" → làm tiếp việc r44 +
+  Anh Hải thay vì ngồi chờ; nội dung r43 gộp chung vào push r44
+  (xem §68.5), script `pxb-push-main-r43.py` bỏ (không xóa file).
+
+### 68.2 Code — XONG
+
+| File | Đổi |
+|---|---|
+| `tools/godot/convert_maps.py` | `ATLAS_PNG_OVERRIDE[4] = "atlas-map004.png"` + `ATLAS_TILE_OVERRIDE[4]` (tile 5 → `nha-cho-ben-xe`, hết PROVISIONAL); thêm `NPC_MOVE` + áp sau khi port event xong. |
+| `src/godot/data/maps.json` (tạo lại) | Map004 atlas mới + tile 5 tên mới; Map002 Anh Hải (9,1); Map001/002/005 atlas không đổi; đủ 18 map. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r44_benxe_tile_test` (nay 70 suite vòng lặp + server_test + probe = 72 mục). |
+| `src/godot/tests/g4_r15_label_world_test.gd` | Sửa theo Anh Hải mới (xem §68.3). |
+| `src/godot/tests/g4_r43_workshop_tile_test.gd` | Sửa theo Map004 atlas mới (xem §68.3). |
+| `visual-check/artpass46/check_r46.py` (mới) | Browser-verify Map002 (nhãn Anh Hải) + Map003→Map004 (tile nhà chờ), theo mẫu check_craft_label.py. |
+
+### 68.3 Lỗi (6,5) → (9,1) + sửa 2 test lỗi thời — XONG
+
+- **Dời (6,3)→(6,5) SAI (chỉ xet biển, chưa xét nhãn):** regen xong,
+  polish rớt **18/19** — "Map002: nhan khong chong nhau Anh Hải vs
+  Sạp rau buổi sáng". Probe headless đo: nhãn Anh Hải
+  (298–422, 799–839) đè nhãn "Sạp rau" (245–554, 818–856)
+  123×20px; resolver giữ nguyên y muốn vì không tìm được khoang
+  trống trong vòng 120px: khoang trên bị chặn bởi vật cản sprite
+  Chị Lệ (y 706–821), khoang dưới bị chặn bởi sprite Anh Hải
+  (y 846–961); dịch ngang cũng không thoát (nhãn "Sạp rau" rộng
+  309px, kẹp x tối đa 395, luôn chạm sprite người chơi).
+  Bài học: **dời NPC phải kiểm tra CẢ nhãn khác + sprite, không
+  chỉ biển sap** — §67.4 chỉ tính 12 rect biển nên kết luận sai.
+- **Chọn (9,1) bằng liệt kê đủ 108 ô Map002** (script Python, công
+  thức màn hình đã đối chiếu probe): 4 tiêu chí — (1) nhãn Anh Hải
+  không đè nhãn "Sạp rau"/Chị Lệ; (2) nhãn không chạm 12 rect biển
+  sap; (3) nhãn "Sạp rau" không che sprite Anh Hải; (4) ô đi được
+  (L1=0), không event, có ô kề cho patrol. 24 ô đạt; chọn (9,1):
+  nhãn x 578–702 tách khỏi "Sạp rau" x 245–554 theo chiều X, 3 ô
+  patrol (10,1)/(8,1)/(9,2) đều L1=0 + không event; (6,2) LOẠI vì
+  nhãn "Sạp rau" (y 818) che mặt/ngực sprite (y 786–901).
+  Probe tạm `probe_r46_labels.gd` đã xóa sau khi dùng.
+- **Sửa 2 test lỗi thời theo thay đổi có chủ ý** (mẫu các vòng trước):
+  1. `g4_r15_label_world_test`: state 4 đặt người chơi ở (5,2)
+     trước khi kiểm — cách Chị Lệ (2,2) 3 ô, cách Anh Hải (9,1)
+     5 ô (đúng ngưỡng hiện nhãn) — thay vì kiểm ở spawn (5,4)
+     nơi Anh Hải cách 7 ô nên nhãn ẩn. **63/63 PASS** trở lại.
+  2. `g4_r43_workshop_tile_test`: check "Map001/004/005 không đổi
+     atlas" → "Map001/002/005 không đổi atlas" (Map004 nay có
+     atlas riêng, do test r44 khóa). **15/15 PASS** trở lại.
+
+### 68.4 Verify thật vòng này
+
+- Test mới `g4_r44_benxe_tile_test`: **15/15 PASS** (cell 4 khác
+  atlas cũ 1810 px, 2857 px đục).
+- Polish **19/19 PASS** (trở lại sau khi đổi sang (9,1)); r22 walk
+  **41/41 PASS** (patrol nhà mới không hỏng); r15 63/63; r43 15/15.
+- Hồi quy đầy đủ: **72 OK, 0 FAIL** (70 suite + server_test +
+  probe; log `~/workspace/regression-move.log`).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **22.165.948 byte, MD5 `e04cd7d2`**
+  (sha256 `64b8934d…`, thay `17077f4c` vòng 45); wasm không đổi
+  `fc74679e`; pck chứa `nha-cho-ben-xe` + Anh Hải tile [9,1]
+  (kiểm bằng `strings`/đọc byte); HTTP 200 đủ 4 file (cổng 8200).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass46/check_r46.py`, cổng 8200):
+  **0 console error, 0 pageerror, 0 request fail.**
+  - Đi chuỗi Map001 → Map002 → Map003 → Map004 đúng cửa (toast
+    "Đã sang Bến Xe Miền Đông"); Map002: người chơi (7,2), nhãn
+    "Anh Hải" hiện rõ trên đầu NPC mũ lưỡi trai xanh, không đè
+    nhãn "Sạp rau buổi sáng", biển HOA QUẢ/RAU CỦ/GIA VỊ đủ chữ
+    (fix craft vòng 45 vẫn giữ); Map004: Bác Tài + Anh Bốc Vác +
+    2 cửa đủ tên.
+  - Tile nhà chờ hiện rõ ở hàng biên Map004 (ảnh `r46-06/-07`):
+    mái vòm tôn sóng xanh teal + tường vàng + cửa kính — khác hẳn
+    tile sạp mái xanh cũ.
+  - Lưu ý: crop zoom đầu (y 300–800) chụp nhầm vùng trời — đã crop
+    lại đúng vùng biên (phải + trái) mới thấy tile; bài học cũ
+    vòng 43 lặp lại, lần sau căn crop theo vị trí ô L1 ngay từ đầu.
+
+### 68.5 Push + Deploy — ĐANG CHỜ PHÊ DUYỆT (bắt đầu lượt này)
+
+- **Push main r44 (gộp r43+r44+r45+r46):** script mới
+  `pxb-push-main-r44.py` + 4 manifest (`pxb-push-main-r44-a/b/c/
+  docs`, 13+2+4+2 paths). Lô a gồm converter + maps.json + test
+  r43/r44/r15 + run_regression.sh + check_r43/r46 + build_atlas
+  map003/004 + check_craft_label.py (vòng 45 chưa push); lô b 2
+  `.import` atlas-map003/004; lô c note + process script
+  artpass43/44; lô docs godot-g4 + roles-qc. Chạy nền
+  `pxb-push-main-r44.py 1 3` (lô docs chạy riêng sau deploy).
+  **Lỗi manifest lúc đầu:** lần chạy đầu báo ngay `--paths-file must
+  contain NUL-delimited paths ending in NUL` — manifest tôi tạo bằng
+  `b'\0'.join(...)` thiếu NUL cuối (manifest cũ kết thúc bằng NUL).
+  Đã sửa cả 14 manifest r44 (4 push + 10 deploy) rồi chạy lại.
+  Thẻ phê duyệt lô a: `connector-attempt-83daed20…` (yêu cầu
+  03:16:57 +07). Nếu lại timeout thì ghi nhận, không đẩy trùng khi
+  thẻ còn chờ.
+  **Khôi phục sau runtime restart (~03:24):** cả 2 tiến trình nền
+  (push + deploy) bị giết, log trống. Đã xác minh từ phía remote
+  (không cần phê duyệt, đọc public): main head vẫn `137f9eea`,
+  live `versions.json` vẫn pck `5f2a052f`, chunk mới `64b8934d`
+  404, sync record vẫn 460 — **không lô nào lên, không có trạng
+  thái dở, không cần undo**. Thử lại cả 2 trong lượt khôi phục:
+  push bám lại ĐÚNG thẻ cũ `83daed20…` (connector dedupe lệnh ghi
+  tương đương — thẻ lại hiện pending khi có exec sống chờ nó, không
+  tạo thẻ mới); deploy chạy lại, chưa thấy thẻ riêng. Nếu thẻ cũ
+  timeout thì lượt sau thử lại như thường.
+  **Kết quả thử lại (xác minh ~03:45):** CẢ HAI đều timeout 1200s
+  ở lô đầu — `github push-files` chờ phê duyệt tới giới hạn
+  1200s của wrapper `subprocess.run` rồi văng `TimeoutExpired`
+  (không bắt exception → script dừng; `PUSH_EXIT=0`/`DEPLOY_EXIT=0`
+  là mã của `tail`, không phải của push). Push lô a: thẻ
+  `83daed20…` vẫn "Awaiting decision" (hạn thẻ 26/11 20:16:57 UTC),
+  main head vẫn `137f9eea`, sync vẫn 460. Deploy lô 1/10: thẻ
+  riêng của deploy KHÔNG còn trong danh sách chờ (đã timeout/biến
+  mất) — lần thử deploy sau sẽ tạo thẻ mới, không trùng. Live
+  vẫn pck `5f2a052f`, chunk `64b8934d` 404 — **không gì lên**.
+  Không thử lại ngay trong lượt này: thẻ push vẫn chờ quyết định
+  của user, thử lại chỉ chờ lại 1200s nữa; lượt cron sau thử lại
+  theo lệ (r43 lô a đã timeout 3 lần kiểu này). BÀI HỌC: wrapper
+  `pxb-push-main-r44.py`/`pxb-deploy-r44.py` nên bắt
+  `TimeoutExpired` và ghi kết quả thay vì văng traceback — sửa ở
+  lượt sau trước khi thử lại.
+- **Deploy gh-pages pck `64b8934d`:** staging rebuild xong,
+  `build_gh_pages.py --verify-only` PASS (khớp byte); 165 chunk
+  (part-000..164) + final (versions.json + index.html); script
+  mới `pxb-deploy-r44.py` + 10 manifest
+  (`pxb-deploy-pck-64b8934d-batch1..9` + `-final`). Wasm không
+  đổi `fc74679e` nên không đẩy lại (đã có trên gh-pages từ vòng 9).
+  Chạy nền sau push main. Live hiện vẫn `5f2a052f` (r41).
+- **Chưa làm:** điền SHA push/deploy vào §68.5 sau khi có kết quả;
+  push lô docs r44 (gồm §65 + §66 + §67 + §68 + mục roles-qc
+  vòng 43–46 — lưu ý: roles-qc.md local mới tới vòng 42, các vòng
+  43–45 chưa kịp ghi dòng hiện trạng; vòng này ghi gộp).
+
+### 68.6 Việc tiếp theo
+
+1. Chờ kết quả push main r44 + deploy pck `64b8934d` → kiểm live
+   pin + đối chiếu byte → điền SHA vào §68.5 → push lô docs r44.
+   Trạng thái ~03:45: cả 2 thử lại đều timeout 1200s chờ phê duyệt;
+   thẻ push `83daed20…` vẫn chờ (hạn 26/11 20:16:57 UTC), thẻ
+   deploy đã biến khỏi danh sách chờ; lượt cron sau thử lại.
+   Trước đó: sửa wrapper bắt `TimeoutExpired` thay vì văng traceback.
+2. Tile riêng tiếp theo: Map005 Làng Đại Học theo
+   `docs/tileset-plan.md` (đang dùng atlas-map001.png — tile nào
+   PROVISIONAL?).
+3. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+## 69. Vòng 47 — Tile giảng đường riêng Map005 + sửa ghost atlas + sửa wrapper TimeoutExpired (26/11 ~04:00–04:50 +07, cron 03:45)
+
+### 69.1 Push main r44 — KẾT QUẢ: THẺ ĐÃ TIMEOUT, KHÔNG CÒN THẺ CHỜ
+
+- Thẻ phê duyệt lô a r44 (`connector-attempt-83daed20…`, yêu cầu
+  03:16:57 +07) **TIMED OUT lúc 03:59:48 +07** (xem
+  permissions.history) — `permissions.list_pending` hiện trống,
+  không còn thẻ chờ nào.
+- Đã xác minh tươi từ phía remote (curl public, không cần phê duyệt):
+  main head vẫn `137f9eea` (r42 lô c), live `versions.json` vẫn pck
+  `5f2a052f` (r41), sync record vẫn 460 mục — **không gì lên**.
+- Không thử đẩy lại lượt này: chủ đang ngủ, không ai bấm duyệt; 4 lần
+  thử trước (00:15, 00:42, 01:17, 03:16) đều timeout kiểu này. Theo
+  kế hoạch đã chốt với chủ (MEMORY 25/11): thử lại khi chủ nói
+  'đẩy tiếp' + bấm duyệt ngay. Push r45 gộp (xem §69.6) thay script
+  r44, như vòng 46 thay script r43.
+
+### 69.2 Art (subagent artpass45) — XONG, gen 0 lần lại
+
+- Tile `giangduong-map005.png` (64×64 RGBA): giảng đường 2 tầng
+  tường vàng ấm #E8C86A, mái ngói đỏ #B4452F, bảng tên trống khung
+  nâu KHÔNG chữ, cửa gỗ + bậc đá, cây xanh bên phải; không người,
+  không chữ, lề đủ 4 phía (bbox nguồn 1495×1003, lề 233/192/128/
+  149px, nền góc lệch tối đa 9,5).
+- Kiểm chứng: 1 component alpha duy nhất (2.143 px alpha>0); 0 pixel
+  mép bán-trong-suốt gần màu xanh da trời (không quầng xanh);
+  0 pixel gần-trắng; kiểm bằng mắt ở 1× và zoom 3× đều đọc rõ
+  giảng đường. Note: `visual-check/artpass45/giangduong-tile-note.md`
+  + script `process_giangduong_r45.py` (tách nền khoảng cách màu +
+  alpha mềm + nearest-fill RGB + resize LANCZOS, theo mẫu vòng 44).
+- Tôi kiểm lại bằng mắt: mái ngói đỏ + tường vàng + bảng trống +
+  cửa gỗ + bậc đá + cây xanh, đúng palette art-style.md.
+
+### 69.3 Lỗi ghost atlas — TÌM RA + SỬA (vòng 43/44/45)
+
+- **`build_atlas_map*.py` paste có mask nên giữ pixel cũ ở chỗ tile
+  mới trong suốt:** đo trên atlas đã ghép: Map005 **932 px ghost**
+  (cả mái nhà trọ cũ hiện lên trên tile giảng đường — ảnh debug
+  `/tmp/ghost-map005.png`, vùng đỏ là mái nhà cũ), Map003 **214 px**,
+  Map004 **1113 px**. Lỗi có từ mẫu vòng 43, không ai đo trước đây;
+  ảnh browser-verify vòng 43/44 nhìn thoáng qua tưởng ổn vì ghost
+  là pixel tối nằm sau tile mới — nhưng ở Map005 mái nhà cũ đỏ sậm
+  lộ rõ trên nền trời.
+- Sửa: **xóa trắng cell đích trước khi paste** + assert ghost=0
+  trong cả 3 script (`build_atlas_map003/004/005.py`). Build lại cả
+  3 atlas: Map003 cell 3 khác 3316 px / 2941 px đục / ghost 0;
+  Map004 cell 4 khác 2950 px / 1709 px đục / ghost 0; Map005 cell 3
+  khác 3079 px / 1977 px đục / ghost 0; các cell khác giống hệt atlas
+  cũ. Bài học: paste có mask chỉ đúng khi tile mới phủ kín cell —
+  atlas tile luôn có vùng trong suốt nên phải xóa cell trước.
+- Atlas r43/r44 đã từng browser-verify với ghost (không đo) — nay đã
+  sửa + verify lại trong cùng lượt này (ảnh r45-01/r45-02, xem §69.5).
+
+### 69.4 Code + test — XONG
+
+| File | Đổi |
+|---|---|
+| `tools/godot/convert_maps.py` | `ATLAS_PNG_OVERRIDE[5] = "atlas-map005.png"` + `ATLAS_TILE_OVERRIDE` (tile 4 → `giang-duong-lang-dai-hoc`, hết PROVISIONAL); sửa comment cũ "Map003/Map005 tái dùng atlas-map001.png". |
+| `src/godot/data/maps.json` (tạo lại) | Map005 atlas mới + tile 4 tên mới; Map001/002/003/004 không đổi; đủ 18 map. |
+| `src/godot/tiles/atlas-map005.png` (mới, binary — chỉ local + trong pck, KHÔNG push qua snapshot-push) | `visual-check/artpass45/build_atlas_map005.py`: atlas-map001.png đổi cell cột 3 (x=192) thành tile giảng đường (đã sửa ghost, xem §69.3). |
+| `src/godot/tiles/atlas-map005.png.import` (mới) | Copy từ `.import` atlas-map001 + `--import` sinh lại. |
+| `src/godot/tests/g4_r45_map005_tile_test.gd` (mới) | 16 mục: Map005 atlas + tên tile 4 + hết PROVISIONAL; Map001/002 không đổi; Map003/004 giữ atlas riêng; PNG 512×64; cell 3 khác atlas cũ + có giảng đường (>800 px đục); cell khác giống hệt; scene thật Map005 (không NadiaScene, lớp tile hiện, atlas đúng file mới) 60 frame + về Map001 map_id 1. |
+| `src/godot/tests/g4_r43_workshop_tile_test.gd` + `g4_r44_benxe_tile_test.gd` (sửa) | Sửa 2 test lỗi thời theo thay đổi có chủ ý (mẫu vòng 46): bỏ Map005 khỏi nhóm "không đổi atlas" (nay có atlas riêng) + cập nhật header. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r45_map005_tile_test` (nay 71 suite vòng lặp + server_test + probe = 73 mục; xem §69.5). |
+| `visual-check/artpass45/check_r45.py` (mới) | Browser-verify Map003→Map004→Map005 (chuỗi cửa (5,8)), cổng 8202 + ảnh + 2 crop zoom, theo mẫu check_r43/r46.py. |
+| `pxb-push-main-r44.py` + `pxb-deploy-r44.py` (sửa, local — không push) | Bắt `subprocess.TimeoutExpired` → in rõ "LOT x TIMEOUT (1200s cho phe duyet, chua co SHA)" + return 2, không văng traceback (đã kiểm chứng py_compile + mẫu timeout). Theo §68.6 bước 1. |
+
+### 69.5 Verify thật vòng này
+
+- `--check-only` 3 test mới/sửa: PASS (exit 0).
+- Test mới `g4_r45_map005_tile_test`: **16/16 PASS** (cell 3 khác
+  atlas cũ 3064 px theo Godot — PIL đo 3079, lệch do import — vẫn
+  >500; 1977 px đục).
+- Hồi quy đầy đủ: **73 OK, 0 FAIL** (71 suite vòng lặp + server_test
+  + probe; log `~/workspace/regression-move.log`).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **22.186.080 byte, MD5 `75daf7dc`**
+  (sha256 `0f349b52…`, thay `64b8934d` vòng 46); wasm không đổi
+  `fc74679e`; pck chứa `giang-duong-lang-dai-hoc` + `atlas-map005` +
+  `nha-cho-ben-xe` + `xuong-may-mai-ton` (kiểm bằng `strings`);
+  HTTP 200 đủ 4 file (cổng 8202); `GODOT_THREADS_ENABLED = false`.
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass45/check_r45.py`, cổng 8202):
+  **0 console error, 0 pageerror, 0 request fail.**
+  - Đi chuỗi Map001 → Map002 → Map003 → Map004 → Map005 đúng cửa
+    (toast "Đã sang Khu Công Nhân" / "Đã sang Bến Xe Miền Đông");
+    Map005: HUD "Phố Xô Bồ — Làng Đại Học", NPC Thầy Giáo + Sinh
+    Viên Làm Thêm, 2 cửa đúng tên ("Cửa về Bến Xe Miền Đông" /
+    "Cửa đi Chung Cư Cũ").
+  - Tile giảng đường hiện rõ ở hàng biên Map005 (ảnh `r45-05`):
+    tường vàng + mái ngói đỏ + nhiều cửa sổ, cao hơn hẳn nhà nhỏ
+    bên cạnh, khác hẳn tile nhà trọ cũ — **không còn bóng ghost**
+    (mái nhà cũ đã hết).
+  - Map003 (ảnh `r45-01`): tile xưởng mái tôn đỏ + cửa cuốn hiện
+    rõ, sạch ghost. Map004 (ảnh `r45-02`): tile nhà chờ mái vòm
+    teal hiện rõ, sạch ghost.
+  - Lưu ý: crop zoom đầu (y 300–800) lại chụp nhầm vùng trời —
+    bài học vòng 43/46 lặp lại lần 3; crop trái (0,600,360,1100)
+    mới thấy tile; lần sau căn crop theo vị trí ô L1 ngay từ đầu,
+    không đoán y.
+  - Player sau chuyển map dừng ở (5,5) thay vì (5,4) do giữ phím
+    400ms qua lúc chuyển map — không phải lỗi game (đã biết từ
+    các vòng trước: giữ phím đủ 1 frame poll thì bước thêm 1 ô).
+
+### 69.6 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- **Push main r45 (gộp r43+r44+r45+r46+r47, thay script r44):**
+  script mới `pxb-push-main-r45.py` + 4 manifest
+  (`pxb-push-main-r45-a/b/c/docs`). Lô a: converter + maps.json +
+  test r43/r44/r45 (+ .uid) + r15 + run_regression.sh +
+  check_r43/r45/r46 + build_atlas map003/004/005 +
+  check_craft_label.py; lô b: 3 `.import` atlas-map003/004/005;
+  lô c: note + process script artpass43/44/45; lô docs: godot-g4 +
+  roles-qc. Script đã có sẵn fix TimeoutExpired (§69.4).
+  **Chưa chạy — chờ chủ nói 'đẩy tiếp' + bấm duyệt** (xem §69.1).
+- **Deploy gh-pages pck `0f349b52`:** staging rebuild xong,
+  `build_gh_pages.py --verify-only` PASS (khớp byte); 165 chunk
+  (part-000..164) + final (versions.json + index.html); script mới
+  `pxb-deploy-r45.py` + 10 manifest
+  (`pxb-deploy-pck-0f349b52-batch1..9` + `-final`). Wasm không đổi
+  `fc74679e` nên không đẩy lại. Chạy sau push main.
+  Live hiện vẫn `5f2a052f` (r41).
+- **Chưa làm:** điền SHA push/deploy vào §69.6 sau khi có kết quả.
+
+### 69.7 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r45 (4 lô) → deploy pck `0f349b52`
+   (10 lô) → kiểm live pin + đối chiếu byte → điền SHA vào §69.6.
+2. Tile riêng tiếp theo: Map006 Chung Cư Cũ theo
+   `docs/tileset-plan.md` (đang dùng atlas-map001.png — tile nào
+   PROVISIONAL?).
+3. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+## 70. Vòng 48 — Tile chung cư cũ riêng Map006 (26/11 ~04:45–05:30 +07, cron 04:45)
+
+### 70.1 Art (subagent artpass48) — XONG, gen 0 lần lại
+
+- Tile `chungcu-map006.png` (64×64 RGBA, 9.579 byte): chung cư cũ 4
+  tầng + tầng trệt, tường vàng kem cũ có vết nứt/thời gian, ban công
+  bê tông lan can đơn giản 4 tầng, nhiều cửa sổ nhỏ + cửa chớp gỗ
+  nâu, mái bằng có bồn nước nâu nhỏ, tầng trệt mặt tiền cửa hàng
+  (quầy gỗ + cửa mở), dải bảng tên trống KHÔNG chữ; không người,
+  không chữ, lề đủ 4 phía (bbox nguồn 1157×1127, lề 381/382/76/77px,
+  nền góc lệch tối đa 7,5).
+- Kiểm chứng: 1 component alpha duy nhất (3.678 px alpha>0); 0 pixel
+  gần-trắng; 0 pixel mép bán-trong-suốt gần màu xanh da trời (không
+  quầng xanh); kiểm bằng mắt ở 1× và zoom 3× đều đọc rõ chung cư cũ.
+  Note: `visual-check/artpass48/chungcu-tile-note.md` + script
+  `process_chungcu_r48.py` (tách nền khoảng cách màu + alpha mềm +
+  nearest-fill RGB + resize LANCZOS, theo mẫu vòng 45).
+- Tôi kiểm lại bằng mắt: tường vàng kem + ban công + mái bằng có bồn
+  nước + bảng trống, đúng palette art-style.md.
+- Đính chính tên: thư mục `visual-check/artpass46/` ĐÃ CÓ từ vòng 46
+  (check_r46.py + ảnh r46-*) nên toàn bộ art vòng này dời sang
+  `visual-check/artpass48/` (test `g4_r48_*`, script `check_r48.py`);
+  không động vào file vòng 46. Bài học: thư mục artpassNN = số vòng,
+  kiểm tra trống trước khi giao art.
+
+### 70.2 Code + test — XONG
+
+| File | Đổi |
+|---|---|
+| `tools/godot/convert_maps.py` | `ATLAS_PNG_OVERRIDE[6] = "atlas-map006.png"` + `ATLAS_TILE_OVERRIDE` (tile 4 → `chung-cu-cu`, hết PROVISIONAL; Map006 L1: tile 4 có 10 ô, tile 5 có 10 ô, tile 3 có 8 ô — thay tile 4 như Map003/Map005). Tile 3/5 vẫn PROVISIONAL (nhà trọ tái dùng). |
+| `src/godot/data/maps.json` (tạo lại) | Map006 atlas mới + tile 4 tên mới; Map001–005 không đổi; đủ 18 map. |
+| `src/godot/tiles/atlas-map006.png` (mới, binary — chỉ local + trong pck, KHÔNG push qua snapshot-push) | `visual-check/artpass48/build_atlas_map006.py`: atlas-map001.png đổi cell cột 3 (x=192) thành tile chung cư (đã có sửa ghost vòng 47: xóa trắng cell trước khi paste + assert ghost=0). Chạy: cell 3 khác 3696 px / 3443 px đục / ghost 0. |
+| `src/godot/tiles/atlas-map006.png.import` (mới) | `--headless --import` sinh lại. |
+| `src/godot/tests/g4_r48_map006_tile_test.gd` (mới) | 16 mục: Map006 atlas + tên tile 4 + hết PROVISIONAL; Map001/002 không đổi; Map003/004/005 giữ atlas riêng; PNG 512×64; cell 3 khác atlas cũ + có chung cư (>800 px đục); cell khác giống hệt; scene thật Map006 (không NadiaScene, lớp tile hiện, atlas đúng file mới) 60 frame + về Map001 map_id 1. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r48_map006_tile_test` (nay 72 suite vòng lặp + server_test + probe = 74 mục; xem §70.3). |
+| `visual-check/artpass48/check_r48.py` (mới) | Browser-verify Map003→Map004→Map005→Map006 (chuỗi cửa (5,8)), cổng 8203 + ảnh + 2 crop zoom, theo mẫu check_r45.py. |
+
+### 70.3 Verify thật vòng này
+
+- `--check-only` test mới: PASS (exit 0). (Quirk đã biết §16.2: chỉ
+  check riêng file mới, không check main.gd đơn lẻ.)
+- Test mới `g4_r48_map006_tile_test`: **16/16 PASS** (cell 3 khác
+  atlas cũ 3687 px theo Godot — PIL đo 3696, lệch do import — vẫn
+  >500; 3443 px đục). 2 WARNING `load_from_file` là test-only, đã
+  biết từ r45.
+- Hồi quy đầy đủ: **74 OK, 0 FAIL** (72 suite vòng lặp +
+  server_test + probe; log `~/workspace/regression-move.log`).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **22.211.092 byte, SHA `d42cd0bc…`**
+  (thay `0f349b52` vòng 47); wasm không đổi `fc74679e`
+  (39.514.754 byte); pck chứa `chung-cu-cu` + `atlas-map006`
+  (kiểm bằng `strings` — chuỗi GDScript trong pck grep được ở đây
+  vì là tên tile/đường dẫn trong data JSON, khác lưu ý §12.3);
+  HTTP 200 đủ 4 file (cổng 8203); `GODOT_THREADS_ENABLED = false`.
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass48/check_r48.py`, cổng 8203):
+  **0 console error, 0 pageerror, 0 request fail.**
+  - Đi chuỗi Map001 → Map002 → Map003 → Map004 → Map005 → Map006
+    đúng cửa (toast "Đã sang Khu Công Nhân" / "Đã sang Làng Đại Học").
+  - Map006: HUD "Phố Xô Bồ — Chung Cư Cũ", NPC Cư Dân Chung Cư +
+    Bác Quản Lý, 2 cửa đúng tên ("Cửa về Làng Đại Học" /
+    "Cửa đi Phố Văn Phòng Nhỏ").
+  - Tile chung cư hiện rõ ở hàng biên Map006 (ảnh `r48-04`): khối
+    nhà 3–4 tầng tường vàng kem + nhiều cửa sổ, cao hơn hẳn nhà nhỏ
+    bên cạnh, khác hẳn tile nhà trọ cũ — **không còn bóng ghost**.
+  - Map003 (ảnh `r48-01`): tile xưởng mái tôn đỏ sạch ghost.
+    Map005 (ảnh `r48-03`): tile giảng đường mái ngói đỏ sạch ghost.
+  - Lưu ý: player sau chuyển map dừng ở (5,7) thay vì (5,4) do giữ
+    phím 400ms qua lúc chuyển map — không phải lỗi game (đã biết
+    từ vòng 47).
+- **Môi trường (ghi để vòng sau không mất thời gian):** VM sau
+  restart đã mất gói Python `playwright` (browser Chromium 1255
+  vẫn còn trong cache); đã cài lại `pip3 install --user
+  --break-system-packages playwright==1.65.2` nhưng `python3`
+  không thấy user site — chạy script bằng
+  `PYTHONPATH=/home/hatch/.local/lib/python3.12/site-packages`.
+
+### 70.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- **Push main r48 (gộp r43+r44+r45+r46+r47+r48, thay script r45):**
+  script mới `pxb-push-main-r48.py` + 4 manifest
+  (`pxb-push-main-r48-a/b/c/docs`). Lô a: converter + maps.json +
+  test r48 (+ .uid) + run_regression.sh + check_r48 +
+  build_atlas_map006 + nội dung r45-a cũ; lô b: 4 `.import`
+  atlas-map003/004/005/006; lô c: note + process script artpass48
+  (+ artpass43/44/45 cũ); lô docs: godot-g4 + roles-qc.
+  **Chưa chạy — chờ chủ nói 'đẩy tiếp' + bấm duyệt** (xem §69.1:
+  thẻ r44 đã timeout, không còn thẻ chờ; chủ đang ngủ).
+- **Deploy gh-pages pck `d42cd0bc`:** staging rebuild xong,
+  `build_gh_pages.py --verify-only` PASS (khớp byte); 165 chunk
+  (part-000..164) + final (versions.json + index.html); script mới
+  `pxb-deploy-r48.py` + 10 manifest
+  (`pxb-deploy-pck-d42cd0bc-batch1..9` + `-final`). Wasm không đổi
+  `fc74679e` nên không đẩy lại. Chạy sau push main.
+  Live hiện vẫn `5f2a052f` (r41).
+- **Chưa làm:** điền SHA push/deploy vào §70.4 sau khi có kết quả.
+
+### 70.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r48 (4 lô) → deploy pck `d42cd0bc`
+   (10 lô) → kiểm live pin + đối chiếu byte → điền SHA vào §70.4.
+2. Tile riêng tiếp theo: Map007 Phố Văn Phòng Nhỏ theo
+   `docs/tileset-plan.md` (đang dùng atlas-map001.png — tile nào
+   PROVISIONAL? L1 Map007: đếm lại như vòng 48 trước khi chọn tile).
+3. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+## 71. Vòng 49 — Tile văn phòng nhỏ riêng Map007 (26/11 ~05:45–06:30 +07, cron 05:45)
+
+### 71.1 Art (subagent artpass49) — XONG, gen 0 lần lại
+
+- Tile `vanphong-map007.png` (64×64 RGBA, 8.016 byte): tòa văn phòng
+  nhỏ 3 tầng, tường vàng kem (#FFF0BE), cửa kính xanh nhạt lớn, ban
+  công lan can + chậu cây, mái bằng, tầng trệt cửa kính + bảng tên
+  trống KHÔNG chữ; không người, không chữ, lề đủ 4 phía (bbox nguồn
+  767×1068, lề 577/576/112/100px, nền góc lệch tối đa 9,9).
+- Kiểm chứng: 1 component alpha duy nhất (2.694 px alpha>0); 0 pixel
+  gần-trắng; 0 pixel mép bán-trong-suốt gần màu xanh da trời (không
+  quầng xanh); kiểm bằng mắt ở 1× và zoom 3× đều đọc rõ tòa văn phòng.
+  Note: `visual-check/artpass49/vanphong-tile-note.md` + script
+  `process_vanphong_r49.py` (tách nền khoảng cách màu + alpha mềm +
+  nearest-fill RGB + resize LANCZOS, theo mẫu vòng 48).
+- Tôi kiểm lại bằng mắt: tường vàng kem + cửa kính + bảng trống, đúng
+  palette art-style.md.
+- Lưu ý: tòa nhà nguồn cao-hẹp (tỉ lệ ~0,72:1) nên tile chỉ rộng 45px
+  trong cell 64 — lề trong suốt 9px mỗi bên, khác chung cư vòng 48
+  lấp đầy hết chiều ngang. Không cắt chi tiết nào.
+
+### 71.2 Code + test — XONG
+
+| File | Đổi |
+|---|---|
+| `tools/godot/convert_maps.py` | `ATLAS_PNG_OVERRIDE[7] = "atlas-map007.png"` + `ATLAS_TILE_OVERRIDE` (tile 4 → `van-phong-nho`, hết PROVISIONAL; Map007 L1: tile 4 có 10 ô, tile 5 có 10 ô, tile 3 có 8 ô — thay tile 4 như Map003/Map005/Map006). Tile 3/5 vẫn PROVISIONAL (nhà trọ tái dùng). |
+| `src/godot/data/maps.json` (tạo lại) | Map007 atlas mới + tile 4 tên mới; Map001–006 không đổi; đủ 18 map. |
+| `src/godot/tiles/atlas-map007.png` (mới, binary — chỉ local + trong pck, KHÔNG push qua snapshot-push) | `visual-check/artpass49/build_atlas_map007.py`: atlas-map001.png đổi cell cột 3 (x=192) thành tile văn phòng (đã có sửa ghost vòng 47: xóa trắng cell trước khi paste + assert ghost=0). Chạy: cell 3 khác 3211 px / 1816 px đục / ghost 0. |
+| `src/godot/tiles/atlas-map007.png.import` (mới) | `--headless --import` sinh lại. |
+| `src/godot/tests/g4_r49_map007_tile_test.gd` (mới) | 16 mục: Map007 atlas + tên tile 4 + hết PROVISIONAL; Map001/002 không đổi; Map003/004/005/006 giữ atlas riêng; PNG 512×64; cell 3 khác atlas cũ + có văn phòng (>800 px đục); cell khác giống hệt; scene thật Map007 (không NadiaScene, lớp tile hiện, atlas đúng file mới) 60 frame + về Map001 map_id 1. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r49_map007_tile_test` (nay 73 suite vòng lặp + server_test + probe = 75 mục; xem §71.3). |
+| `visual-check/artpass49/check_r49.py` (mới) | Browser-verify Map001→Map002→Map003→Map004→Map005→Map006→Map007 (chuỗi cửa (5,8)), cổng 8204 + ảnh + 2 crop zoom, theo mẫu check_r48.py. |
+
+### 71.3 Verify thật vòng này
+
+- `--check-only` test mới: PASS (exit 0). (Quirk đã biết §16.2: chỉ
+  check riêng file mới, không check main.gd đơn lẻ.)
+- Test mới `g4_r49_map007_tile_test`: **16/16 PASS** (cell 3 khác
+  atlas cũ 3201 px theo Godot — PIL đo 3211, lệch do import — vẫn
+  >500; 1822 px đục).
+- Hồi quy đầy đủ: **75 OK, 0 FAIL** (73 suite vòng lặp +
+  server_test + probe; log `~/workspace/regression-move.log`).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **22.235.352 byte, SHA `cc4ecb3c…`**
+  (thay `d42cd0bc` vòng 48); wasm không đổi `fc74679e`
+  (39.514.754 byte); pck chứa `van-phong-nho` + `atlas-map007`
+  (kiểm bằng `strings`); HTTP 200 đủ 4 file (cổng 8204);
+  `GODOT_THREADS_ENABLED = false`.
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass49/check_r49.py`, cổng 8204):
+  **0 console error, 0 pageerror, 0 request fail.**
+  - Đi chuỗi Map001 → Map002 → Map003 → Map004 → Map005 → Map006
+    → Map007 đúng cửa (toast "Đã sang Phố Văn Phòng Nhỏ").
+  - Map007: HUD "Phố Xô Bồ — Phố Văn Phòng Nhỏ", NPC Nhân Viên Văn
+    Phòng + Thực Tập Sinh, 2 cửa đúng tên ("Cửa về Chung Cư Cũ" /
+    "Cửa đi Khu Chung Cư Cao Cấp").
+  - Tile văn phòng hiện rõ ở hàng biên Map007 (ảnh `r49-05` +
+    crop `r49-06`): khối nhà 3 tầng tường vàng kem + cửa kính, cao
+    hơn hẳn nhà nhỏ bên cạnh, khác hẳn tile nhà trọ cũ — **không
+    còn bóng ghost**.
+  - Map006 (ảnh `r49-04`): tile chung cư tường vàng kem nhiều cửa
+    sổ sạch ghost.
+  - Lưu ý: crop zoom `r49-07` (y 300–800) rơi vào vùng trời vì map
+    chỉ chiếm ~35% chiều cao màn dọc — crop `r49-06` (y 600–1100)
+    mới thấy rõ tile; bài học cho vòng sau: crop theo hàng biên
+    thực của map, không copy y từ vòng trước.
+- **Môi trường (ghi để vòng sau không mất thời gian):** chạy script
+  browser-verify bằng
+  `PYTHONPATH=/home/hatch/.local/lib/python3.12/site-packages`
+  (playwright cài user site, `python3` không thấy mặc định).
+
+### 71.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- **Push main r49 (gộp r43+r44+r45+r46+r47+r48+r49, thay script r48):**
+  script mới `pxb-push-main-r49.py` + 4 manifest
+  (`pxb-push-main-r49-a/b/c/docs`). Lô a: converter + maps.json +
+  test r49 (+ .uid) + run_regression.sh + check_r49 +
+  build_atlas_map007 + nội dung r48-a cũ; lô b: 5 `.import`
+  atlas-map003/004/005/006/007; lô c: note + process script artpass49
+  (+ artpass43/44/45/48 cũ); lô docs: godot-g4 + roles-qc.
+  **Chưa chạy — chờ chủ nói 'đẩy tiếp' + bấm duyệt** (xem §69.1:
+  thẻ r44 đã timeout, không còn thẻ chờ; chủ đang ngủ).
+- **Deploy gh-pages pck `cc4ecb3c`:** staging rebuild xong,
+  `build_gh_pages.py --verify-only` PASS (khớp byte); 165 chunk
+  (part-000..164) + final (versions.json + index.html); script mới
+  `pxb-deploy-r49.py` + 10 manifest
+  (`pxb-deploy-pck-cc4ecb3c-batch1..9` + `-final`). Wasm không đổi
+  `fc74679e` nên không đẩy lại. Chạy sau push main.
+  Live hiện vẫn `5f2a052f` (r41).
+- **Chưa làm:** điền SHA push/deploy vào §71.4 sau khi có kết quả.
+
+### 71.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r49 (4 lô) → deploy pck `cc4ecb3c`
+   (10 lô) → kiểm live pin + đối chiếu byte → điền SHA vào §71.4.
+2. Tile riêng tiếp theo: Map008 Khu Chung Cư Cao Cấp theo
+   `docs/tileset-plan.md` (đang dùng atlas-map001.png — tile nào
+   PROVISIONAL? L1 Map008: đếm lại như vòng 49 trước khi chọn tile).
+3. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+## 72. Vòng 50 — Tile chung cư cao cấp riêng Map008 (26/11 ~06:45–07:05 +07, cron 06:45)
+
+### 72.1 Art (subagent artpass50) — XONG, gen 1 lần
+
+- Tile `chungcu-map008.png` (64×64 RGBA, 6.662 byte): tòa chung cư cao
+  cấp 7 tầng, tường kem/cam nhạt, hàng cửa kính xanh nhạt + ban công nâu
+  cam + chậu cây mỗi tầng, mái bằng, tầng trệt cửa kính lối vào giữa +
+  bảng tên trống KHÔNG chữ; không người, không chữ, lề đủ 4 phía (bbox
+  nguồn 814×1407, đặt tại x=14, y=0, đáy chạm y=61).
+- Kiểm chứng: 1 component alpha duy nhất (2.232 px alpha>0, 1.920 px
+  alpha=255); 0 pixel gần-trắng; 0 pixel mép bán-trong-suốt gần màu xanh
+  da trời (không quầng xanh); kiểm bằng mắt ở 1× và zoom 3× đều đọc rõ
+  tòa chung cư cao tầng, khác hẳn tile nhà trọ cũ.
+  Note: `visual-check/artpass50/chungcu-tile-note.md` + script
+  `process_chungcu_r50.py`.
+- Khác mẫu vòng 49 (ghi trong note): kính cửa sổ ảnh này gần màu nền
+  hơn (trung bình (172,218,235), cách nền ~51) nên chạy đúng mẫu vòng
+  49 thì cửa sổ bị bán-trong-suốt — 78 pixel mép gần-xanh, toàn bộ nằm
+  bên trong tòa nhà (0 pixel trên viền ngoài). Sửa trong
+  `process_chungcu_r50.py`: ép alpha=255 cho toàn bộ vùng trong
+  silhouette (`binary_fill_holes` + `binary_erosion` 3px), chỉ dải biên
+  ngoài giữ ramp mềm; sau sửa cả 3 kiểm tra đều 0/đạt. Bài học vòng
+  sau: tile nào kính sáng gần màu nền thì kiểm mép TRONG tòa nhà, không
+  chỉ viền ngoài.
+- Tôi kiểm lại bằng mắt trên ảnh game (r50-06 + crop r50-07): khối nhà
+  cao tầng tường kem/cam + hàng cửa kính xanh hiện rõ ở hàng biên
+  Map008, cao hơn hẳn khối nhà thấp bên cạnh — **không còn bóng ghost**.
+
+### 72.2 Code + test — XONG
+
+| File | Đổi |
+|---|---|
+| `tools/godot/convert_maps.py` | `ATLAS_PNG_OVERRIDE[8] = "atlas-map008.png"` + `ATLAS_TILE_OVERRIDE` (tile 4 → `chung-cu-cao-cap`, hết PROVISIONAL; Map008 L1: tile 4 có 10 ô, tile 5 có 10 ô, tile 3 có 8 ô — thay tile 4 như Map003/Map005/Map006/Map007). Tile 3/5 vẫn PROVISIONAL (nhà trọ tái dùng). |
+| `src/godot/data/maps.json` (tạo lại) | Map008 atlas mới + tile 4 tên mới; Map001–007 không đổi; đủ 18 map. |
+| `src/godot/tiles/atlas-map008.png` (mới, binary — chỉ local + trong pck, KHÔNG push qua snapshot-push) | `visual-check/artpass50/build_atlas_map008.py`: atlas-map001.png đổi cell cột 3 (x=192) thành tile chung cư cao cấp (đã có sửa ghost vòng 47: xóa trắng cell trước khi paste + assert ghost=0). Chạy: cell 3 khác 3071 px / 2116 px đục / ghost 0. |
+| `src/godot/tiles/atlas-map008.png.import` (mới) | `--headless --import` sinh lại. |
+| `src/godot/tests/g4_r50_map008_tile_test.gd` (mới) | 16 mục: Map008 atlas + tên tile 4 + hết PROVISIONAL; Map001/002 không đổi; Map003/004/005/006/007 giữ atlas riêng; PNG 512×64; cell 3 khác atlas cũ + có chung cư (>800 px đục); cell khác giống hệt; scene thật Map008 (không NadiaScene, lớp tile hiện, atlas đúng file mới) 60 frame + về Map001 map_id 1. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r50_map008_tile_test` (nay 74 suite vòng lặp + server_test + probe = 76 mục; xem §72.3). |
+| `visual-check/artpass50/check_r50.py` (mới) | Browser-verify Map001→…→Map008 (chuỗi cửa (5,8)), cổng 8205 + ảnh + crop zoom, theo mẫu check_r49.py. |
+
+### 72.3 Verify thật vòng này
+
+- `--check-only` test mới: PASS (exit 0). (Quirk đã biết §16.2: chỉ
+  check riêng file mới, không check main.gd đơn lẻ.)
+- Test mới `g4_r50_map008_tile_test`: **16/16 PASS** (cell 3 khác
+  atlas cũ 3048 px theo Godot — PIL đo 3071, lệch do import — vẫn
+  >500; 2116 px đục).
+- Hồi quy đầy đủ: **76 OK, 0 FAIL** (74 suite vòng lặp +
+  server_test + probe; log `~/workspace/regression-move.log`).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **22.258.620 byte, SHA `097a3204`**
+  (thay `cc4ecb3c` vòng 49); wasm không đổi `fc74679e`
+  (39.514.754 byte); pck chứa `chung-cu-cao-cap` + `atlas-map008`
+  (kiểm bằng `strings`, 6 lần); HTTP 200 đủ 4 file (cổng 8205);
+  `GODOT_THREADS_ENABLED = false`.
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass50/check_r50.py`, cổng 8205):
+  **0 console error, 0 pageerror, 0 request fail.**
+  - Đi chuỗi Map001 → Map002 → Map003 → Map004 → Map005 → Map006
+    → Map007 → Map008 đúng cửa (HUD "Phố Xô Bồ — Khu Chung Cư Cao
+    Cấp", ô (5,7)).
+  - Map008: NPC Cư Dân Cao Cấp + Bảo Vệ Chung Cư, 2 cửa đúng tên
+    ("Cửa về Phố Văn Phòng Nhỏ" / "Cửa đi Phố Thương Mại").
+  - Tile chung cư cao cấp hiện rõ ở hàng biên Map008 (ảnh `r50-06`
+    + crop `r50-07`): khối nhà cao tầng tường kem/cam + hàng cửa kính
+    xanh, cao hơn hẳn nhà thấp bên cạnh, khác hẳn tile nhà trọ cũ —
+    **không còn bóng ghost**.
+  - Map007 (ảnh `r50-05`): tile văn phòng vòng 49 vẫn sạch ghost.
+- **Môi trường (ghi để vòng sau không mất thời gian):** chạy script
+  browser-verify bằng
+  `PYTHONPATH=/home/hatch/.local/lib/python3.12/site-packages`
+  (playwright cài user site, `python3` không thấy mặc định).
+
+### 72.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- **Push main r50 (gộp r43+r44+r45+r46+r47+r48+r49+r50, thay script r49):**
+  script mới `pxb-push-main-r50.py` + 4 manifest
+  (`pxb-push-main-r50-a/b/c/docs`). Lô a: converter + maps.json +
+  test r50 (+ .uid) + run_regression.sh + check_r50 +
+  build_atlas_map008 + nội dung r49-a cũ; lô b: 6 `.import`
+  atlas-map003/004/005/006/007/008; lô c: note + process script artpass50
+  (+ artpass43/44/45/48/49 cũ); lô docs: godot-g4 + roles-qc.
+  **Chưa chạy — chờ chủ nói 'đẩy tiếp' + bấm duyệt** (xem §69.1:
+  thẻ r44 đã timeout, không còn thẻ chờ; chủ đang ngủ).
+- **Deploy gh-pages pck `097a3204`:** staging rebuild xong,
+  `build_gh_pages.py --verify-only` PASS (khớp byte: pck 165 chunk,
+  22.258.620 byte); 165 chunk (part-000..164) + final (versions.json
+  + index.html); script mới `pxb-deploy-r50.py` + 10 manifest
+  (`pxb-deploy-pck-097a3204-batch1..9` + `-final`). Wasm không đổi
+  `fc74679e` nên không đẩy lại. Chạy sau push main.
+  Live hiện vẫn `5f2a052f` (r41).
+- **Chưa làm:** điền SHA push/deploy vào §72.4 sau khi có kết quả.
+
+### 72.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r50 (4 lô) → deploy pck `097a3204`
+   (10 lô) → kiểm live pin + đối chiếu byte → điền SHA vào §72.4.
+2. Tile riêng tiếp theo: Map009 Phố Thương Mại theo
+   `docs/tileset-plan.md` (đang dùng atlas-map001.png — L1 Map009 đã
+   đếm sẵn: tile 4 có 10 ô, tile 5 có 10 ô, tile 3 có 8 ô — thay tile 4
+   `nha-tro-bac` như các vòng trước).
+3. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+## 73. Vòng 51 — Tile cửa hàng phố thương mại riêng Map009 (26/11 ~07:45–07:58 +07, cron 07:45)
+
+### 73.1 Art (subagent artpass51) — XONG, gen 0 lần lại
+
+- Tile `cuahang-map009.png` (64×64 RGBA, 4.777 byte): nhà phố 3 tầng
+  tường vàng ấm, mái ngói cam, 2 tầng cửa chớp + ban công chậu cây,
+  biển hiệu vàng trống KHÔNG chữ, mái hiên sọc cam/trắng, cửa kính
+  trưng bày giỏ trái cây/lọ/túi hàng; không người, không chữ, lề đủ
+  4 phía (bbox nguồn 592×1246, lề trái/phải 504, trên 184, dưới 170;
+  scale 0,0498 → 29×62, căn giữa x=17, đáy y=61).
+- Kiểm chứng: 1 component alpha duy nhất (1.764 px alpha>0, 1.404 px
+  alpha=255); 0 pixel gần-trắng; 0 quầng xanh ở mép (0/360 pixel
+  bán-trong-suốt gần màu nền); hàng y62–63 trong suốt; kiểm bằng mắt
+  ở 1× và zoom 3× đều đọc rõ từng chi tiết. Tòa nhà hẹp (29 px rộng)
+  vì nhà phố gốc cao (tỉ lệ ~1:2,1) — vừa khung 64×62, đúng hợp đồng.
+  Note: `visual-check/artpass51/cuahang-tile-note.md` + script
+  `process_cuahang_r51.py` (theo mẫu vòng 50: tách nền bằng khoảng
+  cách màu, ép alpha=255 vùng trong silhouette, nearest-fill RGB
+  trước resize LANCZOS).
+- Tôi kiểm lại bằng mắt trên ảnh game (r51-07 + crop r51-08): dãy nhà
+  phố vàng mái ngói cam + mặt tiền xanh (cửa kính trưng bày) hiện rõ
+  ở hàng biên Map009, khác hẳn tile nhà trọ cũ — **không còn bóng
+  ghost**. Map008 (ảnh r51-06): tile chung cư cao cấp vòng 50 vẫn
+  sạch ghost, NPC Cư Dân Cao Cấp + Bảo Vệ Chung Cư đủ mặt.
+
+### 73.2 Code + test — XONG
+
+| File | Đổi |
+|---|---|
+| `tools/godot/convert_maps.py` | `ATLAS_PNG_OVERRIDE[9] = "atlas-map009.png"` + `ATLAS_TILE_OVERRIDE` (tile 4 → `cua-hang-thuong-mai`, hết PROVISIONAL; Map009 L1: tile 4 có 10 ô, tile 5 có 10 ô, tile 3 có 8 ô — thay tile 4 như Map003/Map005/Map006/Map007/Map008). Tile 3/5 vẫn PROVISIONAL (nhà trọ tái dùng). |
+| `src/godot/data/maps.json` (tạo lại) | Map009 atlas mới + tile 4 tên mới; Map001–008 không đổi; đủ 18 map. |
+| `src/godot/tiles/atlas-map009.png` (mới, binary — chỉ local + trong pck, KHÔNG push qua snapshot-push) | `visual-check/artpass51/build_atlas_map009.py`: atlas-map001.png đổi cell cột 3 (x=192) thành tile cửa hàng phố thương mại (đã có sửa ghost vòng 47: xóa trắng cell trước khi paste + assert ghost=0). Chạy: cell 3 khác 2946 px / 1604 px đục / ghost 0. |
+| `src/godot/tiles/atlas-map009.png.import` (mới) | `--headless --import` sinh lại. |
+| `src/godot/tests/g4_r51_map009_tile_test.gd` (mới) | 16 mục: Map009 atlas + tên tile 4 + hết PROVISIONAL; Map001/002 không đổi; Map003/004/005/006/007/008 giữ atlas riêng; PNG 512×64; cell 3 khác atlas cũ + có cửa hàng (>800 px đục); cell khác giống hệt; scene thật Map009 (không NadiaScene, lớp tile hiện, atlas đúng file mới) 60 frame + về Map001 map_id 1. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r51_map009_tile_test` (nay 75 suite vòng lặp + server_test + probe = 77 mục; xem §73.3). |
+| `visual-check/artpass51/check_r51.py` (mới) | Browser-verify Map001→…→Map009 (chuỗi cửa (5,8)), cổng 8206 + ảnh + crop zoom, theo mẫu check_r50.py. |
+
+### 73.3 Verify thật vòng này
+
+- `--check-only` test mới: PASS (exit 0). (Quirk đã biết §16.2: chỉ
+  check riêng file mới, không check main.gd đơn lẻ.)
+- Test mới `g4_r51_map009_tile_test`: **16/16 PASS** (cell 3 khác
+  atlas cũ 2937 px theo Godot — PIL đo 2946, lệch do import — vẫn
+  >500; 1605 px đục).
+- Hồi quy đầy đủ: **77 OK, 0 FAIL** (75 suite vòng lặp +
+  server_test + probe; log `~/workspace/regression-move.log`).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **22.279.936 byte, SHA `6e23ba3b`**
+  (thay `097a3204` vòng 50); wasm không đổi `fc74679e`
+  (39.514.754 byte); pck chứa `cua-hang-thuong-mai` + `atlas-map009`
+  (kiểm bằng `strings`, 6 lần); HTTP 200 đủ 4 file (cổng 8206);
+  `GODOT_THREADS_ENABLED = false`.
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass51/check_r51.py`, cổng 8206):
+  **0 console error, 0 pageerror, 0 request fail.**
+  - Đi chuỗi Map001 → Map002 → Map003 → Map004 → Map005 → Map006
+    → Map007 → Map008 → Map009 đúng cửa (HUD "Phố Xô Bồ — Phố
+    Thương Mại", ô (5,6)).
+  - Map009: NPC Chủ Cửa Hàng + Người Bán Hàng, 2 cửa đúng tên
+    ("Cửa về Khu Chung Cư Cao Cấp" / "Cửa đi Khu Công Nghệ").
+  - Tile cửa hàng phố thương mại hiện rõ ở hàng biên Map009 (ảnh
+    `r51-07` + crop `r51-08`): nhà phố vàng mái ngói cam + mặt tiền
+    xanh, khác hẳn tile nhà trọ cũ — **không còn bóng ghost**.
+  - Map008 (ảnh `r51-06`): tile chung cư cao cấp vòng 50 vẫn sạch ghost.
+- **Môi trường (ghi để vòng sau không mất thời gian):** chạy script
+  browser-verify bằng
+  `PYTHONPATH=/home/hatch/.local/lib/python3.12/site-packages`
+  (playwright cài user site, `python3` không thấy mặc định).
+
+### 73.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- **Push main r51 (gộp r43–r51, thay script r50):**
+  script mới `pxb-push-main-r51.py` + 4 manifest
+  (`pxb-push-main-r51-a/b/c/docs`). Lô a: converter + maps.json +
+  test r51 (+ .uid) + run_regression.sh + check_r51 +
+  build_atlas_map009 + nội dung r50-a cũ; lô b: 7 `.import`
+  atlas-map003/004/005/006/007/008/009; lô c: note + process script
+  artpass51 (+ artpass43/44/45/48/49/50 cũ); lô docs: godot-g4 +
+  roles-qc.
+  **Chưa chạy — chờ chủ nói 'đẩy tiếp' + bấm duyệt** (xem §69.1:
+  thẻ r44 đã timeout, không còn thẻ chờ; chủ đang ngủ).
+- **Deploy gh-pages pck `6e23ba3b`:** staging rebuild xong,
+  `build_gh_pages.py --verify-only` PASS (khớp byte: pck 166 chunk,
+  22.279.936 byte); 166 chunk (part-000..165) + final (versions.json
+  + index.html); script mới `pxb-deploy-r51.py` + 10 manifest
+  (`pxb-deploy-pck-6e23ba3b-batch1..9` + `-final`). Wasm không đổi
+  `fc74679e` nên không đẩy lại. Chạy sau push main.
+  Live hiện vẫn `5f2a052f` (r41).
+- **Chưa làm:** điền SHA push/deploy vào §73.4 sau khi có kết quả.
+
+### 73.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r51 (4 lô) → deploy pck `6e23ba3b`
+   (10 lô) → kiểm live pin + đối chiếu byte → điền SHA vào §73.4.
+2. Tile riêng tiếp theo: Map010 Khu Công Nghệ theo
+   `docs/tileset-plan.md` (đang dùng atlas-map001.png — L1 Map010 đã
+   đếm sẵn: tile 4 có 10 ô, tile 5 có 10 ô, tile 3 có 8 ô — thay tile 4
+   `nha-tro-bac` như các vòng trước).
+3. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+## 74. Vòng 52 — Tile tòa nhà công nghệ riêng Map010 (26/11 ~08:45–09:10 +07, cron 08:45)
+
+### 74.1 Art (subagent artpass52) — XONG, gen 0 lần lại
+
+- Tile `congnghe-map010.png` (64×64 RGBA, 8.617 byte): tòa nhà công nghệ
+  4 tầng, mặt kính xanh dương có khung chia ô, dải mái cam + ăng-ten nhỏ,
+  biển hiệu cam trống KHÔNG chữ, sảnh kính tầng trệt, 2 chậu cây;
+  không người, không chữ, lề đủ 4 phía (bbox nguồn 994×1090, scale
+  0,057 → 57×62, x=3, đáy y=61).
+- Kiểm chứng: 1 component alpha duy nhất (3.274 px alpha>0, 2.817 px
+  alpha=255); 0 pixel gần-trắng; 0 quầng xanh ở mép (0/457 pixel
+  bán-trong-suốt gần màu nền); hàng y62–63 trong suốt; kiểm bằng mắt
+  ở 1× và zoom 3× đều đọc rõ từng chi tiết. Khác mẫu vòng 51: ramp
+  alpha 40→50 (thay vì 30→50) + thêm bước dọn quầng sau resize —
+  LANCZOS blend để lại 16 pixel bán-trong-suốt gần màu nền, script
+  xóa alpha của đúng 16 pixel đó về 0 để chỉ số quầng về đúng 0.
+  Note: `visual-check/artpass52/congnghe-tile-note.md` + script
+  `process_congnghe_r52.py` (theo mẫu vòng 51: tách nền bằng khoảng
+  cách màu, ép alpha=255 vùng trong silhouette, nearest-fill RGB
+  trước resize LANCZOS).
+- Tôi kiểm lại bằng mắt trên ảnh magenta: tòa nhà kính xanh + dải mái
+  cam hiện rõ, nền trong suốt hoàn toàn, không vệt xanh quanh mép.
+
+### 74.2 Code + test — XONG
+
+| File | Đổi |
+|---|---|
+| `tools/godot/convert_maps.py` | `ATLAS_PNG_OVERRIDE[10] = "atlas-map010.png"` + `ATLAS_TILE_OVERRIDE` (tile 4 → `toa-nha-cong-nghe`, hết PROVISIONAL; Map010 L1: tile 4 có 10 ô, tile 5 có 10 ô, tile 3 có 8 ô — thay tile 4 như Map003/Map005/Map006/Map007/Map008/Map009). Tile 3/5 vẫn PROVISIONAL (nhà trọ tái dùng). |
+| `src/godot/data/maps.json` (tạo lại) | Map010 atlas mới + tile 4 tên mới; Map001–009 không đổi; đủ 18 map. |
+| `src/godot/tiles/atlas-map010.png` (mới, binary — chỉ local + trong pck, KHÔNG push qua snapshot-push) | `visual-check/artpass52/build_atlas_map010.py`: atlas-map001.png đổi cell cột 3 (x=192) thành tile tòa nhà công nghệ (đã có sửa ghost vòng 47: xóa trắng cell trước khi paste + assert ghost=0). Chạy: cell 3 khác 3425 px / 3077 px đục / ghost 0. |
+| `src/godot/tiles/atlas-map010.png.import` (mới) | `--headless --import` sinh lại. |
+| `src/godot/tests/g4_r52_map010_tile_test.gd` (mới) | 16 mục: Map010 atlas + tên tile 4 + hết PROVISIONAL; Map001/002 không đổi; Map003–009 giữ atlas riêng; PNG 512×64; cell 3 khác atlas cũ + có tòa nhà (>800 px đục); cell khác giống hệt; scene thật Map010 (không NadiaScene, lớp tile hiện, atlas đúng file mới) 60 frame + về Map001 map_id 1. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r52_map010_tile_test` (nay 76 suite vòng lặp + server_test + probe = 78 mục; xem §74.3). |
+| `visual-check/artpass52/check_r52.py` (mới) | Browser-verify Map001→…→Map010 (chuỗi cửa (5,8)), cổng 8207 + ảnh + crop zoom, theo mẫu check_r51.py. |
+
+### 74.3 Verify thật vòng này
+
+- `--check-only` test mới: PASS (exit 0). (Quirk đã biết §16.2: chỉ
+  check riêng file mới, không check main.gd đơn lẻ.)
+- Test mới `g4_r52_map010_tile_test`: **16/16 PASS** (cell 3 khác
+  atlas cũ 3414 px theo Godot — PIL đo 3425, lệch do import — vẫn
+  >500; 3077 px đục).
+- Hồi quy đầy đủ: **78 OK, 0 FAIL** (76 suite vòng lặp +
+  server_test + probe; log `~/workspace/regression-move.log`).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web exit 0: pck **22.304.564 byte, SHA `8d3d5711`**
+  (thay `6e23ba3b` vòng 51); wasm không đổi `fc74679e`
+  (39.514.754 byte); pck chứa `toa-nha-cong-nghe` + `atlas-map010`
+  (kiểm bằng `strings`); HTTP 200 đủ 4 file (cổng 8207);
+  `GODOT_THREADS_ENABLED = false`.
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass52/check_r52.py`, cổng 8207):
+  **0 console error, 0 pageerror, 0 request fail.**
+  - Đi chuỗi Map001 → … → Map011 đúng cửa (vượt 1 map so với
+    kịch bản — xem ghi chú lệch dưới); ảnh `r52-07-map9.png`
+    thực chất là **Map010 Khu Công Nghệ** (HUD "Phố Xô Bồ — Khu
+    Công Nghệ", ô (5,4), toast "Đã sang Khu Công Nghệ").
+  - Map010: NPC Lập Trình Viên + Kỹ Sư Phần Mềm, 2 cửa đúng tên
+    ("Cửa về Phố Thương Mại" / "Cửa đi Phố Tây").
+  - Tile tòa nhà công nghệ hiện rõ ở hàng biên Map010 (ảnh
+    `r52-07` + crop `r52-09-map10-left.png`, crop lại từ `r52-07`
+    theo mẫu y 600–1100): nhà kính xanh + dải mái cam, khác hẳn
+    tile nhà trọ cũ — **không còn bóng ghost**.
+  - Map009 (ảnh `r52-06`): tile cửa hàng phố thương mại vòng 51
+    vẫn sạch ghost.
+- **Lệch kịch bản — ghi để vòng sau không mất thời gian:** chân
+  Map007→Map008 chuyển 2 lần trong 4 lần giữ phím Down (giữ
+  400ms thỉnh thoảng đi hơn 1 ô khi tốc độ game headless thay đổi
+  theo tải — cùng họ lỗi §9.1, nhưng lần này đi THỪA chứ không
+  miss). Kết quả: mọi ảnh từ `r52-06` trở đi lệch +1 map so với
+  tên file (`r52-06` = Map009, `r52-07` = Map010, `r52-08` =
+  Map011). Game tự nó chuyển cửa đúng ở mọi cửa — không phải lỗi
+  game. Đã crop lại `r52-09` từ đúng ảnh Map010 (`r52-07`).
+  Vòng sau: xác nhận tên map trong HUD sau mỗi chân trước khi
+  chụp, hoặc đọc `window.__pxb_map` nếu có, thay vì tin tên file.
+- **Môi trường (ghi để vòng sau không mất thời gian):** chạy script
+  browser-verify bằng
+  `PYTHONPATH=/home/hatch/.local/lib/python3.12/site-packages`
+  (playwright cài user site, `python3` không thấy mặc định).
+
+### 74.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- **Push main r52 (gộp r43–r52, thay script r51):**
+  script mới `pxb-push-main-r52.py` + 4 manifest
+  (`pxb-push-main-r52-a/b/c/docs`). Lô a: converter + maps.json +
+  test r52 (+ .uid) + run_regression.sh + check_r52 +
+  build_atlas_map010 + nội dung r51-a cũ; lô b: 8 `.import`
+  atlas-map003/004/005/006/007/008/009/010; lô c: note + process
+  script artpass52 (+ artpass43/44/45/48/49/50/51 cũ); lô docs:
+  godot-g4 + roles-qc.
+  **Chưa chạy — chờ chủ nói 'đẩy tiếp' + bấm duyệt** (xem §69.1:
+  thẻ r44 đã timeout, không còn thẻ chờ; live vẫn `5f2a052f` r41).
+- **Deploy gh-pages pck `8d3d5711`:** staging rebuild xong,
+  `build_gh_pages.py --verify-only` PASS (khớp byte: pck 166 chunk,
+  22.304.564 byte; wasm 293 chunk không đổi); 166 chunk
+  (part-000..165) + final (versions.json + index.html); script mới
+  `pxb-deploy-r52.py` + 10 manifest
+  (`pxb-deploy-pck-8d3d5711-batch1..9` + `-final`). Wasm không đổi
+  `fc74679e` nên không đẩy lại. Chạy sau push main.
+  Live hiện vẫn `5f2a052f` (r41).
+- **Chưa làm:** điền SHA push/deploy vào §74.4 sau khi có kết quả.
+
+### 74.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r52 (4 lô) → deploy pck `8d3d5711`
+   (10 lô) → kiểm live pin + đối chiếu byte → điền SHA vào §74.4.
+2. Tile riêng tiếp theo: Map011 Phố Tây theo
+   `docs/tileset-plan.md` (đang dùng atlas-map001.png — L1 Map011 đã
+   đếm sẵn: tile 4 có 10 ô, tile 5 có 10 ô, tile 3 có 8 ô — thay tile 4
+   `nha-tro-bac` như các vòng trước).
+3. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+## 75. Vòng 53 — Tile nhà phố Tây riêng Map011 (26/11 ~09:45–10:05 +07, cron 09:45)
+
+### 75.1 Art (subagent artpass53) — XONG, gen 0 lần lại
+
+- Tile `photay-map011.png` (64×64 RGBA, 9.756 byte): nhà phố Pháp cổ
+  2 tầng, tường vàng kem, 3 cửa sổ vòm xanh lá tầng trên, ban công
+  sắt đen uốn, mái ngói đỏ, biển hiệu trống KHÔNG chữ phía trên cửa,
+  hiên cà phê tầng trệt có mái sọc xanh trắng + bàn ghế + 4 chậu cây
+  đỏ; không người, không chữ, lề đủ 4 phía (bbox nguồn 970×992,
+  scale 0,0625 → 61×62, x=1, đáy y=61).
+- Kiểm chứng: 1 component alpha duy nhất (3.452 px alpha>0, 3.033 px
+  alpha=255); 0 pixel gần-trắng; 0 quầng xanh ở mép (0/419 pixel
+  bán-trong-suốt gần màu nền (137,197,231)); hàng y62–63 trong suốt;
+  kiểm bằng mắt ở 1× và zoom 3× đều đọc rõ từng chi tiết. Tôi đo
+  độc lập bằng PIL, khớp đúng số liệu note của subagent. Không cần
+  dọn quầng sau resize (LANCZOS không để lại pixel gần-nền nào —
+  khác vòng 52 phải xóa 16 px).
+- Note: `visual-check/artpass53/photay-tile-note.md` + script
+  `process_photay_r53.py` (theo mẫu vòng 52: tách nền bằng khoảng
+  cách màu, ép alpha=255 vùng trong silhouette, nearest-fill RGB
+  trước resize LANCZOS).
+
+### 75.2 Code + test — XONG
+
+| File | Đổi |
+|---|---|
+| `tools/godot/convert_maps.py` | `ATLAS_PNG_OVERRIDE[11] = "atlas-map011.png"` + `ATLAS_TILE_OVERRIDE` (tile 4 → `nha-pho-tay`, hết PROVISIONAL; Map011 L1: tile 4 có 10 ô, tile 5 có 10 ô, tile 3 có 8 ô — thay tile 4 như Map003/Map005/Map006/Map007/Map008/Map009/Map010). Tile 3/5 vẫn PROVISIONAL (nhà trọ tái dùng). |
+| `src/godot/data/maps.json` (tạo lại) | Map011 atlas mới + tile 4 tên mới; Map001–010 không đổi; đủ 18 map. |
+| `src/godot/tiles/atlas-map011.png` (mới, binary — chỉ local + trong pck, KHÔNG push qua snapshot-push) | `visual-check/artpass53/build_atlas_map011.py`: atlas-map001.png đổi cell cột 3 (x=192) thành tile nhà phố Tây (đã có sửa ghost vòng 47: xóa trắng cell trước khi paste + assert ghost=0). Chạy: cell 3 khác 3565 px / 3285 px đục / ghost 0. |
+| `src/godot/tiles/atlas-map011.png.import` (mới) | `--headless --import` sinh lại. |
+| `src/godot/main.gd` | `load_map()` ghi thêm `window.__pxb_map = <map_id>` (chỉ trên web, `OS.has_feature("web")`) — để script browser-verify đối chiếu map sau mỗi chân, sửa gốc bài học vòng 52 (tên file không phát hiện được ảnh lệch +1 map). |
+| `src/godot/tests/g4_r53_map011_tile_test.gd` (mới) | 16 mục: Map011 atlas + tên tile 4 + hết PROVISIONAL; Map001/002 không đổi; Map003–010 giữ atlas riêng; PNG 512×64; cell 3 khác atlas cũ + có nhà phố Tây (>800 px đục); cell khác giống hệt; scene thật Map011 (không NadiaScene, lớp tile hiện, atlas đúng file mới) 60 frame + về Map001 map_id 1. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r53_map011_tile_test` (nay 77 suite vòng lặp + server_test + probe = 79 mục; xem §75.3). |
+| `visual-check/artpass53/check_r53.py` (mới) | Browser-verify Map001→…→Map011 (chuỗi cửa (5,8)), cổng 8208 + ảnh + crop zoom, theo mẫu check_r52.py + đọc `window.__pxb_map` sau mỗi chân. |
+
+### 75.3 Verify thật vòng này
+
+- `--check-only` test mới + main.gd: PASS (exit 0).
+- **Lỗi gặp lần đầu, đã sửa:** chạy test r53 ngay sau khi ghép atlas
+  thì `iso_map.gd:159` báo `Cannot create tile / atlas has no tile at
+  (0,0)` + test TIMEOUT — vì chưa chạy `--headless --import` nên
+  chưa có `atlas-map011.png.import`, TileSet không nhận texture mới.
+  Các vòng trước đều import trước khi test; vòng này quên bước đó.
+  Chạy `--headless --import` (exit 0, `.import` sinh ra) rồi test
+  lại thì **16/16 PASS**. Bài học: atlas PNG mới phải import trước
+  khi chạy test headless — ghi vào checklist vòng sau.
+- Test mới `g4_r53_map011_tile_test`: **16/16 PASS** (cell 3 khác
+  atlas cũ 3552 px theo Godot — PIL đo 3565, lệch do import — vẫn
+  >500; 3287 px đục).
+- Hồi quy đầy đủ: **79 OK, 0 FAIL** (77 suite vòng lặp +
+  server_test + probe; log `~/workspace/regression-move.log`).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web: lần 1 exit 1 — `Target folder does not exist:
+  "src/godot-build"` vì chạy từ repo root với đường dẫn tương đối
+  (preset export_path `../godot-build` tính từ project dir, không
+  phải repo root); chạy lại từ `src/godot` với `../godot-build`
+  thì exit 0. pck **22.329.528 byte, SHA `0b73e5c6`**
+  (thay `8d3d5711` vòng 52); wasm không đổi `fc74679e`
+  (39.514.754 byte); pck chứa `nha-pho-tay` + `atlas-map011`
+  (kiểm bằng `strings`); HTTP 200 đủ 4 file (cổng 8208);
+  `GODOT_THREADS_ENABLED = false`.
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass53/check_r53.py`, cổng 8208):
+  **0 console error, 0 pageerror, 0 request fail.**
+  - `window.__pxb_map` đối chiếu đúng cả 10 chân: 2→3→4→5→6→7→8→
+    9→10→11, không lệch map nào — cầu nối mới có tác dụng (vòng 52
+    lệch +1 mà không phát hiện được).
+  - Map011: HUD "Phố Xô Bồ — Phố Tây", NPC Nhân Viên Lễ Tân +
+    Hướng Dẫn Viên, 2 cửa đúng tên ("Cửa về Khu Công Nghệ" /
+    "Cửa đi Khu Biệt Thự Ven Sông").
+  - Tile nhà phố Tây hiện rõ ở hàng biên Map011 (ảnh `r53-09` +
+    crop `r53-10-map11-left.png`): tường vàng kem + mái ngói đỏ +
+    cửa vòm xanh + ban công sắt đen, khác hẳn tile nhà trọ cũ —
+    **không còn bóng ghost**.
+  - Map010 (ảnh `r53-08`): tile tòa nhà công nghệ vòng 52 vẫn
+    sạch ghost.
+- **Cảnh báo export đã biết, không chặn:** `WARNING: UID duplicate
+  detected between res://tiles/atlas-map003.png and
+  res://tiles/atlas-map001.png` (+ map004/map002, map005/map003…)
+  — các atlas copy từ atlas-map001 chia UID; đã có từ các vòng
+  trước, export vẫn exit 0, pck vẫn đúng byte. Ghi để vòng sau
+  khỏi mất thời gian chẩn đoán lại.
+
+### 75.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- **Push main r53 (gộp r43–r53, thay script r52):**
+  script mới `pxb-push-main-r53.py` + 4 manifest
+  (`pxb-push-main-r53-a/b/c/docs`). Lô a: converter + maps.json +
+  main.gd (`__pxb_map`) + test r53 (+ .uid) + run_regression.sh +
+  check_r53 + build_atlas_map011 + nội dung r52-a cũ; lô b: 9
+  `.import` atlas-map003/004/005/006/007/008/009/010/011; lô c:
+  note + process script artpass53 (+ artpass43/44/45/48/49/50/51/52
+  cũ); lô docs: godot-g4 + roles-qc.
+  **Chưa chạy — chờ chủ nói 'đẩy tiếp' + bấm duyệt** (xem §69.1:
+  thẻ r44 đã timeout, không còn thẻ chờ; live vẫn `5f2a052f` r41).
+- **Deploy gh-pages pck `0b73e5c6`:** staging rebuild xong,
+  `build_gh_pages.py` verify PASS (khớp byte: pck 166 chunk,
+  22.329.528 byte; wasm 293 chunk không đổi); 166 chunk
+  (part-000..165) + final (versions.json + index.html); script mới
+  `pxb-deploy-r53.py` + 10 manifest
+  (`pxb-deploy-pck-0b73e5c6-batch1..9` + `-final`). Wasm không đổi
+  `fc74679e` nên không đẩy lại. Chạy sau push main.
+  Live hiện vẫn `5f2a052f` (r41).
+- **Chưa làm:** điền SHA push/deploy vào §75.4 sau khi có kết quả.
+
+### 75.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r53 (4 lô) → deploy pck `0b73e5c6`
+   (10 lô) → kiểm live pin + đối chiếu byte → điền SHA vào §75.4.
+2. Tile riêng tiếp theo: Map012 Khu Biệt Thự Ven Sông theo
+   `docs/tileset-plan.md` (đang dùng atlas-map001.png — L1 Map012 đã
+   đếm sẵn ở các vòng trước: thay tile 4 `nha-tro-bac` như các vòng
+   trước; nhớ import atlas mới TRƯỚC khi chạy test — bài học §75.3).
+3. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+## 76. Vòng 54 — Tile biệt thự ven sông riêng Map012 (26/11 ~10:45–11:15 +07, cron 10:45)
+
+### 76.1 Art (subagent artpass54) — XONG, gen 0 lần lại
+
+- Tile `bietthu-map012.png` (64×64 RGBA, 5.073 byte): biệt thự 2 tầng
+  ven sông Sài Gòn, tường trắng kem, mái ngói đất nung, ban công gỗ,
+  3 cửa kính lớn tầng trệt + 3 cửa sổ khung gỗ tầng trên, 4 cây cọ +
+  hoa hồng/vàng, dải sông xanh bên phải với cỏ lau; không người,
+  không chữ, lề đủ 4 phía (bbox nguồn 1649×876, tỉ lệ ngang 3:2,
+  fit 64×34, đáy y=61). Dải sông chạm mép phải là sông theo đúng ý
+  đồ prompt, không phải nhà bị cắt.
+- Kiểm chứng: 1 component alpha duy nhất (1.465 px alpha>0, 1.009 px
+  alpha=255); 0 pixel gần-trắng (36 px ban đầu đã tone-down 0,92 về
+  0); 0 quầng xanh ở mép (6 px quầng sau resize đã xóa về 0);
+  hàng y62–63 trong suốt; kiểm bằng mắt ở 1× và zoom 3× đều đọc rõ
+  từng chi tiết. Tôi đo độc lập bằng PIL qua atlas (cell 3: 1.219 px
+  đục theo ngưỡng Godot alpha>0,5), khớp đúng số liệu note của
+  subagent (chênh do ngưỡng đo khác nhau).
+- Note: `visual-check/artpass54/bietthu-tile-note.md` + script
+  `process_bietthu_r54.py` (theo mẫu vòng 53: tách nền bằng khoảng
+  cách màu, ép alpha=255 vùng trong silhouette, nearest-fill RGB
+  trước resize LANCZOS).
+
+### 76.2 Code + test — XONG
+
+| File | Đổi |
+|---|---|
+| `tools/godot/convert_maps.py` | `ATLAS_PNG_OVERRIDE[12] = "atlas-map012.png"` + `ATLAS_TILE_OVERRIDE` (tile 4 → `biet-thu-ven-song`, hết PROVISIONAL; Map012 L1 đếm thật: tile 4 có 8 ô, tile 5 có 12 ô, tile 3 có 8 ô — thay tile 4 như các vòng trước). |
+| `src/godot/data/maps.json` (tạo lại) | Map012 atlas mới + tile 4 tên mới; Map001–011 không đổi; đủ 18 map. |
+| `src/godot/tiles/atlas-map012.png` (mới, binary — chỉ local + trong pck, KHÔNG push qua snapshot-push) | `visual-check/artpass54/build_atlas_map012.py`: atlas-map001.png đổi cell cột 3 (x=192) thành tile biệt thự ven sông (đã có sửa ghost vòng 47: xóa trắng cell trước khi paste + assert ghost=0). Chạy: cell 3 khác 3042 px / 1219 px đục / ghost 0. |
+| `src/godot/tiles/atlas-map012.png.import` (mới) | `--headless --import` sinh lại (chạy TRƯỚC khi test — bài học §75.3). |
+| `src/godot/tests/g4_r54_map012_tile_test.gd` (mới) | 16 mục: Map012 atlas + tên tile 4 + hết PROVISIONAL; Map001/002 không đổi; Map003–011 giữ atlas riêng; PNG 512×64; cell 3 khác atlas cũ + có biệt thự ven sông (>800 px đục); cell khác giống hệt; scene thật Map012 (không NadiaScene, lớp tile hiện, atlas đúng file mới) 60 frame + về Map001 map_id 1. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r54_map012_tile_test` (nay 78 suite vòng lặp + server_test + probe = 80 mục). |
+| `visual-check/artpass54/check_r54.py` (mới) | Browser-verify Map001→…→Map012 (chuỗi cửa (5,8)), cổng 8209 + ảnh + crop zoom, theo mẫu check_r53.py + đọc `window.__pxb_map` sau mỗi chân. |
+
+### 76.3 Verify thật vòng này
+
+- `--check-only` test mới: PASS (exit 0).
+- Test mới `g4_r54_map012_tile_test`: **16/16 PASS** (cell 3 khác
+  atlas cũ 3002 px theo Godot — PIL đo 3042, lệch do import — vẫn
+  >500; 1219 px đục).
+- Hồi quy đầy đủ: **80 OK, 0 FAIL** (78 suite vòng lặp +
+  server_test + probe; log `~/workspace/regression-move.log`).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web: exit 0. pck **22.351.212 byte, SHA `b68616fc`**
+  (thay `0b73e5c6` vòng 53); wasm không đổi `fc74679e`
+  (39.514.754 byte); pck chứa `biet-thu-ven-song` + `atlas-map012`
+  (kiểm bằng `strings`); HTTP 200 đủ 4 file (cổng 8209);
+  `GODOT_THREADS_ENABLED = false`.
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass54/check_r54.py`, cổng 8209):
+  **0 console error, 0 pageerror, 0 request fail.**
+  - `window.__pxb_map` đối chiếu đúng cả 11 chân: 2→3→4→5→6→7→8→
+    9→10→11→12, không lệch map nào.
+  - Map012: HUD "Phố Xô Bồ — Khu Biệt Thự Ven Sông", NPC Bảo Vệ
+    Biệt Thự + Người Làm Vườn, 2 cửa đúng tên ("Cửa về Phố Tây" /
+    "Cửa đi Quận Tài Chính"), toast "Đã sang Khu Biệt Thự Ven Sông".
+  - Tile biệt thự ven sông hiện rõ ở hàng biên Map012 (ảnh
+    `r54-10-map12.png` + crop `r54-11-map12-left.png` +
+    `r54-14-map12-leftedge.png`): tường trắng kem + mái ngói đất
+    nung đỏ + cây cọ, khác hẳn tile nhà trọ cũ — **không còn bóng
+    ghost**. Vị trí tile 4 đã đối chiếu từ `maps.json` L1: (1,0),
+    (4,0), (7,0), (10,0), (0,3), (11,3), (0,6), (11,6).
+  - Map011 (ảnh `r54-09-map11`): tile nhà phố Tây vòng 53 vẫn
+    sạch ghost.
+- **Lỗi môi trường gặp trong vòng, đã sửa:** package Python
+  `playwright` không còn trong `/usr/bin/python3` (PEP 668 chặn
+  `pip install --user`) nên `check_r54.py` lỗi `ModuleNotFoundError`
+  lần đầu; đã tạo venv mới `/tmp/pxb-pw-venv` (playwright +
+  pillow, browser Chromium 1255 dùng lại cache cũ) rồi chạy lại
+  thì PASS. Vòng sau dùng venv này (hoặc cài lại nếu `/tmp` bị
+  dọn). Venv này là ephemeral — nếu mất thì tạo lại cùng cách.
+
+### 76.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- **Push main r54 (gộp r43–r54, thay script r53):**
+  script mới `pxb-push-main-r54.py` + 4 manifest
+  (`pxb-push-main-r54-a/b/c/docs`: a 46 path, b 10 `.import`,
+  c 20 path, docs 2 file).
+  **Chưa chạy — chờ chủ nói 'đẩy tiếp' + bấm duyệt** (xem §69.1:
+  thẻ r44 đã timeout, không còn thẻ chờ; live vẫn `5f2a052f` r41).
+- **Deploy gh-pages pck `b68616fc`:** staging rebuild xong,
+  `build_gh_pages.py` verify PASS (khớp byte: pck 166 chunk,
+  22.351.212 byte; wasm 293 chunk không đổi); 166 chunk
+  (part-000..165) + final (versions.json + index.html); script mới
+  `pxb-deploy-r54.py` + 10 manifest
+  (`pxb-deploy-pck-b68616fc-batch1..9` + `-final`). Wasm không đổi
+  `fc74679e` nên không đẩy lại. Chạy sau push main.
+  Live hiện vẫn `5f2a052f` (r41).
+- **Chưa làm:** điền SHA push/deploy vào §76.4 sau khi có kết quả.
+
+### 76.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r54 (4 lô) → deploy pck `b68616fc`
+   (10 lô) → kiểm live pin + đối chiếu byte → điền SHA vào §76.4.
+2. Tile riêng tiếp theo: Map013 Quận Tài Chính theo
+   `docs/tileset-plan.md` (đang dùng atlas-map001.png — L1 Map013
+   đếm thật trước khi thay; nhớ import atlas mới TRƯỚC khi chạy
+   test — bài học §75.3; dùng venv `/tmp/pxb-pw-venv` cho
+   browser-verify — bài học §76.3).
+3. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+## 77. Vòng 55 — Tile tòa nhà tài chính riêng Map013 (26/11 ~11:45–12:20 +07, cron 11:45)
+
+### 77.1 Art (subagent artpass55) — XONG, gen 0 lần lại
+
+- Tile `taichinh-map013.png` (64×64 RGBA, 6.469 byte): tháp kính cao
+  tầng khung cam/vàng + sảnh ngân hàng có cột + cửa kính lớn tầng
+  trệt, cây xanh/chậu cây 2 bên sảnh; không người, không chữ, lề đủ
+  4 phía ở ảnh gốc (trái 376, phải 362, trên 50, dưới 45 px; bbox
+  1182×1185 → scale 0,0523 → 62×62, đáy y=61).
+- Kiểm chứng: 1 component alpha duy nhất (1.977 px alpha>0, 1.456 px
+  alpha=255); 0 pixel gần-trắng; 0 quầng xanh ở mép (đo với đúng màu
+  nền vòng này (149,200,233) — 3 px bán-trong-suốt gần màu nền vòng
+  54 (130,185,224) chỉ là kính xanh của tháp, không phải quầng);
+  hàng y62–63 trong suốt; kiểm bằng mắt ở 1× và zoom 3× đều đọc rõ
+  từng chi tiết. Tôi đo độc lập bằng PIL qua tile đích, khớp đúng số
+  liệu note của subagent.
+- Note: `visual-check/artpass55/taichinh-tile-note.md` + script
+  `process_taichinh_r55.py` (theo mẫu vòng 54: tách nền bằng khoảng
+  cách màu, ép alpha=255 vùng trong silhouette, nearest-fill RGB
+  trước resize LANCZOS).
+
+### 77.2 Code + test — XONG
+
+| File | Đổi |
+|---|---|
+| `tools/godot/convert_maps.py` | `ATLAS_PNG_OVERRIDE[13] = "atlas-map013.png"` + `ATLAS_TILE_OVERRIDE` (tile 4 → `toa-nha-tai-chinh`, hết PROVISIONAL; Map013 L1 đếm thật: tile 4 có 8 ô, tile 5 có 12 ô, tile 3 có 8 ô — thay tile 4 như các vòng trước). |
+| `src/godot/data/maps.json` (tạo lại) | Map013 atlas mới + tile 4 tên mới; Map001–012 không đổi; đủ 18 map. |
+| `src/godot/tiles/atlas-map013.png` (mới, binary — chỉ local + trong pck, KHÔNG push qua snapshot-push) | `visual-check/artpass55/build_atlas_map013.py`: atlas-map001.png đổi cell cột 3 (x=192) thành tile tòa nhà tài chính (đã có sửa ghost vòng 47: xóa trắng cell trước khi paste + assert ghost=0). Chạy: cell 3 khác 3066 px / 1731 px đục / ghost 0. |
+| `src/godot/tiles/atlas-map013.png.import` (mới) | `--headless --import` sinh lại (chạy TRƯỚC khi test — bài học §75.3). |
+| `src/godot/tests/g4_r55_map013_tile_test.gd` (mới) | 16 mục: Map013 atlas + tên tile 4 + hết PROVISIONAL; Map001/002 không đổi; Map003–012 giữ atlas riêng; PNG 512×64; cell 3 khác atlas cũ + có tòa nhà tài chính (>800 px đục); cell khác giống hệt; scene thật Map013 (không NadiaScene, lớp tile hiện, atlas đúng file mới) 60 frame + về Map001 map_id 1. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r55_map013_tile_test` (nay 79 suite vòng lặp + server_test + probe = 81 mục). |
+| `visual-check/artpass55/check_r55.py` (mới) | Browser-verify Map001→…→Map013 (chuỗi cửa (5,8)), cổng 8210 + ảnh + crop zoom, theo mẫu check_r54.py + đọc `window.__pxb_map` sau mỗi chân; **lần 2 đổi sang `walk_down_to_door` — bấm từng phím, dừng ngay khi map đổi** (xem §77.3). |
+
+### 77.3 Verify thật vòng này
+
+- `--check-only` test mới: PASS (exit 0).
+- Test mới `g4_r55_map013_tile_test`: **16/16 PASS** (cell 3 khác
+  atlas cũ 3048 px theo Godot — PIL đo 3066, lệch do import — vẫn
+  >500; 1732 px đục).
+- Hồi quy đầy đủ: **81 OK, 0 FAIL** (79 suite vòng lặp +
+  server_test + probe; log `~/workspace/regression-move.log`).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web: exit 0. pck **22.374.416 byte, SHA `2f650ec3`**
+  (thay `b68616fc` vòng 54); wasm không đổi `fc74679e`
+  (39.514.754 byte); pck chứa `toa-nha-tai-chinh` + `atlas-map013`
+  (kiểm bằng `strings`); HTTP 200 đủ 4 file (cổng 8210);
+  `GODOT_THREADS_ENABLED = false`.
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass55/check_r55.py`, cổng 8210):
+  **0 console error, 0 pageerror, 0 request fail.**
+  - **Lần 1 — LỆCH +1 map từ chân Map009→Map010:** giữ phím 400ms
+    đôi lúc đi 2 ô (game nhanh hơn bình thường lúc swiftshader nhẹ
+    tải) — 4 lần giữ = 8 bước, qua 2 cửa trong 1 chân: chân
+    Map010 đọc `__pxb_map=11`, các chân sau đều lệch +1 (Map013
+    đọc 14). Ảnh chứng minh: `r55-08-map10.png` hiện Phố Tây
+    (Map011, ô (5,4), NPC Nhân Viên Lễ Tân / Hướng Dẫn Viên),
+    `r55-11-map13.png` lần 1 hiện Đảo Thượng Lưu (Map014, ô (5,6)).
+    Đây là lỗi script verify, KHÔNG phải lỗi game (cửa/NPC/tên map
+    đều đúng dữ liệu ở map đã tới).
+  - **Lần 2 — PASS hết (sau khi sửa script):** `walk_down_to_door`
+    bấm từng phím ArrowDown, đọc `__pxb_map` sau mỗi phím, dừng
+    ngay khi map đổi — 1 chân chỉ qua đúng 1 cửa, không phụ thuộc
+    tốc độ game. `window.__pxb_map` đối chiếu đúng cả 11 chân:
+    2→3→4→5→6→7→8→9→10→11→12→13, không lệch map nào.
+  - Map013: HUD "Phố Xô Bồ — Quận Tài Chính", NPC Nhân Viên Ngân
+    Hàng + Môi Giới Chứng Khoán, 2 cửa đúng tên ("Cửa về Khu Biệt
+    Thự Ven Sông" / "Cửa đi Đảo Thượng Lưu"), debug ô (5,4).
+  - Tile tòa nhà tài chính hiện rõ ở hàng biên Map013 (ảnh
+    `r55-11-map13.png` + crop `r55-12-map13-left.png`): tháp kính
+    lưới cửa sổ xanh, khác hẳn tile nhà trọ cũ — **không còn bóng
+    ghost**. Vị trí tile 4 đã đối chiếu từ `maps.json` L1: (1,0),
+    (4,0), (7,0), (10,0), (0,3), (11,3), (0,6), (11,6).
+  - Map012 (ảnh `r55-10-map12`): tile biệt thự ven sông vòng 54 vẫn
+    sạch ghost.
+- **Bài học môi trường vòng này:** (1) venv Playwright
+  `/tmp/pxb-pw-venv` đã mất do `/tmp` bị dọn — đã tạo lại
+  (`python3 -m venv` + pip install playwright pillow, dùng lại
+  cache Chromium 1255); vòng sau kiểm tra venv trước, mất thì tạo
+  lại cùng cách. (2) Nước đi đầu Map001→Map002 (Up + Right) ở lần
+  2 cũng bị double-step (Up đi 2 ô → Right trượt cửa (5,4),
+  `__pxb_map` vẫn 1) — chân xuống robust sau đó tự sửa (đi qua
+  cửa (5,4) rồi mới xuống tiếp nên vẫn tới đúng Map003); vòng sau
+  nên áp `walk_down_to_door` cả cho nước đi đầu (bấm từng phím +
+  đọc map sau mỗi phím). (3) `pkill -f "http.server ..."` tự giết
+  luôn shell gọi nó (pattern khớp chính lệnh) — tắt server bằng
+  PID qua `ss -ltnp`, không dùng pkill với pattern chứa trong lệnh.
+
+### 77.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- **Push main r55 (gộp r43–r55, thay script r54):**
+  script mới `pxb-push-main-r55.py` + 4 manifest
+  (`pxb-push-main-r55-a/b/c/docs`: a 50 path, b 11 `.import`,
+  c 22 path, docs 2 file).
+  **Chưa chạy — chờ chủ nói 'đẩy tiếp' + bấm duyệt** (xem §69.1:
+  thẻ r44 đã timeout, không còn thẻ chờ; live vẫn `5f2a052f` r41).
+- **Deploy gh-pages pck `2f650ec3`:** staging rebuild xong,
+  `build_gh_pages.py` verify PASS (khớp byte: pck 166 chunk,
+  22.374.416 byte; wasm 293 chunk không đổi); 166 chunk
+  (part-000..165) + final (versions.json + index.html); script mới
+  `pxb-deploy-r55.py` + 10 manifest
+  (`pxb-deploy-pck-2f650ec3-batch1..9` + `-final`). Wasm không đổi
+  `fc74679e` nên không đẩy lại. Chạy sau push main.
+  Live hiện vẫn `5f2a052f` (r41).
+- **Chưa làm:** điền SHA push/deploy vào §77.4 sau khi có kết quả.
+
+### 77.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r55 (4 lô) → deploy pck `2f650ec3`
+   (10 lô) → kiểm live pin + đối chiếu byte → điền SHA vào §77.4.
+2. Tile riêng tiếp theo: Map014 Đảo Thượng Lưu theo
+   `docs/tileset-plan.md` (đang dùng atlas-map001.png — L1 Map014
+   đếm thật trước khi thay; nhớ import atlas mới TRƯỚC khi chạy
+   test — bài học §75.3; kiểm tra venv `/tmp/pxb-pw-venv` trước
+   browser-verify, mất thì tạo lại — bài học §77.3; dùng
+   `walk_down_to_door` cho mọi nước đi kể cả nước đầu — bài học
+   §77.3).
+3. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+## 78. Vòng 56 — Tile biệt thự đảo thượng lưu riêng Map014 (26/11 ~12:45–13:30 +07, cron 12:45)
+
+### 78.1 Art (subagent artpass56) — XONG, gen 0 lần lại
+
+- Tile `daothuongluu-map014.png` (64×64 RGBA, 7.267 byte): biệt thự
+  trắng 2 tầng mái ngói nâu cam + cửa kính lớn + ban công, cọ và cây
+  nhiệt đới 2 bên, đảo cát vàng, biển ngọc lam + cầu gỗ nhỏ ở đáy;
+  không người, không chữ, lề đủ 4 phía ở ảnh gốc (trái 35, phải 30,
+  trên 311, dưới 246 px; bbox 1535×1043 → scale 0,0417 → 64×43, đáy y=61).
+- Kiểm chứng: 1 component alpha duy nhất (2.119 px alpha>0, 1.552 px
+  alpha=255); 0 pixel gần-trắng (đã tone-down 143 px ×0,92); 0 quầng
+  xanh ở mép (đã xóa 12 px bán-trong-suốt gần màu nền vòng này
+  (135,193,231)); hàng y62–63 trong suốt; kiểm bằng mắt ở 1× và zoom
+  3× đều đọc rõ từng chi tiết. Tôi đo độc lập bằng PIL qua tile đích,
+  khớp đúng số liệu note của subagent.
+- Note: `visual-check/artpass56/daothuongluu-tile-note.md` + script
+  `process_daothuongluu_r56.py` (theo mẫu vòng 55: tách nền bằng khoảng
+  cách màu, ép alpha=255 vùng trong silhouette, nearest-fill RGB
+  trước resize LANCZOS).
+
+### 78.2 Code + test — XONG
+
+| File | Đổi |
+|---|---|
+| `tools/godot/convert_maps.py` | `ATLAS_PNG_OVERRIDE[14] = "atlas-map014.png"` + `ATLAS_TILE_OVERRIDE` (tile 4 → `biet-thu-dao-thuong-luu`, hết PROVISIONAL; Map014 L1 đếm thật: tile 4 có 8 ô, tile 5 có 12 ô, tile 3 có 8 ô — thay tile 4 như các vòng trước; vị trí tile 4: (1,0),(4,0),(7,0),(10,0),(0,3),(11,3),(0,6),(11,6)). |
+| `src/godot/data/maps.json` (tạo lại) | Map014 atlas mới + tile 4 tên mới; Map001–013 không đổi; đủ 18 map. |
+| `src/godot/tiles/atlas-map014.png` (mới, binary — chỉ local + trong pck, KHÔNG push qua snapshot-push) | `visual-check/artpass56/build_atlas_map014.py`: atlas-map001.png đổi cell cột 3 (x=192) thành tile biệt thự đảo (đã có sửa ghost vòng 47: xóa trắng cell trước khi paste + assert ghost=0). Chạy: cell 3 khác 3063 px / 1803 px đục / ghost 0. |
+| `src/godot/tiles/atlas-map014.png.import` (mới) | `--headless --import` sinh lại (chạy TRƯỚC khi test — bài học §75.3). |
+| `src/godot/tests/g4_r56_map014_tile_test.gd` (mới) | 16 mục: Map014 atlas + tên tile 4 + hết PROVISIONAL; Map001/002 không đổi; Map003–013 giữ atlas riêng; PNG 512×64; cell 3 khác atlas cũ + có biệt thự đảo (>800 px đục); cell khác giống hệt; scene thật Map014 (không NadiaScene, lớp tile hiện, atlas đúng file mới) 60 frame + về Map001 map_id 1. |
+| `src/godot/main.gd` | Vòng 56: lộ thêm `window.__pxb_tile = [x, y]` ra JS (trong `load_map` lúc spawn + trong `_on_player_moved_to` mỗi lần player đổi ô) — theo đúng mẫu `__pxb_map` vòng 53. Lý do: xem §78.3, bài học browser-verify lần 1/2. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r56_map014_tile_test` (nay 80 suite vòng lặp + server_test + probe = 82 mục). |
+| `visual-check/artpass56/check_r56.py` (mới) | Browser-verify Map001→…→Map014 (chuỗi cửa (5,8)), cổng 8210 + ảnh + crop zoom, theo mẫu check_r55.py + đọc `window.__pxb_map` sau mỗi chân; **lần 3 đổi sang lái theo `__pxb_tile`** — bấm từng phím, đọc tile thật sau mỗi phím, tính lại hướng (x trước rồi y), dừng ngay khi map đổi (xem §78.3). |
+
+### 78.3 Verify thật vòng này
+
+- `--check-only` test mới + `main.gd`: PASS (exit 0).
+- Test mới `g4_r56_map014_tile_test`: **16/16 PASS** (cell 3 khác
+  atlas cũ 3033 px theo Godot — PIL đo 3063, lệch do import — vẫn
+  >500; 1805 px đục).
+- Hồi quy đầy đủ: **82 OK, 0 FAIL** (80 suite vòng lặp +
+  server_test + probe; chạy 2 lần — lần 1 trước khi sửa main.gd,
+  lần 2 sau khi sửa, đều 82/82).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR (chạy 2 lần:
+  trước/sau sửa main.gd).
+- Export web: exit 0. pck **22.398.356 byte, SHA `b4b1cf1d`**
+  (thay `2f650ec3` vòng 55); wasm không đổi `fc74679e`
+  (39.514.754 byte); pck chứa `biet-thu-dao-thuong-luu` + `atlas-map014`
+  (kiểm bằng `strings`); HTTP 200 đủ 4 file (cổng 8210);
+  `GODOT_THREADS_ENABLED = false`.
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass56/check_r56.py`, cổng 8210):
+  **0 console error, 0 pageerror, 0 request fail.**
+  - **Lần 1 + 2 — LỆCH HẾT từ cửa đầu (lỗi script verify, KHÔNG
+    phải lỗi game):** đếm phím cố định vẫn sai — giữ phím 400ms đôi
+    lúc đi 2 ô (bài học vòng 55) nên player vượt qua cửa (5,4):
+    ảnh `r56-01-map3.png` lần 1 hiện player ở ô (10,4) vẫn Map001
+    (debug `Ô (10,4) • S`), 12 chân sau đều lệch. Lần 2 sửa
+    `walk_to_door` cho nước đầu vẫn sai cùng kiểu: `walk_to_door`
+    lặp tối đa 8 phím cho tới khi map đổi — dùng cho ArrowUp sẽ đi
+    lên 8 ô vì lên không đổi map; bấm Up đúng 1 lần rồi
+    `walk_to_door` Right vẫn vượt cửa do double-step.
+  - **Lần 3 — PASS hết (sau khi sửa game + script):** `main.gd`
+    lộ thêm `window.__pxb_tile` (theo mẫu `__pxb_map` vòng 53);
+    `goto_tile` lái theo tile thật: bấm từng phím (giữ 200ms),
+    đọc `__pxb_tile` sau mỗi phím, tính lại hướng (x trước rồi y),
+    dừng ngay khi map đổi — vượt cửa thì quay lại, kẹt thì báo.
+    `window.__pxb_map` đối chiếu đúng cả 13 chân:
+    1→2→3→4→5→6→7→8→9→10→11→12→13→14, không lệch map nào.
+  - Map014: HUD "Phố Xô Bồ — Đảo Thượng Lưu", NPC Quản Gia Đảo +
+    Chủ Biệt Thự Đảo, 2 cửa đúng tên ("Cửa về Quận Tài Chính" /
+    "Cửa đi Khu Penthouse"), debug ô (5,4).
+  - Tile biệt thự đảo hiện rõ ở hàng biên Map014 (ảnh
+    `r56-12-map14.png` + crop `r56-13-map14-left.png`): biệt thự
+    trắng mái ngói nâu cam, cọ, biển ngọc lam + cầu gỗ — **không
+    còn bóng ghost**. Vị trí tile 4 đã đối chiếu từ `maps.json` L1:
+    (1,0), (4,0), (7,0), (10,0), (0,3), (11,3), (0,6), (11,6).
+  - Map013 (ảnh `r56-11-map13`): tile tòa nhà tài chính vòng 55 vẫn
+    sạch ghost.
+- **Bài học môi trường vòng này:** (1) Đếm phím cố định KHÔNG BAO
+  GIỜ tin được khi giữ phím có thể đi 2 ô — mọi script
+  browser-verify từ nay lái theo `window.__pxb_tile` (đã có sẵn
+  trong main.gd từ vòng này), không đếm phím mù. (2) `grep -c` trên
+  file pck không tìm được chuỗi GDScript (`__pxb_map` cũng 0 kết
+  quả dù đã chạy thật từ vòng 53) — chuỗi script trong pck không
+  lưu dạng text thường; đừng dùng grep pck để kết luận code có/không
+  trong build, kiểm bằng browser thật. (3) `pkill -f "http.server"`
+  tự giết shell gọi nó — tắt server bằng PID qua `ss -ltnp`
+  (bài học vòng 55, đã áp dụng đúng vòng này).
+
+### 78.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- **Push main r56 (gộp r43–r56, thay script r55):**
+  script mới `pxb-push-main-r56.py` + 4 manifest
+  (`pxb-push-main-r56-a/b/c/docs`: a 54 path, b 12 `.import`,
+  c 24 path, docs 2 file).
+  **Chưa chạy — chờ chủ nói 'đẩy tiếp' + bấm duyệt** (xem §69.1:
+  thẻ r44 đã timeout, không còn thẻ chờ; live vẫn `5f2a052f` r41).
+- **Deploy gh-pages pck `b4b1cf1d`:** staging rebuild xong,
+  `build_gh_pages.py` verify PASS (khớp byte: pck 166 chunk,
+  22.398.356 byte; wasm 293 chunk không đổi); 166 chunk
+  (part-000..165) + final (versions.json + index.html); script mới
+  `pxb-deploy-r56.py` + 10 manifest
+  (`pxb-deploy-pck-b4b1cf1d-batch1..9` + `-final`). Wasm không đổi
+  `fc74679e` nên không đẩy lại. Chạy sau push main.
+  Live hiện vẫn `5f2a052f` (r41).
+- **Chưa làm:** điền SHA push/deploy vào §78.4 sau khi có kết quả.
+
+### 78.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r56 (4 lô) → deploy pck `b4b1cf1d`
+   (10 lô) → kiểm live pin + đối chiếu byte → điền SHA vào §78.4.
+2. Tile riêng tiếp theo: Map015 Khu Penthouse theo
+   `docs/tileset-plan.md` (đang dùng atlas-map001.png — L1 Map015
+   đếm thật trước khi thay; nhớ import atlas mới TRƯỚC khi chạy
+   test — bài học §75.3; kiểm tra venv `/tmp/pxb-pw-venv` trước
+   browser-verify, mất thì tạo lại — bài học §77.3; lái theo
+   `window.__pxb_tile`, không đếm phím — bài học §78.3).
+3. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+## 79. Vòng 57 — Tile penthouse tầng cao riêng Map015 (26/11 ~13:45–14:10 +07, cron 13:45)
+
+### 79.1 Art (subagent artpass57) — XONG, gen 0 lần lại
+
+- Tile `penthouse-map015.png` (64×64 RGBA, 5.191 byte): tháp
+  penthouse kính đèn vàng ấm + terrace có cây xanh + hồ bơi nhỏ
+  phía phải + dải skyline đèn vàng dưới chân, nền trời chiều xanh
+  đậm trơn; không người, không chữ, lề đủ 4 phía ở ảnh gốc (bbox
+  1920×1137 — rộng full vì dải skyline dưới chân chạm mép trái/phải
+  theo đúng ý prompt → scale 0,0333 → 64×38, đáy y=61; dải skyline
+  thành dải nền thành phố mỏng dưới chân tháp, tương tự vai trò dải
+  đảo + biển ở tile vòng 56).
+- Kiểm chứng: 1 component alpha duy nhất (1.469 px alpha>0, 1.095 px
+  alpha=255); 0 pixel gần-trắng; 0 quầng ở mép; hàng y62–63 trong
+  suốt; kiểm bằng mắt ở 1× và zoom 3× trên nền magenta đều đọc rõ
+  penthouse/terrace/hồ bơi. Tôi đo độc lập bằng PIL qua tile đích,
+  khớp đúng số liệu note của subagent.
+- Note: `visual-check/artpass57/penthouse-tile-note.md` + script
+  `process_penthouse_r57.py` (theo mẫu vòng 56: tách nền bằng khoảng
+  cách màu, ép alpha=255 vùng trong silhouette, nearest-fill RGB
+  trước resize LANCZOS).
+
+### 79.2 Code + test — XONG
+
+| File | Đổi |
+|---|---|
+| `tools/godot/convert_maps.py` | `ATLAS_PNG_OVERRIDE[15] = "atlas-map015.png"` + `ATLAS_TILE_OVERRIDE` (tile 4 → `penthouse-tang-cao`, hết PROVISIONAL; Map015 L1 đếm thật: tile 4 có 8 ô, tile 5 có 12 ô, tile 3 có 8 ô — thay tile 4 như các vòng trước; vị trí tile 4: (1,0),(4,0),(7,0),(10,0),(0,3),(11,3),(0,6),(11,6)). **Sửa gốc vòng này:** `handwritten()` (Map015–018 viết tay, không qua `convert()`) trước đây BỎ QUA override — regen lần đầu Map015 vẫn giữ atlas-map001.png + tile cũ; nay `handwritten()` áp `ATLAS_PNG_OVERRIDE` / `ATLAS_TILE_OVERRIDE` như `convert()` (chỉ Map015 đổi, Map016–018 không đổi — đã đối chiếu diff). |
+| `src/godot/data/maps.json` (tạo lại) | Map015 atlas mới + tile 4 tên mới; Map001–014, Map016–018 không đổi; đủ 18 map. |
+| `src/godot/tiles/atlas-map015.png` (mới, binary — chỉ local + trong pck, KHÔNG push qua snapshot-push) | `visual-check/artpass57/build_atlas_map015.py`: atlas-map001.png đổi cell cột 3 (x=192) thành tile penthouse (đã có sửa ghost vòng 47: xóa trắng cell trước khi paste + assert ghost=0). Chạy: cell 3 khác 2974 px / 1296 px đục / ghost 0. |
+| `src/godot/tiles/atlas-map015.png.import` (mới) | `--headless --import` sinh lại (chạy TRƯỚC khi test — bài học §75.3). |
+| `src/godot/tests/g4_r57_map015_tile_test.gd` (mới) | 16 mục: Map015 atlas + tên tile 4 + hết PROVISIONAL; Map001/002 không đổi; Map003–014 giữ atlas riêng; PNG 512×64; cell 3 khác atlas cũ + có penthouse (>800 px đục); cell khác giống hệt; scene thật Map015 (không NadiaScene, lớp tile hiện, atlas đúng file mới) 60 frame + về Map001 map_id 1. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r57_map015_tile_test` (nay 81 suite vòng lặp + server_test + probe = 83 mục). |
+| `visual-check/artpass57/check_r57.py` (mới) | Browser-verify Map001→…→Map015 (chuỗi cửa (5,8)), cổng 8210 + ảnh + crop zoom, theo mẫu check_r56.py + lái theo `__pxb_tile` (bài học §78.3). |
+
+### 79.3 Verify thật vòng này
+
+- `--check-only` test mới: PASS (exit 0).
+- Test mới `g4_r57_map015_tile_test`: **16/16 PASS** (cell 3 khác
+  atlas cũ 2941 px theo Godot — PIL đo 2974, lệch do import — vẫn
+  >500; 1298 px đục).
+- Hồi quy đầy đủ: **83 OK, 0 FAIL** (81 suite vòng lặp +
+  server_test + probe).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR/warning.
+- Export web: exit 0. pck **22.420.632 byte, SHA `a7f08e57`**
+  (thay `b4b1cf1d` vòng 56); wasm không đổi `fc74679e`
+  (39.514.754 byte); pck chứa `penthouse-tang-cao` + `atlas-map015`
+  (kiểm bằng `strings`, 6 hit); HTTP 200 đủ 4 file (cổng 8210);
+  `GODOT_THREADS_ENABLED = false`.
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass57/check_r57.py`, cổng 8210):
+  **0 console error, 0 pageerror, 0 request fail.**
+  `window.__pxb_map` đối chiếu đúng cả 14 chân:
+  1→2→3→4→5→6→7→8→9→10→11→12→13→14→15, không lệch map nào
+  (lái theo `__pxb_tile`, không đếm phím — bài học §78.3).
+  - Map015: HUD "Phố Xô Bồ — Khu Penthouse", NPC Quản Lý Penthouse +
+    Cư Dân Penthouse, 2 cửa đúng tên ("Cửa về Đảo Thượng Lưu" /
+    "Cửa đi Khu Sân Golf & Resort"), debug ô (5,4).
+  - Tile penthouse hiện rõ ở hàng biên Map015 (ảnh
+    `r57-13-map15.png` + crop `r57-14-map15-left.png` +
+    `r57-15-map15-toprow.png` + `r57-16-map15-leftedge.png`): tháp
+    kính xanh + đèn vàng ấm, khác hẳn khối nhà trọ vàng Kenney
+    (tile 3/5 vẫn PROVISIONAL) — **không còn bóng ghost**.
+  - Map014 (ảnh `r57-12-map14`): tile biệt thự đảo vòng 56 vẫn
+    sạch ghost.
+- **Bài học môi trường vòng này:** venv Playwright `/tmp/pxb-pw-venv`
+  lại mất do `/tmp` bị dọn (lần 2 — bài học §77.3) — tạo lại cùng
+  cách (venv + pip install playwright pillow, dùng lại cache
+  Chromium 1255) trước khi browser-verify.
+
+### 79.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- **Push main r57 (gộp r43–r57, thay script r56):**
+  script mới `pxb-push-main-r57.py` + 4 manifest
+  (`pxb-push-main-r57-a/b/c/docs`: a 58 path, b 13 `.import`,
+  c 26 path, docs 2 file).
+  **Chưa chạy — chờ chủ nói 'đẩy tiếp' + bấm duyệt** (xem §69.1:
+  thẻ r44 đã timeout, không còn thẻ chờ; live vẫn `5f2a052f` r41).
+- **Deploy gh-pages pck `a7f08e57`:** staging rebuild xong,
+  `build_gh_pages.py` verify PASS (khớp byte: pck 167 chunk,
+  22.420.632 byte; wasm 293 chunk không đổi); 167 chunk
+  (part-000..166) + final (versions.json + index.html); script mới
+  `pxb-deploy-r57.py` + 10 manifest
+  (`pxb-deploy-pck-a7f08e57-batch1..9` + `-final`). Wasm không đổi
+  `fc74679e` nên không đẩy lại. Chạy sau push main.
+  Live hiện vẫn `5f2a052f` (r41).
+- **Chưa làm:** điền SHA push/deploy vào §79.4 sau khi có kết quả.
+
+### 79.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r57 (4 lô) → deploy pck `a7f08e57`
+   (10 lô) → kiểm live pin + đối chiếu byte → điền SHA vào §79.4.
+2. Tile riêng tiếp theo: Map016 Khu Sân Golf & Resort theo
+   `docs/tileset-plan.md` (đang dùng atlas-map001.png — L1 Map016
+   đếm thật trước khi thay; nhớ `handwritten()` nay đã áp override
+   nên regen là đủ, không cần sửa converter thêm; import atlas mới
+   TRƯỚC khi chạy test — bài học §75.3; kiểm tra venv
+   `/tmp/pxb-pw-venv` trước browser-verify, mất thì tạo lại —
+   bài học §77.3; lái theo `window.__pxb_tile`, không đếm phím —
+   bài học §78.3).
+3. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+## 80. Vòng 58 — Tile sân golf & resort riêng Map016 (26/11 ~14:45–15:15 +07, cron 14:45)
+
+### 80.1 Art (subagent artpass58) — XONG, gen 0 lần lại
+
+- Tile `golf-map016.png` (64×64 RGBA, 5.170 byte): clubhouse 2 tầng kiểu
+  thuộc địa — mái ngói nâu cam, tường kem, cửa chớp + vòm xanh lá, cọ
+  xanh 2 bên, fairway xanh đậm trước nhà có cờ golf cắm giữa green, hồ
+  sen nhỏ phía trái đáy có hoa sen vàng, nền trơn; không người, không
+  chữ. Bố cục gốc ngang nên tile thấp (hàng y33–61, 64×29), đáy y=61.
+- Kiểm chứng: 1 component alpha duy nhất (1.580 px alpha>0, 1.411 px
+  alpha>0,5); 0 pixel gần-trắng; 0 quầng ở mép; hàng y62–63 trong suốt;
+  kiểm bằng mắt ở 1× và zoom 3× trên nền magenta đều đọc rõ sân golf +
+  clubhouse/resort. Tôi đo độc lập bằng PIL qua tile đích, khớp số liệu
+  note của subagent (chênh 1 px ở ngưỡng alpha>128: 1.410 vs 1.411 —
+  không đáng kể, vẫn >800).
+- Note: `visual-check/artpass58/golf-tile-note.md` + script
+  `process_golf_r58.py` (theo mẫu vòng 56/57: tách nền bằng khoảng
+  cách màu, ép alpha=255 vùng trong silhouette, nearest-fill RGB
+  trước resize LANCZOS).
+
+### 80.2 Code + test — XONG
+
+| File | Đổi |
+|---|---|
+| `tools/godot/convert_maps.py` | `ATLAS_PNG_OVERRIDE[16] = "atlas-map016.png"` + `ATLAS_TILE_OVERRIDE` (tile 4 → `san-golf-resort`, hết PROVISIONAL; Map016 L1 đếm thật: tile 4 có 8 ô, tile 5 có 12 ô, tile 3 có 8 ô — thay tile 4 như các vòng trước; vị trí tile 4: (1,0),(4,0),(7,0),(10,0),(0,3),(11,3),(0,6),(11,6)). `handwritten()` đã áp override từ vòng 57 nên regen là đủ, không cần sửa thêm. |
+| `src/godot/data/maps.json` (tạo lại) | Chỉ Map016 đổi (atlas mới + tile 4 tên mới); Map001–015, Map017–018 không đổi; đủ 18 map. |
+| `src/godot/tiles/atlas-map016.png` (mới, binary — chỉ local + trong pck, KHÔNG push qua snapshot-push) | `visual-check/artpass58/build_atlas_map016.py`: atlas-map001.png đổi cell cột 3 (x=192) thành tile sân golf (đã có sửa ghost vòng 47: xóa trắng cell trước khi paste + assert ghost=0). Chạy: cell 3 khác 3.110 px / 1.372 px đục / ghost 0. |
+| `src/godot/tiles/atlas-map016.png.import` (mới) | `--headless --import` sinh lại (chạy TRƯỚC khi test — bài học §75.3). |
+| `src/godot/tests/g4_r58_map016_tile_test.gd` (mới) | 16 mục: Map016 atlas + tên tile 4 + hết PROVISIONAL; Map001/002 không đổi; Map003–015 giữ atlas riêng; PNG 512×64; cell 3 khác atlas cũ + có sân golf (>800 px đục); cell khác giống hệt; scene thật Map016 (không NadiaScene, lớp tile hiện, atlas đúng file mới) 60 frame + về Map001 map_id 1. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r58_map016_tile_test` (nay 82 suite vòng lặp + server_test + probe = 84 mục). |
+| `visual-check/artpass58/check_r58.py` (mới) | Browser-verify Map001→…→Map016 (chuỗi cửa (5,8)), cổng 8211 + ảnh + crop zoom, theo mẫu check_r57.py + lái theo `__pxb_tile` (bài học §78.3). |
+
+### 80.3 Verify thật vòng này
+
+- `--check-only` test mới: PASS (exit 0).
+- Test mới `g4_r58_map016_tile_test`: **16/16 PASS** (cell 3 khác
+  atlas cũ 3.071 px theo Godot — PIL đo 3.110, lệch do import — vẫn
+  >500; 1.373 px đục).
+- Hồi quy đầy đủ: **84 OK, 0 FAIL** (82 suite vòng lặp +
+  server_test + probe).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web: exit 0. pck **22.442.668 byte, SHA `3f6125e5`**
+  (thay `a7f08e57` vòng 57); wasm không đổi `fc74679e`
+  (39.514.754 byte); pck chứa `san-golf-resort` + `atlas-map016`
+  (kiểm bằng `strings`, 1 hit — chuỗi GDScript trong pck không grep
+  được theo §12.3, hit này là từ maps.json); HTTP 200 đủ 4 file
+  (cổng 8211); `GODOT_THREADS_ENABLED = false`.
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass58/check_r58.py`, cổng 8211):
+  **0 console error, 0 pageerror, 0 request fail.**
+  `window.__pxb_map` đối chiếu đúng cả 15 chân:
+  1→2→3→4→5→6→7→8→9→10→11→12→13→14→15→16, không lệch map nào
+  (lái theo `__pxb_tile`, không đếm phím — bài học §78.3).
+  - Map016: HUD "Phố Xô Bồ — Khu Sân Golf & Resort", NPC Nhân Viên
+    Sân Golf + Quản Lý Resort, 2 cửa đúng tên ("Cửa về Khu
+    Penthouse" / "Cửa đi Công Viên An Bình"), debug ô (5,4), toast
+    "Đã sang Khu Sân Golf & Resort".
+  - Tile sân golf hiện rõ ở hàng biên Map016 (ảnh
+    `r58-14-map16.png` + crop `r58-15-map16-left.png` +
+    `r58-16-toprow-zoom.png` + `r58-17-leftedge-zoom.png`):
+    clubhouse tường kem + mái ngói nâu cam + vòm xanh lá hiện sau
+    nút D-pad ở cạnh trái, xen kẽ khối nhà trọ vàng Kenney (tile
+    3/5 vẫn PROVISIONAL) — **không còn bóng ghost**.
+  - Map015 (ảnh `r58-13-map15`): tile penthouse vòng 57 vẫn sạch
+    ghost.
+- **Lỗi script verify gặp + sửa trong vòng này (ghi để không tái
+  phạm):** `check_r58.py` chép từ `check_r57.py` bằng sed nhưng 3
+  chỗ không đổi theo: (1) `OUT` vẫn trỏ `visual-check/artpass57`
+  (sed `s/r57/r58/` không chạm "artpass57"); (2) danh sách `legs`
+  sau sed thành `("r58-13-map16", 15)` — chân cuối gán nhầm tên
+  map16 cho Map015 nên Map016 không được đi tới; (3) bước crop tìm
+  `r58-14-map16.png` không tồn tại → `FileNotFoundError` sau khi
+  13 chân 1→15 đã PASS. Lần chạy đầu vì vậy chỉ xác nhận tới
+  Map015, không phải lỗi game. Sửa `OUT` + `legs` (thêm
+  `("r58-13-map15", 15), ("r58-14-map16", 16)`), xóa 13 ảnh
+  `r58-*.png` ghi nhầm vào thư mục artpass57, chạy lại toàn bộ:
+  15/15 chân + `ERRORS: none`. Bài học: khi chép script verify
+  bằng sed, kiểm tra lại `OUT` + `legs` + tên file crop bằng mắt
+  trước khi chạy — sed không đổi được "artpass57" hay số chân
+  trong danh sách.
+- **Bài học môi trường lặp lại:** `pkill -f "http.server 8211"`
+  tự giết luôn shell gọi nó (lệnh chứa đúng chuỗi đó) — tắt server
+  bằng `fuser -k 8211/tcp` (đã ghi từ vòng 55, vẫn tái phạm ở vòng
+  này vì gõ nhanh).
+
+### 80.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- **Push main r58 (gộp r43–r58, thay script r57):**
+  script mới `pxb-push-main-r58.py` + 4 manifest
+  (`pxb-push-main-r58-a/b/c/docs`: a 62 path, b 14 `.import`,
+  c 28 path, docs 2 file).
+  **Chưa chạy — chờ chủ nói 'đẩy tiếp' + bấm duyệt** (xem §69.1:
+  thẻ r44 đã timeout, không còn thẻ chờ; live vẫn `5f2a052f` r41).
+- **Deploy gh-pages pck `3f6125e5`:** staging rebuild xong,
+  `build_gh_pages.py` verify PASS (khớp byte: pck 167 chunk,
+  22.442.668 byte; wasm 293 chunk không đổi; img
+  title_bg `260962c1` + char_player `5dc7da77` + char_banthan
+  `a4c96723` — cả 3 version img đã có trên gh-pages theo sync
+  record `src/nadia/www.muse-github-snapshot-sync.json`, nên
+  deploy này chỉ đẩy pck + final như vòng 57); script mới
+  `pxb-deploy-r58.py` + 10 manifest
+  (`pxb-deploy-pck-3f6125e5-batch1..9` + `-final`). Wasm không đổi
+  `fc74679e` nên không đẩy lại. Chạy sau push main.
+  Live hiện vẫn `5f2a052f` (r41).
+- **Chưa làm:** điền SHA push/deploy vào §80.4 sau khi có kết quả.
+
+### 80.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r58 (4 lô) → deploy pck `3f6125e5`
+   (10 lô) → kiểm live pin + đối chiếu byte → điền SHA vào §80.4.
+2. Tile riêng tiếp theo: Map017 Công Viên An Bình theo
+   `docs/tileset-plan.md` (đang dùng atlas-map001.png — L1 Map017
+   đếm thật trước khi thay; nhớ `handwritten()` nay đã áp override;
+   import atlas mới TRƯỚC khi chạy test — bài học §75.3; kiểm tra
+   venv `/tmp/pxb-pw-venv` trước browser-verify, mất thì tạo lại —
+   bài học §77.3; lái theo `window.__pxb_tile`, không đếm phím —
+   bài học §78.3; kiểm `OUT` + `legs` bằng mắt sau khi chép script
+   verify — bài học §80.3).
+3. Làm lại Map001–002 cho giống Nadia hẳn theo cam kết mới với chủ
+   (26/11, sau vòng 54) — việc lớn tiếp theo sau đợt đẩy gộp r43–r58
+   (tile riêng đã làm tới Map016 trong lúc chờ chủ nói 'đẩy tiếp').
+4. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+## 81. Vòng 59 — Tile công viên An Bình riêng Map017 (26/11 ~15:45–16:15 +07, cron 15:45)
+
+### 81.1 Art (subagent artpass59) — XONG, gen 0 lần lại
+
+- Tile `park-map017.png` (64×64 RGBA, 6.185 byte): 4 cây xanh tán tròn lớn,
+  ghế đá xám bên trái, lối đi lát gạch kem uốn quanh hồ sen, hồ sen nhỏ
+  giữa cảnh với hoa sen hồng + lá sen, đèn đường cổ điển bên phải, bụi hoa
+  hồng/vàng dọc chân cảnh; nền kem trơn, không người, không chữ, toàn bộ
+  cảnh nằm gọn trong khung (lề trái 239, phải 238, trên 275, dưới 259 px).
+- Kiểm chứng: 1 component alpha duy nhất (1.834 px alpha>0, 1.612 px
+  alpha>0,5); 0 pixel gần-trắng; 0 quầng ở mép; hàng y62–63 trong suốt;
+  kiểm bằng mắt ở 1× và zoom 3× trên nền magenta đều đọc rõ công viên.
+  Tôi đo độc lập bằng PIL qua tile đích, khớp số liệu note của subagent
+  (chênh 2 px ở ngưỡng alpha>128: 1.610 vs 1.612 — không đáng kể, vẫn >800).
+- Note: `visual-check/artpass59/park-tile-note.md` + script
+  `process_park_r59.py` (theo mẫu vòng 58: tách nền bằng khoảng cách màu,
+  ép alpha=255 vùng trong silhouette, nearest-fill RGB trước resize LANCZOS).
+
+### 81.2 Code + test — XONG
+
+| File | Đổi |
+|---|---|
+| `tools/godot/convert_maps.py` | `ATLAS_PNG_OVERRIDE[17] = "atlas-map017.png"` + `ATLAS_TILE_OVERRIDE` (tile 4 → `cong-vien-an-binh`, hết PROVISIONAL; Map017 L1 đếm thật: tile 4 có 8 ô, tile 5 có 12 ô, tile 3 có 8 ô — thay tile 4 như các vòng trước; vị trí tile 4: (1,0),(4,0),(7,0),(10,0),(0,3),(11,3),(0,6),(11,6)). `handwritten()` đã áp override từ vòng 57 nên regen là đủ, không cần sửa thêm. |
+| `src/godot/data/maps.json` (tạo lại) | Chỉ Map017 đổi (atlas mới + tile 4 tên mới); Map001–016, Map018 không đổi; đủ 18 map. |
+| `src/godot/tiles/atlas-map017.png` (mới, binary — chỉ local + trong pck, KHÔNG push qua snapshot-push) | `visual-check/artpass59/build_atlas_map017.py`: atlas-map001.png đổi cell cột 3 (x=192) thành tile công viên (đã có sửa ghost vòng 47: xóa trắng cell trước khi paste + assert ghost=0). Chạy: cell 3 khác 3.104 px / 1.562 px đục / ghost 0. |
+| `src/godot/tiles/atlas-map017.png.import` (mới) | `--headless --import` sinh lại (chạy TRƯỚC khi test — bài học §75.3). |
+| `src/godot/tests/g4_r59_map017_tile_test.gd` (mới) | 16 mục: Map017 atlas + tên tile 4 + hết PROVISIONAL; Map001/002 không đổi; Map003–016 giữ atlas riêng; PNG 512×64; cell 3 khác atlas cũ + có công viên (>800 px đục); cell khác giống hệt; scene thật Map017 (không NadiaScene, lớp tile hiện, atlas đúng file mới) 60 frame + về Map001 map_id 1. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r59_map017_tile_test` (nay 83 suite vòng lặp + server_test + probe = 85 mục). |
+| `visual-check/artpass59/check_r59.py` (mới) | Browser-verify Map001→…→Map017 (chuỗi cửa (5,8)), cổng 8212 + ảnh + crop zoom, theo mẫu check_r58.py + lái theo `__pxb_tile` (bài học §78.3). |
+
+### 81.3 Verify thật vòng này
+
+- `--check-only` test mới: PASS (exit 0). **Lỗi sửa trong vòng:** test mới
+  parse fail dòng 102 — `tex16.get_size()` sót sau khi đổi tên biến thành
+  `tex17` (sed `s/tex16 != null/tex17 != null/` không chạm `tex16.get_size()`).
+  Sửa 1 dòng, chạy lại PASS. Bài học: sau khi sed đổi tên biến, grep lại
+  mọi occurrence của tên cũ, không chỉ chỗ đã sửa.
+- Test mới `g4_r59_map017_tile_test`: **16/16 PASS** (cell 3 khác atlas
+  cũ 3.075 px theo Godot — PIL đo 3.104, lệch do import — vẫn >500;
+  1.563 px đục).
+- Hồi quy đầy đủ: **85 OK, 0 FAIL** (83 suite vòng lặp +
+  server_test + probe).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web: exit 0. pck **22.465.600 byte, SHA `61082d94`**
+  (thay `3f6125e5` vòng 58); wasm không đổi `fc74679e`
+  (39.514.754 byte); pck chứa `cong-vien-an-binh` + `atlas-map017`
+  (kiểm bằng `strings`, 6 hit); HTTP 200 đủ 4 file (cổng 8212);
+  `GODOT_THREADS_ENABLED = false`.
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass59/check_r59.py`, cổng 8212):
+  **0 console error, 0 pageerror, 0 request fail.**
+  `window.__pxb_map` đối chiếu đúng cả 16 chân:
+  1→2→3→4→5→6→7→8→9→10→11→12→13→14→15→16→17, không lệch map nào
+  (lái theo `__pxb_tile`, không đếm phím — bài học §78.3).
+  - Map017: HUD "Phố Xô Bồ — Công Viên An Bình", NPC Cô Bán Bánh +
+    Ông Lão Tập Thể Dục, 2 cửa đúng tên ("Cửa về Khu Sân Golf &
+    Resort" / "Cửa đi Phố Đi Bộ – Chợ Đêm"), debug ô (5,4).
+  - Tile công viên hiện ở hàng biên Map017 (ảnh
+    `r59-15-map17.png` + crop `r59-16-map17-left.png`): cụm cây
+    xanh tán tròn xen kẽ khối nhà trọ vàng Kenney (tile 3/5 vẫn
+    PROVISIONAL) — **không còn bóng ghost**; nhãn 2 cửa + 2 NPC
+    không chồng nhau.
+  - Map016 (ảnh `r59-14-map16`): tile sân golf vòng 58 vẫn sạch
+    ghost (clubhouse mái nâu cam hiện rõ ở hàng biên).
+- **Bài học môi trường lặp lại:** venv Playwright `/tmp/pxb-pw-venv`
+  đã mất (xóa theo /tmp) — tạo lại bằng `python3 -m venv` + pip
+  install playwright pillow (chromium-1255 còn trong cache, không
+  cần tải lại); kiểm tra venv TRƯỚC khi chạy browser-verify —
+  bài học §77.3.
+- **Lỗi script chép bằng sed (tái phạm mẫu §80.3):**
+  `build_atlas_map017.py` chép từ bản r58 nhưng `s/map016/map017/`
+  chạy TRƯỚC `s/golf-map016/park-map017/` nên SRC thành
+  `golf-map017.png` không tồn tại → `FileNotFoundError` khi chạy.
+  Sửa SRC + 2 chuỗi docstring còn sót "san golf", chạy lại OK.
+  Bài học: khi chép script bằng nhiều sed, đặt phép thay tên file
+  cụ thể TRƯỚC phép thay số vòng chung; kiểm tra lại SRC bằng mắt
+  trước khi chạy.
+
+### 81.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- **Push main r59 (gộp r43–r59, thay script r58):**
+  script mới `pxb-push-main-r59.py` + 4 manifest
+  (`pxb-push-main-r59-a/b/c/docs`: a 66 path, b 15 `.import`,
+  c 30 path, docs 2 file).
+  **Chưa chạy — chờ chủ nói 'đẩy tiếp' + bấm duyệt** (xem §69.1:
+  thẻ r44 đã timeout, không còn thẻ chờ; live vẫn `5f2a052f` r41).
+- **Lỗi manifest gặp + sửa trong vòng này (ghi để không tái phạm):**
+  file manifest r58 gốc KHÔNG kết thúc bằng `\0` nên khi append
+  path mới bằng `b + new + b'\0'`, path cuối cũ dính liền với path
+  mới (`build_atlas_map016.pysrc/godot/tests/...`) — đếm lại thấy
+  a 65 (thiếu 1), b 14 (thiếu 1), c 29 (thiếu 1) so với kỳ vọng
+  66/15/30. Đã tách thủ công 3 chỗ dính + chuẩn hóa lại (join bằng
+  `\0` + trailing `\0`), đếm lại đủ 66/15/30. Bài học: manifest
+  paths-file là danh sách NUL-separated — khi append phải kiểm tra
+  file gốc có trailing `\0` không; an toàn nhất là đọc → split →
+  filter rỗng → join lại + trailing `\0`, rồi đếm lại trước khi dùng.
+- **Deploy gh-pages pck `61082d94`:** staging rebuild xong,
+  `build_gh_pages.py` verify PASS (khớp byte: pck 167 chunk,
+  22.465.600 byte; wasm 293 chunk không đổi; img
+  title_bg `260962c1` + char_player `5dc7da77` + char_banthan
+  `a4c96723` — cả 3 version img đã có trên gh-pages theo sync
+  record `src/nadia/www.muse-github-snapshot-sync.json`, nên
+  deploy này chỉ đẩy pck + final như vòng 58); script mới
+  `pxb-deploy-r59.py` + 10 manifest
+  (`pxb-deploy-pck-61082d94-batch1..9` + `-final`). Wasm không đổi
+  `fc74679e` nên không đẩy lại. Chạy sau push main.
+  Live hiện vẫn `5f2a052f` (r41).
+- **Chưa làm:** điền SHA push/deploy vào §81.4 sau khi có kết quả.
+
+### 81.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r59 (4 lô) → deploy pck `61082d94`
+   (10 lô) → kiểm live pin + đối chiếu byte → điền SHA vào §81.4.
+2. Tile riêng tiếp theo: Map018 Phố Đi Bộ – Chợ Đêm theo
+   `docs/tileset-plan.md` (đang dùng atlas-map001.png — L1 Map018
+   đếm thật trước khi thay; nhớ `handwritten()` nay đã áp override;
+   import atlas mới TRƯỚC khi chạy test — bài học §75.3; kiểm tra
+   venv `/tmp/pxb-pw-venv` trước browser-verify, mất thì tạo lại —
+   bài học §77.3; lái theo `window.__pxb_tile`, không đếm phím —
+   bài học §78.3; kiểm `OUT` + `legs` bằng mắt sau khi chép script
+   verify — bài học §80.3; kiểm SRC sau khi chép build_atlas bằng
+   sed — bài học §81.3; đếm lại manifest sau khi append —
+   bài học §81.4).
+3. Làm lại Map001–002 cho giống Nadia hẳn theo cam kết mới với chủ
+   (26/11, sau vòng 54) — việc lớn tiếp theo sau đợt đẩy gộp r43–r59
+   (tile riêng đã làm tới Map017 trong lúc chờ chủ nói 'đẩy tiếp').
+4. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+## §82 — Vòng 60: tile sạp chợ đêm riêng Map018 Phố Đi Bộ – Chợ Đêm (khu cuối chuỗi tile riêng)
+
+### 82.1 Art — XONG
+
+- Tile sạp chợ đêm Sài Gòn riêng cho Map018: `nightmarket-map018.png`
+  64×64 RGBA, 6.967 byte (mái che sọc đỏ/vàng, 6 đèn lồng cam/vàng treo +
+  dây đèn tròn hai bên, 4 giỏ trái cây lớn trên quầy — xoài, thanh long,
+  vải, chuối — + 2 giỏ nhỏ phía trước — chanh xanh, lê — bát + ấm trà đỏ,
+  7 ghế nhựa đỏ/vàng trước quầy — art gen 0 lần lại, 1 component alpha,
+  0 gần-trắng, 0 quầng xanh; kiểm bằng mắt 1× + 3×; tile rộng 64 px, cao
+  43 px vì ảnh gốc tỉ lệ ngang, đáy y=61; nền ảnh gốc là đêm xanh đậm
+  bg ≈ (31, 75, 135) nên tách nền theo màu góc thực tế, KHÔNG giả định
+  nền kem như vòng 59).
+- Đo độc lập bằng PIL qua tile đích, khớp số liệu note của subagent
+  (chênh 4 px ở ngưỡng alpha>128: 1.830 vs 1.834 — không đáng kể, vẫn
+  >800).
+- Note: `visual-check/artpass60/nightmarket-tile-note.md` + script
+  `process_nightmarket_r60.py` (theo mẫu vòng 59: tách nền bằng khoảng
+  cách màu, ép alpha=255 vùng trong silhouette, nearest-fill RGB trước
+  resize LANCZOS, dọn 41 px quầng sau resize).
+
+### 82.2 Code + test — XONG
+
+| File | Đổi |
+|---|---|
+| `tools/godot/convert_maps.py` | `ATLAS_PNG_OVERRIDE[18] = "atlas-map018.png"` + `ATLAS_TILE_OVERRIDE` (tile 4 → `sap-cho-dem`, hết PROVISIONAL; Map018 L1 đếm thật: tile 4 có 8 ô, tile 5 có 12 ô, tile 3 có 8 ô — thay tile 4 như các vòng trước; vị trí tile 4: (1,0),(4,0),(7,0),(10,0),(0,3),(11,3),(0,6),(11,6)). `handwritten()` đã áp override từ vòng 57 nên regen là đủ, không cần sửa thêm. |
+| `src/godot/data/maps.json` (tạo lại) | Chỉ Map018 đổi (atlas mới + tile 4 tên mới); Map001–017 không đổi; đủ 18 map. |
+| `src/godot/tiles/atlas-map018.png` (mới, binary — chỉ local + trong pck, KHÔNG push qua snapshot-push) | `visual-check/artpass60/build_atlas_map018.py`: atlas-map001.png đổi cell cột 3 (x=192) thành tile sạp chợ đêm (đã có sửa ghost vòng 47: xóa trắng cell trước khi paste + assert ghost=0). Chạy: cell 3 khác 3.004 px / 1.780 px đục / ghost 0. |
+| `src/godot/tiles/atlas-map018.png.import` (mới) | `--headless --import` sinh lại (chạy TRƯỚC khi test — bài học §75.3). |
+| `src/godot/tests/g4_r60_map018_tile_test.gd` (mới) | 16 mục: Map018 atlas + tên tile 4 + hết PROVISIONAL; Map001/002 không đổi; Map003–017 giữ atlas riêng; PNG 512×64; cell 3 khác atlas cũ + có sạp chợ đêm (>800 px đục); cell khác giống hệt; scene thật Map018 (không NadiaScene, lớp tile hiện, atlas đúng file mới) 60 frame + về Map001 map_id 1. |
+| `tools/godot/run_regression.sh` | Thêm `g4_r60_map018_tile_test` (nay 84 suite vòng lặp + server_test + probe = 86 mục). |
+| `visual-check/artpass60/check_r60.py` (mới) | Browser-verify Map001→…→Map018 (chuỗi cửa (5,8), 17 chân), cổng 8213 + ảnh + crop zoom, theo mẫu check_r59.py + lái theo `__pxb_tile` (bài học §78.3). |
+
+### 82.3 Verify thật vòng này
+
+- `--check-only` test mới: PASS (exit 0).
+- Test mới `g4_r60_map018_tile_test`: **16/16 PASS** (cell 3 khác atlas
+  cũ 2.967 px theo Godot — PIL đo 3.004, lệch do import — vẫn >500;
+  1.783 px đục).
+- Hồi quy đầy đủ: **86 OK, 0 FAIL** (84 suite vòng lặp +
+  server_test + probe).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR.
+- Export web: exit 0 (~9s). pck **22.489.988 byte, SHA `1c4a4bf2`**
+  (thay `61082d94` vòng 59); wasm không đổi `fc74679e`
+  (39.514.754 byte); pck chứa `sap-cho-dem` (strings 1 hit) +
+  `atlas-map018` (5 hit); HTTP 200 đủ 4 file (cổng 8213);
+  `GODOT_THREADS_ENABLED = false`.
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `visual-check/artpass60/check_r60.py`, cổng 8213):
+  **0 console error, 0 pageerror, 0 request fail.**
+  `window.__pxb_map` đối chiếu đúng cả 17 chân:
+  1→2→3→4→5→6→7→8→9→10→11→12→13→14→15→16→17→18, không lệch map nào
+  (lái theo `__pxb_tile`, không đếm phím — bài học §78.3).
+  - Map018: HUD "Phố Xô Bồ — Phố Đi Bộ – Chợ Đêm", NPC Chủ Sạp Đêm +
+    Người Bán Hàng Rong, 1 cửa đúng tên ("Cửa về Công Viên An Bình"),
+    debug ô (5,4), toast `Đã sang Phố Đi Bộ – Chợ Đêm`.
+  - Tile sạp chợ đêm hiện ở hàng biên Map018 (ảnh
+    `r60-16-map18.png` + crop `r60-17-map18-left.png`): mái che sọc
+    đỏ/vàng + đèn lồng xen kẽ khối nhà trọ vàng Kenney (tile 3/5 vẫn
+    PROVISIONAL) — **không còn bóng ghost**; nhãn 2 NPC + 1 cửa
+    không chồng nhau.
+  - Map017 (ảnh `r60-15-map17`): tile công viên vòng 59 vẫn sạch
+    ghost (cụm cây xanh hiện rõ ở hàng biên).
+- **Venv Playwright `/tmp/pxb-pw-venv` vẫn còn vòng này** (không phải
+  tạo lại như vòng 55/59).
+- **Lỗi script chép bằng sed (tái phạm mẫu §80.3/§81.3):**
+  `pxb-push-main-r60.py` chép từ bản r59 nhưng sót "tile Map016" +
+  "build_atlas_map016" + "pxb-push-main-r58.py" + "§80" trong
+  header/LOTS — đã sửa trực tiếp bằng edit + đọc lại toàn bộ header.
+  `pxb-deploy-r60.py`: phép thay "Vong 59" không tồn tại (docstring
+  gốc viết "vong 59" thường) nên assert dừng — bỏ phép thay thừa;
+  docstring còn sót số byte/test/override cũ — đã sửa tay. Bài học:
+  sau khi chép script bằng sed/thay chuỗi, đọc lại TOÀN BỘ header +
+  LOTS bằng mắt, không chỉ grep chỗ đã sửa.
+- **Lỗi môi trường (tái phạm mẫu vòng 55):** `pkill -f "http.server
+  8213"` tự giết luôn shell gọi nó — tắt server bằng PID qua `kill`.
+
+### 82.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- **Push main r60 (gộp r43–r60, thay script r59):**
+  script mới `pxb-push-main-r60.py` + 4 manifest
+  (`pxb-push-main-r60-a/b/c/docs`: a 70 path, b 16 `.import`,
+  c 32 path, docs 2 file — đếm lại sau khi chuẩn hóa join NUL +
+  trailing NUL, đủ path, không thiếu file nào).
+  **Chưa chạy — chờ chủ nói 'đẩy tiếp' + bấm duyệt** (xem §69.1:
+  thẻ r44 đã timeout, không còn thẻ chờ; live vẫn `5f2a052f` r41).
+- **Deploy gh-pages pck `1c4a4bf2`:** staging rebuild xong,
+  `build_gh_pages.py` verify PASS (khớp byte: pck 167 chunk,
+  22.489.988 byte; wasm 293 chunk không đổi; img
+  title_bg `260962c1` + char_player `5dc7da77` + char_banthan
+  `a4c96723` — cả 3 version img đã có trên gh-pages theo sync
+  record `src/nadia/www.muse-github-snapshot-sync.json`, nên
+  deploy này chỉ đẩy pck + final như vòng 59); script mới
+  `pxb-deploy-r60.py` + 10 manifest
+  (`pxb-deploy-pck-1c4a4bf2-batch1..9` + `-final`). Wasm không đổi
+  `fc74679e` nên không đẩy lại. Chạy sau push main.
+  Live hiện vẫn `5f2a052f` (r41).
+- **Chưa làm:** điền SHA push/deploy vào §82.4 sau khi có kết quả.
+
+### 82.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r60 (4 lô) → deploy pck `1c4a4bf2`
+   (10 lô) → kiểm live pin + đối chiếu byte → điền SHA vào §82.4.
+2. **Chuỗi tile riêng ĐÃ XONG ĐỦ 18 KHU** — Map003–018 đều có atlas
+   riêng (16 atlas mới), chỉ Map001/002 còn dùng atlas gốc. Việc lớn
+   tiếp theo sau đợt đẩy gộp r43–r60: làm lại Map001–002 cho giống
+   Nadia hẳn theo cam kết mới với chủ (26/11, sau vòng 54).
+3. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+## §83 — Vòng 61: nền vẽ tay cao Map002 Chợ Đầu Mối (bước 1 làm lại Map001–002 kiểu Nadia) (26/11 ~17:48–19:05 +07, cron 18:45)
+
+### 83.1 Art + code
+
+- Art (subagent artpass61, 17:48–18:10): `src/godot/art/bg_map002_tall.png`
+  (864×1536, 1.025.798 byte, MD5 `de22a9fb…`) +
+  `bg_map002_tall_night.png` (864×1536, 1.008.683 byte, MD5 `b6676d2f…`).
+  Sáng trung bình 116,6 / tối 47,7; trời ngày (35,79,135) vs đêm
+  (3,22,51); hàng dưới là đất, không phải trời. Ghi chú
+  `visual-check/artpass61/bg-map002-note.md`; script
+  `process_map002_r61.py`. Import xong. Lưu ý: mép mái đêm thấp hơn
+  ngày ~45–72px; sạp/xe/ba lô khớp ±4px.
+- Code (luồng song song): `iso_map.gd` thêm nhánh `map_id == 2` dùng
+  `bg_map002_tall.png` (ngày + đêm), neo `offset + (0, 20 − height/2)`,
+  `has_tall_bg = true`, bỏ `sky_wide`; thiếu file thì về `sky_band`.
+- Test mới `g4_r61_map002_bg_test.gd` **18/18 PASS** (2 file 864×1536,
+  ngày/đêm khác rõ, đáy ≠ trời, Map001 không đổi, `has_tall_bg` /
+  `has_night_bg`, đổi khung ngày↔đêm, về Map001 vẫn ảnh cao).
+
+### 83.2 Hồi quy + sửa test cũ
+
+- Hồi quy lần 1: **3057 PASS, 7 FAIL, 4 suite** (log
+  `hidden_files/regression-2026-11-26-1845.log`).
+- 3 suite test cũ (stale, không phải lỗi game): `artpass12` hardcode
+  nửa cao sky_band 140 → lấy nửa cao thật từ texture; `g4_polish`
+  đòi Map002 dùng sky_band → đổi sang bg_map002_tall + không sky_wide;
+  `g4_r16` khẳng định "Map002 không đổi: vẫn sky_band + sky_wide" →
+  lật 3 check sang hành vi mới.
+- `g4_transfer_move_test` 13/15 — **lỗi test, không phải lỗi game**:
+  điều tra bằng print tạm trong `_on_player_moved_to` / `_transfer`
+  (đã revert): A quay lại ô cửa (5,4) trên Map002 là **bước lên cửa →
+  chuyển về Map001 ngay** (luật từ G3), test lại tưởng vẫn ở Map002
+  vì check chỉ đọc tile, không đọc map; các check sau "qua" một cách
+  rỗng, đến check spawn mới vỡ. Đã sửa test theo đúng luật cửa: A về
+  Map001 (check cả map==1), S / D-pad / tap chạy trên Map001, click
+  lại cửa (5,4) sang Map002, D vẫn đi được. Sửa xong: **16/16 PASS**.
+- Hồi quy chạy lại: **3066 PASS, 0 FAIL, 0 suite lỗi** (87 suite; log
+  `hidden_files/regression-2026-11-26-1845-rerun.log`).
+- `--check-only` 5 file đã sửa exit 0; smoke `--headless --quit-after
+  120` exit 0, 0 ERROR.
+- Export web exit 0: pck **24.073.652 byte, SHA `b9d68286`** (thay
+  `1c4a4bf2` vòng 60; tăng ~1,6 MB đúng 2 PNG nền mới); wasm không đổi
+  `fc74679e`; HTTP 200 đủ 4 file (cổng 8931).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `hidden_files/pxb-browser-verify-r61.py`, cổng 8931):
+  **0 console error, 0 pageerror.** Ảnh
+  `hidden_files/pxb-browser-verify-r61/`: Map002 ngày — nền chợ cao
+  hiện rõ (sạp rau củ, xe đẩy gỗ, bao tải, mặt trời); đêm — trời xanh
+  đậm + mặt trăng + đèn sáng, hotspot đổi "Sạp rau buổi tối"; F về
+  Sáng — ảnh ngày trở lại, ngày game tăng 1→2 (đúng chu trình khung).
+  Không còn sky_band, không khe hở đen — chỉ một đường nối thẳng mờ
+  nơi đáy nền gặp đất (mỹ thuật, không chặn).
+
+### 83.3 Bài học
+
+- **Test chỉ check tile mà không check map là check rỗng:**
+  transfer_move "pass" 13 check trong khi người chơi đã sang map khác
+  — mọi check sau chuyển map phải khẳng định cả `current_map_id`.
+- **Luật cửa (ghi lại):** bước lên ô cửa là chuyển map ngay, không
+  đứng yên được trên ô cửa — test nào đi qua cửa phải tính chuyển map
+  vào luồng.
+- **Tái phạm pkill (lần 3, vòng 55/60/61):** `pkill -f "http.server
+  8931"` tự giết shell gọi — tắt server bằng `kill <PID>` lấy từ
+  `pgrep`. AGENTS.md không ghi được (file root 660, không quyền ghi)
+  — đã ghi vào `~/memory/2026-11-26.md`.
+- **Venv Playwright `/tmp` lại mất** (lần 3): tạo lại ở
+  `~/workspace/pxb-pw-venv` (bền vững, không dùng /tmp nữa), dùng lại
+  cache Chromium 1255.
+- **Không trích số hồi quy vòng cũ nếu không có log:** "r60 86 OK"
+  không đối chiếu được vì không còn log hồi quy r60 (chỉ có log 20/11
+  + 26/11) — số suite mỗi vòng khác nhau (87 vòng này), chỉ tin log
+  file.
+
+### 83.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- **Push main r61 (gộp r43–r61, thay script r60):** script mới
+  `pxb-push-main-r61.py` + 4 manifest (a 81 path — gồm 4 file test đã
+  sửa + .uid; b 18 `.import` — 16 atlas + 2 bg_map002_tall; c 34 path
+  — gồm note + script artpass61; docs 2 file). **Chưa chạy — chờ chủ
+  nói 'đẩy tiếp' + bấm duyệt** (thẻ r44 đã timeout, không còn thẻ chờ;
+  live vẫn `5f2a052f` r41).
+- **Deploy gh-pages pck `b9d68286`:** staging rebuild xong,
+  `build_gh_pages.py` verify PASS (khớp byte: pck 179 chunk,
+  24.073.652 byte; wasm 293 chunk không đổi; img 3 version không đổi
+  — đã có trên gh-pages, nên deploy này chỉ đẩy pck + final); script
+  mới `pxb-deploy-r61.py` + 10 manifest
+  (`pxb-deploy-pck-b9d68286-batch1..9` + `-final`). Chạy sau push
+  main. Live hiện vẫn `5f2a052f` (r41).
+- **Chưa làm:** điền SHA push/deploy vào §83.4 sau khi có kết quả.
+
+### 83.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r61 (4 lô) → deploy pck `b9d68286`
+   (10 lô) → kiểm live pin + đối chiếu byte → điền SHA vào §83.4.
+2. Tiếp tục làm lại Map001–002 kiểu Nadia (bước tiếp: nhân vật + ánh
+   sáng theo cam kết với chủ 26/11) — Map002 đã có nền cao ngày/đêm;
+   Map001 đã có từ vòng 16.
+3. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+## §84 — Vòng 62: ánh sáng đêm Map001–002 — đất đêm + nhân vật tối theo (bước 2 làm lại Map001–002 kiểu Nadia) (26/11 ~19:45–21:00 +07, cron 19:45)
+
+### 84.1 Art + code
+
+- Art (subagent artpass62): `src/godot/art/ground_map001_night.png`
+  (1440×900, 2.414.144 byte, MD5 `388d9979…`) +
+  `ground_map002_night.png` (1440×900, 2.411.873 byte, MD5 `5b67701b…`).
+  Độ sáng trung bình (PIL): Map001 ngày 131,4 → đêm 80,8 (61,5%);
+  Map002 ngày 142,4 → đêm 88,5 (62,1%) — trong band 50–65%; đêm lạnh
+  hơn (B cao hơn). Gen 1 lần lại mỗi ảnh: v1 edit quá tối (44,1% /
+  45,0%, dưới band), v2 resume snapshot + sáng nhẹ thì đạt ngay.
+  Tương quan cấu trúc ngày/đêm 0,785 / 0,683; vài chi tiết nhỏ (lá,
+  vệt rêu) xê dịch nhẹ do edit-model — chấp nhận, không gen lại.
+  Ghi chú `visual-check/artpass62/bg-ground-night-note.md`; script
+  `process_ground_night_r62.py` (resize LANCZOS 1920×1200 →
+  1440×900, tỉ lệ 1,6, không méo). Import xong (.import đã sinh).
+- Code: `main.gd` — `_update_ground` thêm `_night_ground_path`
+  (Map001-002, có file mới dùng); khung Tối (frame 2) đổi sang ảnh
+  đất đêm, thiếu file thì giữ ảnh ngày + MUL (không crash);
+  `_update_daynight` gọi lại `_update_ground(current_map_id)` để
+  phím F đổi đất theo khung (trước đây chỉ gọi ở load_map nên bấm F
+  đất ngày giữ sáng trong khi nền đêm đã tối — đó chính là lỗi);
+  `_update_character_tint` — NGOẠI LỆ có điều kiện cho Map001-002:
+  khung Tối + có đất đêm thì tint nhân vật (0.60,0.62,0.70) để về
+  ~(0.42,0.48,0.67) sau MUL, hòa vào đất đêm (~0.42); map không có
+  đất đêm giữ trắng (bài học 20/11 không bị phá: lúc đó đất KHÔNG
+  có bản đêm nên tint riêng là nấc thừa không có cơ sở).
+- Test mới `g4_r62_night_ground_test.gd` **31/31 PASS** (file đêm
+  1440×900, tỉ lệ sáng 0,62 cả 2 map; scene thật: Sáng đất ngày +
+  tint trắng; Tối qua `_update_daynight` như phím F: đất đêm + tint
+  đêm player + NPC; về Sáng trả lại; Map003 không đổi: đất
+  ground_wide + tint trắng).
+
+### 84.2 Hồi quy + sửa test cũ
+
+- Hồi quy lần 1: **85 OK, 3 FAIL** (log
+  `hidden_files/regression-2026-11-26-1945.log`).
+- 3 suite test cũ (stale, không phải lỗi game — đúng mẫu vòng 61):
+  `g4_artpass3/4/5_test` khẳng định luật vòng 5 "đêm không tint
+  riêng (trắng)" trên Map001 — nay Map001 có đất đêm nên tint đêm
+  là hành vi mới có chủ đích. Đã lật 3 check sang tint đêm
+  (0.60,0.62,0.70) ±0,02 + cập nhật header artpass4/5; check "về
+  Sáng tint trắng trở lại" giữ nguyên. Chạy lẻ: **24/24, 19/19,
+  17/17 PASS**.
+- Hồi quy chạy lại: **88 OK, 0 FAIL, 3168 mục PASS đếm được**
+  (88 suite: 86 vòng lặp + server_test + probe; 2 suite probe
+  PASS theo exit code, không đếm số; log
+  `hidden_files/regression-2026-11-26-1945-rerun.log`).
+  `run_regression.sh` nay thêm cả `g4_r61_map002_bg_test` (vòng 61
+  quên thêm vào list — log rerun r61 chạy riêng) + r62.
+- `--check-only` 5 file đã sửa exit 0; smoke `--headless
+  --quit-after 120` exit 0, 0 ERROR/warning.
+- Export web exit 0 (~17s): pck **27.607.784 byte, SHA `8b6ea8ac`**
+  (thay `b9d68286` vòng 61; tăng ~3,5 MB đúng 2 PNG đất đêm);
+  wasm không đổi `fc74679e`; HTTP 200 đủ 4 file (cổng 8932).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `hidden_files/pxb-browser-verify-r62.py`, cổng 8932):
+  **0 console error, 0 pageerror.** Ảnh
+  `hidden_files/pxb-browser-verify-r62/`: Map001 đêm — nền CÀ PHÊ
+  tối, đất hẻm xanh đậm + quầng đèn vàng, player/Bạn Thân/Cô Tư
+  tối theo, không còn "dán" sáng trên đất tối; Map002 đêm — nền
+  chợ tối, đất chợ tối + đèn sáng, Chị Lệ/player/Anh Hải tối theo.
+  Đo PIL vùng đất (y 950–1250): Map001 ngày 155,0 → đêm 104,3
+  (tỉ lệ 0,67); Map002 ngày 183,3 → đêm 139,7 (tỉ lệ 0,76) —
+  đều ≤ 0,80; toàn ảnh đêm tối hơn ngày rõ (118,0→75,4 /
+  139,0→96,3). F về Sáng ảnh ngày trở lại đúng; ngày game tăng
+  1→2 đúng chu trình khung.
+- Còn tồn (mỹ thuật, không chặn): sprite sạp NadiaScene ở vùng
+  đất chỉ nhận MUL 0,7 (không có bản đêm riêng) nên dãy sạp Map002
+  đêm vẫn sáng hơn mặt đất — chấp nhận vòng này; muốn khớp hẳn
+  thì vẽ bản đêm cho stall sprite ở vòng sau.
+
+### 84.3 Bài học
+
+- **Venv Playwright thiếu pillow:** script r62 dùng PIL đo ảnh
+  nhưng venv `~/workspace/pxb-pw-venv` chỉ có playwright — đã
+  `pip install pillow` vào venv (lần sau script đo ảnh chạy được
+  ngay, không phải sửa script).
+- **Tắt server bằng PID thật, không phải PID subshell:** lệnh
+  `(python3 -m http.server 8932 &)` in PID 12036 là subshell,
+  server thật là 12038 — `kill 12036` không tắt, phải `ps` tìm
+  đúng PID python rồi kill. Bài học pkill vòng 61 vẫn đúng (không
+  dùng pkill), bổ sung: luôn `ps -ef | grep http.server <port>`
+  xác nhận PID thật trước khi kill.
+- **Test cũ khẳng định luật cũ thì phải lật, không được xóa:**
+  artpass3/4/5 giữ nguyên số check, chỉ đổi khẳng định sang hành
+  vi mới + ghi rõ ngoại lệ vòng 62 trong comment — như vòng 61 đã
+  làm với artpass12/polish/r16.
+
+### 84.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- **Push main r62 (gộp r43–r62, thay script r61):** script mới
+  `pxb-push-main-r62.py` + 4 manifest (a 86 path — gồm test r62 +
+  .uid + 3 test cũ đã sửa; b 20 `.import` — 16 atlas + 2
+  bg_map002_tall + 2 ground_map00N_night; c 36 path — gồm note +
+  script artpass62; docs 2 file). Đã kiểm: py_compile OK, mọi
+  path trong manifest đều tồn tại trên đĩa. **Chưa chạy — chờ chủ
+  nói 'đẩy tiếp' + bấm duyệt** (không còn thẻ chờ; live vẫn
+  `5f2a052f` r41).
+- **Deploy gh-pages pck `8b6ea8ac`:** staging rebuild xong,
+  `build_gh_pages.py` verify PASS (khớp byte: pck 27.607.784,
+  wasm không đổi; img 3 version không đổi — đã có trên gh-pages,
+  nên deploy này chỉ đẩy pck + final); script mới
+  `pxb-deploy-r62.py` + 12 manifest
+  (`pxb-deploy-pck-8b6ea8ac-batch1..11` + `-final`, 207 path, đã
+  kiểm đủ file staging). Chạy sau push main. Live hiện vẫn
+  `5f2a052f` (r41).
+- **Chưa làm:** điền SHA push/deploy vào §84.4 sau khi có kết quả.
+
+### 84.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r62 (4 lô) → deploy pck `8b6ea8ac`
+   (12 lô) → kiểm live pin + đối chiếu byte → điền SHA vào §84.4.
+2. Làm lại Map001–002 kiểu Nadia — bước tiếp: nhân vật lớn hơn
+   theo tỉ lệ nền cao (hiện nhân vật ~104 world px vẫn nhỏ so với
+   mặt tiền/sạp trong ảnh cao) + bản đêm cho stall sprite
+   NadiaScene (84.2) — hoặc quyết Bậc 1 là tỉ lệ hiện tại đã đủ
+   vì đã hòa ánh sáng.
+3. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+## §85 — Vòng 63: nhân vật lớn hơn + bản đêm cho stall sprite (bước 3 làm lại Map001–002 kiểu Nadia) (26/11 ~20:45–21:30 +07, cron 20:45)
+
+### 85.1 Số đo + code
+
+- Đo từ ảnh thật vòng 62 (viewport 720×1280, zoom 1.25): nhân vật cũ
+  cao ~127px màn hình (104 world × nội dung ảnh 204/208 × 1,25); mặt
+  tiền Map001 ~595px → tỉ lệ nhân vật/mặt tiền chỉ 0,21; sạp Map002 cao
+  ~120px ≈ bằng nhân vật → nhân vật "chìm" trước sạp/cửa hàng.
+- `scripts/character_sprite.gd`: **TEX_HEIGHT 104 → 128** (hệ số 1,23).
+  Nhân vật nay ~157px màn hình, tỉ lệ vs mặt tiền ~0,26, ~1,3× chiều cao
+  sạp. Bề rộng player 65 world (~ô tile 64), NPC rộng nhất (Bạn Thân)
+  83 world; cao 128 world = 4 hàng tile — đầu chỉ chạm tới ô cách 4 hàng,
+  không che cửa/hotspot kề (kiểm bằng hình học trong test). Bóng đổ tỉ lệ
+  theo khung: Sáng rx 17,2/ry 5,5/lệch (10,3); Chiều 32,0/6,2/(-27,3);
+  Tối 14,8/4,9/alpha 0,12. Vòng vàng qua hàm mới `ring_radius()`: r=49
+  (ảnh) / 44 (fallback vẽ code). Walk-cycle frames dùng chung TEX_HEIGHT
+  nên tự theo.
+- `scripts/marker.gd`: `NPC_LABEL_TOP` -170 → **-180** (đỉnh đầu mới
+  -125 world; khe nhãn thực đo 22,5 world ≈ 29px màn hình, không chạm
+  tóc). Fallback vẽ code vẫn cao ~72px.
+- `scripts/nadia_scene.gd` — bản đêm cho stall sprite: khung Tối, sprite
+  sạp nhận tint đêm **0,62** (MUL đêm 0,7 × 0,62 = 0,43, khớp đất đêm
+  0,62 × 0,7 = 0,43; số vòng 62: Map002 ngày 142,4 → đêm 88,5) + **quầng
+  đèn ấm HDR** (3 vòng 2,0/1,6/0,7, theo mẫu NightGlow) ở 6 sạp hàng 0 +
+  6 sạp bên tường, không đổi layout/vị trí. Dùng đúng đường `set_frame(f)`
+  đã có (iso_map forward khi bấm F). Sang/Chiều không đổi; Map001 không
+  có sạp nên không đổi. Hàm mới cho test: `stall_sprite_tint()`,
+  `stall_lamp_on()`, `stall_glow_centers()`.
+- Ghi chú `visual-check/artpass63/char-scale-stall-night-note.md`.
+
+### 85.2 Hồi quy + sửa test cũ
+
+- Test mới `g4_r63_char_scale_test.gd` **27/27 PASS**;
+  `g4_r63_stall_night_test.gd` **36/36 PASS** (lần đầu 35/36 do bound
+  test đặt sai — tâm quang y tới 272 trong khi map thật tới 320 — đã
+  sửa bound theo map thật). `run_regression.sh` nay thêm cả 2 test r63.
+- Hồi quy đầy đủ: **90 OK, 0 FAIL** (log
+  `hidden_files/regression-2026-11-26-2045.log`).
+- 2 check bóng cũ stale (`g4_artpass7_test`, khẳng định cứng rx 14,0/
+  (8,3) và 26,0/(-22,3) từ vòng 7): lật sang giá trị mới rx 17,2/(10,3)
+  và 32,0/(-27,3) + ghi ngoại lệ vòng 63 trong comment — đúng mẫu vòng
+  61/62 (sửa test, không sửa code). Chạy lẻ artpass7 **25/25 PASS**;
+  `g4_r15_label_world_test` 63/63 (nhãn -180 vẫn trong band khe 40–60px).
+- Smoke `--headless --quit-after 120` exit 0, 0 ERROR/warning.
+- Export web exit 0 (~17s): pck **27.621.788 byte, SHA `e60fb0de`**
+  (r62: 27.607.784 `8b6ea8ac` — tăng ~14 KB, đúng code mới); wasm không
+  đổi `fc74679e`; HTTP 200 đủ 4 file (cổng 8933).
+- **Browser-verify thật** (Chromium 1255 + swiftshader, 720×1280,
+  script `hidden_files/pxb-browser-verify-r63.py`, cổng 8933):
+  **0 console error, 0 pageerror.** Đo PIL: đất Map001 đêm/ngày 0,67;
+  Map002 0,77 (≤0,80); vùng sạp Map002 đêm/ngày **0,54**. Ảnh
+  `hidden_files/pxb-browser-verify-r63/`: Map001 ngày — player/Bạn Thân/
+  Cô Tư lớn rõ, mặt đọc được, nhãn không đè mặt; Map002 đêm — sạp tối +
+  quầng đèn ấm thấy rõ ở góc trái, nhân vật lớn hơn hẳn r62.
+- Còn tồn (có từ r62, KHÔNG phải hồi quy): nhãn biển sạp Map002
+  ("Sạp rau buổi tối" đè "THỊT HEO"/"RAU CỦ", "HOA QUẢ" đè đầu Chị Lệ,
+  "Góc phế liệu chợ" cắt ở mép phải) — biển sạp vẽ trong scene, không qua
+  bộ giải nhãn Marker; để vòng polish sau. Vật cản đầu nhân vật trong bộ
+  giải nhãn của `main.gd` vẫn tính theo đầu 104 world — nhãn có thể chạm
+  nhẹ ~21 world đỉnh đầu trong trường hợp hiếm (ngoài phạm vi vòng này).
+
+### 85.3 Bài học
+
+- **Vật cản nhãn phải theo kích thước nhân vật mới:** đổi TEX_HEIGHT mà
+  không đổi vật cản đầu trong `main.gd` là nợ nhỏ đã ghi rõ ở §85.1/85.2
+  (không giấu) — vòng polish nhãn sau phải cập nhật vật cản theo
+  `TEX_HEIGHT` thay vì số cứng 104.
+- **Bound test phải đo từ map thật, không đặt theo cảm giác:** test r63
+  stall lần đầu rớt 1 check vì bound y=272 đặt theo ước lượng, trong khi
+  map thật tới 320 — sửa bound theo số đo thật, không nới test cho qua.
+
+### 85.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- **Push main r63 (gộp r43–r63, thay script r62):** script mới
+  `pxb-push-main-r63.py` + 4 manifest (a 94 path — gồm 3 script sửa +
+  2 test r63 + .uid + artpass7 đã lật + note r63; b 20 `.import` không
+  đổi; c 37 path — gồm note artpass63; docs 2 file). Đã kiểm: py_compile
+  OK, mọi path trong manifest đều tồn tại trên đĩa. **Chưa chạy — chờ chủ
+  nói 'đẩy tiếp' + bấm duyệt** (không còn thẻ chờ; live vẫn `5f2a052f` r41).
+- **Deploy gh-pages pck `e60fb0de`:** staging rebuild xong,
+  `build_gh_pages.py` verify PASS (khớp byte: pck 27.621.788, wasm không
+  đổi; img 3 version không đổi — đã có trên gh-pages, nên deploy này chỉ
+  đẩy pck + final); script mới `pxb-deploy-r63.py` + 12 manifest
+  (`pxb-deploy-pck-e60fb0de-batch1..11` + `-final`, 207 path, đã kiểm đủ
+  file staging). Chạy sau push main. Live hiện vẫn `5f2a052f` (r41).
+- **Chưa làm:** điền SHA push/deploy vào §85.4 sau khi có kết quả.
+
+### 85.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r63 (4 lô) → deploy pck `e60fb0de`
+   (12 lô) → kiểm live pin + đối chiếu byte → điền SHA vào §85.4.
+2. Làm lại Map001–002 kiểu Nadia — bước tiếp: cập nhật vật cản đầu nhân
+   vật trong bộ giải nhãn `main.gd` theo `TEX_HEIGHT` 128 + gom biển sạp
+   Map002 vào bộ giải nhãn (hết chồng/cắt, §85.2); hoặc quyết Bậc 1 tỉ lệ
+   + nhãn hiện tại đã đủ.
+3. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+## §86 — Vòng 65: lượt tách tránh biển sạp — (b1) XONG, (b2) ngoại lệ có tên (26/11 ~22:45–23:20 +07, cron 22:45)
+
+> Mục 2 của §85.5 đã làm ở vòng 64 (vật cản đầu theo `TEX_HEIGHT` 128 +
+> dời Chị Lệ (2,2)→(4,5) + ngoại lệ "Sạp rau"/THỊT HEO + "Góc phế liệu"
+> không cắt mép — xem `~/memory/2026-11-26.md` mục vòng 64; vòng 64
+> chưa có § riêng trong file này nên đợt đẩy vòng 65 gộp cả r64).
+> Vòng này xử lý 2 chồng biển còn lại mà vòng 64 để lại có tên.
+
+### 86.1 Chẩn đoán bằng probe (không đoán)
+
+- Probe `tests/probe_r65.gd` (tạm, đã xóa): 5 vị trí camera × Sáng/Tối.
+- **(b1) "Cửa về Xóm Trọ Cũ" đè biển GIA VỊ (11,6) 35×15px ở camera
+  (5,2):** vòng chính đặt nhãn đúng ở neo 1162 (không đè biển), nhưng
+  **lượt tách** đẩy nhãn lên 1112 để tách khỏi "Cửa đi Khu Công Nhân"
+  (cùng y=1162) — lượt tách chỉ kiểm vật cản CỨNG nên đẩy thẳng lên
+  biển. Probe b (`_nearest_free_y` gọi trực tiếp) xác nhận vòng chính
+  vô can: `nearest=1162.00 drift=0`.
+- **(b2) "Góc phế liệu chợ" quẹt biển CÁ TƯƠI (11,2) 65×2,75px ở camera
+  (9,2):** vòng chính tìm được khoang trống gần nhất ở 1080.75 nhưng
+  drift 142,2px > `LABEL_MAX_DRIFT` 120 nên giữ neo theo luật
+  (probe b: `nearest=1080.75 drift=142.2`). Nham thạch: khoang bịt kín
+  bởi vật cản người chơi + 3 biển (CÁ TƯƠI/ĐỒ KHÔ/GIA VỊ) + icon
+  của chính nó; dịch ngang cũng không thoát (icon của nó chặn ±160,
+  x=16 thì nhãn rời khỏi icon). Nhảy 142px để tránh vết quẹt 2,75px
+  là đổi tệ lấy tốt — giữ làm ngoại lệ có tên như (a) vòng 64.
+- Bài học probe: lần sửa đầu kiểm cả nhãn trong helper nudge nên
+  **không dịch được** — "Góc Chế Tạo" đang ở 1107.25 (vòng chính đặt)
+  chặn hết mọi dịch ngang, trong khi nó sẽ được cascade đẩy lên 1062
+  ngay sau đó. Sửa lại: nudge chỉ kiểm biển + vật cản cứng, chong
+  nhãn để cascade của lượt tách xử lý (xem §86.2).
+
+### 86.2 Code — XONG
+
+- `main.gd` — `_nudge_clear_of_signs(cand, signs, hard_obstacles)`
+  (mới): ứng viên tách đè biển thì thử dịch ngang giữ nguyên y
+  (±40/80/120/160, gần trước, như vòng chính), lấy cái đầu tiên
+  sạch biển (rect grow `LABEL_GAP`) + vật cản cứng; không có thì
+  trả về ứng viên gốc (giữ hành vi cũ). Chỉ chạy khi ứng viên đè
+  biển — 99% trường hợp không đổi gì. **Cố tình KHÔNG kiểm nhãn
+  khác** (xem bài học §86.1).
+- `main.gd` — `_try_move_up(..., signs = [])` (mới, tham số mặc định
+  để test cũ không đổi): nhãn bị cascade đẩy lên cũng không được đè
+  biển — nếu không, lượt tách lại tạo ra chồng biển mới.
+- Lượt tách gọi cả hai: `cand_up`/`cand_dn` qua nudge trước, rồi
+  `_try_move_up(..., sign_rects)`.
+- Kết quả đo lại: "Cửa về" ở (5,2) Sáng + Tối về **(37,5, 1112)**
+  (dịch trái 80px, y tách giữ nguyên), hết đè GIA VỊ; "Góc Chế Tạo"
+  vẫn cascade lên 1062 như cũ; không nhãn nào khác đổi vị trí.
+
+### 86.3 Test + hồi quy — XONG
+
+- Test mới `tests/g4_r65_label_signs_test.gd`: **78/78 PASS** — 6 vị
+  trí đo (spawn, (5,2), (9,2) × Sáng/Tối + (10,4) Tối): (b1) "Cửa về"
+  sạch mọi biển + ở đúng ô tách y=1112 + dịch ngang ≤160px; (b2)
+  "Góc phế liệu" chỉ quẹt CÁ TƯƠI ≤65×3px; (a) "Sạp rau" chỉ đè
+  THỊT HEO ≤36×21px; toàn cục: nhãn khác không đè biển nào; không
+  cặp nhãn nào chồng nhau; nhãn trong màn hình + neo Y trong luật
+  (≤120, hoặc ≤200 khi thoát người chơi/D-pad); kiểm thẳng helper
+  `(117.5,1112) → (37.5,1112)`.
+- Hồi quy đầy đủ: **92 OK, 0 FAIL** (baseline r64: 91 OK; +1 suite
+  r65; log `hidden_files/regression-2026-11-26-2320.log`).
+  `run_regression.sh` đã thêm `g4_r65_label_signs_test`.
+- Smoke `--quit-after 120` exit 0, 0 ERROR/warning.
+- Export web exit 0 (~19s): pck mới **27.641.172 byte, SHA
+  `9ceea485…`** (trước `e60fb0de…` r63), wasm không đổi
+  `fc74679e…`, `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ 4 file
+  (cổng 8940).
+- Chưa kiểm chứng bằng trình duyệt thật vòng này (chỉ đo headless +
+  probe); vòng sau nên chụp ảnh Chromium ở camera (5,2) để thấy
+  "Cửa về" đã rời khỏi biển GIA VỊ bằng mắt.
+
+### 86.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r65 (gộp r43–r65: a 99 / b 20 / c 37 / docs 2) + deploy
+  pck `9ceea485` (12 lô, 207 path) đã chuẩn bị xong, **CHƯA CHẠY —
+  chờ chủ nói 'đẩy tiếp'** (thẻ r44 đã timeout, không còn thẻ chờ;
+  live vẫn `5f2a052f` r41). Script `pxb-push-main-r65.py`,
+  `pxb-deploy-r65.py` + manifest trong hidden_files goal.
+- Lô a r65 = lô a r63 + 4 path mới: `g4_r64_label_polish_test.gd`
+  (+`.uid`), `g4_r65_label_signs_test.gd` (+`.uid`),
+  `g1_playtest.gd` (r64 sửa ô Chị Lệ); `main.gd` /
+  `convert_maps.py` / `data/maps.json` / `run_regression.sh` đã có
+  trong lô a r63 nên chỉ đẩy lại nội dung mới.
+
+### 86.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r65 (4 lô) → deploy pck `9ceea485`
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 65 bằng Chromium thật ở camera (5,2): chụp
+   "Cửa về" đã rời biển GIA VỊ; kiểm (b2) quẹt 2,75px có thấy bằng
+   mắt không — nếu thấy rõ thì quyết Bậc 1 có sửa tiếp không.
+3. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+
+
+
+## §87 — Vòng 65: browser-verify lượt tách tránh biển sạp — XONG (26/11 ~23:45–23:55 +07, cron 23:45)
+
+> Mục 2 của §86.5. Build kiểm chứng: đúng pck vòng 65 `9ceea485…`
+> (SHA khớp), wasm không đổi `fc74679e…`, serve cổng 8941, HTTP 200
+> đủ 4 file. Script mới `hidden_files/pxb-browser-verify-r65.py`
+> (tái chạy được), ảnh + log console
+> `hidden_files/pxb-browser-verify-r65/` (01–06 + crop phóng to).
+
+### 87.1 Cách kiểm
+
+- Chromium 1255 headless + swiftshader, viewport 720×1280; đợi
+  `#start-btn:not([disabled])` rồi click qua selector (bài học §8.5).
+- Di chuyển bằng phím (đã có event-held artpass7): W+D từ spawn
+  Map001 (4,5) qua cửa (5,4) sang Map002; W×2 tới ô (5,2);
+  F×2 sang Tối; F×1 về Sáng (sang Ngày 2); D×4 tới ô (9,2);
+  F×2 sang Tối. Debug overlay trên ảnh xác nhận đúng ô
+  ("Ô (5,2) • W", "Ô (9,2) • D").
+- 0 console error, 0 pageerror cả buổi (log `console-r65.json`).
+
+### 87.2 Kết quả — (b1) PASS bằng mắt, (b2) không thấy rõ → giữ ngoại lệ
+
+- **(b1) "Cửa về Xóm Trọ Cũ" đã rời biển GIA VỊ (11,6) ở camera
+  (5,2), Sáng + Tối — PASS.** Ảnh crop 2× vùng y 1000–1200:
+  nhãn kết thúc x≈390, biển GIA VỊ bắt đầu x≈445 — khe ~55px,
+  không đè, cả Sáng (`03` + `crop-b1-day`) lẫn Tối
+  (`04` + `crop-b1-night`). Đúng vị trí test khóa (37.5, 1112).
+- **(b2) "Góc phế liệu chợ" quẹt biển CÁ TƯƠI (11,2) ở camera
+  (9,2) — KHÔNG THẤY RÕ bằng mắt, giữ làm ngoại lệ có tên,
+  không sửa tiếp (quyết Bậc 1 theo câu hỏi §86.5).** Ở tỉ lệ
+  thường (`05`/`06`) nhãn nhìn sạch hoàn toàn; crop 4× vùng
+  nhãn (`crop-b2-zoom-day/night`) chỉ thấy mép dưới nhãn chạm
+  sát mép trên biển (đúng 2,75px theo test), chữ biển vẫn đọc
+  được, phần lớn biển đã bị sao hotspot che từ trước (không
+  phải do nhãn). Nhảy 142px để tránh vết quẹt này vẫn là đổi
+  tệ lấy tốt như §86.1 đã kết luận.
+- Kiểm chéo thêm: đổi khung Sáng→Chiều→Tối→Ngày 2 Sáng chạy
+  đúng; nhãn "Sạp rau buổi tối" đổi đúng theo khung (artpass7);
+  chuyển map 2 chiều qua cửa (5,4) + toast "Đã sang Chợ Đầu Mối".
+
+### 87.3 Ghi nhận thêm (không chặn, để vòng polish sau)
+
+- **(a) vòng 64 còn nguyên ở camera (9,2) Tối:** nhãn "Sạp rau
+  buổi tối" che mất chữ T của biển THỊT HEO ("HỊT HEO",
+  `crop-a-night.png`) — đúng bound test r64 (≤36×21px), ngoại
+  lệ có tên đã biết, không phải hồi quy vòng 65.
+- **Nhãn "Sạp rau buổi tối" che mặt Chị Lệ ở camera (9,2) Tối:**
+  nhãn rộng đè lên đầu/mặt NPC (thấy tóc + thân, mắt bị che).
+  Bộ giải nhãn hiện chỉ tránh đầu của NPC neo nhãn, chưa tránh
+  đầu NPC khác ở cùng vị trí — ghi cho vòng polish nhãn sau,
+  không sửa trong vòng verify này.
+- Smoke headless kèm: `--headless --quit-after 120` exit 0,
+  0 ERROR. Không export lại (build trên đĩa đã là pck vòng 65).
+  Server 8941 đã tắt sau khi verify xong.
+
+### 87.4 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r65 (4 lô) → deploy pck
+   `9ceea485` (12 lô) → kiểm live pin + đối chiếu byte
+   (script + manifest đã chuẩn bị xong từ vòng 65, §86.4).
+2. G2 còn lại rồi G4 online (quyết server Godot headless hay
+   .NET, xem `docs/opensource-engine.md` §3.4).
+3. Polish nhãn: tránh đầu NPC khác (mục §87.3) + cân nhắc neo
+   nhãn "Sạp rau" gần điểm neo hơn thay vì đè biển THỊT HEO.
+
+## §88 — Vòng 66: nhãn tránh đầu NPC khác (mục 3 của §87.4) (27/11 ~00:45–01:10 +07, cron 00:45)
+
+### 88.1 Chẩn đoán bằng probe (không đoán)
+
+- Phát hiện §87.3: ở camera (9,2) Tối Map002, nhãn "Sạp rau buổi tối"
+  che mặt Chị Lệ (thấy tóc + thân, mắt bị che). Probe tái hiện trên
+  code cũ (`tests/g4_r66_probe_test.gd`, đã xóa sau khi dùng — không
+  commit): nhãn [P:(23.5,778.5), S:(273,38)] giao với đầu Chị Lệ
+  [P:(-7.3,772.8), S:(94.6,40)] = **63.8×34.3px**.
+- Cơ chế (đo, không suy luận): `want_y` 778.5, `best_y` 621.2, cách
+  **157.2px** — trong `LABEL_ESCAPE_MAX_DRIFT` (200px) nhưng vượt
+  `LABEL_MAX_DRIFT` (120px) nên vòng chính giữ neo; dịch ngang cũng
+  kẹt (dãy biển sạp y 671–811 + icon chắn cả 8 hướng); ngoại lệ
+  thoát (vòng 12b) chỉ tính nhân vật chính / D-pad nên không nhảy.
+  Vật cản chặn: sprite Chị Lệ (-12.7,756.2, 105×120), D-pad, 4 biển
+  sạp (77.5×20), 3 icon 48×48.
+- Kết luận: chỉ cần mở rộng ngoại lệ thoát cho **đầu NPC khác** —
+  không sửa vòng chính, không đụng luật neo 120px / 200px, không
+  mở rộng thoát cho biển sạp (cấm vòng 45 vẫn giữ).
+
+### 88.2 Code — XONG
+
+- `main.gd` — `_npc_head_rect(screen_pos)` (mới): cùng đỉnh + rộng
+  với `_sprite_obstacle_rect`, cao `32*z+15` (đầu 32 world + 15px
+  biên tóc), khớp `_head_rect` trong test r64/r66.
+- `main.gd` — `_label_hits_other_npc_head(r)` (mới): nhãn giao với
+  đầu NPC nào đó ≥10px cả 2 chiều (như luật thoát nhân vật chính).
+  Chỉ xét NPC — nhãn đang xét là hotspot/craft/door, không phải
+  NPC; nhãn NPC cố định nên không xét. Thân/ngực NPC không tính:
+  nhãn đè thân một chút vẫn đọc được, chỉ mặt mới không được che.
+- `main.gd` — nhánh thoát trong `_resolve_label_overlaps`: điều
+  kiện thêm `or _label_hits_other_npc_head(r)`; `best_y` đã tránh
+  cả sprite NPC nên nhảy tới đó là sạch đầu. Comment vòng 12b cập
+  nhật (đè thân NPC/icon vẫn chấp nhận; đè đầu thì thoát).
+- "Sạp rau" vs biển THỊT HEO: **cân nhắc xong, giữ nguyên ngoại lệ
+  có tên** (§87.4 mục 3, nửa sau) — nhãn đã ở đúng neo, không còn
+  ô sạch nào gần sạp (kết luận r64, probe 108 ô), dời neo/biển đều
+  phá luật khác. Test r66 khóa lại bound 36×20px không đổi.
+
+### 88.3 Test + hồi quy — XONG
+
+- Test mới `tests/g4_r66_label_other_npc_test.gd`: **42/42 PASS** —
+  hình học `_npc_head_rect` (đỉnh/rộng/cao), helper thoát (phủ đầu
+  → true, xa → false), 5 vị trí camera Map002 Sáng/Tối: không nhãn
+  nào (không phải NPC) che đầu NPC nào ≥10px; "Sạp rau" vs THỊT
+  HEO ≤36×20; drift ≤120 (hoặc ≤200 khi thoát khỏi nhân vật /
+  D-pad / đầu NPC); nhãn trong màn hình; không cặp nhãn nào chồng
+  nhau. Probe sau sửa: nhãn về đúng `best_y` 621.2 (drift 157.2px),
+  giao với đầu Chị Lệ **0×0**.
+- Hồi quy lần 1: **90 OK, 3 FAIL** — artpass12 + r64 + r65, cùng
+  một nhãn "Sạp rau" nhảy 156–158px ở (8,6)/(7,6) Sáng và
+  (9,2)/(10,4) Tối. Probe 2 xác minh nguyên nhân: ở (8,6)/(7,6)
+  nhãn ở vị trí muốn đè mặt Chị Lệ **87.2×32.7px** — đúng hành vi
+  mới có chủ ý, không phải lỗi code. Đã sửa 3 test cũ theo mẫu
+  "sửa test cũ lỗi thời": luật thoát nay chấp nhận cả đầu NPC khác
+  (kèm điều kiện cuối không còn đè đầu NPC) — artpass12 14/14,
+  r64 77/77, r65 78/78. Lưu ý: sửa `var esc_ok :=` → `var esc_ok:
+  bool =` ở cả 3 file — gọi method trên biến kiểu `Node` trả
+  Variant nên `:=` không suy ra được bool (parse error).
+- Hồi quy chạy lại: **93 OK, 0 FAIL** (`~/workspace/regression-move.log`).
+  `--check-only` main.gd exit 0; scene 120 frame exit 0, 0
+  ERROR/WARNING; export web exit 0 (pck **27.650.168 byte, SHA
+  `d20cee0e…`**, wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`); HTTP 200 đủ 4 file (cổng 8166).
+- Chưa kiểm chứng bằng trình duyệt thật vòng này (để vòng sau, theo
+  mẫu vòng 65: code + test vòng này, browser-verify vòng sau).
+
+### 88.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r66 (gộp r43–r66: a 101 / b 20 / c 37 / docs 2) + deploy
+  pck `d20cee0e` (12 lô, 207 path) đã chuẩn bị xong, **CHƯA CHẠY —
+  chờ chủ nói 'đẩy tiếp'** (thẻ r44 đã timeout, không còn thẻ chờ;
+  live vẫn `5f2a052f` r41). Script `pxb-push-main-r66.py`,
+  `pxb-deploy-r66.py` + manifest trong hidden_files goal. Staging
+  `gh-pages-staging/` đã rebuild cho pck `d20cee0e` (205 chunk,
+  `build_gh_pages.py --verify-only` OK, khớp byte).
+- Lô a r66 = lô a r65 + 2 path mới: `g4_r66_label_other_npc_test.gd`
+  (+`.uid`); `main.gd` / `run_regression.sh` / `artpass12_test.gd` /
+  `g4_r64_label_polish_test.gd` / `g4_r65_label_signs_test.gd` đã có
+  trong lô a r65 nên chỉ đẩy lại nội dung mới.
+
+### 88.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r66 (4 lô) → deploy pck `d20cee0e`
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 66 bằng Chromium thật ở camera (9,2) Tối:
+   chụp "Sạp rau" đã rời mặt Chị Lệ; kiểm (8,6)/(7,6) Sáng tương tự.
+   → **XONG vòng 67, xem §89.**
+3. G2 còn lại rồi G4 online (quyết server Godot headless hay .NET,
+   xem `docs/opensource-engine.md` §3.4).
+
+## §89 — Vòng 67: browser-verify vòng 66 — nhãn đã rời mặt Chị Lệ (27/11 ~01:45–02:10 +07, cron 01:45)
+
+### 89.1 Cách kiểm
+
+- Build kiểm đúng pck vòng 66 `d20cee0e` (SHA local khớp
+  `d20cee0e`, wasm không đổi `fc74679e`), serve cổng 8942,
+  HTTP 200 đủ 3 file (`index.html`/`index.wasm`/`index.pck`).
+- Playwright Chromium 1255 headless + SwiftShader WebGL2, viewport
+  720×1280; script mới `hidden_files/pxb-browser-verify-r66.py`
+  (tái chạy được; `PYTHONPATH=~/.local/lib/python3.12/site-packages`
+  mới import được playwright — như yt-dlp).
+- Khác vòng 65: sau mỗi phím đọc `window.__pxb_tile` /
+  `window.__pxb_map` để biết ô thật (không đoán từ phím); F không
+  đổi ô là đúng (F chỉ đổi khung). Lộ trình: spawn Map001 (4,5) →
+  W+D qua cửa (5,4) sang Map002 → W×2 tới (5,2) → F×2 Tối → F×1 về
+  Sáng → D×4 tới (9,2) → F×2 Tối → F×1 về Sáng → S×4 + A×1 tới
+  (8,6) → A×1 tới (7,6). Ảnh 01–08 + 3 crop phóng to 2× + log
+  `console-r66.json`, cùng thư mục `hidden_files/pxb-browser-verify-r66/`.
+
+### 89.2 Kết quả — PASS bằng mắt, 0 lỗi
+
+| Kiểm tra | Kết quả |
+|---|---|
+| Engine + nút Start | Canvas 720×1280, `__pxb_start === true`; console chỉ 3 dòng log (Godot 4.7.2, WebGL2, Emscripten single-threaded) |
+| Di chuyển (đọc ô thật) | Mọi bước đúng ô: (4,5)→(4,4)→(5,4) Map002 →(5,2)→(9,2)→(9,6)→(8,6)→(7,6); không bước nào bị chặn |
+| Đổi khung (F) | Sáng→Chiều→Tối→Sáng ngày sau, đúng: (5,2) Ngày 1 Tối → (9,2) Ngày 2 Sáng → Ngày 2 Tối → (8,6)/(7,6) Ngày 3 Sáng |
+| **(9,2) Tối — ẢNH CHÍNH** | **"Sạp rau buổi tối" đã rời mặt Chị Lệ: nhãn ở y≈621 (đúng `best_y` 621.2 của probe §88.1), mặt Chị Lệ hiện đủ mắt/miệng/tóc, khe hở ~80px; crop 2× xác nhận, không còn giao nhau** (trước sửa đè 63.8×34.3px) |
+| (9,2) Sáng | "Sạp rau buổi sáng" cũng ở trên cao, mặt Chị Lệ đủ — PASS |
+| (8,6) + (7,6) Sáng | "Sạp rau buổi sáng" ở trên cao, mặt Chị Lệ đủ cả 2 camera; nhãn "Chị Lệ" hiện rõ — PASS |
+| (b1) kiểm lại ở (5,2) Tối | "Cửa về Xóm Trọ Cũ" vẫn rời biển GIA VỊ — biển đọc được đủ chữ, khe rõ; crop 2× xác nhận — PASS |
+| Console / pageerror | **0 error, 0 pageerror** (16/16 step OK) |
+| Smoke headless kèm | `--quit-after 120` exit 0, 0 ERROR |
+
+### 89.3 Ghi nhận thêm (không chặn, để vòng polish sau)
+
+1. (b2) giữ nguyên: ở (8,6) Sáng, mép dưới nhãn "Góc phế liệu chợ"
+   vẫn chạm sát mép trên biển CÁ TƯƠI (chữ biển đọc được đủ; ngôi
+   sao hotspot đè lên mép trái biển — đó là marker của chính
+   hotspot, không phải lỗi nhãn). Cùng họ với ngoại lệ có tên
+   65×2.75px ở (9,2) (§86/§87); không sửa tiếp theo quyết Bậc 1 cũ.
+2. "Sạp rau" vẫn che chữ T biển THỊT HEO ở (9,2) Tối (đúng bound
+   r64 ≤36×20, đã ghi §88.2) — không đổi.
+3. Nhãn "Góc Chế Tạo" / "Cửa về" / "Cửa đi Khu Công Nhân" ở (7,6)
+   Sáng xếp chồng 3 tầng dưới màn hình nhưng không đè nhau, đọc
+   được đủ — chấp nhận được, chưa cần chống chồng lấn thêm.
+
+### 89.4 Push + Deploy — KHÔNG CÓ GÌ MỚI ĐỂ ĐẨY, CHỜ 'ĐẨY TIẾP' NHƯ CŨ
+
+- Vòng này chỉ kiểm chứng bằng trình duyệt thật, **không đổi code**:
+  không có file code/test mới. Docs mới (§89 này + dòng trạng thái
+  `roles-qc.md`) nằm trong lô docs r66 (manifest
+  `pxb-push-main-r66-docs` đã liệt kê sẵn `docs/godot-g4.md` +
+  `docs/roles-qc.md`) nên sẽ lên cùng push r66 khi chủ nói
+  'đẩy tiếp' — **không cần script push r67**.
+- Push main r66 (gộp r43–r66: a 101 / b 20 / c 37 / docs 2) + deploy
+  pck `d20cee0e` (12 lô, 207 path) vẫn CHƯA CHẠY — chờ chủ nói
+  'đẩy tiếp' (không còn thẻ chờ; live vẫn `5f2a052f` r41).
+  Script `pxb-push-main-r66.py`, `pxb-deploy-r66.py` + manifest trong
+  hidden_files goal. Staging `gh-pages-staging/` đã rebuild cho pck
+  `d20cee0e` (205 chunk, verify khớp byte).
+- Server http 8942 đã tắt sau khi verify xong (build vẫn ở
+  `src/godot-build/`, chạy lại khi cần).
+
+### 89.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r66 (4 lô) → deploy pck `d20cee0e`
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Vòng polish tiếp theo (theo §88.5 mục 3 + §89.3): G4 online —
+   quyết server Godot headless hay .NET (xem
+   `docs/opensource-engine.md` §3.4); hoặc xử lý (b2) + nhãn 3 tầng
+   ở (7,6) nếu chủ ưu tiên polish trước online.
+
+## §90 — Vòng 68: can_challenge ở demo — đội đang giữ sạp thì không mở trận tranh sạp mới (27/11 ~02:45–03:30 +07, cron 02:45)
+
+> Mục còn lại của §17.3: `hold_benefits` đã nối xong (G4 bước 8:
+> Danh vọng/ngày + giá sỉ −10% trong `buy_item`); chỉ còn
+> `can_challenge` ở demo — luật đã chốt trong
+> `docs/market-battle-design.md` §6 + §11 điều kiện 4
+> ("1 đội giữ tối đa 1 sạp... đội đã giữ sạp đó rồi thì thách đấu
+> chính sạp đó cũng bị chặn") nhưng code CHƯA áp: `create_battle`
+> không kiểm tra, `_start_battle_demo` không gọi `can_challenge`,
+> toast lỗi hiện mã reason thô (`dang-giu-sap-khac`).
+
+### 90.1 Code — XONG
+
+- `scripts/pxb_marketbattle.gd` — `create_battle`: sau kiểm cỡ đội,
+  nếu `stallId != ""` thì gọi `can_challenge(_state, teamA.id,
+  stall_id, game_day)`; bị chặn thì trả `{ok: false, reason,
+  holdingStallId}`. Trận không tranh sạp (`stallId == ""`) không
+  bị chặn. Chặn ở tầng luật nên mọi đường mở trận sau này đều
+  được luật — không chỉ demo.
+- `main.gd` — `_start_battle_demo`: kiểm tra
+  `can_challenge_now("doi-ban", "sap-cho-dau-moi", day)` TRƯỚC khi
+  mở trận; bị chặn thì báo toast tiếng Việt + `queue_free`
+  `battle_mb`, không mở trận. Toast lỗi của `create_battle` cũng
+  đổi sang dùng `_battle_block_text` (không còn mã reason thô).
+- `main.gd` — `_battle_block_text(reason, holding_stall_id)` (mới)
+  + `_hold_until_day(stall_id)` (mới, đọc từ `battle_state`):
+  `dang-giu-sap-khac` → "Đội Bạn đang giữ sạp %s đến ngày %d —
+  không thách đấu sạp khác được."; `da-giu-sap-nay` → "Đội Bạn đã
+  giữ sạp này đến ngày %d rồi."; 3 mã cỡ đội dịch tương ứng;
+  lý do lạ thì giữ nguyên mã để debug.
+
+### 90.2 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_r68_can_challenge_test.gd`: **28/28 PASS** —
+  chưa giữ sạp thì mở được; giữ chính sạp đó (ngày 3, đến ngày 8)
+  thì chặn `da-giu-sap-nay` + đúng `holdingStallId`; giữ sạp khác
+  thì chặn `dang-giu-sap-khac`; đến đúng ngày hết (ngày 8) thì mở
+  lại được; trận không tranh sạp không bị chặn; đội khác giữ sạp
+  không chặn đội Bạn thách đấu; `can_challenge_now` khớp static;
+  chặn đội thiếu người/không bằng nhau vẫn giữ nguyên. Mức Main:
+  `battle_state` đang giữ sạp + bấm B → không mở trận, không để
+  lại `battle_mb` rác, toast "Đội Bạn đã giữ sạp này đến ngày 8
+  rồi."; hết giữ sạp thì mở trận như cũ + đóng trả lại map.
+  (Lần chạy đầu 27/28: 1 FAIL là test viết sai — check tìm
+  "đang giữ" trong khi toast đúng luật là "đã giữ sạp này" —
+  sửa test, không sửa code.)
+- **Hồi quy lần 1: 93 OK, 1 FAIL — `g4_battle_save_test` (5 check):**
+  luồng test thắng trận → giữ sạp → save/load → bấm B mở trận
+  LẠI để đo hòa/thua — luồng này vi phạm đúng luật mới (đội đang
+  giữ sạp của mình thì không được thách đấu lại chính sạp đó).
+  Đây là test dùng demo sai ngữ nghĩa, không phải lỗi code:
+  đã sửa test theo luật — bấm B lúc đang giữ sạp nay KHÔNG mở
+  trận + toast tiếng Việt (2 check mới); trước các bước hòa/thua
+  thì xóa hold (giả lập hết hạn, GIỮ lịch sử — test vốn đã thao
+  tác trực tiếp `battle_state`); check hòa đổi thành "chưa ai giữ
+  sạp sau hòa" (hòa không đổi chủ giữ — trước trận không ai giữ
+  nên sau hòa vẫn trống, đúng `market-battle-design.md` §6).
+  Sau sửa: **`g4_battle_save_test` 33/33 PASS**; hồi quy chạy lại
+  **94 OK, 0 FAIL** (log `hidden_files/regression-2026-11-27-0245.log`).
+  `run_regression.sh` đã thêm `g4_r68_can_challenge_test`.
+- `--check-only` exit 0: `main.gd`, `pxb_marketbattle.gd`,
+  `g4_r68_can_challenge_test.gd` (sau `--import`).
+
+### 90.3 Verify + export — XONG
+
+- Scene Main 120 frame exit 0, 0 ERROR/warning.
+- Export web exit 0: pck mới **27.657.508 byte, SHA `3ca0d628…`**
+  (trước `d20cee0e…`), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`.
+- HTTP 200 đủ 4 file (`index.html`/`index.js`/`index.wasm`/
+  `index.pck`, cổng 8943, đã tắt server sau khi kiểm).
+- Chưa browser-verify vòng này (để vòng sau): thay đổi là logic +
+  toast chữ; đường bấm B thật đã kiểm headless qua Main
+  (`_unhandled_input` → `_start_battle_demo`) trong test r68.
+- **Bài học export:** lần đầu export lỗi "Target folder does not
+  exist: src/godot-build" — vì chạy từ repo root, Godot hiểu
+  đường dẫn export theo thư mục project (`src/godot/`), không
+  phải CWD. Đúng: `cd src/godot` rồi export `../godot-build/`
+  (như G0). **Cảnh báo UID trùng (có từ trước, không chặn
+  export):** `atlas-map003.png` trùng UID với `atlas-map001.png`
+  (tương tự map004/map002, map005/map003...) — do các vòng tile
+  copy atlas kèm `.uid`; export vẫn exit 0. Ghi để vòng sau dọn
+  UID trùng, không sửa trong vòng này.
+- **Bài học tắt server:** `pgrep -f "http.server 8943"` trả PID
+  subshell (28906) chứ không phải PID python (28923) — `kill`
+  nhầm làm exec bị SIGTERM. Tắt bằng PID đúng của tiến trình
+  python (đọc từ `ps aux`), không kill theo pgrep đầu tiên.
+
+### 90.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r68 (gộp r43–r68: a **105** / b 20 / c 37 / docs 2) +
+  deploy pck `3ca0d628` (12 lô: 11 lô chunk 205 + final) đã chuẩn
+  bị xong (script `pxb-push-main-r68.py`, `pxb-deploy-r68.py` +
+  manifest trong hidden_files goal; staging rebuild,
+  `build_gh_pages.py --verify-only` OK — pck `3ca0d628`, 205
+  chunk, khớp byte; wasm không đổi `fc74679e`).
+  **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn thẻ chờ;
+  live vẫn `5f2a052f` r41). Lô a r68 = lô a r66 (101) +
+  `pxb_marketbattle.gd` + test r68 (+.uid) + `g4_battle_save_test.gd`
+  (đổi theo luật mới); r67 không đổi code nên không có file mới.
+
+### 90.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r68 (4 lô) → deploy pck
+   `3ca0d628` (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 68 (bấm B lúc đang giữ sạp → toast tiếng
+   Việt, không mở trận) — cần thắng 1 trận demo trước để có hold,
+   làm ở vòng sau khi có thời gian chờ trận chạy.
+3. G4 online (quyết server Godot headless hay .NET — xem
+   `docs/opensource-engine.md` §3.4, quyết đã có từ 20/11:
+   Godot headless dedicated server; skeleton + nối PxbOnline
+   đã xong §16/§22) hoặc polish (b2)/nhãn 3 tầng ở (7,6).
+
+## §91 — Vòng 69: trade đổi đồ qua WebSocket trên dedicated server Godot (27/11 ~03:45–04:30 +07, cron 03:45)
+
+> Việc tiếp theo lớn nhất từ §90.5 mục 3 (G4 online): trade/đấu giá/
+> công ty vẫn `server-chua-co-endpoint` — nay trade đã có đường
+> thật qua WS trên dedicated server Godot (quyết §12.5). Đấu giá +
+> công ty vẫn chưa có cả 2 đường. Server validate + ghi nhận thỏa
+> thuận (trade_completed); CHƯA trừ/chuyển tiền/đồ thật — client
+> nhận trade_completed rồi tự áp vào túi/sổ của mình (việc sau, cần
+> sổ cái server giữ). Push/deploy vẫn chờ chủ nói 'đẩy tiếp' như cũ.
+
+### 91.1 Server — XONG
+
+- `server/pxb_server.gd` — giao thức v1 thêm 4 lệnh client →
+  server (`trade_offer` / `trade_accept` / `trade_decline` /
+  `trade_cancel`) + 6 gói server → client (`trade_offer` cho người
+  nhận, `trade_offered` cho người gửi, `trade_completed` cho cả 2,
+  `trade_declined`, `trade_cancelled`, `trade_error` — KHÔNG ngắt
+  kết nối, khác gói `error` của hello). `data()` thêm
+  `trade_pending` + `trade_completed_count`.
+- Validate ở server theo thứ tự: người gửi đã hello → có người
+  nhận → không đổi với chính mình → mã món ≤64 ký tự → tiền
+  0..100 tỉ (số nguyên; 100 tỉ = giá penthouse/đảo, mức tiền lớn
+  nhất GDD, PROVISIONAL) → cho + muốn đều không rỗng → người gửi
+  chưa có đề nghị đang chờ (tối đa 1/người gửi) → người nhận đang
+  online. Sai thì trả `trade_error` + đếm `dropped_packets`.
+- `trade_id` do server cấp `"trade-<ms>-<seq>"`; chấp nhận chỉ
+  người NHẬN được (kiểm `to_peer`); từ chối chỉ người nhận; hủy
+  chỉ người gửi. Chốt thì xóa khỏi `trades`, ghi `trade_log` (giữ
+  100), gửi `trade_completed` cho cả 2 bên. Bye/mất kết nối thì
+  hủy mọi đề nghị đang chờ có mặt nó (`_cancel_trades_for_peer`,
+  lý do `doi-phuong-mat-ket-noi`) + báo cho bên còn lại.
+- Signal mới: `trade_offered` / `trade_completed` /
+  `trade_declined` / `trade_cancelled`.
+
+### 91.2 Client — XONG
+
+- `scripts/pxb_online.gd` — const `WS_MAX_TRADE_MONEY_VND`
+  (100 tỉ, khớp server), `WS_MAX_ITEM_ID_LEN` (64),
+  `WS_TRADES_MAX` (50); signal `ws_trade_offer_received` /
+  `ws_trade_offered_sent` / `ws_trade_completed` /
+  `ws_trade_declined` / `ws_trade_cancelled` / `ws_trade_error`.
+- `send_ws_trade_offer(to, give_item, give_money, want_item,
+  want_money)` / `send_ws_trade_accept` / `send_ws_trade_decline`
+  / `send_ws_trade_cancel`: validate ở client trước khi gửi
+  (chưa nối, đổi với chính mình, đề nghị trống, tiền ngoài
+  0..100 tỉ, mã món quá dài, đã có đề nghị chờ, sai trade_id).
+  Bên từ chối/hủy tự xóa đề nghị khỏi danh sách của mình ngay
+  khi gửi xong (server chỉ báo cho bên kia); bên chấp nhận thì
+  đợi `trade_completed` của server mới xóa.
+- `_clean_trade` (bỏ gói thiếu trade_id/thiếu 1 bên/mã món quá
+  dài/tiền quá 100 tỉ) + `_find_trade` / `_remove_trade`.
+  `default_data()` / `data()` / `from_data()` thêm
+  `ws_trades_completed` (giữ 50, dữ liệu bẩn bỏ); đề nghị đang
+  chờ KHÔNG lưu — hết phiên là hết. `reset_state()` xóa cả 3
+  danh sách trade + lỗi trade. Comment khối stub HTTP cập nhật:
+  trade qua WS ĐÃ CÓ, đấu giá + công ty vẫn chưa có cả 2 đường.
+- Test cũ sửa theo thay đổi có chủ ý: `g2_online_test` kỳ vọng
+  `default_data()` nay thêm `"ws_trades_completed": []`.
+
+### 91.3 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_online_trade_test.gd`: **69/69 PASS** —
+  socket thật + server thật qua loopback cổng 18769: A↔B hello;
+  đề nghị đổi đồ (com-tam lấy ca-phe) tới B đúng điều khoản +
+  server đếm 1 đề nghị chờ; chấp nhận sai id / sai người / gửi
+  đề nghị thứ 2 đều bị chặn; B chấp nhận đúng → cả 2 nhận
+  `trade_completed` cùng trade_id + server đếm 1 giao dịch đã
+  chốt; đề nghị tiền bù 1 triệu → B từ chối → A nhận
+  `trade_declined`; đề nghị vòng 3 → A hủy → B nhận
+  `trade_cancelled` (`nguoi-gui-da-huy`); validate client (đổi
+  với chính mình, đề nghị trống, tiền âm, tiền quá 100 tỉ, mã
+  món 65 ký tự) không tới server; đề nghị cho người không online
+  → `trade_error` `khong-tim-thay-nguoi-choi` + KHÔNG ngắt kết
+  nối; B ngắt giữa lúc có đề nghị chờ → A nhận `trade_cancelled`
+  (`doi-phuong-mat-ket-noi`); `data()`/`from_data()` giữ log
+  trade đã chốt (dữ liệu bẩn bỏ); `reset_state()` xóa trade.
+  (Lần chạy đầu 46/47: 1 FAIL là test viết sai — chuyển phase
+  3→4 không reset `_step` nên phase 4 kẹt ở step 3; sửa test,
+  không sửa code.)
+- `run_regression.sh` đã thêm `g4_online_trade_test`.
+- Hồi quy: **95 OK, 0 FAIL** (log
+  `hidden_files/regression-2026-11-27-0345.log`): trade 69/69,
+  online 91/91, server 37/37 + probe OK, G1 selftest 419/419,
+  G3 playtest 95/95, G2 selftest 87/87, MarketBattle 123/123,
+  battle scene 43/43, battle AI 34/34, battle save 33/33, còn lại
+  giữ nguyên — không regression.
+
+### 91.4 Verify + export — XONG
+
+- `--check-only` exit 0: `main.gd`, `pxb_online.gd`,
+  `pxb_server.gd`, `g4_online_trade_test.gd`, `g2_online_test.gd`
+  (sau `--import`; chỉ còn warning UID trùng atlas đã biết từ
+  trước, không chặn export).
+- Scene Main 120 frame exit 0, 0 ERROR/warning.
+- Export web exit 0: pck mới **27.677.512 byte, SHA `1a05ffca…`**
+  (trước `3ca0d628…`), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; pck chứa đường dẫn
+  `res://server/pxb_server.gd` + `res://scripts/pxb_online.gd` +
+  `res://tests/g4_online_trade_test.gd` (chuỗi literal trong
+  script biên dịch không grep được trực tiếp trong pck — đã
+  kiểm chứng bằng đường dẫn file + SHA/size đổi, như các vòng
+  trước).
+- HTTP 200 đủ 4 file (`index.html`/`index.js`/`index.wasm`/
+  `index.pck`, cổng 8944, đã tắt server sau khi kiểm).
+- Chưa browser-verify vòng này (thay đổi là logic WS + test
+  headless qua socket thật; UI trade trong điện thoại chưa có —
+  việc vòng sau).
+
+### 91.5 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r69 (gộp r43–r69: a **110** / b 20 / c 37 / docs 2) +
+  deploy pck `1a05ffca` (12 lô: 11 lô chunk 206 + final) đã chuẩn
+  bị xong (script `pxb-push-main-r69.py`, `pxb-deploy-r69.py` +
+  manifest trong hidden_files goal; staging rebuild,
+  `build_gh_pages.py --verify-only` OK — pck `1a05ffca`, 206
+  chunk, khớp byte; wasm không đổi `fc74679e`).
+  **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn thẻ chờ;
+  live vẫn `5f2a052f` r41). Lô a r69 = lô a r68 (105) +
+  `pxb_server.gd` + `pxb_online.gd` + test trade (+.uid) +
+  `g2_online_test.gd` + `run_regression.sh`; r67 không đổi code
+  nên không có file mới.
+
+### 91.6 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r69 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 68 (bấm B lúc đang giữ sạp → toast tiếng
+   Việt, không mở trận) — cần thắng 1 trận demo trước để có hold.
+3. G4 online tiếp: áp `trade_completed` vào túi/sổ ở client
+   (trừ/chuyển tiền/đồ thật) hoặc đấu giá qua WS (phí sàn 5% đã
+   chốt) — server giữ sổ cái là việc sau; hoặc UI trade trong
+   điện thoại (nút gửi đề nghị cho người online).
+
+## §92 — Vòng 70: áp trade_completed vào túi + ví ở client (27/11 ~04:45–05:05 +07, cron 04:45)
+
+### 92.1 Code — XONG
+
+- `scripts/pxb_inventory.gd` — `remove(item_id, quantity=1)` mới:
+  bớt đồ KHÔNG buff (dùng khi đổi đồ), all-or-nothing, giữ entry
+  0 như C# / `use()` (khác `use()` ở chỗ không kích hoạt buff).
+- `scripts/pxb_online.gd` — `apply_trade_completed(trade)` mới +
+  tự áp trong nhánh `trade_completed` của `_handle_ws_message`
+  (áp TRƯỚC khi phát signal; dict đã chốt kèm thêm khóa `"apply"`):
+  xác định vai sender/receiver theo `ws_player_id`; chống áp trùng
+  theo trade_id (`ws_trades_applied`, giữ 50); chưa nối túi/ví thì
+  trả `chua-noi-tui-vi`, không áp; áp từng phần + ghi rõ phần thiếu
+  (món cho thiếu → `missing_item`, món nhận trùng đồ không xếp chồng
+  → `receive_failed`, tiền cho thiếu → trừ tới 0 + `short_money`,
+  ví không âm); tiền/món nhận cộng đủ theo thỏa thuận.
+  `trade_inventory: PxbInventory` + `trade_economy: PxbEconomy`
+  (null = chưa nối); `reset_state()` xóa cả `ws_trades_applied`.
+- Chặn đề nghị không đủ khả năng ở lúc gửi/chấp nhận (chỉ khi đã
+  nối túi/ví): `send_ws_trade_offer` kiểm tra món cho
+  (`khong-du-do-cho`) + tiền cho (`khong-du-tien-cho`);
+  `send_ws_trade_accept` kiểm tra tương tự với món/tiền cho đi của
+  người nhận (want_item/want_money). Chưa nối thì bỏ qua (không
+  biết số dư) — test r69 không nối nên không đổi hành vi.
+- `main.gd` — túi đồ slice `bag: PxbInventory` mới (khác `inventory`
+  là Dictionary nguyên liệu chế đồ); nối
+  `online.trade_inventory = bag` + `online.trade_economy = economy`;
+  `_on_ws_trade_completed` đồng bộ ngược về ví chung
+  (`_wallet_from_economy()`) + toast tiếng Việt mô tả giao dịch
+  (tên món qua `PxbInventory.get_item`, tiền qua `_fmt_vnd`) + ghi
+  rõ phần thiếu (thiếu món / không vào túi được / thiếu tiền);
+  `_process` đồng bộ ví → economy MỖI FRAME (`_wallet_to_economy()`)
+  vì trade áp tiền vào `economy.money` lúc poll (cha `_process`
+  chạy trước con — mẫu vòng 4) và `economy.money` có thể stale sau
+  khi làm ca (lương chỉ vào `jobs.gold`); save/load thêm khóa
+  `"pxb_inventory"` (`bag.data()` / `from_data`, save cũ thiếu khóa
+  → túi rỗng) + `_replace_system("inventory", …)` + nối lại
+  trade sau khi load (nối cũ trỏ node đã `queue_free`).
+- **KHE HỞ ĐÃ BIẾT (v1, chưa có sổ cái server):** 2 bên áp độc lập
+  theo thỏa thuận, không biết số dư thật của nhau. Chặn ở lúc
+  gửi/chấp nhận thu hẹp khe; chỉ khi số dư đổi GIỮA lúc gửi và lúc
+  chốt thì bên cho áp thiếu (ghi `short_money` / `missing_item`
+  vào log) còn bên nhận vẫn nhận đủ theo thỏa thuận. Sổ cái server
+  giữ sau này sẽ đóng khe này (việc sau, §92.5). Log đã chốt sau
+  load chỉ giữ điều khoản, không giữ kết quả áp (`_clean_trade`
+  bỏ khóa `"apply"` — đã chốt bằng test).
+
+### 92.2 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_online_trade_apply_test.gd`: **76/76 PASS** —
+  socket thật + server thật qua loopback cổng 18770: unit
+  `remove()` (8 kiểm); A↔B đổi com-tam + 1 triệu lấy ca-phe → túi
+  + ví 2 bên đổi đúng (A còn 1 com-tam + 1 ca-phe + 4 triệu; B hết
+  ca-phe + 1 com-tam + 3 triệu); áp trùng trade_id thì bỏ lần 2;
+  race món (A dùng mất com-tam sau khi gửi) → `missing_item`,
+  vẫn nhận sach, B vẫn nhận com-tam theo thỏa thuận; nhận trùng
+  áo mưa đã có → `receive_failed`, vẫn 1 áo; race tiền (A tiêu
+  mất 3/4 triệu sau khi gửi) → cho 1 triệu + `short_money` 3 triệu,
+  ví về 0 không âm, B nhận đủ 4 triệu theo thỏa thuận (khe hở v1);
+  chặn gửi (không đủ món/tiền) + chặn chấp nhận (người nhận không
+  đủ món) + hủy sau chặn; chưa nối tui/vi / không liên quan / gói
+  bẩn; `data()`/`from_data()` giữ log 4 trade; `reset_state()` xóa
+  danh sách đã áp (client mới áp lại trade cũ thì không duplicate).
+- `run_regression.sh` đã thêm `g4_online_trade_apply_test`.
+- Hồi quy: **96 OK, 0 FAIL** (log
+  `hidden_files/regression-2026-11-27-0445.log`): apply 76/76,
+  trade 69/69, online 91/91, server 37/37 + probe OK, G1 selftest
+  419/419, G3 playtest 95/95, G2 selftest 87/87, MarketBattle
+  123/123, battle scene 43/43, battle AI 34/34, battle save 33/33,
+  còn lại giữ nguyên — không regression.
+
+### 92.3 Verify + export — XONG
+
+- `--check-only` exit 0: `main.gd`, `pxb_online.gd`,
+  `pxb_inventory.gd`, `g4_online_trade_apply_test.gd`,
+  `g4_online_trade_test.gd` (sau `--import`; chỉ còn warning UID
+  trùng atlas đã biết từ trước, không chặn export).
+- Scene Main 120 frame exit 0, 0 ERROR/warning.
+- Export web exit 0: pck mới **27.693.144 byte, SHA `dc5d8654…`**
+  (trước `1a05ffca…`), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; pck chứa đường dẫn
+  `res://scripts/pxb_online.gd` + `res://scripts/pxb_inventory.gd`
+  + `res://tests/g4_online_trade_apply_test.gd` (chuỗi literal
+  trong script biên dịch không grep được trực tiếp trong pck — đã
+  kiểm chứng bằng đường dẫn file + SHA/size đổi, như các vòng
+  trước).
+- HTTP 200 đủ 4 file (`index.html`/`index.js`/`index.wasm`/
+  `index.pck`, cổng 8945, đã tắt server sau khi kiểm).
+- Chưa browser-verify vòng này (thay đổi là logic áp trade + test
+  headless qua socket thật; toast trade trong game chưa bấm tay).
+
+### 92.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r70 (gộp r43–r70: a **113** / b 20 / c 37 / docs 2) +
+  deploy pck `dc5d8654` (12 lô: 11 lô chunk 206 + final) đã chuẩn
+  bị xong (script `pxb-push-main-r70.py`, `pxb-deploy-r70.py` +
+  manifest trong hidden_files goal; staging rebuild,
+  `build_gh_pages.py --verify-only` OK — pck `dc5d8654`, 206
+  chunk, khớp byte; wasm không đổi `fc74679e`). **Thay script
+  r69 (pck `1a05ffca` chưa lên — bỏ, không xóa file, theo mẫu
+  vòng 46).** **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn
+  thẻ chờ; live vẫn `5f2a052f` r41). Lô a r70 = lô a r69 (110) +
+  `pxb_inventory.gd` + test apply (+.uid) — `main.gd`,
+  `pxb_online.gd`, `run_regression.sh` đã có trong lô a r69;
+  r67 không đổi code nên không có file mới.
+
+### 92.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r70 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 68 (bấm B lúc đang giữ sạp → toast tiếng
+   Việt, không mở trận) — cần thắng 1 trận demo trước để có hold.
+3. G4 online tiếp: đấu giá qua WS (phí sàn 5% đã chốt) hoặc UI
+   trade trong điện thoại (nút gửi đề nghị cho người online) —
+   hoặc sổ cái server (đóng khe hở race §92.1: server giữ số dư
+   + validate đủ khả năng trước khi chốt, thay vì chỉ client).
+
+## §93 — Vòng 71: đấu giá qua WebSocket trên dedicated server Godot (27/11 ~05:45–06:30 +07, cron 05:45)
+
+Mục 3 của §92.5 (G4 online). Phí sàn 5% đã chốt trong GDD +
+`PxbBalance.AUCTION_FEE_PERCENT` + `PxbEconomy.auction_seller_receives`
+— vòng này đưa đấu giá lên WS thật, theo đúng mẫu trade r69/r70
+(server giữ phiên + validate, client tự áp kết quả vào túi/ví).
+
+### 93.1 Server — XONG
+
+- `server/pxb_server.gd` — giao thức JSON v1 thêm 4 lệnh client →
+  server + 6 gói server → client (ghi đủ trong doc đầu file):
+  `auction_create` {item_id, start_price, duration_s} →
+  broadcast `auction_created`; `auction_bid` {auction_id, amount}
+  → broadcast `auction_bid`; `auction_cancel` {auction_id} →
+  broadcast `auction_cancelled`; `auction_list` → trả
+  `auction_list` chỉ cho người xin (xếp theo ends_at_ms tăng dần);
+  hết giờ server tự đóng → broadcast `auction_closed`
+  {winner_player_id, hammer_price, fee_vnd, seller_receives_vnd};
+  lệnh sai luật → `auction_error` (không ngắt kết nối, giống
+  trade_error).
+- Luật validate (PROVISIONAL, ghi trong code): giá khởi điểm
+  1.000..100 tỉ; thời gian 30..3600 giây; tối đa 1 phiên đang mở /
+  người bán (giống luật 1 đề nghị trade / người gửi); giá đầu tiên
+  >= giá khởi điểm, các giá sau >= giá hiện tại + 1.000đ
+  (`MIN_BID_INCREMENT_VND`); người bán không được đấu giá của
+  mình; hủy chỉ khi chưa có ai đấu giá (có giá rồi thì phải chờ
+  hết giờ — tránh người bán rút món sau khi đã có người trả giá).
+- Phí: `AUCTION_FEE_PERCENT = 5` — người bán nhận
+  hammer × 95 / 100, cắt phần lẻ theo phép chia nguyên (khớp
+  `PxbEconomy.auction_seller_receives`); không ai đấu giá thì
+  winner rỗng, hammer = fee = seller_receives = 0.
+- Đóng phiên: `_close_expired_auctions()` chạy cuối mỗi `poll()`
+  (cả `_process` lẫn test gọi tay đều đóng đúng giờ); log 100
+  phiên đã đóng gần nhất; `data()` thêm `auction_open` +
+  `auction_closed_count`; signal mới `auction_created` /
+  `auction_bid_placed` / `auction_closed` / `auction_cancelled`.
+- Mất kết nối: `_cancel_auctions_for_peer()` — người bán rời
+  (bye / mất kết nối) thì hủy các phiên CHƯA có ai đấu giá
+  (broadcast `auction_cancelled`); phiên đã có giá giữ nguyên tới
+  hết giờ (người thắng vẫn chốt được).
+- Server CHƯA trừ/chuyển tiền/đồ thật — client tự áp khi nhận
+  `auction_closed` (giống trade v1); sổ cái server là việc sau.
+
+### 93.2 Client — XONG
+
+- `scripts/pxb_online.gd` — hằng khớp server
+  (`WS_AUCTION_FEE_PERCENT = 5`, `WS_MIN_BID_INCREMENT_VND = 1000`,
+  `WS_MIN_AUCTION_START_PRICE_VND = 1000`,
+  `WS_MAX_AUCTION_MONEY_VND = 100 tỉ`, thời gian 30..3600s,
+  `WS_AUCTIONS_MAX = 50`); signal mới `ws_auction_created` /
+  `ws_auction_bid` / `ws_auction_closed` / `ws_auction_cancelled` /
+  `ws_auction_list` / `ws_auction_error`.
+- Gửi: `send_ws_auction_create(item_id, start_price, duration_s)`
+  (chặn ở client: mã món rỗng/quá dài, giá/thời gian ngoài khoảng,
+  đã có phiên mở, không có món trong túi khi đã nối túi →
+  `khong-du-do-cho`); `send_ws_auction_bid(auction_id, amount)`
+  (chặn: không phải phiên đang mở, đấu giá của mình, giá thấp hơn
+  giá tối thiểu tiếp theo, vượt ví khi đã nối ví →
+  `khong-du-tien-cho`); `send_ws_auction_cancel(auction_id)` (chỉ
+  người bán, chưa có giá); `request_ws_auction_list()`.
+- Nhận: `_handle_ws_message` thêm 6 nhánh — `auction_created` /
+  `auction_bid` upsert vào `ws_auctions`, `auction_cancelled` xóa,
+  `auction_closed` áp qua `apply_auction_closed()` TRƯỚC khi phát
+  signal (dict đã chốt kèm khóa `"apply"` — giống trade_completed
+  bước 11), `auction_list` thay toàn bộ `ws_auctions`.
+  `_clean_auction()` / `_clean_closed_auction()` bỏ gói bẩn
+  (thiếu id/bên, giá ngoài 1.000..100 tỉ, phí vượt giá chốt,
+  hammer > 0 mà winner rỗng và ngược lại).
+- `apply_auction_closed(auction)`: vai seller (cho món, nhận
+  `seller_receives_vnd` — lấy số server gửi, bẩn thì tính lại bằng
+  `PxbEconomy.auction_seller_receives`) / winner (trả hammer,
+  nhận món); phiên không ai đấu giá → `khong-co-nguoi-thang`,
+  không áp gì; chống áp trùng theo auction_id (giữ 50); chưa nối
+  túi/ví → `chua-noi-tui-vi`; áp từng phần + ghi thiếu
+  (`missing_item` / `receive_failed` / `short_money`, ví không âm).
+  **KHE HỞ ĐÃ BIẾT (v1, giống trade):** 2 bên áp độc lập theo kết
+  quả server chốt — số dư đổi giữa lúc đặt giá và lúc chốt thì
+  người thắng áp thiếu (ghi `short_money`), người bán vẫn nhận đủ
+  theo giá chốt; sổ cái server sẽ đóng khe này.
+- `data()` / `from_data()` thêm `ws_auction_log` (50 phiên đã
+  đóng, làm sạch lại qua `_clean_closed_auction` nên không giữ
+  khóa `"apply"` sau load; phiên đang mở KHÔNG lưu — vào lại thì
+  xin `auction_list`); `reset_state()` xóa cả 4 biến đấu giá;
+  `ws_auctions_text()` mới để hiển thị tab Chợ (phiên mở + 5 phiên
+  đã đóng gần nhất). Hàm HTTP cũ `list_auctions()` /
+  `place_bid()` vẫn trả `server-chua-co-endpoint` (đường HTTP chưa
+  có endpoint) — comment nay chỉ sang hàm WS.
+- `main.gd`: nối `online.ws_auction_closed` →
+  `_on_ws_auction_closed` mới — đồng bộ ngược về ví chung
+  `jobs.gold` + toast tiếng Việt (bán được / thắng đấu giá / không
+  ai đấu giá / chỉ xem kết quả khi không phải 1 trong 2 bên, ghi
+  rõ phần thiếu như trade).
+
+### 93.3 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_online_auction_test.gd`: **95/95 PASS** —
+  socket thật + server thật qua loopback cổng 18771: unit phí 5%
+  (1.000.000 → 950.000; 1.001.000 → 950.950; 999 → 949 cắt lẻ);
+  chặn tạo phiên sai luật (giá 0 / thời gian 5s / mã món rỗng /
+  mở phiên thứ 2); `auction_list` trả đúng 1 phiên; chặn đấu giá
+  (người bán đấu của mình / giá đầu < khởi điểm / giá sau <
+  hiện tại + 1.000 / vượt ví); hủy phiên chưa có giá + hủy phiên
+  đã có giá bị chặn; đóng phiên hết giờ THẬT (chờ 30 giây wall):
+  winner player-b, hammer 1.001.000, fee 50.050, seller nhận
+  950.950, áp đúng 2 bên (A hết com-tam + 5.950.950; B hết ví +
+  1 com-tam); race tiền (B tiêu mất 1,5 triệu sau khi đặt giá) →
+  `short_money` 501.000, ví về 0 không âm, B vẫn nhận món theo kết
+  quả chốt (khe hở v1); áp trùng → duplicate; phiên không ai đấu
+  giá → winner rỗng + không áp (`khong-co-nguoi-thang`), A giữ
+  món (đóng bằng white-box đổi `ends_at_ms` về quá khứ rồi poll —
+  chỉ mô phỏng 1 lần để khỏi chờ thêm 30 giây); chưa nối /
+  không liên quan / gói bẩn; `data()`/`from_data()` giữ log 2
+  phiên (bỏ phiên bẩn phí vượt giá chốt); `reset_state()` xóa
+  danh sách đã áp + log; client mới áp lại phiên cũ thì không
+  duplicate. Thêm vào `tools/godot/run_regression.sh`.
+- Hồi quy: **97 OK, 0 FAIL** (log
+  `hidden_files/regression-2026-11-27-0545.log`): auction 95/95
+  mới + toàn bộ test cũ vẫn PASS (không regression).
+
+### 93.4 Verify + export — XONG
+
+- `--check-only` exit 0: `pxb_server.gd`, `pxb_online.gd`,
+  `main.gd`, `g4_online_auction_test.gd` (sau `--import`; chỉ còn
+  warning UID trùng atlas đã biết từ trước, không chặn export).
+- Scene Main 120 frame exit 0, 0 ERROR/warning.
+- Export web exit 0: pck mới **27.723.920 byte, SHA `9663c82f…`**
+  (trước `dc5d8654…`), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; pck chứa đường dẫn
+  `res://tests/g4_online_auction_test.gd` (chuỗi literal trong
+  script biên dịch không grep được trực tiếp trong pck — đã kiểm
+  chứng bằng đường dẫn file + SHA/size đổi, như các vòng trước).
+- HTTP 200 đủ 4 file (`index.html`/`index.js`/`index.wasm`/
+  `index.pck`, cổng 8947, đã tắt server sau khi kiểm).
+- Chưa browser-verify vòng này (thay đổi là logic đấu giá + test
+  headless qua socket thật; toast đấu giá trong game chưa bấm tay).
+
+### 93.5 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r71 (gộp r43–r71: a **115** / b 20 / c 37 / docs 2) +
+  deploy pck `9663c82f` (12 lô: 11 lô chunk 206 + final) đã chuẩn
+  bị xong (script `pxb-push-main-r71.py`, `pxb-deploy-r71.py` +
+  manifest trong hidden_files goal; staging rebuild,
+  `build_gh_pages.py --verify-only` OK — pck `9663c82f`, 206
+  chunk, khớp byte; wasm không đổi `fc74679e`). **Thay script
+  r70 (pck `dc5d8654` chưa lên — bỏ, không xóa file, theo mẫu
+  vòng 46).** **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn
+  thẻ chờ; live vẫn `5f2a052f` r41). Lô a r71 = lô a r70 (113) +
+  `g4_online_auction_test.gd` (+.uid) — `main.gd`,
+  `pxb_online.gd`, `pxb_server.gd`, `g2_online_test.gd`,
+  `run_regression.sh` đã có trong lô a r70.
+
+### 93.6 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r71 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 68 (bấm B lúc đang giữ sạp → toast tiếng
+   Việt, không mở trận) — cần thắng 1 trận demo trước để có hold.
+3. G4 online tiếp: UI trade/đấu giá trong điện thoại (nút gửi đề
+   nghị / mở phiên / đặt giá cho người online — logic WS đã có,
+   chỉ thiếu UI) — hoặc sổ cái server (đóng khe hở race §92.1 +
+   §93.2: server giữ số dư + validate đủ khả năng trước khi chốt,
+   thay vì chỉ client).
+
+## §94 — Vòng 72: sổ cái server cho đấu giá (27/11 ~06:45–07:30 +07, cron 06:45)
+
+Mục 3 của §93.6 (G4 online). Đóng khe hở race §92.1 + §93.2: trước
+đây 2 bên áp độc lập theo giá chốt — người thắng trả thiếu thì người
+bán vẫn nhận đủ theo hammer; nay server giữ số dư + quyết toán.
+
+### 94.1 Code — XONG
+
+- `server/pxb_server.gd` — sổ cái `ledger: {player_id: {money,
+  items, reserved}}` + gói mới `ledger_sync` (phải hello trước;
+  money int >= 0 — sai thì bỏ cả gói + đếm dropped_packets; items
+  tối đa 512 món, món sai thì bỏ món đó; sync thay thế money/items
+  nhưng GIỮ reserved; ledger > 256 người thì xóa entry của người
+  không còn online — `_prune_ledger`).
+  - Mở phiên: người bán đã đồng bộ mà ledger không có món thì
+    `auction_error` `khong-du-do-cho`.
+  - Đặt giá: người đấu đã đồng bộ thì chỉ cho đặt trong khả năng
+    còn lại `money - reserved` (+ giá cũ của chính mình nếu đang
+    dẫn đầu — tiền giữ hộ đó dùng lại được cho giá mới); vượt thì
+    `khong-du-tien-cho`. Chưa đồng bộ thì cho qua (hành vi cũ).
+  - Giữ hộ: đặt giá thành công thì `reserved` += giá mới (người
+    dẫn đầu cũ được giải phóng; tự nâng giá thì chỉ cộng phần
+    chênh). Đóng phiên thì giải phóng đúng hammer.
+  - Quyết toán `_settle_auction` khi đóng phiên: người thắng trả
+    `paid = min(hammer, money trong ledger)`, `short_money =
+    hammer - paid`; người bán còn món trong ledger thì trừ 1 món,
+    cộng 1 món cho người thắng, nhận `paid × 95 / 100` (phí = paid
+    − nhận); người bán KHÔNG còn món thì HỦY giao dịch — hoàn paid
+    cho người thắng, `winner_paid = seller_received = fee =
+    short_money = 0`, `missing_item = true`. Người thắng chưa từng
+    đồng bộ thì hành vi cũ (trả đủ hammer, nhận đủ 95%). Khối
+    `"ledger"` kèm trong `auction_closed` (cả top-level fee_vnd /
+    seller_receives_vnd cũng lấy số đã quyết toán).
+  - Doc đầu file cập nhật: giao thức `ledger_sync` + khối
+    `"ledger"` trong `auction_closed` + ghi chú PROVISIONAL mới
+    (sổ cái tin số client đồng bộ — chưa server-authoritative
+    hoàn toàn).
+- `scripts/pxb_online.gd` — `send_ws_ledger_sync()` (gửi ví +
+  túi hiện tại; chưa nối túi/ví thì `chua-noi-tui-vi`) +
+  `_maybe_auto_sync_ledger()` (gọi mỗi frame từ `_process`: chỉ
+  gửi khi đã nối WS + đã nối túi/ví + qua 500 ms từ lần trước +
+  số dư thật sự đổi) + đồng bộ ngay khi nhận `welcome` + đồng bộ
+  trước khi mở phiên / đặt giá (để server validate bằng số mới
+  nhất). Cờ `ws_ledger_auto_sync` (tắt trong test để điều khiển
+  thời điểm sync).
+  - `_clean_closed_auction` giữ khối `"ledger"` khi hợp lệ
+    (`_clean_ledger_block`: paid/received/fee/short 0..hammer,
+    fee = paid − received, short = hammer − paid trừ khi hủy vì
+    thiếu món; khối bẩn thì bỏ khối, giữ phiên).
+  - `apply_auction_closed` áp đúng số server quyết toán khi có
+    khối ledger: người thắng trả `winner_paid`, người bán nhận
+    `seller_received`, phí theo ledger; giao dịch hủy vì thiếu món
+    thì không ai trả/nhận gì (`missing_item = true` cả 2 bên để
+    Main/toast báo rõ). `short_money` trong kết quả áp vẫn = thiếu
+    so với GIÁ CHỐT (hammer − đã trả) như v71 — khớp
+    `ledger.short_money` khi trả đủ số server yêu cầu. Không có
+    khối ledger (server cũ) thì dùng đường cũ (v71).
+  - `reset_state()` xóa cả mốc sync ledger.
+- `main.gd`: KHÔNG đổi — toast đấu giá đã đọc `short_money` /
+  `missing_item` trong kết quả áp nên tự nhận số quyết toán mới.
+- **KHE HỞ CÒN LẠI (v72, ghi rõ trong code + doc server):** sổ
+  cái tin số client đồng bộ — client vẫn tiêu được tiền đang giữ
+  hộ ở local giữa 2 lần sync, và đồng bộ ghi đè nên client mất
+  kết nối đúng lúc chốt phiên rồi sync lại bằng số local cũ sẽ
+  ghi đè mất khoản đã quyết toán. Đóng hẳn cần kinh tế
+  server-authoritative / chặn tiêu tiền giữ hộ ở client — việc sau.
+  Trade vẫn áp độc lập như v71 (sổ cái mới chỉ áp cho đấu giá).
+
+### 94.2 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_online_ledger_test.gd`: **127/127 PASS** —
+  socket thật + server thật qua loopback cổng 18772, 3 client:
+  sync lên ledger đúng số + giữ reserved khi sync lại; gói sync
+  money âm bị bỏ (dropped +1, ledger không đổi); món count âm
+  bị bỏ, món đúng được giữ; giữ hộ / giải phóng khi đặt giá / bị
+  vượt giá / tự nâng giá (dùng lại tiền giữ hộ cũ); chặn
+  double-spend ở server — B còn khả năng 400k (1,6 triệu đang
+  giữ hộ) thì đặt 600k ở phiên khác bị `khong-du-tien-cho` dù ví
+  local còn 2 triệu, đặt đúng 400k thì được; race: B tiêu mất
+  1,5 triệu sau khi đặt giá ở 2 phiên (chỉ còn 500k) → phiên 1
+  (hammer 1,6 triệu) trả 500k, thiếu 1,1 triệu, A chỉ nhận 475k
+  (95% của 500k thực trả); phiên 2 (hammer 400k) trả 0, thiếu
+  400k, C nhận 0 — cả 2 bên áp cùng số server quyết toán, ví/túi
+  3 bên khớp ledger server; thiếu món ở người bán lúc chốt thì
+  HỦY giao dịch (hoàn tiền, không ai nhận gì); server chặn mở
+  phiên bán món không có trong ledger (gói thô); `data()` /
+  `from_data()` giữ khối ledger, khối ledger bẩn thì bỏ khối giữ
+  phiên; `reset_state()` xóa mốc sync.
+- Test cũ `tests/g4_online_auction_test.gd` sửa kỳ vọng theo số
+  quyết toán mới (mẫu r64/r65 — test stale theo thay đổi có chủ
+  ý): race B trả 500k thì A nhận 475k (không còn 950.950), phí
+  25.000 (không còn 50.050), ví A 5.475.000; **95/95 PASS**.
+- `tools/godot/run_regression.sh` đã thêm `g4_online_ledger_test`.
+- Hồi quy: **98 OK, 0 FAIL** (log
+  `hidden_files/regression-2026-11-27-0645.log`): ledger 127/127
+  mới + toàn bộ test cũ vẫn PASS (không regression).
+
+### 94.3 Verify + export — XONG
+
+- `--check-only` exit 0: `pxb_server.gd`, `pxb_online.gd`,
+  `g4_online_auction_test.gd`, `g4_online_ledger_test.gd`.
+- Scene Main 120 frame exit 0, 0 ERROR/warning.
+- Export web exit 0: pck mới **27.749.156 byte, SHA `0dc02713…`**
+  (trước `9663c82f…`), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; pck chứa
+  `res://tests/g4_online_ledger_test.gd` (grep thấy 4 lần trong
+  pck — chuỗi literal trong script biên dịch).
+- HTTP 200 đủ 4 file (`index.html`/`index.js`/`index.wasm`/
+  `index.pck`, cổng 8948, đã tắt server sau khi kiểm).
+- Chưa browser-verify vòng này (thay đổi là logic sổ cái +
+  test headless qua socket thật; toast đấu giá trong game chưa
+  bấm tay).
+
+### 94.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r72 (gộp r43–r72: a **117** / b 20 / c 37 / docs 2) +
+  deploy pck `0dc02713` (12 lô: 11 lô chunk 206 + final) đã chuẩn
+  bị xong (script `pxb-push-main-r72.py`, `pxb-deploy-r72.py` +
+  manifest trong hidden_files goal; staging rebuild,
+  `build_gh_pages.py --verify-only` OK — pck `0dc02713`, 206
+  chunk, khớp byte; wasm không đổi `fc74679e`). **Thay script
+  r71 (pck `9663c82f` chưa lên — bỏ, không xóa file, theo mẫu
+  vòng 46).** **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn
+  thẻ chờ; live vẫn `5f2a052f` r41). Lô a r72 = lô a r71 (115) +
+  `g4_online_ledger_test.gd` (+.uid) — `main.gd`,
+  `pxb_online.gd`, `pxb_server.gd`, `g4_online_auction_test.gd`,
+  `run_regression.sh` đã có trong lô a r71.
+
+### 94.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r72 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 68 (bấm B lúc đang giữ sạp → toast tiếng
+   Việt, không mở trận) — cần thắng 1 trận demo trước để có hold.
+3. G4 online tiếp: UI trade/đấu giá trong điện thoại (nút gửi đề
+   nghị / mở phiên / đặt giá cho người online — logic WS đã có,
+   chỉ thiếu UI) — hoặc sổ cái cho trade (đóng khe hở race trade
+   §92.1 như đã làm cho đấu giá) — hoặc kinh tế
+   server-authoritative / chặn tiêu tiền giữ hộ ở client (đóng
+   khe hở còn lại của §94.1).
+
+## §95 — Vòng 73: sổ cái server cho trade (27/11 ~07:45–08:30 +07, cron 07:45)
+
+Mục 3 của §94.5 (G4 online) — đóng khe hở race trade §92.1, theo
+đúng mẫu sổ cái đấu giá vòng 72: server giữ số dư + quyết toán
+nguyên tử lúc chấp nhận, thay vì 2 bên tự áp độc lập theo thỏa
+thuận.
+
+### 95.1 Code — XONG
+
+- `server/pxb_server.gd` — `_settle_trade(trade)` mới (quyết toán
+  từ sổ cái lúc chấp nhận):
+  - Không bên nào từng đồng bộ ledger → trả `{}` (không khối
+    ledger) → client áp theo thỏa thuận như cũ (v70).
+  - Có ít nhất 1 bên đã đồng bộ: kiểm tra bên đã đồng bộ có đủ
+    khả năng cho đi không (tiền cho <= money − reserved, còn món
+    cho trong ledger). Bên chưa đồng bộ thì coi như đủ (hành vi
+    cũ — giống người thắng chưa đồng bộ ở đấu giá).
+  - Không đủ → HỦY giao dịch: khối `{voided:true, reason, ...}`,
+    KHÔNG chuyển gì trong ledger (cả 2 bên giữ nguyên); đề nghị
+    vẫn bị xóa + `trade_completed` vẫn gửi để 2 bên biết đã hủy.
+    Lý do theo thứ tự cố định: `thieu-tien-nguoi-gui` →
+    `thieu-do-nguoi-gui` → `thieu-tien-nguoi-nhan` →
+    `thieu-do-nguoi-nhan`.
+  - Đủ → chuyển tiền + món cả 2 chiều trong ledger, nguyên tử
+    trong 1 lần gọi (không còn trạng thái nửa vời: không bên nào
+    nhận đủ trong khi bên kia trả thiếu như khe hở v1). Tiền giữ
+    hộ đấu giá (`reserved`) KHÔNG tính vào khả năng cho trade.
+  - `_handle_trade_accept` nay quyết toán rồi mới gửi
+    `trade_completed` (kèm khối `"ledger"` khi đã quyết toán);
+    `trade_log` giữ luôn khối này.
+  - `_handle_trade_offer` chặn sớm ở server (gói thô qua mặt
+    chặn client cũng bị chặn): người gửi đã đồng bộ mà cho vượt
+    tiền khả dụng → `khong-du-tien-cho`; cho món không còn trong
+    ledger → `khong-du-do-cho` (đếm `dropped_packets`, không tạo
+    đề nghị).
+  - Doc đầu file cập nhật: `trade_accept` + `trade_completed`
+    (khối `"ledger"`) + `ledger_sync` (nay dùng cho cả trade) +
+    ghi chú PROVISIONAL (trade quyết toán từ sổ cái; khe hở
+    đồng bộ ghi đè nay áp cho cả trade).
+- `scripts/pxb_online.gd` — `_clean_trade_ledger_block(trade)`
+  mới (kiểm chuẩn khối ledger theo đúng thỏa thuận: paid 0..tiền
+  cho, không voided thì paid == tiền cho + short 0 + missing
+  false + transferred == (món cho không rỗng); voided thì paid 0
+  + transferred false + reason không rỗng + có ít nhất 1 nguyên
+  nhân; khối bẩn thì bỏ khối, giữ giao dịch) + `_clean_trade`
+  giữ khối ledger khi hợp lệ (log sau load giữ khối ledger, bỏ
+  khóa `"apply"` như cũ).
+  - `apply_trade_completed` nhánh sổ cái: voided → không trừ/cộng
+    gì ở local, ghi id đã áp (chống áp trùng), trả `reason` hủy
+    + `voided:true` + `short_money`/`missing_item` theo vai để
+    Main/toast báo rõ; đã quyết toán → áp đúng số server ghi
+    (`sender_paid`/`receiver_paid` theo vai, tiền cho thiếu so
+    với số server thì trừ tới 0 + ghi `short_money` như cũ —
+    chỉ xảy ra khi túi/ví local lệch khỏi ledger đã đồng bộ).
+    Không có khối ledger (server cũ / chưa ai đồng bộ) thì dùng
+    đường cũ (v70).
+  - `send_ws_trade_offer` / `send_ws_trade_accept` nay gọi
+    `send_ws_ledger_sync()` trước khi gửi (để server validate /
+    quyết toán bằng số mới nhất — như đấu giá ở vòng 72).
+  - Doc đầu file cập nhật: bước 11 ghi sổ cái trade (v73), bước
+    12 sửa dòng cũ "CHƯA giữ sổ cái" (nay đã có từ vòng 72).
+- `main.gd` — `_on_ws_trade_completed`: giao dịch bị hủy thì
+  toast riêng "Đổi đồ bị hủy: <lý do tiếng Việt>" (4 lý do theo
+  vai người gửi/người nhận), không giả vờ đã đổi xong.
+- **KHE HỞ CÒN LẠI (v73, ghi rõ trong code + doc server):** sổ
+  cái tin số client đồng bộ — client vẫn tiêu được tiền giữ hộ
+  ở local giữa 2 lần sync, và đồng bộ ghi đè nên client mất kết
+  nối đúng lúc chốt rồi sync lại bằng số local cũ sẽ ghi đè mất
+  khoản đã quyết toán. Nhưng trong 1 lần chấp nhận thì quyết
+  toán là nguyên tử — không còn chuyện 1 bên nhận đủ trong khi
+  bên kia trả thiếu (khe hở v1 đã đóng). Đóng hẳn cần kinh tế
+  server-authoritative / chặn tiêu tiền giữ hộ ở client — việc
+  sau.
+
+### 95.2 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_online_trade_ledger_test.gd`: **97/97 PASS** —
+  socket thật + server thật qua loopback cổng 18773, 3 client
+  (A + B đã đồng bộ, C CHƯA đồng bộ — không nối túi/ví — để
+  kiểm đường cũ): chặn gửi đề nghị vượt tiền/món ledger ở server
+  (gói thô, `khong-du-tien-cho` / `khong-du-do-cho`, dropped +1,
+  không tạo đề nghị); quyết toán thành công — tiền/món 2 bên +
+  ledger server khớp nhau tuyệt đối (A còn 1 com-tam + 1 ca-phe
+  + 4,5 triệu; B hết ca-phe + 1 com-tam + 2,5 triệu); race tiền
+  (A tiêu mất 4 triệu sau khi gửi, chỉ còn 500k) → HỦY, lý do
+  `thieu-tien-nguoi-gui`, thiếu 3,5 triệu, không bên nào đổi;
+  race món (B dùng mất com-tam sau khi gửi) → HỦY, lý do
+  `thieu-do-nguoi-gui`; bên chưa đồng bộ (C) thì đường cũ — bên
+  đã đồng bộ vẫn quyết toán đúng (A hết com-tam + nhận sach),
+  C áp trả `chua-noi-tui-vi`, local C không đổi, C vẫn không có
+  ledger; áp trùng trade_id thì bỏ lần 2; `data()`/`from_data()`
+  giữ khối ledger (kể cả khối voided), khối ledger bẩn (trả vượt
+  tiền thỏa thuận) thì bỏ khối giữ giao dịch; `reset_state()`
+  xóa log + mốc sync.
+- `tools/godot/run_regression.sh` đã thêm
+  `g4_online_trade_ledger_test`.
+- Hồi quy: **99 OK, 0 FAIL** (log
+  `hidden_files/regression-2026-11-27-0745.log`): trade ledger
+  97/97 mới + toàn bộ test cũ vẫn PASS (không regression).
+
+### 95.3 Verify + export — XONG
+
+- `--check-only` exit 0: `pxb_server.gd`, `pxb_online.gd`,
+  `main.gd`, `g4_online_trade_ledger_test.gd`.
+- Scene Main 120 frame exit 0, 0 ERROR/warning.
+- Export web exit 0: pck mới **27.763.800 byte, SHA `64aace39…`**
+  (trước `0dc02713…`), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; pck chứa
+  `res://tests/g4_online_trade_ledger_test.gd` (grep thấy 2 lần
+  trong pck — chuỗi literal trong script biên dịch không grep
+  được trực tiếp, đã kiểm chứng bằng đường dẫn file + SHA/size
+  đổi, như các vòng trước).
+- HTTP 200 đủ 4 file (`index.html`/`index.js`/`index.wasm`/
+  `index.pck`, cổng 8949, đã tắt server sau khi kiểm).
+- Chưa browser-verify vòng này (thay đổi là logic sổ cái +
+  test headless qua socket thật; toast hủy trade trong game chưa
+  bấm tay).
+
+### 95.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r73 (gộp r43–r73: a **119** / b 20 / c 37 / docs 2) +
+  deploy pck `64aace39` (12 lô: 11 lô chunk 206 + final) đã chuẩn
+  bị xong (script `pxb-push-main-r73.py`, `pxb-deploy-r73.py` +
+  manifest trong hidden_files goal; staging rebuild,
+  `build_gh_pages.py --verify-only` OK — pck `64aace39`, 206
+  chunk, khớp byte; wasm không đổi `fc74679e`). **Thay script
+  r72 (pck `0dc02713` chưa lên — bỏ, không xóa file, theo mẫu
+  vòng 46).** **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn
+  thẻ chờ; live vẫn `5f2a052f` r41). Lô a r73 = lô a r72 (117) +
+  `g4_online_trade_ledger_test.gd` (+.uid) — `main.gd`,
+  `pxb_online.gd`, `pxb_server.gd`, `run_regression.sh` đã có
+  trong lô a r72.
+
+### 95.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r73 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 68 (bấm B lúc đang giữ sạp → toast tiếng
+   Việt, không mở trận) — cần thắng 1 trận demo trước để có hold.
+3. G4 online tiếp: UI trade/đấu giá trong điện thoại (nút gửi đề
+   nghị / mở phiên / đặt giá cho người online — logic WS đã có,
+   chỉ thiếu UI) — hoặc kinh tế server-authoritative / chặn tiêu
+   tiền giữ hộ ở client (đóng khe hở còn lại của §94.1, nay áp
+   cho cả trade).
+
+## §96 — Vòng 74: UI trade / đấu giá trong điện thoại (27/11 ~08:45–09:15 +07, cron 08:45)
+
+Mục 3 của §95.5 (G4 online) — logic WS trade/đấu giá đã có từ
+vòng 69–73, chỉ thiếu UI trong điện thoại: người chơi chưa bấm
+được gì ngoài chat. Vòng này nối UI vào 2 tab có sẵn (không thêm
+tab mới — 9 tab GDD giữ nguyên).
+
+### 96.1 Code — XONG
+
+- `main.gd` — hằng mới `TRADE_OFFER_WANT_MONEY_VND = 100000`,
+  `AUCTION_CREATE_START_PRICE_VND = 100000`,
+  `AUCTION_CREATE_DURATION_S = 60`. Đề nghị + phiên mẫu dùng số
+  cố định vì điện thoại chưa có ô nhập số — ghi rõ trong code +
+  doc, không bịa thêm UI nhập số.
+  - Tab Tin nhắn (khi đã nối WS): nút "Đổi đồ với <tên>" cho từng
+    người online (trừ chính mình) → gửi đề nghị mẫu: cho món đầu
+    tiên trong túi, lấy 100.000đ; đề nghị đến → nút "Chấp nhận: …" /
+    "Từ chối: …" + dòng mô tả trong nội dung; đề nghị đã gửi → nút
+    "Hủy đề nghị: …". Túi trống thì bấm gửi/mở phiên vẫn báo toast
+    "Túi đang trống…" thay vì im lặng.
+  - Tab Chợ (khi đã nối WS): nội dung thêm khối
+    `ws_auctions_text()` (kể cả khi chưa nối — báo ngoại tuyến);
+    từng phiên: người bán khác → nút "Đặt giá <giá tiếp theo>đ"
+    (giá tiếp theo = giá hiện tại + 1.000đ, chưa ai đấu thì giá
+    khởi điểm); phiên của mình chưa có giá → nút "Hủy phiên";
+    chưa có phiên của mình → nút "Mở phiên: bán <món đầu tiên> —
+    100.000đ, 60 giây" (túi trống thì nút chỉ ghi "Mở phiên đấu
+    giá", bấm vào báo túi trống); nút "Làm mới danh sách đấu giá".
+  - Helper mới: `_first_owned_item_id()` (id nhỏ nhất theo alphabet
+    trong `bag`, ổn định giữa các lần mở — không phụ thuộc thứ tự
+    chèn Dictionary), `_first_owned_item_name()`,
+    `_ws_player_name()`, `_trade_offer_text()` ("Bình cho Cà Phê,
+    muốn Cơm Tấm + 100.000đ"; mã lạ in mã thô, không bịa tên),
+    `_ws_auction_next_bid()`, `_has_my_auction_open()`,
+    `_ws_trade_reason_text()` / `_ws_auction_reason_text()` (dịch
+    mã lỗi PxbOnline sang tiếng Việt, không để mã thô lọt ra màn
+    hình).
+  - Signal mới nối trong `_ready`: `ws_trade_offer_received` /
+    `ws_trade_offered_sent` / `ws_trade_declined` /
+    `ws_trade_cancelled` / `ws_trade_error` / `ws_auction_created`
+    / `ws_auction_bid` / `ws_auction_list` / `ws_auction_cancelled`
+    / `ws_auction_error`. Đề nghị đến / phiên mới / giá mới: đang
+    mở đúng tab thì làm tươi ngay, không thì `notify()` báo số chưa
+    đọc ở tab đó (đề nghị đến lúc đóng điện thoại → chấm đỏ tab Tin
+    nhắn, như tin chat).
+- `tools/godot/run_regression.sh` — thêm `g4_r74_phone_online_ui_test`.
+
+### 96.2 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_r74_phone_online_ui_test.gd`: **44/44 PASS** —
+  server Godot thật cổng 18774 + scene Main thật + 1 client đối tác
+  thật (Bình): helper (món đầu tiên, mô tả đề nghị, giá đấu tiếp
+  theo, dịch lỗi), nút "Đổi đồ với Bình" → gửi đề nghị mẫu → hủy,
+  đề nghị đến → chấp nhận (túi đổi thật: com-tam 1→0, ca-phe 1→2)
+  / từ chối, đề nghị đến lúc đóng điện thoại → báo chưa đọc (mở tab
+  xóa), tab Chợ → mở phiên bán ca-phe 100.000đ/60 giây → Bình đấu
+  giá 100.000đ → nội dung hiện giá hiện tại → người bán không thấy
+  nút "Đặt giá" cho phiên của mình + tự đấu giá bị chặn bằng toast
+  → Bình đấu tiếp 101.000đ → hủy phiên đã có giá bị chặn → làm mới
+  danh sách.
+  - Lần chạy 1: **42/44** — 2 FAIL đều do test viết sai, không phải
+    code: (1) phase gửi đề nghị không chờ server trả `trade_offered`
+    (1 vòng mạng) nên `ws_my_offers` còn rỗng lúc kiểm + đọc index 0
+    gây script error; đã sửa test thành chờ `my_offers` có 1 rồi mới
+    kiểm/hủy. (2) test đòi nút "Đặt giá 101.000đ" trên phiên của
+    chính Main — sai thiết kế: người bán không thấy nút đặt giá cho
+    phiên của mình; đã sửa thành kiểm nội dung hiện giá hiện tại +
+    không có nút "Đặt giá". Không sửa code Main ở cả 2 chỗ.
+- Hồi quy: **100 OK, 0 FAIL** (log
+  `hidden_files/regression-2026-11-27-0907.log`): test mới 44/44 +
+  toàn bộ test cũ vẫn PASS (không regression).
+
+### 96.3 Verify + export — XONG
+
+- `--check-only` exit 0: `main.gd`, `g4_r74_phone_online_ui_test.gd`.
+- Scene Main 120 frame exit 0, 0 ERROR/warning.
+- Export web exit 0: pck mới **27.780.060 byte, SHA `c5fcdc77…`**
+  (trước `64aace39…`), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; pck chứa
+  `res://tests/g4_r74_phone_online_ui_test.gd` (grep thấy 2 lần
+  trong pck — chuỗi literal trong script biên dịch không grep
+  được trực tiếp, đã kiểm chứng bằng đường dẫn file + SHA/size
+  đổi, như các vòng trước).
+- HTTP 200 đủ 4 file (`index.html`/`index.js`/`index.wasm`/
+  `index.pck`, cổng 8950, đã tắt server sau khi kiểm).
+- Staging rebuild `build_gh_pages.py --verify-only` OK (pck
+  `c5fcdc77`, 206 chunk, khớp byte; wasm không đổi `fc74679e`).
+- Chưa browser-verify vòng này (thay đổi là UI điện thoại + test
+  headless qua socket thật; các nút trade/đấu giá chưa bấm tay
+  trên trình duyệt thật).
+
+### 96.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r74 (gộp r43–r74: a **121** / b 20 / c 37 / docs 2) +
+  deploy pck `c5fcdc77` (12 lô: 11 lô chunk 206 + final) đã chuẩn
+  bị xong (script `pxb-push-main-r74.py`, `pxb-deploy-r74.py` +
+  manifest trong hidden_files goal; staging rebuild,
+  `build_gh_pages.py --verify-only` OK — pck `c5fcdc77`, 206
+  chunk, khớp byte; wasm không đổi `fc74679e`). **Thay script
+  r73 (pck `64aace39` chưa lên — bỏ, không xóa file, theo mẫu
+  vòng 46).** **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn
+  thẻ chờ; live vẫn `5f2a052f` r41). Lô a r74 = lô a r73 (119) +
+  `g4_r74_phone_online_ui_test.gd` (+.uid) — `main.gd` và
+  `run_regression.sh` đã có trong lô a r73.
+
+### 96.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r74 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 68 (bấm B lúc đang giữ sạp → toast tiếng
+   Việt, không mở trận) — cần thắng 1 trận demo trước để có hold.
+3. G4 online tiếp: kinh tế server-authoritative / chặn tiêu tiền
+   giữ hộ ở client (đóng khe hở còn lại của §94.1, nay áp cho cả
+   trade) — hoặc ô nhập số trong điện thoại để đề nghị/phiên không
+   còn dùng số mẫu cố định 100.000đ.
+
+## §97 — Vòng 75: ô nhập số trong điện thoại (27/11 ~09:45–10:15 +07, cron 09:45)
+
+Mục 3 của §96.5, lựa chọn thứ 2 (G4 online) — đề nghị + phiên ở
+vòng 74 dùng số mẫu cố định 100.000đ / 60 giây vì điện thoại chưa
+có ô nhập số. Vòng này thêm ô nhập số vào 2 tab có sẵn, không thêm
+tab mới, không đổi luật server (mọi giới hạn vẫn do PxbOnline +
+server kiểm tra lại).
+
+### 97.1 Code — XONG
+
+- `main.gd` — helper mới `_parse_vnd_input(le, default, min, max)`:
+  bỏ dấu chấm/phẩy/khoảng trắng ("100.000" hay "100000" đều
+  được); trống / sai định dạng → mặc định; âm / vượt trần → kẹp
+  về min/max; LineEdit đã bị xóa (đổi tab) → mặc định.
+  `_ws_auction_bid_amount(auction)`: ô trống / sai định dạng → giá
+  tiếp theo; gõ thấp hơn giá tiếp theo → trả -1 để handler báo lỗi,
+  không gửi; gõ cao → kẹp về max. `_phone_number_input(placeholder,
+  current_value)` tạo LineEdit 580×56, giữ số đã gõ qua mỗi lần vẽ
+  lại điện thoại (biến thành viên `_trade_want_money_vnd` /
+  `_auction_start_price_vnd` / `_auction_duration_s` /
+  `_bid_amount_vnd`, 0 = để trống = giá tiếp theo).
+  - Tab Tin nhắn (khi đã nối WS): ô "Số tiền muốn lấy khi đổi đồ
+    (đ) — mặc định 100.000" trước nút "Đổi đồ với <tên>";
+    `_on_ws_trade_offer_pressed` đọc số từ ô thay cho hằng
+    `TRADE_OFFER_WANT_MONEY_VND` (hằng giữ làm mặc định), toast
+    ghi số thật đã gửi.
+  - Tab Chợ (khi đã nối WS): ô "Giá đấu của bạn (đ) — để trống =
+    giá tiếp theo" trước nút đặt giá; ô "Giá khởi điểm (đ) — mặc
+    định 100.000" + ô "Thời gian phiên (giây, 30–3600) — mặc định
+    60" trước nút mở phiên; `_on_ws_auction_create_pressed` đọc
+    cả 2 ô (giá < 1.000đ kẹp lên 1.000đ, thời gian kẹp 30..3600
+    giây theo luật PxbOnline), toast ghi giá + giây thật;
+    `_on_ws_auction_bid_pressed` đọc ô giá đấu — gõ thấp hơn giá
+    tiếp theo thì toast "Giá đấu phải từ <giá tiếp theo>đ trở lên."
+    và không gửi. Nút "Mở phiên: bán <món> — <giá>đ, <giây> giây"
+    ghi giá trị đã lưu lúc vẽ (số vừa gõ chỉ chốt khi bấm nút,
+    toast xác nhận số thật sau khi bấm).
+- `tools/godot/run_regression.sh` — thêm
+  `g4_r75_phone_amount_input_test`.
+
+### 97.2 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_r75_phone_amount_input_test.gd`: **45/45 PASS**
+  (chạy đầu đã pass hết) — server Godot thật cổng 18775 + scene
+  Main thật + 1 client đối tác thật (Bình): parse (số thường /
+  dấu chấm / khoảng trắng / chữ / trống / âm / vượt trần / thời
+  gian kẹp 30..3600 / LineEdit null), gõ 250.000đ → đề nghị thật
+  want_money 250000, gõ "abc" → về mặc định 100.000đ, mở phiên
+  300.000đ / 120 giây → start_price 300000 + toast "120 giây",
+  Bình đấu giá 300.000đ, Bình mở phiên riêng 200.000đ/3600 giây →
+  Main đấu 500.000đ → giá hiện tại 500000, đấu 400.000đ (thấp hơn
+  giá tiếp theo 501.000đ) → toast lỗi + giá không đổi, để trống →
+  tự đấu giá tiếp theo 501.000đ, mở lại 2 tab → số đã gõ vẫn giữ
+  (giá đấu 501000, tiền đổi đồ 100000).
+- Hồi quy: **101 OK, 0 FAIL** (log
+  `hidden_files/regression-2026-11-27-0945.log`, tổng 3940 passes):
+  test mới 45/45 + toàn bộ test cũ vẫn PASS (không regression).
+
+### 97.3 Verify + export — XONG
+
+- `--check-only` exit 0: `main.gd`, `g4_r75_phone_amount_input_test.gd`.
+- Scene Main 120 frame exit 0, 0 ERROR/warning.
+- Export web exit 0: pck mới **27.804.788 byte, SHA `b300bf4d…`**
+  (trước `c5fcdc77…`), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; pck chứa
+  `res://tests/g4_r75_phone_amount_input_test.gd` (grep thấy 4 lần
+  trong pck — chuỗi literal trong script biên dịch không grep
+  được trực tiếp, đã kiểm chứng bằng đường dẫn file + SHA/size
+  đổi, như các vòng trước).
+- HTTP 200 đủ 4 file (`index.html`/`index.js`/`index.wasm`/
+  `index.pck`, cổng 8951, đã tắt server sau khi kiểm).
+- Staging rebuild `build_gh_pages.py --verify-only` OK (pck
+  `b300bf4d`, 206 chunk, khớp byte; wasm không đổi `fc74679e`).
+- Chưa browser-verify vòng này (thay đổi là ô nhập số trong điện
+  thoại + test headless qua socket thật; các ô nhập chưa gõ tay
+  trên trình duyệt thật).
+
+### 97.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r75 (gộp r43–r75: a **123** / b 20 / c 37 / docs 2) +
+  deploy pck `b300bf4d` (12 lô: 11 lô chunk 206 + final) đã chuẩn
+  bị xong (script `pxb-push-main-r75.py`, `pxb-deploy-r75.py` +
+  manifest trong hidden_files goal; staging rebuild,
+  `build_gh_pages.py --verify-only` OK — pck `b300bf4d`, 206
+  chunk, khớp byte; wasm không đổi `fc74679e`). **Thay script
+  r74 (pck `c5fcdc77` chưa lên — bỏ, không xóa file, theo mẫu
+  vòng 46).** **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn
+  thẻ chờ; live vẫn `5f2a052f` r41). Lô a r75 = lô a r74 (121) +
+  `g4_r75_phone_amount_input_test.gd` (+.uid) — `main.gd` và
+  `run_regression.sh` đã có trong lô a r74.
+
+### 97.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r75 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 68 (bấm B lúc đang giữ sạp → toast tiếng
+   Việt, không mở trận) — cần thắng 1 trận demo trước để có hold.
+3. G4 online tiếp: kinh tế server-authoritative / chặn tiêu tiền
+   giữ hộ ở client (đóng khe hở còn lại của §94.1, nay áp cho cả
+   trade) — việc lớn cuối cùng của chuỗi sổ cái vòng 72–74; hoặc
+   browser-verify các ô nhập số vòng 75 trên trình duyệt thật.
+
+## §98 — Vòng 76: sổ cái server-authoritative — kẹp tiền/món + chống ghi đè stale + chặn tiêu tiền giữ hộ (27/11 ~10:45–12:00 +07, cron 10:45 + cron 11:45)
+
+Mục 3 của §97.5 (G4 online) — đóng khe hở còn lại của §94.1, nay
+áp cho cả đấu giá VÀ trade: trước đây sổ cái tin số client đồng
+bộ — client tiêu được tiền đang giữ hộ ở local giữa 2 lần sync,
+và sync lại bằng số local cũ sau khi mất kết nối đúng lúc chốt
+phiên sẽ ghi đè mất khoản đã quyết toán.
+
+LƯU Ý CHẠY: code + test vòng này do worker của cron 10:45 làm
+xong (~11:45) nhưng dừng do cron timeout trước khi chạy hồi quy;
+cron 11:45 (lượt này) chạy tiếp: hồi quy + verify + export +
+docs + chuẩn bị push/deploy. Không sửa lại code của lượt trước,
+chỉ kiểm chứng + hoàn thiện.
+
+### 98.1 Code — XONG (cron 10:45)
+
+- `server/pxb_server.gd` — `_handle_ledger_sync` nhận thêm
+  `base_money` (int, -1 = chưa từng nhận ack): money lúc sync lần
+  trước. Đã có entry ledger mà `base_money >= 0` và khác money
+  trong ledger → sync STALE (đã có quyết toán chen giữa) nên
+  KHÔNG ghi đè, chỉ trả `ledger_sync_ack` với số server +
+  `stale: true`. Đồng bộ thường thay thế money/items nhưng GIỮ
+  reserved, và KẸP: money không xuống dưới reserved
+  (`clamped_money: true` khi bị kẹp); mỗi món đã hứa bán/cho
+  (phiên đấu giá đang mở của người này + trade đang chờ do người
+  này gửi, cộng dồn nếu nhiều phiên/trade cùng món) không xuống
+  dưới số đã hứa (`clamped_items: {item_id: số tối thiểu}`).
+  Ack luôn trả về đúng peer: money/items/reserved là số server
+  sau khi ghi (stale thì là số server hiện tại). Doc đầu file cập
+  nhật: giao thức `ledger_sync` + ack + ghi chú PROVISIONAL mới
+  (khe hở còn lại: mua/bán local trong Main vẫn chưa qua server
+  validate — xem §98.5).
+- `scripts/pxb_online.gd` — client giữ số server làm chuẩn:
+  `ws_ledger_authoritative_money` / `ws_ledger_authoritative_items`
+  / `ws_reserved_money` / `ws_last_ledger_ack` + signal
+  `ws_ledger_sync_acked`, cập nhật khi nhận `ledger_sync_ack`
+  (làm sạch qua `_clean_ledger_sync_ack`: money/items/reserved
+  hợp lệ, `clamped_money`/`stale` bool, `clamped_items` dict;
+  gói bẩn thì bỏ lặng); `ws_ledger_clamped_count` đếm ack bị kẹp.
+  `send_ws_ledger_sync()` tự kẹp tiền gửi đi theo reserved
+  (`maxi(money, reserved)`) + gửi kèm `base_money` là money lần
+  sync trước; `_maybe_auto_sync_ledger()` so sánh theo số SẼ GỬI
+  (đã kẹp) để khỏi gửi trùng mỗi 500 ms; nhận `auction_bid` mà
+  mình liên quan (vừa đấu dẫn đầu / vừa bị vượt giá) thì sync
+  ngay để lấy reserved mới. `_rebaseline_ledger_after_settlement()`
+  đặt lại baseline theo local sau khi áp 1 quyết toán thành công
+  (không bị đánh stale oan ở lần sync kế). `ws_available_money()`
+  = ví trừ tiền giữ hộ (Main dùng để chặn chi tiêu).
+  `reset_state()` xóa cả biến mới.
+- `main.gd` — `_on_ws_ledger_sync_acked` (nối signal lúc
+  `_ready`): ack về mà ví/túi local lệch số server thì áp số
+  server vào ví/túi + toast "Máy chủ đã đồng bộ lại ví/túi (đã
+  trừ tiền đấu giá/trade đã chốt).". `_reserve_blocked(amount)`:
+  chỉ chặn khi đã nối WS + server đang giữ hộ + khoản chi làm ví
+  xuống dưới số giữ hộ; offline/không giữ hộ thì không chặn.
+  Chặn ở 4 chỗ chi tiền local: `buy_item` (mua đồ, tính đúng giá
+  sỉ khi giữ sạp), `deposit_savings` (gửi tiết kiệm), `enroll_degree`
+  (học phí, kiểm tra trước khi enroll vì enroll xong không hoàn
+  tác được), `enroll_short_course` (phí 2 triệu) — đều toast tiếng
+  Việt "Tiền đang giữ hộ đấu giá/trade, không … được." + trả
+  `reason: "tien-dang-giu-ho"`, không trừ tiền. Rút tiết kiệm
+  không chặn (tiền rút vào ví, không chạm tiền giữ hộ).
+
+### 98.2 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_r76_ledger_authoritative_test.gd`:
+  **121/121 PASS** — socket thật + server thật qua loopback cổng
+  18776, client A thô (seller) + scene Main thật (bidder), 6
+  phase: (0) setup — 2 client hello/welcome, ledger A 5 triệu +
+  cơm tấm ×3, Main 2 triệu, baseline Main theo ack; (a) server
+  kẹp tiền — Main đấu dẫn đầu 1,6 triệu (reserved 1,6 triệu),
+  tiêu local còn 500k rồi sync với base đúng → ledger vẫn ≥1,6
+  triệu, ack `clamped_money: true`; client tự kẹp tiền gửi đi;
+  (b) server kẹp món — A mở phiên bán cơm tấm rồi sync túi không
+  có cơm tấm → ledger vẫn giữ ≥1; gửi trade cho cơm tấm rồi sync
+  lại → kẹp cộng dồn = 2; hủy trade → kẹp về 1; (c) stale sync —
+  phiên 1 đóng, server đã trừ tiền người thắng, client gửi sync
+  với `base_money` cũ (trước quyết toán) → server KHÔNG ghi đè,
+  ack `stale: true` + money == số server; Main áp ack → ví local
+  == số server + toast đồng bộ lại; (d) spend guard ở Main thật —
+  Main đấu dẫn đầu (reserved > 0): mua món đắt hơn tiền khả dụng
+  / gửi tiết kiệm vượt khả dụng / đóng học phí vượt khả dụng →
+  bị chặn (toast tiếng Việt, ví không đổi); mua món rẻ / khóa phí
+  vừa khả dụng → vẫn được; (e) baseline theo ack + (f)
+  `reset_state` xóa biến mới (reserved về 0, số chuẩn về -1, ack
+  gần nhất rỗng, ngắt WS).
+- `tools/godot/run_regression.sh` đã thêm
+  `g4_r76_ledger_authoritative_test`.
+- Hồi quy: **102 OK, 0 FAIL** (log
+  `hidden_files/regression-2026-11-27-1145.log`, tổng 3997
+  passes): test mới 121/121 + toàn bộ test cũ vẫn PASS (không
+  regression). Lỗi WebSocket `ready_state != STATE_OPEN` ở cuối
+  log test r76 là noise khi teardown sau khi test đã xong (exit
+  0), không phải lỗi test.
+
+### 98.3 Verify + export — XONG
+
+- `--check-only` exit 0: `pxb_server.gd`, `pxb_online.gd`,
+  `main.gd`, `g4_r76_ledger_authoritative_test.gd`.
+- Scene Main 120 frame exit 0, 0 ERROR/warning.
+- Export web exit 0: pck mới **27.828.448 byte, SHA `365faa62…`**
+  (trước `b300bf4d…`), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; pck chứa
+  `res://tests/g4_r76_ledger_authoritative_test.gd` (grep thấy 4
+  lần trong pck).
+- HTTP 200 đủ 4 file (`index.html`/`index.js`/`index.wasm`/
+  `index.pck`, cổng 8952, đã tắt server sau khi kiểm).
+- Staging rebuild `build_gh_pages.py --verify-only` OK (pck
+  `365faa62`, 207 chunk, ráp lại 27.828.448 byte SHA `365faa62…`
+  khớp byte với build local; wasm không đổi `fc74679e`).
+- Chưa browser-verify vòng này (thay đổi là logic sổ cái +
+  test headless qua socket thật; toast chặn tiêu tiền giữ hộ
+  trong game chưa bấm tay).
+
+### 98.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r76 (gộp r43–r76: a **125** / b 20 / c 37 / docs 2) +
+  deploy pck `365faa62` (12 lô: 11 lô chunk 207 + final) đã chuẩn
+  bị xong (script `pxb-push-main-r76.py`, `pxb-deploy-r76.py` +
+  manifest trong hidden_files goal; staging rebuild,
+  `build_gh_pages.py --verify-only` OK — pck `365faa62`, 207
+  chunk, khớp byte; wasm không đổi `fc74679e`). **Thay script
+  r75 (pck `b300bf4d` chưa lên — bỏ, không xóa file, theo mẫu
+  vòng 46).** **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn
+  thẻ chờ; live vẫn `5f2a052f` r41). Lô a r76 = lô a r75 (123) +
+  `g4_r76_ledger_authoritative_test.gd` (+.uid — .uid sẽ sinh khi
+  import/export, đã có trong manifest sau khi export).
+
+### 98.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r76 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 68 (bấm B lúc đang giữ sạp → toast tiếng
+   Việt, không mở trận) — cần thắng 1 trận demo trước để có hold.
+3. G4 online tiếp: kinh tế server-authoritative HOÀN TOÀN — mua/
+   bán local trong Main (shop, chợ) vẫn chưa qua server validate;
+   server hiện chỉ chặn ghi đè ledger sai + chặn tiêu tiền giữ hộ
+   qua sync. Đóng khe hở này cần mọi giao dịch mua/bán đi qua
+   server (validate + trừ tiền trong ledger) — việc lớn tiếp theo
+   của chuỗi sổ cái; hoặc browser-verify toast chặn tiêu tiền giữ
+   hộ vòng 76 trên trình duyệt thật.
+
+## §99 — Vòng 77: mua ở chợ qua server validate — kinh tế server-authoritative hoàn toàn (27/11 ~12:45–13:30 +07, cron 12:45)
+
+> Mục 3 của §98.5 — đóng khe hở "mua/bán local trong Main chưa
+> qua server validate". Bán lại cho chợ CHƯA CÓ (game chưa có
+> tính năng bán — economy cũng không có hàm sell) nên vòng này
+> chỉ có mua; thêm bán thì cần `shop_sell` riêng.
+
+### 99.1 Code — XONG
+
+- `server/pxb_server.gd` — giao thức mới `shop_buy` /
+  `shop_buy_ack` (doc đầu file cập nhật) + `shop_log` (100 lần
+  mua gần nhất, `SHOP_LOG_MAX`) + `shop_buy_count` trong
+  `data()` + dispatch + `_handle_shop_buy`:
+  - Validate: phải hello trước (`chua-hello`); `req_id` int
+    >= 1 (sai thì `dropped_packets`, không trả ack — client
+    luôn gửi req_id đúng); `item_id` rỗng/dài → `thieu-item-id`;
+    `discount_percent` ngoài 0..50 → `gia-khong-hop-le`.
+  - Giá lấy từ `PxbEconomy.get_item` (bảng giá duy nhất —
+    server KHÔNG tin giá client gửi, client cũng không gửi
+    giá); món không có → `khong-co-mon`; giảm giá đúng luật
+    `economy.buy` (discount 0..50, KHÔNG áp cho `phong-tro`;
+    xe-đạp giá 0 thì mua 0đ vẫn qua server để ghi log).
+  - Phải có entry ledger (đã đồng bộ ít nhất 1 lần) —
+    chưa có thì `chua-dong-bo-so-cai`, client sync rồi mua
+    lại; tiền khả dụng = money − reserved (cùng luật vòng 76).
+  - Thành công: TRỪ TIỀN trong ledger + ghi `shop_log` +
+    ack ok=true (`money`/`reserved` là số server sau khi trừ,
+    `price_paid`, `fame_gained` = 50 khi kind House hoặc
+    `xe-sang` — đúng `economy.buy`); thất bại: không trừ gì,
+    ack ok=false + reason.
+  - `owned` KHÔNG nằm trong ledger items (ledger items là túi
+    đồ slice `PxbInventory`; nhà/xe/điện thoại/quần áo mua ở
+    chợ nằm trong `economy.owned`, không đem đấu giá/trade
+    được) nên server không theo dõi owned — món mua là tài
+    sản local, TIỀN mới là phần server-authoritative. Muốn
+    owned cũng lên ledger thì cần ledger_sync owned + server
+    làm chuẩn cho owned (việc sau, ngoài vòng này).
+  - PROVISIONAL: discount là số client tự khai (server chưa
+    biết ai đang giữ sạp — giữ sạp chỉ có ở `battle_state`
+    local), server chỉ kẹp 0..50; muốn validate thật thì phải
+    đồng bộ giữ sạp lên server trước (việc sau).
+- `scripts/pxb_online.gd` — `send_ws_shop_buy(item_id,
+  discount_percent)` (đồng bộ ledger trước khi gửi như
+  `auction_bid`; chưa nối túi/ví thì bỏ qua pre-sync, vẫn gửi
+  — server trả `chua-dong-bo-so-cai` nếu chưa có entry;
+  `req_id` tăng dần, lưu `_ws_shop_pending`) + signal
+  `ws_shop_buy_acked` + `_clean_shop_buy_ack` (req_id >= 1,
+  ok bool, price_paid/fame_gained/money/reserved int >= 0,
+  reason string) + nhận `shop_buy_ack` trong
+  `_handle_ws_message` (req_id không khớp lần mua đang chờ thì
+  bỏ lặng; khớp thì cập nhật baseline/authoritative/reserved
+  theo ack + áp tiền vào `trade_economy.money` khi ok — giống
+  `apply_auction_closed`, để lần sync kế không ghi đè số
+  server bằng ví local cũ; Main áp lại theo delta sau đó) +
+  `reset_state` xóa pending + req_id.
+  - Cùng vòng 77 — SỬA RACE CỦA ACK SYNC (tìm ra khi test
+    phase 2): mỗi lần `send_ws_ledger_sync` ghi lại ví local
+    lúc gửi vào `_ws_ledger_sent_money_queue` (tiền TRƯỚC
+    KHI kẹp theo reserved — vd ví 500k giữ hộ 1,6 triệu thì
+    gửi đi 1,6 triệu nhưng delta phải tính theo 500k); ack về
+    kèm `sent_money` (pop đầu hàng đợi — ack trả đúng thứ tự)
+    để Main áp ví theo delta thay vì áp tuyệt đối (không nuốt
+    tiền kiếm/tiêu local trong lúc chờ ack). Sync gửi thô
+    (không qua `send_ws_ledger_sync`) thì ack không có
+    `sent_money` và Main áp tuyệt đối như vòng 76. Hàng đợi
+    giữ tối đa 8 mục, xóa ở `reset_state`. Lệch còn lại: ack
+    bẩn không tiêu thụ mục nào (server của mình không gửi ack
+    bẩn nên chấp nhận).
+- `main.gd` — `_pending_shop_buy` (chỉ 1 lần mua chờ: {req_id,
+  item_id, discount_percent, money_at_send}) + nối signal
+  `ws_shop_buy_acked` + `buy_item` đi qua server khi đã nối
+  WS (mua chen khi đang chờ → `dang-cho-may-chu`; gửi thất
+  bại vì mất kết nối thì rơi về mua local như cũ; gửi ok thì
+  toast "Đang chờ máy chủ xác nhận mua …" + trả
+  `cho-may-chu`/`pending:true`) + `_on_ws_shop_buy_acked`
+  (req_id lạ thì bỏ; ok thì ví = ack.money + (jobs.gold −
+  money_at_send) — không mất tiền kiếm/tiêu local trong lúc
+  chờ, kẹp >= 0; món vào `economy.owned`, Danh vọng theo ack,
+  toast tiếng Việt; không ok thì toast theo reason, không
+  trừ/cộng gì) + `_on_ws_status_changed(false)` xóa pending
+  khi mất kết nối trong lúc chờ (toast "Mất kết nối, lần mua
+  chưa được xác nhận — thử mua lại.") + tab Chợ ẩn nút mua
+  trong lúc chờ ("Đang chờ máy chủ xác nhận mua hàng…") +
+  `_on_ws_ledger_sync_acked` áp ví theo delta khi ack có
+  `sent_money` (không có thì áp tuyệt đối như vòng 76).
+
+### 99.2 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_r77_server_shop_buy_test.gd`:
+  **95/95 PASS** — socket thật + server thật qua loopback cổng
+  18777, client A thô + client C thô (chưa đồng bộ) + scene
+  Main thật, 10 phase: (0) setup — unit `send_ws_shop_buy`
+  khi chưa nối + `_clean_shop_buy_ack` 6 trường hợp, 2 client
+  hello/welcome, ledger A 5 triệu + cơm tấm ×3, ledger Main
+  1 tỉ; (1) mua ok qua Main — chung-cu-mini 800 triệu, ack
+  ok, ví 200 triệu, owned + Danh vọng +50, ledger server
+  200 triệu, `shop_log` 1, toast "Đã mua Chung cư mini (máy
+  chủ đã trừ 800.000.000đ).", baseline theo ack; (2) delta
+  trong lúc chờ ack — mua ao-dai 2 triệu, ví local +100k sau
+  khi gửi → ví = 198 triệu + 100k (chính race này bắt được
+  lỗi áp tuyệt đối của ack sync — đã sửa bằng `sent_money`
+  trong cùng vòng); (3) không đủ tiền — nhà-phố-nhỏ 3 tỉ →
+  ack `khong-du-tien`, ví/owned không đổi (pre-sync đã đẩy
+  100k lên server nên ack money 198,1 triệu, không phải 198
+  triệu — test đã sửa kỳ vọng sau lần chạy 94/95); (4) A:
+  discount 99 bị chặn ở client, món lạ → ack `khong-co-mon`,
+  ledger không đổi; (5) C chưa đồng bộ → ack
+  `chua-dong-bo-so-cai`; (6) giảm giá — ao-dai −10% còn 1,8
+  triệu, phong-tro −10% vẫn 2 triệu (không giảm tiền thuê),
+  discount 51 gửi thô (pending chen req_id 777) → ack
+  `gia-khong-hop-le`, ledger không đổi; (7) giữ hộ — reserved
+  150 triệu (white-box): o-to-cu 400 triệu bị từ chối, ao-dai
+  2 triệu vẫn mua được; (8) 1 lần chờ — mua chen →
+  `dang-cho-may-chu`, req_id không tăng, ack 1 lần, owned
+  ao-dai ×3 (không thêm bo-cong-so); mất kết nối xóa pending
+  (white-box gọi handler) + ngắt WS thật → mua offline về
+  local (ví 192,1 triệu, ao-dai ×4); (9) `reset_state` xóa
+  pending + req_id, `shop_log` 6, `data().shop_buy_count` 6.
+- Cập nhật test cũ (bắt buộc vì hành vi đổi): test r76 phase
+  (d)/(e) — mua ao-dai 2 triệu khi đã nối WS nay đi qua
+  server nên `buy_item` trả `cho-may-chu` + pending, tiền trừ
+  khi ack về (thêm step 7 chờ ack + counter
+  `_shop_acks_main76`); baseline/auth sau đó là 17 triệu
+  (không còn 21 triệu), ack ledger gần nhất là pre-sync 19
+  triệu. **Test r76: 125/125 PASS** (trước 121 — thêm 4
+  check mới).
+- `tools/godot/run_regression.sh` đã thêm
+  `g4_r77_server_shop_buy_test`.
+- Hồi quy: **103 OK, 0 FAIL** (log
+  `hidden_files/regression-2026-11-27-1245.log`, tổng 4096
+  passes): test mới 95/95 + r76 125/125 + toàn bộ test cũ vẫn
+  PASS (không regression). Lỗi WebSocket `ready_state !=
+  STATE_OPEN` ở cuối log test r76/r77 là noise khi teardown
+  sau khi test đã xong (exit 0), không phải lỗi test.
+
+### 99.3 Verify + export — XONG
+
+- `--check-only` exit 0: `pxb_server.gd`, `pxb_online.gd`,
+  `main.gd`, `g4_r77_server_shop_buy_test.gd`,
+  `g4_r76_ledger_authoritative_test.gd` (sau khi sửa test).
+- Scene Main 120 frame exit 0, 0 ERROR/warning.
+- Export web exit 0: pck mới **27.850.548 byte, SHA `28ae55e9…`**
+  (trước `365faa62…`), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; pck chứa
+  `res://tests/g4_r77_server_shop_buy_test.gd`.
+- HTTP 200 đủ 4 file (`index.html`/`index.js`/`index.wasm`/
+  `index.pck`, cổng 8953, đã tắt server sau khi kiểm).
+- Staging rebuild `build_gh_pages.py --verify-only` OK (pck
+  `28ae55e9`, 207 chunk, ráp lại 27.850.548 byte SHA `28ae55e9…`
+  khớp byte với build local; wasm không đổi `fc74679e`).
+- Chưa browser-verify vòng này (thay đổi là logic mua qua
+  server + test headless qua socket thật; nút mua trong điện
+  thoại + toast "Đang chờ máy chủ…" chưa bấm tay).
+
+### 99.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r77 (gộp r43–r77: a **127** / b 20 / c 37 / docs 2) +
+  deploy pck `28ae55e9` (12 lô: 11 lô chunk 207 + final) đã chuẩn
+  bị xong (script `pxb-push-main-r77.py`, `pxb-deploy-r77.py` +
+  manifest trong hidden_files goal; staging rebuild,
+  `build_gh_pages.py --verify-only` OK — pck `28ae55e9`, 207
+  chunk, khớp byte; wasm không đổi `fc74679e`). **Thay script
+  r76 (pck `365faa62` chưa lên — bỏ, không xóa file, theo mẫu
+  vòng 46).** **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn
+  thẻ chờ; live vẫn `5f2a052f` r41). Lô a r77 = lô a r76 (125) +
+  `g4_r77_server_shop_buy_test.gd` + `.uid` (đã có sau khi
+  export); test r76 trong lô a đã cập nhật theo hành vi mới.
+
+### 99.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r77 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 77 (mua ao-dai trong điện thoại khi đã
+   nối WS → toast chờ → toast đã mua + ví trừ đúng; ngắt WS
+   giữa chừng → toast mất kết nối + mua lại được) + vòng 68
+   (bấm B lúc đang giữ sạp → toast tiếng Việt, không mở trận)
+   — cần thắng 1 trận demo trước để có hold.
+3. G4 online tiếp: đưa `owned` (nhà/xe/điện thoại/quần áo) vào
+   ledger để server cũng làm chuẩn cho tài sản đã mua (hiện
+   server chỉ chuẩn cho tiền); đồng bộ giữ sạp lên server để
+   validate discount giá sỉ thật thay vì tin số client khai;
+   hoặc thêm `shop_sell` khi game có tính năng bán lại.
+
+## §100 — Vòng 78: đưa `owned` vào ledger — server làm chuẩn cho tài sản đã mua (27/11 ~13:45–14:30 +07, cron 13:45)
+
+### 100.1 Code — XONG
+
+- **Vấn đề đóng:** từ vòng 77, server chỉ làm chuẩn cho TIỀN;
+  `economy.owned` (nhà/xe/điện thoại/quần áo mua ở chợ) chỉ có
+  ở client local. Đổi máy / save hỏng / client sửa save thì tài
+  sản đã mua không còn ai chứng thực — server không biết người
+  này đã mua gì, không đối chiếu được khi cần (vd validate
+  discount giữ sạp sau này cũng cần biết ai giữ sạp nào).
+- **`server/pxb_server.gd`:** entry ledger thêm `"owned":
+  {item_id: count}` (kho riêng trong cùng entry, khác `items`
+  là túi đồ slice — owned không đem đấu giá/trade được).
+  `_clean_owned_dict(raw)` mới: chỉ giữ món có trong bảng giá
+  `PxbEconomy.get_item`, item_id ≤64 ký tự, count int 0..99,
+  tối đa 512 món; món sai thì bỏ món đó. `_handle_ledger_sync`
+  nhận thêm khóa `"owned"` tùy chọn: HỢP NHẤT theo max(server,
+  client) từng món (không thay thế tuyệt đối như money/items —
+  client có thể mua local offline trước khi sync lần đầu; server
+  cũng không bao giờ quên món nó đã validate qua shop_buy) rồi
+  trả lại trong `ledger_sync_ack` (kể cả ack STALE — stale vẫn
+  trả owned server hiện tại). `_handle_shop_buy` khi ok: cộng
+  món vào `entry_d["owned"]` + ack kèm `"owned"` đầy đủ sau khi
+  mua; ack lỗi không kèm owned (client giữ owned cũ). Doc giao
+  thức đầu file cập nhật cả 2 gói.
+- **`scripts/pxb_online.gd`:** `_owned_snapshot_from(eco)` mới
+  (đếm `economy.owned` Array thành dict) + `_clean_owned_dict`
+  (làm sạch owned trong ack, cùng luật server).
+  `send_ws_ledger_sync` gửi kèm `"owned"` + baseline
+  `_ws_ledger_last_owned`; `_maybe_auto_sync_ledger` so sánh cả
+  owned (mua local offline xong mới nối WS cũng kích hoạt
+  sync). `_clean_ledger_sync_ack` / `_clean_shop_buy_ack` parse
+  khóa `"owned"` TÙY CHỌN + cờ `"owned_present"` (server cũ
+  không gửi thì false, client giữ owned local — không xóa);
+  owned có nhưng không phải dict thì gói bẩn, bỏ cả gói.
+  Handler ack: `ws_ledger_authoritative_owned` +
+  `_ws_ledger_last_owned` đặt theo ack khi owned_present;
+  `_rebaseline_ledger_after_settlement` rebaseline cả owned;
+  `reset_state` xóa cả 2 biến mới.
+- **`main.gd`:** `_apply_server_owned(owned)` mới — dựng lại
+  `economy.owned` từ dict server (sắp id theo alphabet, lặp
+  theo count), trả true khi owned đổi. `_on_ws_ledger_sync_acked`
+  áp ack.owned khi owned_present (chỉ refresh HUD/điện thoại khi
+  owned đổi, không toast riêng — toast cũ chỉ cho ví/túi);
+  `_on_ws_shop_buy_acked` áp ack.owned thay cho append local,
+  server cũ thì append như cũ. An toàn race: mua local chỉ xảy
+  ra khi WS đã ngắt (không có ack nào đang bay); khi đã nối WS
+  thì owned chỉ đổi qua ack server, và mọi sync đều gửi owned
+  local lên trước để server hợp nhất.
+- **Không đổi:** `PxbEconomy.data()/from_data()` (save local vẫn
+  giữ owned như cũ); `_settle_auction/_settle_trade` (ghi lại
+  cùng dict entry nên giữ nguyên khóa owned); discount vẫn
+  PROVISIONAL (chưa validate giữ sạp thật — việc sau).
+
+### 100.2 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_r78_owned_ledger_test.gd` (cổng 18778,
+  socket + server thật + scene Main thật + client A/D thô):
+  **53/53 PASS** — unit: snapshot đếm trùng (ao-dai x2 +
+  xe-sang x1), clean owned lọc món lạ/âm/>99/rỗng, clean 2 loại
+  ack (thiếu owned → present=false, có owned → parse + lọc,
+  owned không phải dict → bỏ gói); phase 0: Main seed owned
+  offline ao-dai x1 trước khi nối → ledger Main hợp nhất
+  ao-dai x1, ack owned_present, authoritative + baseline khớp;
+  phase 1: mua chung-cu-mini 800 triệu qua server → ack owned
+  đủ ao-dai + chung-cu-mini, ledger/Main/authoritative khớp;
+  phase 2: sync thô từ A với owned bẩn → server lọc còn ao-dai
+  x2 + chung-cu-mini x3 (bỏ khong-co-mon/xe-sang -1/""/phong-tro
+  100), ledger Main không lệch; phase 3: sync STALE (ledger
+  +1000đ chen giữa) → ack stale=true + money server + owned đầy
+  đủ, ledger/Main owned không đổi; phase 4: client D máy mới
+  (cùng player-main, owned trống, ví = tiền ledger) sync lên →
+  server trả lại đủ 2 món, ledger tiền/owned không bị ghi đè;
+  phase 5: Main mua ao-dai lần 2 → ack/ledger/Main đều ao-dai
+  x2, ví về 198.001.000đ; phase 6: reset_state xóa
+  authoritative + baseline owned, shop_log 2 lần mua.
+- Hồi quy: xem §100.3.
+
+### 100.3 Verify + export — XONG (hồi quy có 5 fail ĐÃ CÓ TỪ TRƯỚC)
+
+- `--check-only` 3 file sửa (main.gd, pxb_online.gd,
+  pxb_server.gd) exit 0; scene Main 120 frame exit 0.
+- Hồi quy đầy đủ 104 suite (log
+  `hidden_files/regression-2026-11-27-1345.log`): **4213 pass,
+  5 fail** — `g4_online_trade_ledger_test` 96/100 (4 fail) +
+  `g4_online_auction_test` 94/95 (1 fail). **5 fail này ĐÃ CÓ
+  TỪ TRƯỚC, không phải do r78:** log hồi quy 12:45 (r77) ghi
+  đúng 2 con số đó (96/100 + 94/95). Chẩn đoán bằng test debug
+  tạm (đã xóa): trade 3 cho A com-tam 1→2 là ĐÚNG số học (A còn
+  1 com-tam sau trade 1, nhận thêm 1 ở trade 3; server ledger
+  cũng ghi 2) nhưng test đòi com-tam == 1 — kỳ vọng của test cũ
+  sai, không phải code sai; auction fail cũng là 1 check cũ
+  (client mới áp lại phiên cũ, đòi nhận đúng 475.000đ).
+  **Điểm mù của runner cũ:** bản tin r77 ghi "hồi quy 103 OK,
+  0 FAIL" vì runner cũ chỉ đếm suite theo exit code — script
+  test thoát 0 kể cả khi có check FAIL bên trong; runner vòng
+  này đếm thẳng số FAIL nên mới thấy 5 fail. Từ nay ghi cả 2
+  con số (số suite + số pass/fail) để khỏi hiểu lầm.
+- Export web exit 0: pck **27.866.048 byte, SHA `c01f7161…`**
+  (trước `28ae55e9…`, +15.500 byte do code + test mới), wasm
+  không đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`;
+  pck chứa `pxb_online.gdc` / `pxb_server.gdc` / test r78
+  `.gdc` mới; HTTP 200 đủ 4 file (cổng 8954).
+- Staging rebuild `build_gh_pages.py` OK: wasm 293 chunk +
+  pck 207 chunk, khớp byte True; `versions.json` ghi
+  pck=`c01f7161`.
+
+### 100.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r78 (`hidden_files/pxb-push-main-r78.py`, 4 lô):
+  a 129 paths (r77-a 127 + test r78 `.gd` + `.uid`), b 20,
+  c 37, docs 2 — tất cả path tồn tại, không file nào vượt
+  giới hạn snapshot-push 188.416 byte/file **trừ**
+  `docs/godot-g4.md` (696.120 byte — nhưng 75 lần push docs
+  trước đều thành công nên giữ nguyên mẫu cũ; nếu lô docs lỗi
+  thì tách sau). Thay script r77 (pck `28ae55e9` chưa lên —
+  bỏ, file giữ lại).
+- Deploy pck `c01f7161` (`hidden_files/pxb-deploy-r78.py`,
+  12 lô: 11 chunk pck 207 + final versions.json/index.html;
+  manifest đã kiểm đủ path). Thay script r77.
+- **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn thẻ chờ;
+  live vẫn `5f2a052f` r41).
+
+### 100.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r78 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 78 (mua ao-dai trong điện thoại khi đã
+   nối WS → ack owned về → tắt/mở lại máy vẫn còn món; máy mới
+   cùng player_id sync lên nhận lại owned) + vòng 77 + vòng 68
+   (bấm B lúc đang giữ sạp → toast tiếng Việt, không mở trận)
+   — cần thắng 1 trận demo trước để có hold.
+3. Sửa 5 fail cũ trong 2 suite online (kỳ vọng test sai ở trade
+   3 + auction client mới — xem §100.3) HOẶC ghi nhận là nợ
+   test đã biết; đồng bộ giữ sạp lên server để validate
+   discount giá sỉ thật thay vì tin số client khai; hoặc thêm
+   `shop_sell` khi game có tính năng bán lại.
+
+## §101 — Vòng 79: sửa 5 fail cũ — kỳ vọng test sai, code đúng (27/11 ~14:45–15:30 +07, cron 14:45)
+
+### 101.1 Chẩn đoán — XONG (không sửa code game)
+
+- 5 fail từ hồi quy r77/r78 (`g4_online_trade_ledger_test`
+  96/100 + `g4_online_auction_test` 94/95) đã tái hiện đúng
+  bằng 2 test debug tạm (đã xóa): cả 5 đều là kỳ vọng test cũ
+  sai số học / sai theo hành vi v76, code game + server đúng.
+- **Trade 3 (4 fail):** A còn com-tam 1 sau trade 1 (đổi
+  com-tam + 1 triệu lấy ca-phe + 500k), trade 3 nhận thêm 1
+  com-tam từ B → A phải có com-tam **2**, không phải 1. Đo
+  thật: sau trade 3 A local ca-phe=0, com-tam=2, ví 500k;
+  ledger A {ca-phe: 0, com-tam: 2}. Trade 4 A cho 1 com-tam
+  lấy sach → còn com-tam **1** (không phải 0): đo thật
+  com-tam=1, sach=1, ledger {ca-phe: 0, com-tam: 1, sach: 1}.
+  Test cũ quên A vẫn giữ com-tam 1 từ trade 1 nên đòi 1 rồi 0.
+- **Auction client mới (1 fail):** client mới áp lại phiên cũ
+  (seller A, hammer 1.001.000, phí 50.050) — test cũ đòi nhận
+  475.000đ (= 95% của 500.000đ người thắng trả được ở local,
+  hành vi v72). Từ v76 server kẹp tiền giữ hộ theo reserved
+  nên người thắng trả ĐỦ hammer từ sổ cái, người bán nhận đủ
+  950.950đ. Đo thật: `money_received=950950`,
+  ledger `seller_received=950950, winner_paid=1001000`.
+  Check phase 3 của cùng suite đã đòi 950.950 từ v76 — chỉ
+  check phase 6 này còn sót lại số v72.
+
+### 101.2 Sửa — chỉ 2 file test, không động code game
+
+- `tests/g4_online_trade_ledger_test.gd` (4 check + header):
+  trade 3 đòi com-tam A == 2 (local + ledger); trade 4 đòi
+  com-tam A == 1 (local + ledger); header sửa mô tả race-mon:
+  thiếu TIỀN thì HUY, thiếu MÓN thì server GIỮ món trong
+  ledger (kẹp món, v76) nên giao dịch vẫn chốt đủ, bên thiếu
+  món ở local áp từng phần.
+- `tests/g4_online_auction_test.gd` (1 check + header):
+  client mới áp lại phiên cũ đòi nhận 950.950đ (sổ cái v76);
+  header sửa mô tả race đấu giá theo v76 (kẹp tiền giữ hộ,
+  trả đủ hammer, local thiếu thì ghi short 501.000).
+- Không sửa `pxb_server.gd` / `pxb_online.gd` / `main.gd` —
+  số liệu đo thật khớp đúng luật v76/v78 đã chốt.
+
+### 101.3 Verify + export — XONG (hồi quy 0 fail lần đầu từ r77)
+
+- 2 suite sửa: trade ledger **100/100 PASS**, auction
+  **95/95 PASS**.
+- Hồi quy đầy đủ 104 suite (log
+  `hidden_files/regression-2026-11-27-1445.log`): **4218 pass,
+  0 fail** (4213 + 5 đã sửa). Lần đầu 0 fail kể từ khi 5 fail
+  này xuất hiện ở r77 — runner đếm thẳng số FAIL nên con số
+  này là thật, không còn điểm mù đếm theo exit code (§100.3).
+- `--check-only` 2 file test exit 0; scene Main 120 frame
+  exit 0, 0 ERROR/warning.
+- Export web exit 0: pck **27.865.984 byte, SHA `40d875bc…`**
+  (trước `c01f7161…`, −64 byte — chỉ đổi 2 file test + header
+  comment, không đổi code game), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ 4 file
+  (cổng 8955).
+- Staging rebuild `build_gh_pages.py` OK: wasm 293 chunk +
+  pck 207 chunk, khớp byte True; `versions.json` ghi
+  pck=`40d875bc`.
+
+### 101.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r79 (`hidden_files/pxb-push-main-r79.py`, 4 lô):
+  a 129 paths (giống r78-a — 2 file test sửa đã có sẵn trong
+  manifest, chỉ đổi nội dung), b 20, c 37, docs 2 — thay
+  script r78 (pck `c01f7161` chưa lên — bỏ, file giữ lại).
+- Deploy pck `40d875bc` (`hidden_files/pxb-deploy-r79.py`,
+  12 lô: 11 chunk pck 207 + final versions.json/index.html;
+  manifest đã kiểm đủ path). Thay script r78.
+- **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn thẻ chờ;
+  live vẫn `5f2a052f` r41).
+
+### 101.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r79 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 78 + vòng 77 + vòng 68 (bấm B lúc đang
+   giữ sạp → toast tiếng Việt, không mở trận) — cần thắng 1
+   trận demo trước để có hold.
+3. Đồng bộ giữ sạp lên server để validate discount giá sỉ thật
+   thay vì tin số client khai; hoặc thêm `shop_sell` khi game
+   có tính năng bán lại.
+
+## §102 — Vòng 80: đồng bộ giữ sạp lên server — validate discount giá sỉ thật (27/11 ~15:45–16:15 +07, cron 15:45)
+
+### 102.1 Chẩn đoán — XONG (PROVISIONAL: discount là số client khai)
+
+- Mục 3 của §101.5. Header của `pxb_server.gd` tự ghi
+  PROVISIONAL: discount là số client khai, server chỉ kẹp
+  0..50 — client gian lận khai 50% là server trừ 50%.
+  Cần server tự giữ sổ holds và tự tính discount từ hold
+  còn hạn, không tin số client gửi lên.
+- Luật lấy từ `scripts/pxb_marketbattle.gd`:
+  `HOLD_DAYS = 7`, `WHOLESALE_DISCOUNT_PERCENT = 10`,
+  `STALL_TAX_CUT_PERCENT = 20`, `HOLD_FAME_PER_DAY = 10`.
+  Sạp ví dụ: `sap-cho-dau-moi`. Giá: `dien-thoai-cu`
+  5.000.000đ, `ao-dai` 2.000.000đ, `phong-tro`
+  2.000.000đ/tháng (tiền thuê KHÔNG bao giờ giảm giá).
+
+### 102.2 Sửa — server + client + Main
+
+- **Server `server/pxb_server.gd`** (hằng mới, mirror từ
+  `PxbMarketBattle` để server vẫn đứng độc lập):
+  `HOLD_DAYS_MAX := 7`, `WHOLESALE_DISCOUNT_PERCENT := 10`,
+  `STALL_TAX_CUT_PERCENT := 20`, `MAX_STALL_ID_LEN := 64`,
+  `HOLDS_MAX_PLAYERS := 256`. State mới `holds`
+  (player_id → {stall_id, start_day, until_day,
+  synced_at_ms}, tối đa 1 hold/người — theo luật r68
+  can_challenge) + `player_day` (player_id → int, chỉ
+  tăng, lấy từ `game_day` trong stall_hold_sync /
+  shop_buy / ledger_sync). Helper `_known_day`,
+  `_note_day` (chỉ tăng), `_live_hold_for` (còn hạn khi
+  start ≤ day < until; xóa hold hết hạn), `_prune_holds`
+  (quá 256 người thì xóa người offline).
+- **Handler mới `_handle_stall_hold_sync`** + nhánh
+  dispatch. Validate: phải hello trước; stall_id không
+  rỗng, ≤ 64 ký tự; start ≥ 1, until > start, dài ≤ 7
+  ngày; start ≤ ngày server biết (không giữ sạp tương
+  lai); until > ngày đã biết (không phải hold đã hết
+  hạn); đang giữ sạp khác còn hạn → từ chối
+  `dang-giu-sap-khac` (kèm `holding_stall_id`); sync
+  lại cùng sạp thì ghi đè (idempotent). Trả
+  `stall_hold_sync_ack` {req_id, ok, stall_id,
+  start_day, until_day, discount_percent (10 nếu ok),
+  holding_stall_id, reason} — reason: `chua-hello` /
+  `thieu-sap-id` / `ngay-giu-sap-sai` / `het-han-giu-sap`
+  / `dang-giu-sap-khac`.
+- **`_handle_shop_buy`:** discount không còn tin số
+  client khai. `disc_claimed` giữ lại để trả ack;
+  `disc` = 10 chỉ khi có hold còn hạn tại `game_day`
+  báo lên (hoặc ngày cuối server biết nếu không báo)
+  và món ≠ `phong-tro`, còn lại 0. Ack (cả thành công
+  lẫn `khong-du-tien`) và entry `shop_log` đều ghi thêm
+  `discount_applied` + `discount_claimed`.
+- **`_settle_auction`:** người bán đang giữ sạp thì phí
+  4% (nhận 96%) thay vì 5% (nhận 95%) —
+  `fee_percent = 5 * (100-20)/100 = 4`, áp cả 2 nhánh
+  (người thắng đã sync và chưa sync bao giờ), xét theo
+  ngày server biết của người bán.
+- **`_handle_ledger_sync`:** nhận thêm `game_day` tùy
+  chọn → `_note_day` (không động tới sổ cái).
+  `data()` thêm `holds_count`. Header protocol cập nhật
+  (shop_buy + khối stall_hold_sync mới; auction 95% →
+  96% khi đang giữ sạp). **Giới hạn đã biết, ghi rõ:**
+  ngày của server chỉ tươi bằng tin nhắn gần nhất có
+  kèm ngày; sửa triệt để cần ngày do server làm chủ —
+  ngoài phạm vi vòng này.
+- **Client `scripts/pxb_online.gd`:** signal mới
+  `ws_stall_hold_synced(ack)`; biến `ws_hold_req_id`,
+  `_ws_hold_pending`, `ws_last_hold_ack`, `ws_game_day`
+  (Main đặt; 0 = chưa biết). Cleaner mới
+  `_clean_stall_hold_sync_ack` (nghiêm) + nhánh dispatch
+  (chỉ emit khi req_id khớp sync đang chờ).
+  `send_ws_stall_hold_sync(stall_id, start_day,
+  until_day, game_day := -1)`: client tự validate trước
+  (sạp rỗng → `thieu-sap-id`; khoảng sai / > 7 ngày theo
+  `PxbMarketBattle.HOLD_DAYS` → `ngay-giu-sap-sai`;
+  không biết ngày → `chua-biet-ngay-game`); req_id chỉ
+  tăng khi gửi thành công. `send_ws_shop_buy` gửi thêm
+  `game_day` khi biết (tham số hoặc `ws_game_day`).
+  `send_ws_ledger_sync` gửi thêm `game_day` khi
+  `ws_game_day ≥ 1`. `_clean_shop_buy_ack`:
+  `discount_applied` / `discount_claimed` là key TÙY
+  CHỌN (int 0..50 nếu có, không thì -1 = "server không
+  nói") — để ack giả cũ của r78 vẫn chạy.
+  `reset_state()` xóa thêm hold pending / req_id / ack
+  cuối; `ws_game_day` KHÔNG reset (state của Main).
+  `data()` / `from_data()` không đổi (req id không lưu).
+- **Main `main.gd`:** `_create_systems` nối
+  `ws_stall_hold_synced` → `_on_ws_stall_hold_synced`;
+  đặt `online.ws_game_day = day`. `ws_game_day` làm mới
+  thêm trong `_advance_frame` (sau `day += 1`) và
+  `_apply_save_data` (sau khi khôi phục day), đều có
+  null-guard. Helper mới `_sync_hold_to_server()` →
+  Dictionary: trả {} nếu offline / không có hold còn
+  hạn; còn lại gửi `send_ws_stall_hold_sync(stall_id,
+  startGameDay, untilGameDay, day)` lấy từ hold trong
+  `battle_state` qua `_hold_benefits_now()`. Gọi từ
+  `_on_battle_finished` (sau toast thắng) và từ
+  `_on_ws_status_changed(true)` (sync lại khi (nối lại)).
+  `_on_ws_stall_hold_synced(ack)`: ok thì im; chỉ toast
+  khi `het-han-giu-sap` ("Giữ sạp đã hết hạn theo máy
+  chủ, lần mua sau không còn giá sỉ.") và
+  `dang-giu-sap-khac` ("Máy chủ báo đội đang giữ sạp
+  khác."). `_on_ws_shop_buy_acked`: toast dùng
+  `discount_applied` của server (fallback số pending
+  khi ack thiếu key, tức -1); nhánh mới khi khai > 0
+  mà áp dụng = 0: "…(máy chủ đã trừ Xđ — không còn giá
+  sỉ.)".
+
+### 102.3 Verify + export — XONG (hồi quy 0 fail, pck mới)
+
+- Test mới `tests/g4_r80_stall_hold_server_test.gd`
+  (port **18780**; các suite khác dùng 18771–18778),
+  11 phase (0–10), GLOBAL_TIMEOUT 150s, PHASE_TIMEOUT
+  20s, socket thật + PxbServer thật + scene Main thật.
+  Phủ: unit cleaner + gửi khi chưa nối; sync hold hợp
+  lệ (ack ok, server có holds + player_day +
+  holds_count); mua có hold (1.800.000đ, áp 10/khai
+  10); khai 50% bị kẹp về 10%; mua không hold đúng giá
+  gốc (áp 0/khai 10); phong-tro không bao giờ giảm;
+  xung đột `dang-giu-sap-khac`; sync lại idempotent;
+  hold 8 ngày bị server từ chối (gửi bằng packet thô
+  kèm req_id 778 tự chèn, vì client chặn trước);
+  start tương lai bị từ chối; hold đã hết hạn bị từ
+  chối; packet thô không req_id → dropped_packets +1,
+  không ack; client tự validate (không tăng req_id);
+  hết hạn đúng ngày == until (ngày 10); ngày đơn điệu
+  (gửi ngày 3 sau ngày 10 vẫn không giảm); đấu giá qua
+  `_settle_auction` trực tiếp (bán có hold nhận
+  960.000đ, phí 40.000đ; không hold 950.000đ/50.000đ;
+  người thắng chưa sync + bán có hold: 960.000đ, sổ
+  cái người bán không đổi theo legacy v71 — assert
+  1.950.000đ nguyên); Main thắng trận end-to-end
+  (hold 3→10 craft từ `PxbMarketBattle.from_data` +
+  `BattleScene.battle` → `_on_battle_finished("A")` →
+  server giữ sạp cho player-main, fame +50, toast
+  "Giữ sạp sap-cho-dau-moi đến ngày 10"); Main (nối
+  lại) sync lại qua `_on_ws_status_changed(true)` trực
+  tiếp; reset_state xóa state hold; cuối
+  `holds_count == 2` (B + Main).
+  **Kết quả: 106/106 PASS** (lần chạy 2; lần 1 là
+  51/53 — lỗi của chính test: đòi server từ chối sync
+  8 ngày gửi qua API client, nhưng client chặn trước
+  khi gửi; đã sửa bằng packet thô). Nhiễu lỗi
+  `ready_state != STATE_OPEN` lúc tắt là bình thường
+  (cũng có ở r77).
+- **Sửa `tests/g4_r77_server_shop_buy_test.gd` phase 6:**
+  A sync hold trước (thêm biến handler ack hold + nối),
+  rồi mua ao-dai giảm 10% (check `discount_applied ==
+  10`); check phong-tro thêm `discount_applied == 0`.
+  **Kết quả: 99/99 PASS.** Bắt buộc vì server r80 tính
+  đúng giá gốc khi mua giảm mà không có hold — phase 6
+  cũ của r77 sẽ fail nếu không sửa.
+- Rủi ro hồi quy đã kiểm và sạch: không test nào khác
+  dùng `send_ws_shop_buy` kèm discount (grep);
+  `g4_battle_hold_benefits_test.gd` là Main offline
+  (đường mua local); r76/r78 mua disc 0 và không assert
+  text toast thành công; ack giả của r78 thiếu key
+  discount (xử lý tùy chọn giữ nguyên).
+- Hồi quy đầy đủ 105 suite (log
+  `hidden_files/regression-2026-11-27-1545.log`):
+  **4328 pass, 0 fail** (4218 + 106 r80 + 4 ở r77 do
+  phase 6 mới thêm check hold). 0 fail lần thứ 2 liên
+  tiếp.
+- `--check-only` 3 file sửa (main.gd, pxb_online.gd,
+  pxb_server.gd) exit 0; scene Main 120 frame exit 0,
+  0 ERROR/warning.
+- Export web exit 0: pck **27.893.380 byte, SHA
+  `eb8c6824…`** (trước `40d875bc…`, +27.396 byte do code
+  + test mới), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; pck chứa
+  `g4_r80_stall_hold_server_test` (grep 4 lần); HTTP
+  200 đủ 4 file (cổng 8956, tắt server bằng PID —
+  không dùng pkill -f).
+- Staging rebuild `build_gh_pages.py` OK: wasm 293
+  chunk + pck 207 chunk, khớp byte True;
+  `versions.json` ghi pck=`eb8c6824`.
+
+### 102.4 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r80 (`hidden_files/pxb-push-main-r80.py`, 4 lô):
+  a 130 paths (r79-a 129 + test r80 `.gd` mới — chưa có
+  `.uid` vì file tạo bằng tay, chưa qua import của
+  editor), b 20, c 37, docs 2 — tất cả path tồn tại,
+  không file nào vượt giới hạn snapshot-push 188.416
+  byte/file **trừ** `docs/godot-g4.md` (~700 KB — nhưng
+  75 lần push docs trước đều thành công nên giữ nguyên
+  mẫu cũ; nếu lô docs lỗi thì tách sau). Thay script
+  r79 (pck `40d875bc` chưa lên — bỏ, file giữ lại).
+- Deploy pck `eb8c6824` (`hidden_files/pxb-deploy-r80.py`,
+  12 lô: 11 chunk pck 207 + final versions.json/index.html;
+  manifest đã kiểm đủ path). Thay script r79.
+- **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn thẻ chờ;
+  live vẫn `5f2a052f` r41).
+
+### 102.5 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r80 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 80 + vòng 78 + vòng 77 + vòng 68
+   (thắng 1 trận demo → giữ sạp → mua dien-thoai-cu giảm
+   10% thật trên server; bấm B lúc đang giữ sạp → toast
+   tiếng Việt, không mở trận) — cần thắng 1 trận demo
+   trước để có hold.
+3. Server-authoritative day (ngày do server làm chủ thay vì
+   tin ngày client báo — giới hạn đã ghi ở §102.2); hoặc
+   thêm `shop_sell` khi game có tính năng bán lại.
+
+## §103 — Vòng 81: ngày do server làm chủ (27/11 ~16:45–17:30 +07, cron 16:45)
+
+### 103.1 Chẩn đoán — XONG (PROVISIONAL: ngày server = ngày client báo gần nhất)
+
+Giới hạn đã ghi ở §102.2: server chỉ biết ngày qua `player_day`
+(client báo kèm `game_day` ở `stall_hold_sync` / `shop_buy` /
+`ledger_sync`, chỉ tăng, không lùi). Client độc có thể khai ngày
+tương lai để kéo dài hold đã hết hạn (giảm 10% + phí đấu giá 4%
+vô thời hạn) — server không có cách nào biết ngày thật. Ngày
+`_known_day` khác nhau theo từng người chơi nên 2 client cùng
+phòng còn thấy 2 "ngày hiện tại" khác nhau.
+
+### 103.2 Sửa — server + client + Main
+
+**Server `server/pxb_server.gd` (xóa `player_day` / `_known_day` /
+`_note_day`, không còn sót chuỗi nào):**
+- `DAY_LENGTH_MS := 1800000` (30 phút thật = 1 ngày game, khớp
+  `PxbBalance.GAME_DAY_MINUTES`, đã chốt trong GDD — không
+  PROVISIONAL). `server_day()` = base (1 lúc mở cổng) + số ngày
+  30 phút đã trôi theo đồng hồ thật của server;
+  `day_ends_in_ms()` đếm ngược tới ranh giới ngày kế;
+  `server_day_info()` gom 3 số cho client;
+  `debug_set_server_day(day)` CHỈ DÙNG CHO TEST (đặt lại mốc
+  ngày — giống `PxbTime.debug_set_elapsed`); `day_length_ms`
+  là var để test đặt nhỏ mà chờ sang ngày thật.
+- `_check_client_day(msg)`: không kèm `game_day` thì ok (dùng
+  ngày server); kèm số nguyên khác ngày server thì
+  `{"ok": false, "reason": "ngay-server-khong-khop"}`; kèm sai
+  kiểu thì bỏ qua như không kèm (lenient như `shop_buy` cũ).
+- `welcome` kèm `server_day` + `day_length_ms`; gói mới
+  `day_sync` (phải hello trước) → `day_sync_ack`
+  (`server_day` / `day_length_ms` / `day_ends_in_ms`); mọi ack
+  của `shop_buy` / `stall_hold_sync` / `ledger_sync` đều kèm
+  `server_day`; `data()` thêm `server_day`.
+- `shop_buy` / `stall_hold_sync`: `game_day` lệch thì ack
+  ok=false `ngay-server-khong-khop`, không trừ tiền / không
+  ghi hold; `game_day` ở `stall_hold_sync` nay TÙY CHỌN
+  (thiếu thì dùng ngày server). `ledger_sync`: `game_day`
+  không dùng nữa (sổ cái không phụ thuộc ngày), ack vẫn trả
+  `server_day` để client đồng bộ. `_settle_auction` xét hold
+  theo `server_day()` thay vì ngày của người bán.
+- Header protocol + PROVISIONAL cập nhật theo hợp đồng mới.
+  **Giới hạn đã biết:** restart server thì ngày về 1 (cùng
+  loại với ledger/holds chỉ nằm trong RAM — chưa có
+  persistence cho server).
+
+**Client `scripts/pxb_online.gd`:**
+- `ws_server_day` (0 = chưa biết) + `ws_day_ends_in_ms` +
+  signal `ws_server_day_changed` (chỉ phát khi ngày THẬT
+  ĐỔI); `_apply_server_day()` dùng chung cho welcome /
+  `day_sync_ack` / 3 loại ack; `send_ws_day_sync()` mới;
+  3 cleaner ack thêm key tùy chọn `server_day` (thiếu thì
+  0, sai kiểu thì gói bẩn — ack giả r78 vẫn chạy);
+  `reset_state()` xóa ngày server.
+- Thứ tự ngày khi gửi (`ledger_sync` / `shop_buy` /
+  `stall_hold_sync`): `ws_server_day` (nếu đã biết) thắng
+  tham số truyền vào / `ws_game_day` local — server chỉ
+  chấp nhận đúng ngày của nó.
+
+**Main `main.gd`:** nối `ws_server_day_changed` →
+`_on_ws_server_day_changed()` đồng bộ lại hold đang giữ theo
+ngày mới (còn hạn thì ok, hết hạn thì ack
+`het-han-giu-sap` → toast sẵn có); ngày local `day` (đồng hồ
+offline) KHÔNG đổi theo ngày server; toast mới cho
+`ngay-server-khong-khop`.
+
+**Sửa test cũ theo hợp đồng ngày mới (không sửa code game):**
+- `g4_r77_server_shop_buy_test`: `debug_set_server_day(3)`
+  sau khi mở cổng (phase 6 dùng hold 3→10).
+- `g4_r80_stall_hold_server_test`: `debug_set_server_day(3)`
+  sau khi mở cổng; bỏ check `player_day` (phase 1 → check
+  `server_day() == 3`); phase 7 viết lại — server sang ngày
+  10 bằng debug + client `day_sync` rồi mới mua (hết hạn
+  đúng ngày == until; gửi ngày 3 tua ngược vẫn giá đầy vì
+  client gửi ngày server 10); phase 8/9: B + Main `day_sync`
+  lên ngày 10 trước khi đồng bộ, hold mới 10→17 (thay 3→10).
+
+### 103.3 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_r81_server_day_test.gd` (port **18781**,
+  11 phase 0–10, GLOBAL_TIMEOUT 150s, PHASE_TIMEOUT 20s,
+  socket thật + PxbServer thật + scene Main thật). Phủ:
+  unit `server_day` / `day_ends_in_ms` /
+  `server_day_info` / `debug_set_server_day` (kẹp về 1 khi
+  đặt 0) / `_check_client_day` (thiếu → ok, bằng → ok,
+  99 → `ngay-server-khong-khop` + `server_day`, chuỗi /
+  0 / 2.5 → bỏ qua); cleaner 3 loại ack (giữ `server_day`,
+  thiếu → 0, chuỗi → bỏ gói); `_apply_server_day` (phát
+  signal đúng 1 lần khi đổi, không phát khi trùng / sai
+  kiểu) + `reset_state` xóa ngày server; welcome kèm ngày
+  (3 client đều lấy ngày 1, signal 1 lần); `day_sync`
+  (server sang ngày 2 thì A biết 2, B vẫn 1, đếm ngược
+  trong (0, 30 phút]); `ledger_sync` kèm ngày lệch vẫn ack
+  ok + trả `server_day` để client đồng bộ lại; `shop_buy`
+  / `stall_hold_sync` thô kèm `game_day` 99 → từ chối
+  `ngay-server-khong-khop`, không trừ tiền / không ghi
+  hold, `shop_log` rỗng; mua không kèm `game_day` vẫn
+  giảm 10% theo hold còn hạn; `game_day` chuỗi thì bỏ qua,
+  vẫn mua được; server sang ngày 8 → hold 1→8 hết hạn
+  (A đồng bộ lại sau `day_sync`, B mua giá đầy); Main
+  thắng trận giữ sạp 8→15 → ngày server đổi sang 9 thì
+  Main TỰ đồng bộ lại (ack ok), sang 15 thì hết hạn +
+  toast "hết hạn"; ngày tự tăng theo đồng hồ thật
+  (`day_length_ms` 300ms, chờ sang ngày 21 thật rồi
+  `day_sync` lại); `data()` + `reset_state`.
+  **Kết quả: 96/96 PASS** (lần 1 lỗi của chính test:
+  `_main.online` còn null trong `_init` — chuyển connect
+  signal ngày của Main sang phase 0 như r80; lần 2
+  96/96). Nhiễu `ready_state != STATE_OPEN` / leak RID
+  lúc tắt như các test socket trước.
+- **Hồi quy lần 1: 4421 pass, 7 fail** (`g4_r77_server_shop_buy_test`
+  phase 6 — hold 3→10 trong khi server day đang 1 nên
+  start ở tương lai → `ngay-giu-sap-sai`; đúng luật mới,
+  test cũ sai) → sửa r77 bằng `debug_set_server_day(3)`
+  (chỉ test, không động code game) → **99/99 PASS**.
+- **Hồi quy lần 2 (log
+  `hidden_files/regression-2026-11-27-1645.log`): 106
+  suite, 4428 pass, 0 fail** (4328 + 96 r81 + 4 ở r80 do
+  thêm check `day_sync`). r80 **110/110 PASS** (cũ
+  106 — thêm 4 check `day_sync` ở phase 7/8/9), r77
+  **99/99 PASS**. 0 fail lần thứ 3 liên tiếp.
+
+### 103.4 Verify + export — XONG (hồi quy 0 fail, pck mới)
+
+- `--check-only` 4 file sửa (main.gd, pxb_online.gd,
+  pxb_server.gd, test r81 + test r80) exit 0; scene Main
+  120 frame exit 0, 0 ERROR/warning.
+- Export web exit 0: pck **27.913.916 byte, SHA
+  `6e820176…`** (trước `eb8c6824…`, +20.536 byte do code
+  + test mới), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; pck chứa
+  `g4_r81_server_day_test` (grep tên file 4 lần — cùng
+  mẫu kiểm như r80; script trong pck không ở dạng text
+  thường nên chuỗi dài không grep được); HTTP 200 đủ 4
+  file (cổng 8957, tắt server bằng PID — không dùng
+  pkill -f).
+- Staging rebuild `build_gh_pages.py` OK: wasm 293
+  chunk + pck 207 chunk, khớp byte True;
+  `versions.json` ghi pck=`6e820176`.
+
+### 103.5 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r81 (`hidden_files/pxb-push-main-r81.py`, 4 lô):
+  a 132 paths (r80-a 130 + test r81 `.gd` + `.uid` mới),
+  b 20, c 37, docs 2 — tất cả path tồn tại, không file nào
+  vượt giới hạn snapshot-push 188.416 byte/file **trừ**
+  `docs/godot-g4.md` (~700 KB — nhưng 75 lần push docs
+  trước đều thành công nên giữ nguyên mẫu cũ; nếu lô docs
+  lỗi thì tách sau). Thay script r80 (pck `eb8c6824`
+  chưa lên — bỏ, file giữ lại).
+- Deploy pck `6e820176` (`hidden_files/pxb-deploy-r81.py`,
+  12 lô: 11 chunk pck 207 + final versions.json/index.html;
+  manifest đã kiểm đủ path). Thay script r80.
+- **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn thẻ chờ;
+  live vẫn `5f2a052f` r41).
+
+### 103.6 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r81 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 81 + vòng 80 + vòng 78 + vòng 77 +
+   vòng 68 (thắng 1 trận demo → giữ sạp → mua dien-thoai-cu
+   giảm 10% thật trên server; sang ngày server mới thì hold
+   hết hạn → toast tiếng Việt; bấm B lúc đang giữ sạp →
+   toast tiếng Việt, không mở trận) — cần thắng 1 trận demo
+   trước để có hold.
+3. Thêm `shop_sell` khi game có tính năng bán lại; hoặc
+   persistence ngày server qua restart (hiện restart thì
+   ngày về 1 — giới hạn đã ghi ở §103.2).
+
+## §104 — Vòng 82: persistence ngày + ledger + holds qua restart (27/11 ~17:45–18:30 +07, cron 17:45)
+
+> **Kết luận: VÒNG 82 XONG (mức headless).** Server nay lưu ngày +
+> ledger + holds xuống file JSON và nạp lại khi restart — restart
+> không còn về ngày 1 / mất tiền. `stop_server` lưu trước khi xóa,
+> autosave 5 giây khi có thay đổi, file hỏng/thiếu thì khởi động
+> mới từ ngày 1 (không crash), entry sai thì bỏ entry đó. Test mới
+> **78/78 PASS**. Hồi quy **107 suite, 4506 pass, 0 fail** — lần
+> đầu 0 fail sau khi sửa lỗi nhiễm chéo do nạp state mặc định
+> (xem §104.2 cuối). Scene chạy 120 frame exit 0, export web
+> exit 0 (pck `9aea9fd3`), http.server 200 đủ 4 file.
+> **Chưa kiểm chứng bằng trình duyệt thật** — như các vòng trước,
+> VM không có Chromium/Firefox. **Push main r82 + deploy pck
+> `9aea9fd3` đã chuẩn bị xong, CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'**
+> (live vẫn `5f2a052f` r41).
+
+### 104.1 Chẩn đoán — XONG (giới hạn đã ghi ở §103.2)
+
+Giới hạn đã ghi ở §103.2: restart server thì ngày về 1 (ledger /
+holds cũng chỉ nằm trong RAM — chưa có persistence cho server).
+Hậu quả thực tế: server sập / deploy lại là toàn bộ tiền đã đồng
+bộ, đồ đã mua (`owned`), sạp đang giữ đều mất; ngày quay về 1 nên
+hold tưởng còn hạn lại thành hết hạn (hoặc ngược lại, hold mới
+đồng bộ sau restart lại được tính từ ngày 1). Client không có
+cách nào khôi phục — `ledger_sync` sau restart ghi đè bằng số
+local (có thể cũ hơn số server trước khi sập).
+
+### 104.2 Sửa — server + server_main (không sửa client/Main)
+
+**Server `server/pxb_server.gd`:**
+- Hằng số mới: `STATE_VERSION := 1`,
+  `STATE_FILE_DEFAULT := "user://pxb_server_state.json"`,
+  `STATE_AUTOSAVE_MS := 5000`.
+- `state_file_path: String = ""` (rỗng = KHÔNG bật persistence),
+  `_state_dirty`, `_state_last_save_ms`; `state_file()` trả đường
+  dẫn thật dùng; `_persistence_enabled()` = path đặt tường minh.
+- `save_state() -> {ok, path}`: ghi JSON `{version,
+  saved_at_unix_ms, server_day_base, server_day_started_ms,
+  day_length_ms, ledger, holds}` (deep-copy, 1 lần ghi trực
+  tiếp); lỗi mở file / JSON rỗng thì trả `{ok:false, reason,
+  error}` rõ ràng, không crash.
+- `load_state() -> {ok, loaded} / {ok:false, reason}`: file
+  thiếu → `chua-co-file`; không parse được JSON → `file-hong`;
+  sai version → `phien-ban-la`; ngày sai → `ngay-sai` — cả 4
+  trường hợp đều GIỮ NGUYÊN trạng thái hiện tại (ngày 1, sổ
+  trống), không crash, không xóa file. Entry ledger/hold nào sai
+  thì bỏ entry đó (`_clean_ledger_entry` / `_clean_hold_entry`:
+  money int ≥ 0, items ≤ 512 món, reserved int ≥ 0, owned lọc
+  bằng `_clean_owned_dict`; hold stall_id 1..64 ký tự,
+  start ≥ 1, until > start), giữ phần đúng. Giới hạn số entry
+  theo `LEDGER_MAX_PLAYERS` / `HOLDS_MAX_PLAYERS`.
+- `start_server()`: reset sổ về trống + ngày 1 rồi CHỈ nạp khi
+  persistence bật; `stop_server()`: lưu trước khi xóa CHỈ KHI
+  persistence bật; `_maybe_autosave()` (gọi từ `poll()` — cả
+  server trong cây lẫn test gọi poll tay): lưu khi dirty và đã
+  qua 5 giây từ lần lưu trước.
+- Đánh dấu dirty ở mọi chỗ đổi ledger/holds/ngày:
+  `_handle_ledger_sync`, `_handle_shop_buy`,
+  `_handle_stall_hold_sync`, `_settle_trade`,
+  `_settle_auction` (cả 2 đường trả), `_ledger_reserve`,
+  `_ledger_release`, `_prune_ledger`, `_prune_holds`,
+  `debug_set_server_day`. `data()` thêm `state_file` +
+  `state_dirty` để quan sát.
+- Header PROVISIONAL + comment hằng `DAY_LENGTH_MS` cập nhật:
+  restart không còn về ngày 1; trades / auctions đang mở /
+  chat vẫn chỉ nằm trong RAM — restart thì mất (giới hạn còn lại).
+
+**`server/server_main.gd`:** thêm cờ `--state-file <đường-dẫn>`;
+server thật LUÔN đặt `state_file_path` (mặc định
+`STATE_FILE_DEFAULT` khi không truyền cờ) — persistence là hành
+vi của tiến trình server, không phải của test. Log khởi động in
+thêm `state=<đường-dẫn>`.
+
+**LỖI NHIỄM CHÉO TÌM ĐƯỢC Ở HỒI QUY — ĐÃ SỬA TRONG CÙNG VÒNG
+(không phải lỗi test cũ):** bản đầu `start_server()` nạp state
+từ đường dẫn MẶC ĐỊNH cho mọi server (kể cả test). Hồi quy lượt
+1: `g4_online_trade_ledger_test` **92/100** + `g4_online_trade_test`
+**33/34** — 1 test online trước đó đã lưu ledger (player-a/b/c/
+main) xuống `user://pxb_server_state.json` qua `stop_server()`,
+test sau nạp nhầm số đó nên kỳ vọng tiền sai. Chẩn đoán bằng file
+thật: `~/.local/share/godot/app_userdata/Phố Xô Bồ/pxb_server_state.json`
+chứa ledger player-a 500.000đ + player-b 2.500.000đ (không phải
+số test trade kỳ vọng). Sửa: persistence thành OPT-IN — chỉ
+`load_state`/`save_state`/autosave khi `state_file_path` được
+đặt tường minh; test không đặt thì khởi động mới sạch và không
+ghi file nào. Đã xóa file state nhiễm. Kiểm chứng sau sửa:
+trade-ledger **100/100**, trade **69/69**, r82 vẫn **78/78**,
+không còn file state mặc định mới sinh ra.
+
+### 104.3 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_r82_server_persistence_test.gd` (cổng
+  18782, 7 phase, socket + server thật, client A thô)
+  **78/78 PASS** (lần 1 đã pass — không sửa code sau test).
+  Unit (không mạng): đường dẫn mặc định/tùy chỉnh, lọc entry
+  ledger/hold đúng/sai, save/load vòng tròn (ngày 7 + ledger
+  123.456đ + hold đến ngày 14), file hỏng → `file-hong` (ngày
+  vẫn 1), sai version → `phien-ban-la`, thiếu file →
+  `chua-co-file`. Socket: ngày 5 + ledger 5 triệu + hold 5→12
+  + mua ao-dai giảm 10% (discount server tính từ hold); stop →
+  file JSON chứa đúng ngày/ledger/owned/hold; restart → ngày
+  vẫn 5, ledger/hold đủ; client mới nối lại: welcome ngày 5,
+  auto-sync không stale, mua lần 2 ok (owned ao-dai 2); đổi
+  tiền qua gói thô, KHÔNG stop, sau 6 giây file đã có số mới
+  (autosave) + `state_dirty` false; đổi ngày 9 → restart vẫn
+  ngày 9, hold 5→12 còn trong sổ; file hỏng → khởi động ngày 1,
+  sổ trống, không crash; thiếu file → ngày 1, sổ trống.
+  2 dòng `ERROR: Parse JSON failed` trong log là engine in khi
+  `JSON.parse_string` gặp file hỏng có chủ đích — code đã bắt
+  và trả `file-hong`, không phải lỗi (giống nhiễu stderr ở các
+  test khác).
+- **Hồi quy 107 suite: 4506 pass, 0 fail** (log
+  `hidden_files/regression-2026-11-27-1745.log`) — 0 fail lần
+  thứ 4 liên tiếp (sau 3 lần 0 fail của r79/r80/r81; lượt 1
+  của vòng này có 9 fail nhiễm chéo ở 2 suite trade, đã sửa
+  code — xem §104.2 — rồi chạy lại toàn bộ, không sửa test cũ).
+
+### 104.4 Verify + export — XONG (hồi quy 0 fail, pck mới)
+
+- `--check-only` 3 file sửa (pxb_server.gd, server_main.gd,
+  test r82) exit 0; scene Main 120 frame exit 0, 0 ERROR/warning.
+- Export web exit 0: pck **27.934.116 byte, SHA
+  `9aea9fd3…`** (trước `6e820176…`, +20.200 byte do code
+  + test mới), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; pck chứa
+  `g4_r82_server_persistence_test` (grep tên file 4 lần — cùng
+  mẫu kiểm như r81); HTTP 200 đủ 4 file (cổng 8958, tắt server
+  bằng PID — không dùng pkill -f).
+- Staging rebuild `build_gh_pages.py` OK: wasm 293
+  chunk + pck 207 chunk, khớp byte True;
+  `versions.json` ghi pck=`9aea9fd3`.
+
+### 104.5 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r82 (`hidden_files/pxb-push-main-r82.py`, 4 lô):
+  a 135 paths (r81-a 132 + server_main.gd + test r82 `.gd` +
+  `.uid` mới), b 20, c 37, docs 2 — tất cả path tồn tại, không
+  file nào vượt giới hạn snapshot-push 188.416 byte/file **trừ**
+  `docs/godot-g4.md` (~725 KB — nhưng 75 lần push docs
+  trước đều thành công nên giữ nguyên mẫu cũ; nếu lô docs
+  lỗi thì tách sau). Thay script r81 (pck `6e820176`
+  chưa lên — bỏ, file giữ lại).
+- Deploy pck `9aea9fd3` (`hidden_files/pxb-deploy-r82.py`,
+  12 lô: 11 chunk pck 207 + final versions.json/index.html;
+  manifest đã kiểm đủ path). Thay script r81.
+- **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn thẻ chờ;
+  live vẫn `5f2a052f` r41).
+
+### 104.6 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r82 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 82 + vòng 81 + vòng 80 + vòng 78 + vòng
+   77 + vòng 68 (thắng 1 trận demo → giữ sạp → mua
+   dien-thoai-cu giảm 10% thật trên server; sang ngày server
+   mới thì hold hết hạn → toast tiếng Việt; bấm B lúc đang giữ
+   sạp → toast tiếng Việt, không mở trận) — cần thắng 1 trận
+   demo trước để có hold; kiểm thêm restart server thật bằng
+   `server_main.gd --state-file` rồi nối lại thấy ngày/ledger
+   còn nguyên.
+3. Thêm `shop_sell` khi game có tính năng bán lại; hoặc
+   persistence cho trades/auctions đang mở + chat (hiện restart
+   vẫn mất — giới hạn đã ghi ở §104.2).
+
+## §105 — Vòng 83: persistence trades + auctions + chat qua restart (27/11 ~18:45–19:30 +07, cron 18:45)
+
+> **Kết luận: VÒNG 83 XONG (mức headless).** Server nay lưu cả
+> trades đang chờ + auctions đang mở + chat_log (100 tin gần
+> nhất) xuống file JSON và nạp lại khi restart — đề nghị đổi đồ
+> / phiên đấu giá / lịch sử chat không còn mất khi server sập.
+> Peer_id trong trade/auction là số socket (đổi sau mỗi lần nối
+> lại) nên lúc nạp đặt về -1 rồi REBIND theo player_id khi
+> người chơi hello lại + gửi lại đề nghị đang chờ + chat_history
+> cho người vừa vào — trade chấp nhận được ngay sau restart,
+> auction tiếp tục đấu giá/hủy được. Test mới **120/120 PASS**
+> (lần 1 đã pass). Hồi quy **108 suite, 4626 pass, 0 fail** —
+> 0 fail lần thứ 5 liên tiếp. Scene chạy 120 frame exit 0,
+> export web exit 0 (pck `dd9321c8`), http.server 200 đủ 4 file.
+> **Chưa kiểm chứng bằng trình duyệt thật** — như các vòng trước,
+> VM không có Chromium/Firefox. **Push main r83 + deploy pck
+> `dd9321c8` đã chuẩn bị xong, CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'**
+> (live vẫn `5f2a052f` r41).
+
+### 105.1 Chẩn đoán — XONG (giới hạn đã ghi ở §104.2)
+
+Giới hạn đã ghi ở §104.2: trades / auctions đang mở / chat chỉ
+nằm trong RAM — restart thì mất. Hậu quả thực tế: server sập /
+deploy lại là đề nghị đổi đồ đang chờ biến mất (người nhận không
+bao giờ nhận được trade_completed), phiên đấu giá đang có giá bị
+hủy ngang (tiền giữ hộ `reserved` của người dẫn đầu kẹt lại trong
+ledger — không ai giải phóng), lịch sử chat 100 tin gần nhất mất
+hẳn. Vấn đề thiết kế riêng của vòng này: trade/auction tham chiếu
+`from_peer`/`to_peer`/`seller_peer` (số socket WebSocket, đổi sau
+mỗi lần nối lại) — nạp nguyên xi từ file thì `trade_accept` so
+`to_peer` cũ với peer mới sẽ luôn báo `khong-phai-nguoi-nhan`,
+nên chỉ lưu file thôi là chưa đủ, phải rebind theo `player_id`.
+
+### 105.2 Sửa — server + client (không sửa Main)
+
+**Server `server/pxb_server.gd`:**
+- `save_state()`: thêm `"trades"`, `"auctions"`, `"chat_log"`
+  (duplicate sâu) vào JSON. `STATE_VERSION` giữ 1 — 3 key mới là
+  tùy chọn nên file v82 cũ (không có 3 key) vẫn nạp được.
+- `load_state()`: sau holds, nạp 3 key mới (thiếu thì rỗng);
+  cap trades/auctions ≤ `MAX_PLAYERS` (64 — 1 đề nghị/phiên
+  đang chờ cho mỗi người), chat ≤ `CHAT_LOG_MAX` (100). Entry
+  sai thì bỏ entry đó, giữ phần đúng.
+- 3 cleaner mới (đặt cạnh `_clean_ledger_entry` /
+  `_clean_hold_entry`): `_clean_trade_entry` (trade_id/from/to
+  player_id không rỗng ≤64 ký tự, mã món ≤64, tiền int
+  0..100 tỉ qua `_is_valid_trade_money`, cả 2 phía không rỗng,
+  created_at_ms int ≥ 0; peer về -1), `_clean_auction_entry`
+  (auction_id/seller/item không rỗng ≤64, start_price int
+  1000..100 tỉ, current_bid int 0..100 tỉ, bidder có thể rỗng,
+  created_at_ms ≥ 0, ends_at_ms > created_at_ms — **hết hạn rồi
+  vẫn giữ**, lần poll đầu sau restart sẽ đóng + quyết toán qua
+  `_close_expired_auctions`, tránh kẹt tiền `reserved`; seller
+  về -1), `_clean_chat_entry` (tên ≤30 ký tự, text 1..500 ký tự,
+  player_id ≤64, at_ms ≥ 0; from_peer về -1).
+- `_rebind_after_hello(peer_id, player_id)` (mới, gọi cuối
+  `_handle_hello` sau welcome + presence): gắn lại from/to_peer
+  cho trade có from/to_player_id khớp, seller_peer cho auction
+  có seller_player_id khớp; gửi lại cho NGƯỜI VỪA VÀO: đề nghị
+  đang chờ mình trả lời (`trade_offer`) / đề nghị mình đã gửi
+  (`trade_offered`) + lịch sử chat (`chat_history`, chỉ khi log
+  không rỗng). Auction không gửi lại ở đây — client tự xin
+  `auction_list` khi cần. Chỉ gửi cho người vừa hello, không
+  broadcast.
+- Đánh dấu dirty ở mọi chỗ đổi trade/auction/chat:
+  `_handle_chat`, `_handle_trade_offer`, `_handle_trade_accept`,
+  `_handle_trade_decline`, `_handle_trade_cancel`,
+  `_handle_auction_create`, `_handle_auction_bid`,
+  `_handle_auction_cancel`, `_close_expired_auctions`,
+  `_cancel_trades_for_peer`, `_cancel_auctions_for_peer`
+  (hủy khi 1 bên mất kết nối cũng là thay đổi cần lưu).
+- Header persistence cập nhật: trades/auctions/chat nay persist;
+  giới hạn còn lại: `trade_log` / `auction_log` / `shop_log`
+  chỉ là lịch sử quan sát (100 mục) — KHÔNG persist; phiên hết
+  hạn trong lúc server sập được đóng + quyết toán ở lần poll đầu
+  sau restart, nhưng `auction_closed` không tới được tay người
+  chơi đang offline (log không persist); `_trade_seq` /
+  `_auction_seq` reset về 0 sau restart nhưng id mới vẫn không
+  trùng id cũ vì `trade-<ms>-<seq>` dùng wall-clock (ms sau
+  restart luôn lớn hơn trước).
+
+**Client `scripts/pxb_online.gd`:**
+- Signal mới `ws_chat_history_received(messages: Array)` +
+  case `"chat_history"` trong `_handle_ws_message`: làm sạch
+  từng tin bằng `_clean_chat_message` như chat thường, thêm vào
+  `ws_chat_log` (cap 100), phát 1 signal tổng. Client cũ
+  (không có case này) bỏ qua gói này (`_:` pass) — server mới +
+  client cũ vẫn chạy. Main chưa cần nối signal này (log đã đủ
+  tin để hiển thị).
+
+### 105.3 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_r83_server_persistence_trades_test.gd`
+  (cổng 18783/18784, state `/tmp/pxb-r83-state.json`, 11 phase,
+  socket + server thật, client A/B/C thô; viết bởi subagent,
+  **120/120 PASS ngay lần 1 — không sửa code sau test**).
+  Unit (không mạng): cleaner trade (6) / auction (4) / chat
+  (4); save/load vòng tròn (ngày 9 + ledger 123.456đ + hold
+  đến ngày 14 + 1 trade + 1 auction bid 150.000đ + 2 chat —
+  file JSON thô đủ 3 key mới); tương thích file v82 (không có
+  3 key mới → load ok, trades/auctions/chat rỗng); entry sai
+  bị lọc (mỗi loại 1 tốt + 1 xấu → chỉ giữ tốt); file hỏng →
+  `file-hong`, state giữ nguyên. Socket: A/B/C hello; A+B chat
+  2 tin; A offer trade cho B (50.000đ + com-tam) → B nhận
+  `trade_offer` 1 lần, A nhận `trade_offered` 1 lần; C tạo
+  auction dien-thoai-cu 100.000đ, B bid 150.000đ; stop → file
+  JSON có đúng trade_id/auction/chat; restart cổng mới → data
+  trade_pending 1 / auction_open 1 / chat_count 2, trade peer
+  -1; A hello lại → `trade_offered` + `chat_history` (2 tin);
+  B hello lại → `trade_offer` + `chat_history`; C hello lại →
+  seller_peer bằng peer mới + `auction_list` thấy phiên bid
+  150.000đ; B accept trade → cả 2 nhận `trade_completed`,
+  **không `trade_error`** (rebind hoạt động), server trades
+  rỗng; phiên hết hạn (ends_at_ms quá khứ, chưa có bid) →
+  `_close_expired_auctions()` đóng, winner rỗng, hammer 0,
+  phiên thật vẫn mở; autosave sau 6 giây đã có chat mới trong
+  file (3 tin), `state_dirty` false. 2 dòng `ERROR: Parse JSON
+  failed` trong log là engine in khi `load_state` đọc file hỏng
+  có chủ đích — code đã bắt và trả `file-hong`, không phải lỗi
+  (giống nhiễu stderr ở r82).
+- **Hồi quy 108 suite: 4626 pass, 0 fail** (log
+  `hidden_files/regression-2026-11-27-1845.log`) — 0 fail lần
+  thứ 5 liên tiếp (r79/r80/r81/r82/r83); r83 **120/120**, r82
+  78/78, r81 96/96, r80 110/110, G1 419/419, G3 95/95, G1
+  playtest 14/14, không regression.
+
+### 105.4 Verify + export — XONG (hồi quy 0 fail, pck mới)
+
+- `--check-only` 3 file sửa (pxb_server.gd, pxb_online.gd,
+  test r83) exit 0; `--headless --import` exit 0 (sinh
+  `.uid` cho test r83); scene Main 120 frame exit 0, 0
+  ERROR/warning.
+- Export web exit 0: pck **27.953.256 byte, SHA
+  `dd9321c8…`** (trước `9aea9fd3…`, +19.140 byte do code +
+  test mới), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; pck chứa
+  `g4_r83_server_persistence_trades_test` (grep tên file 4
+  lần — cùng mẫu kiểm như r82); HTTP 200 đủ 4 file (cổng
+  8960, tắt server bằng PID — không dùng pkill -f).
+- **Lỗi export lần 1 — đã sửa trong cùng vòng (không phải lỗi
+  code):** chạy export từ repo root với đường dẫn
+  `src/godot-build/index.html` thì Godot hiểu tương đối theo
+  thư mục project (`src/godot/src/godot-build/...` không tồn
+  tại) nên báo `Project export for preset "Web" failed` (pck
+  cũ `9aea9fd3` còn nguyên, không bị ghi đè). Chạy lại từ
+  `src/godot` với `../godot-build/index.html` như các vòng
+  trước thì exit 0 ngay. Bài học: export LUÔN chạy từ
+  `src/godot`.
+- Staging rebuild `build_gh_pages.py` OK: wasm 293
+  chunk + pck 208 chunk (trước 207), khớp byte True;
+  `versions.json` ghi pck=`dd9321c8`.
+
+### 105.5 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r83 (`hidden_files/pxb-push-main-r83.py`, 4 lô):
+  a 135 paths (r82-a 135, thay 2 file test r82 bằng 2 file
+  test r83 `.gd` + `.uid`; pxb_server.gd + pxb_online.gd đã
+  có sẵn trong a), b 20, c 37, docs 2 — tất cả path tồn tại,
+  không file nào vượt giới hạn snapshot-push 188.416
+  byte/file **trừ** `docs/godot-g4.md` (~730 KB — nhưng 75+
+  lần push docs trước đều thành công nên giữ nguyên mẫu cũ;
+  nếu lô docs lỗi thì tách sau). Thay script r82 (pck
+  `9aea9fd3` chưa lên — bỏ, file giữ lại).
+- Deploy pck `dd9321c8` (`hidden_files/pxb-deploy-r83.py`,
+  12 lô: 11 chunk pck 208 + final versions.json/index.html;
+  manifest đã kiểm đủ path). Thay script r82.
+- **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn thẻ chờ;
+  live vẫn `5f2a052f` r41).
+
+### 105.6 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r83 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 83 + vòng 82 + vòng 81 + vòng 80 + vòng
+   78 + vòng 77 + vòng 68 (thắng 1 trận demo → giữ sạp → mua
+   dien-thoai-cu giảm 10% thật trên server; sang ngày server
+   mới thì hold hết hạn → toast tiếng Việt; bấm B lúc đang giữ
+   sạp → toast tiếng Việt, không mở trận; trade/auction/chat
+   còn nguyên sau restart server thật bằng `server_main.gd
+   --state-file`) — cần thắng 1 trận demo trước để có hold.
+3. Thêm `shop_sell` khi game có tính năng bán lại; hoặc
+   persistence cho trade_log/auction_log/shop_log (hiện restart
+   vẫn mất — giới hạn đã ghi ở §105.2); hoặc nối Main hiển thị
+   `chat_history` sau khi hello lại (signal
+   `ws_chat_history_received` đã có, Main chưa nối).
+
+
+## §106 — Vòng 84: persistence trade_log + auction_log + shop_log qua restart (27/11 ~19:45–20:30 +07, cron 19:45)
+
+> **Kết luận: VÒNG 84 XONG (mức headless).** Server nay lưu cả
+> 3 log quan sát (100 mục gần nhất mỗi loại) xuống file JSON và
+> nạp lại khi restart — lịch sử giao dịch đã chốt / phiên đấu giá
+> đã đóng / lần mua ở chợ không còn mất khi server sập. Entry nào
+> sai thì bỏ entry đó, giữ phần đúng; file v83 cũ (không có 3 key
+> mới) vẫn nạp được. Test mới **145/145 PASS** (2 lần liên tiếp).
+> Hồi quy **109 suite, 4771 pass, 0 fail** — 0 fail lần thứ 6
+> liên tiếp. Scene chạy 120 frame exit 0, export web exit 0
+> (pck `bd33397b`), http.server 200 đủ 4 file. **Chưa kiểm chứng
+> bằng trình duyệt thật** — như các vòng trước. **Push main r84
+> + deploy pck `bd33397b` đã chuẩn bị xong, CHƯA CHẠY — chờ chủ
+> nói 'đẩy tiếp'** (live vẫn `5f2a052f` r41).
+
+### 106.1 Chẩn đoán — XONG (giới hạn đã ghi ở §105.2)
+
+Giới hạn đã ghi ở §105.2: `trade_log` / `auction_log` /
+`shop_log` chỉ là lịch sử quan sát (100 mục) — KHÔNG persist,
+restart thì mất. Hậu quả thực tế: server sập / deploy lại là
+mất dấu giao dịch đã chốt (không còn bằng chứng ai đã đổi gì
+với ai, giá nào), mất lịch sử đấu giá đã đóng (người bán không
+kiểm lại được mình đã nhận bao nhiêu sau phí 5%), mất lịch sử
+mua ở chợ (không đối chiếu được `discount_applied` đã áp).
+Khác với trades/auctions đang mở ở vòng 83, 3 log này KHÔNG
+tham chiếu peer đang sống theo cách cần rebind — `from_peer` /
+`to_peer` / `seller_peer` trong log chỉ là số socket lúc chốt,
+vô nghĩa sau restart — nên chỉ cần lưu + nạp + lọc, không cần
+gửi lại cho ai.
+
+### 106.2 Sửa — server (không sửa client, không sửa Main)
+
+**Server `server/pxb_server.gd`:**
+- `save_state()`: thêm `"trade_log"`, `"auction_log"`,
+  `"shop_log"` (duplicate sâu). `STATE_VERSION` giữ 1 — 3 key
+  mới là tùy chọn nên file v83 cũ vẫn nạp được.
+- `load_state()`: nạp 3 key mới sau `chat_log` (thiếu thì
+  rỗng); cap mỗi loại `TRADE_LOG_MAX` / `AUCTION_LOG_MAX` /
+  `SHOP_LOG_MAX` (100). Entry sai thì bỏ entry đó, giữ phần
+  đúng.
+- 3 cleaner mới (đặt cạnh `_clean_trade_entry` /
+  `_clean_auction_entry` / `_clean_chat_entry`):
+  `_clean_trade_log_entry` (các trường trade như
+  `_clean_trade_entry` — peer về -1 — + `completed_at_ms`
+  int ≥ 0 bắt buộc + `ledger` nếu có phải Dictionary, sai
+  kiểu thì bỏ khối ledger, giữ mục log), `_clean_auction_log_entry`
+  (các trường phiên như `_clean_auction_entry` — seller_peer
+  về -1 — + `winner_player_id` có thể rỗng ≤64 + `hammer_price`
+  int 0..100 tỉ + `fee_vnd` int ≥ 0 + `seller_receives_vnd`
+  int ≥ 0 + `closed_at_ms` int ≥ 0 + `ledger` nếu có phải
+  Dictionary), `_clean_shop_log_entry` (player_id/item_id
+  không rỗng ≤64, `price_paid` int 0..100 tỉ, `fame_gained`
+  int ≥ 0, `at_ms` int ≥ 0, `discount_applied` /
+  `discount_claimed` int 0..50, thiếu thì 0 — mục cũ trước
+  vòng 80 không ghi 2 trường này).
+- KHÔNG cần thêm `_mark_state_dirty()`: cả 3 chỗ append log
+  (trade accept, shop_buy thành công, đóng phiên đấu giá) đã
+  đánh dirty từ trước (autosave 5s + stop_server đều lưu log).
+- Header persistence cập nhật: 3 log nay persist; giới hạn
+  còn lại: phiên hết hạn trong lúc sập được đóng + quyết toán
+  ở poll đầu, nhưng `auction_closed` không tới được tay người
+  chơi đang offline (chỉ log persist, không gửi lại).
+
+### 106.3 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_r84_server_persistence_logs_test.gd`
+  (cổng 18785/18786, state `/tmp/pxb-r84-state.json`, socket +
+  server thật, client A/B/C thô; viết bởi subagent,
+  **145/145 PASS, chạy 2 lần liên tiếp đều PASS**).
+  Unit (~53 check): 3 cleaner (đủ trường, peer về −1, thiếu
+  `completed_at_ms`/`closed_at_ms` → {}, ledger sai kiểu →
+  {}, không ledger vẫn giữ, winner rỗng vẫn giữ, discount
+  thiếu → 0, discount 51 → {}, giá âm → {}); save/load vòng
+  tròn 3 log (kèm ngày/ledger/trade/auction/chat); cap 100
+  mỗi loại (file 101 mục → load còn 100); file v83 cũ không
+  có 3 key → load ok, 3 log rỗng; mỗi loại 1 tốt + 1 xấu →
+  chỉ giữ tốt; file hỏng → reason `file-hong`, state giữ
+  nguyên. Socket (~92 check): A chat 1 tin; A offer → B
+  accept → `trade_log` 1 mục, `completed_at_ms > 0`, đúng
+  trade_id; C sync ledger rồi mua áo dài → `shop_log` 1 mục
+  (2.000.000đ, ví 5tr → 3tr); C tạo phiên, B bid 150.000,
+  ép hết hạn + `_close_expired_auctions()` → `auction_log`
+  1 mục, winner = B, hammer 150.000, fee 7.500 (đúng 5% luật
+  r72), seller nhận 142.500; stop → file JSON thô đủ 3 key
+  1/1/1; restart cổng mới → 3 log còn 1/1/1, `data()` đếm
+  đúng, trade đã chốt KHÔNG gửi lại (`trade_offered` = 0),
+  phiên đã đóng KHÔNG mở lại (`auction_list` rỗng); mua lần
+  2 + đợi >5s → autosave ghi `shop_log` 2 mục, `state_dirty`
+  false.
+- 3 lỗi TEST đã sửa trong lúc viết (không chạm server):
+  (1) C bị `khong-du-do-cho` khi tạo auction vì client tự
+  sync ledger ngay khi nhận welcome nên C đã có entry ledger
+  mà không có món — sửa: C chỉ nối túi/ví ngay trước khi sync
+  ledger để mua hàng; (2) ép `ends_at_ms = now−1000` làm
+  entry auction_log bị loại khi load (ends < created) — sửa:
+  ép về điểm giữa `created..now`, vẫn "về quá khứ" nhưng giữ
+  `ends > created` như phiên thật; (3) index `auction_log[0]`
+  khi mảng rỗng làm crash step → spam ~5.900 FAIL — sửa:
+  kiểm size trước khi index.
+- 2 hành vi server đã xác minh đúng trong lúc debug: stale-sync
+  protection từ chối sync khi base lệch (server giữ số của
+  mình), và `_clean_auction_log_entry` loại entry có
+  `ends_at_ms <= created_at_ms` (đúng spec cleaner tái dùng
+  `_clean_auction_entry`).
+- **Hồi quy 109 suite: 4771 pass, 0 fail** (log
+  `hidden_files/regression-2026-11-27-1945.log`) — 0 fail lần
+  thứ 6 liên tiếp (r79/r80/r81/r82/r83/r84); r84 **145/145**,
+  r83 120/120, r82 78/78, r81 96/96, r80 110/110, G1 419/419,
+  G3 95/95, G1 playtest 14/14, không regression.
+
+### 106.4 Verify + export — XONG (hồi quy 0 fail, pck mới)
+
+- `--check-only` file sửa (`pxb_server.gd`) exit 0;
+  `--headless --import` exit 0 (sinh `.uid` cho test r84);
+  scene Main 120 frame exit 0, 0 ERROR/warning.
+- Export web exit 0: pck **27.985.564 byte, SHA `bd33397b…`**
+  (trước `dd9321c8…`, +32.308 byte do code + test mới), wasm
+  không đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`;
+  pck chứa tên file test r84 ×4 (grep -a, cùng mẫu kiểm như
+  r82/r83); chuỗi GDScript trong pck không grep được (§12.3
+  — chỉ kiểm bằng hành vi chạy thật). HTTP 200 đủ 4 file
+  (cổng 8961). Lưu ý: lệnh `pkill -f "http.server 8961"` giết
+  luôn chính shell exec chứa chuỗi đó (exit signal 15) — kết
+  quả HTTP đã in đủ trước đó, không ảnh hưởng.
+- Staging rebuild `build_gh_pages.py` OK: wasm 293 chunk +
+  pck 208 chunk (trước 208), khớp byte; `versions.json` ghi
+  pck=`bd33397b`.
+
+### 106.5 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r84 (`hidden_files/pxb-push-main-r84.py`, 4 lô):
+  a 135 paths (r83-a 135, thay 2 file test r83 bằng 2 file
+  test r84 `.gd` + `.uid`; pxb_server.gd đã có sẵn trong a),
+  b 20, c 37, docs 2 — tất cả path tồn tại, không file nào
+  vượt giới hạn snapshot-push 188.416 byte/file **trừ**
+  `docs/godot-g4.md` (~740 KB — nhưng 75+ lần push docs trước
+  đều thành công nên giữ nguyên mẫu cũ; nếu lô docs lỗi thì
+  tách sau). Thay script r83 (pck `dd9321c8` chưa lên — bỏ,
+  file giữ lại).
+- Deploy pck `bd33397b` (`hidden_files/pxb-deploy-r84.py`,
+  12 lô: 11 chunk pck 208 + final versions.json/index.html;
+  manifest đã kiểm đủ path). Thay script r83.
+- **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn thẻ chờ;
+  live vẫn `5f2a052f` r41).
+
+### 106.6 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r84 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 84 + vòng 83 + vòng 82 + vòng 81 + vòng
+   80 + vòng 78 + vòng 77 + vòng 68 (thắng 1 trận demo → giữ
+   sạp → mua dien-thoai-cu giảm 10% thật trên server; sang ngày
+   server mới thì hold hết hạn → toast tiếng Việt; bấm B lúc
+   đang giữ sạp → toast tiếng Việt, không mở trận; trade/auction/
+   chat còn nguyên sau restart server thật bằng `server_main.gd
+   --state-file`) — cần thắng 1 trận demo trước để có hold.
+3. Thêm `shop_sell` khi game có tính năng bán lại; hoặc nối Main
+   hiển thị `chat_history` sau khi hello lại (signal
+   `ws_chat_history_received` đã có, Main chưa nối).
+
+## §107 — Vòng 85: nối Main hiển thị chat_history sau khi hello lại (27/11 ~20:45–21:30 +07, cron 20:45)
+
+### 107.1 Chẩn đoán — XONG (khoảng trống thật, đã chứng minh bằng thứ tự gói tin)
+
+- Mục 3 của §106.6: signal `ws_chat_history_received` đã có từ vòng 83
+  (server gửi lại 100 tin gần nhất sau hello, client thêm vào
+  `ws_chat_log` rồi phát 1 signal tổng) nhưng Main chưa nối.
+- Thứ tự gói tin chứng minh khoảng trống là thật: server gửi `welcome`
+  TRƯỚC rồi mới gửi `chat_history` (cùng hàm hello,
+  `server/pxb_server.gd` ~1296). Bên client, `welcome` → `_set_ws_connected`
+  → `ws_status_changed` → `Main._on_ws_status_changed` → `_refresh_phone()`
+  chạy LÚC `ws_chat_log` còn trống (lịch sử chưa về) — nên tab Tin nhắn
+  vẫn vẽ "(chưa có tin nhắn nào…)" cho tới khi có tin chat mới / đổi tab.
+  Điện thoại đang đóng thì còn tệ hơn: không có badge chưa đọc nào cho
+  số tin cũ vừa khôi phục, dù `ws_chat_log` đã có đủ tin.
+- Không phải lỗi dữ liệu: `ws_chat_log` đã đúng từ vòng 83 (test r83:
+  hello lại nhận `chat_history` đủ 2 tin) — chỉ thiếu 1 nhịp làm tươi
+  ở Main. Sửa ở Main, không sửa server/client.
+
+### 107.2 Sửa — Main + comment (không sửa server, không sửa luật)
+
+- `main.gd` (`_ready`, cạnh 3 connect chat cũ): thêm
+  `online.ws_chat_history_received.connect(_on_ws_chat_history_received)`.
+- Handler mới `Main._on_ws_chat_history_received(_messages: Array)` —
+  làm đúng như `_on_ws_chat_received`: điện thoại đang mở tab Tin nhắn
+  thì `_refresh_phone()` ngay, không thì `phonehub.notify(TAB_DANH_BA_TIN_NHAN)`.
+  KHÔNG thêm tin vào log lần nữa (PxbOnline đã thêm trước khi phát
+  signal — thêm nữa là nhân đôi).
+- `scripts/pxb_online.gd`: sửa comment signal (dòng 205–207) — trước đây
+  ghi "Main chưa cần nối signal này", nay ghi Main đã nối từ vòng 85
+  + lý do (welcome đến trước nên refresh ở status_changed chạy lúc
+  log còn trống).
+- Không toast riêng: toast "Đã nối chat online (N người)." ở
+  `_on_ws_status_changed` đã báo lúc nối lại; thêm toast nữa là spam
+  mỗi lần reconnect.
+
+### 107.3 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_r85_chat_history_ui_test.gd` (cổng 18787, server
+  Godot thật + scene Main thật + 1 client đối tác thật, mẫu r74/r83):
+  **25/25 PASS, lần 1** (chạy ~3s, exit 0).
+  - B gửi 2 tin ("Chao buoi sang", "Chieu nay gap nhau nhe") → Main
+    nhận đủ 2, tab Tin nhắn hiện cả 2 (cơ số).
+  - Xóa log cục bộ (giả lập phiên mới) + làm tươi → tab hết tin cũ,
+    báo "(chưa có tin nhắn nào" (chứng minh panel đang stale); ngắt
+    WS rồi nối lại → lịch sử về đủ 2 tin, KHÔNG nhân đôi → **tab
+    đang mở tự làm tươi, hiện lại cả 2 tin** (điểm sửa chính).
+  - Gọi trực tiếp handler lúc điện thoại đóng → badge chưa đọc +1
+    đúng 1, KHÔNG thêm tin vào log.
+  - End-to-end lúc điện thoại đóng: ngắt + xóa log + nối lại → lịch
+    sử về đủ 2 tin, có badge chưa đọc; mở tab lại thì hiện đủ 2 tin
+    + xóa badge.
+- 1 lỗi TEST đã sửa trong lúc viết (không chạm code game): `var before
+  := _main.online.ws_chat_log.size()` không suy được kiểu (vì `_main`
+  là Node) → đổi sang `var before: int = ...`.
+
+### 107.4 Verify + export — XONG (hồi quy 0 fail, pck mới)
+
+- `--check-only` 3 file đổi/mới (`main.gd`, `pxb_online.gd`,
+  `g4_r85_chat_history_ui_test.gd`) exit 0; `--headless --import`
+  exit 0 (sinh `.uid` cho test r85); scene Main 120 frame exit 0,
+  0 ERROR/warning.
+- **Hồi quy 110 suite: 4796 pass, 0 fail** (log
+  `hidden_files/regression-2026-11-27-2045.log`) — 0 fail lần thứ 7
+  liên tiếp (r79/r80/r81/r82/r83/r84/r85); r85 **25/25**, r84 145/145,
+  r83 120/120, r82 78/78, r81 96/96, r80 110/110, G1 419/419,
+  G3 95/95, G1 playtest 14/14, không regression.
+- Export web exit 0: pck **27.992.240 byte, SHA `9c914dea…`**
+  (trước `bd33397b…`, +6.676 byte do code + test mới), wasm không đổi
+  `fc74679e…`, `GODOT_THREADS_ENABLED = false`; pck chứa tên file
+  test r85 ×4 (grep -a); HTTP 200 đủ 4 file (cổng 8962).
+- Staging rebuild `build_gh_pages.py` OK: wasm 293 chunk +
+  pck 208 chunk, khớp byte; `versions.json` ghi pck=`9c914dea`.
+  (Cảnh báo `title_bg.jpg` thiếu vẫn như các vòng trước — DOM dùng
+  fallback, không phải lỗi mới.)
+
+### 107.5 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r85 (`hidden_files/pxb-push-main-r85.py`, 4 lô):
+  a 135 paths (r84-a 135, thay 2 file test r84 bằng 2 file test r85
+  `.gd` + `.uid`; `main.gd` + `pxb_online.gd` đã có sẵn trong a),
+  b 20, c 37, docs 2 — tất cả path tồn tại, không file nào vượt giới
+  hạn snapshot-push 188.416 byte/file **trừ** `docs/godot-g4.md`
+  (~759 KB — nhưng 75+ lần push docs trước đều thành công nên giữ
+  nguyên mẫu cũ; nếu lô docs lỗi thì tách sau). Thay script r84
+  (pck `bd33397b` chưa lên — bỏ, file giữ lại).
+- Deploy pck `9c914dea` (`hidden_files/pxb-deploy-r85.py`,
+  12 lô: 11 chunk pck 208 + final versions.json/index.html;
+  manifest đã kiểm đủ path, không thiếu). Thay script r84.
+- **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn thẻ chờ;
+  live vẫn `5f2a052f` r41).
+
+### 107.6 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r85 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 85 + vòng 84 + vòng 83 + vòng 82 + vòng 81 +
+   vòng 80 + vòng 78 + vòng 77 + vòng 68 (thắng 1 trận demo → giữ
+   sạp → mua dien-thoai-cu giảm 10% thật trên server; sang ngày
+   server mới thì hold hết hạn → toast tiếng Việt; bấm B lúc
+   đang giữ sạp → toast tiếng Việt, không mở trận; trade/auction/
+   chat còn nguyên sau restart server thật bằng `server_main.gd
+   --state-file`; **mở điện thoại tab Tin nhắn sau khi nối lại
+   chat thì thấy lại tin cũ**) — cần thắng 1 trận demo trước để
+   có hold.
+3. Thêm `shop_sell` khi game có tính năng bán lại.
+
+## §108 — Vòng 86: bán lại cho chợ qua server (`shop_sell`, 27/11 ~21:45–23:00 +07, cron 21:45 + 22:45)
+
+### 108.1 Chẩn đoán — khoảng trống thật (mục 3 của §107.6)
+
+- `shop_buy` đã server-authoritative từ vòng 77 (server trừ tiền +
+  cộng món vào owned trong ledger), nhưng chiều ngược lại CHƯA CÓ:
+  server comment (`server/pxb_server.gd` ~131) + client comment
+  (`scripts/pxb_online.gd` ~66) đều ghi rõ "thêm bán thì cần
+  shop_sell riêng"; `PxbEconomy` cũng không có hàm `sell`. Người
+  chơi mua nhầm / muốn đổi tiền thì không có đường nào bán lại —
+  tiền kẹt trong đồ.
+- GDD/economy KHÔNG chốt tỷ lệ bán lại → vòng này chọn **50% giá
+  catalog** (thông lệ), ghi PROVISIONAL ở `PxbBalance.SHOP_SELLBACK_PERCENT`,
+  cần chủ chốt số. Server + client + Main đều dùng chung hằng này,
+  không hardcode 50 rải rác. Không giảm giá sỉ khi bán; không Danh
+  vọng khi bán (bán không phải mua lớn).
+
+### 108.2 Thiết kế — đối xứng `shop_buy`, 1 món / lần gửi
+
+- Gói `{"type":"shop_sell","item_id","req_id"[,"game_day"]}` →
+  `_handle_shop_sell`, trả `shop_sell_ack` {req_id, ok, item_id,
+  price_received, money, reserved, owned (chỉ khi ok), reason,
+  server_day}. Thứ tự validate như shop_buy: req_id int ≥ 1 →
+  hello → item_id → catalog → ngày server (vòng 81) → ledger đã
+  đồng bộ → phong-tro ("khong-ban-duoc", thuê tháng không bán lại
+  được) → owned ≥ 1 ("khong-so-huu"). Thành công: money +=
+  `PxbEconomy.shop_sellback_price` (server tính), owned trừ 1
+  (hết thì xóa key), ghi shop_log {kind:"sell", price_received,
+  price_paid:0, fame_gained:0}, `_mark_state_dirty()`.
+- `shop_log` nay có 2 kind: mục mua kind "buy" (price_paid),
+  mục bán kind "sell" (price_received). `_clean_shop_log_entry`
+  chấp nhận cả 2 (thiếu kind → "buy" — file v83/v84 cũ vẫn nạp
+  được); mục sell thiếu price_received hoặc ≤ 0 → {}.
+  `data()` thêm `shop_sell_count` (shop_buy_count vẫn đếm toàn bộ
+  shop_log như cũ, không đổi nghĩa).
+- Client: `send_ws_shop_sell(item_id, game_day=-1)` + signal
+  `ws_shop_sell_acked` + `_clean_shop_sell_ack` + pending
+  `_ws_shop_sell_pending` (đồng bộ ledger trước khi gửi như
+  shop_buy; ack lạ/trùng req_id thì bỏ lặng; ack ok thì cập nhật
+  baseline tiền/owned để lần sync kế không stale).
+- Main: `sell_item(item_id)` — WS thì gửi + pending
+  `_pending_shop_sell` (chỉ 1 lần chờ ack, nút bán ẩn trong lúc
+  chờ, toast "Đang chờ máy chủ xác nhận bán…"); chưa nối thì bán
+  local qua `economy.sell`. `_on_ws_shop_sell_acked` áp ví theo
+  delta + owned server làm chuẩn + toast "Đã bán … (máy chủ đã
+  cộng …đ)". Mất kết nối lúc chờ ack bán thì hủy lần bán như mua
+  (vòng 77). Tab Chợ thêm nút "Bán … — nhận …đ" cho món đang sở
+  hữu (trừ phong-tro, tối đa 4 món rẻ nhất, `_sellable_owned_items`).
+
+### 108.3 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_r86_shop_sell_test.gd` (cổng 18788, restart
+  18789, server Godot thật + scene Main thật + 2 client thật +
+  1 peer thô chưa hello, mẫu r77/r84): **131/131 PASS, lần 1**
+  (chạy ~3s, exit 0).
+  - Unit local: sellback 2.000.000 → 1.000.000, lẻ 999.999 →
+    499.999 (cắt lẻ), giá âm/0 → 0; `economy.sell` chặn đúng
+    chưa-sở-hữu / phòng-trọ / món lạ; mua phòng-trọ 2 triệu rồi bán
+    → `khong-ban-duoc`, tiền + owned không đổi; mua + bán áo dài →
+    tiền 1 → 2 triệu, owned hết; bán lần 2 → `khong-so-huu`;
+    bán nhà chung-cư-mini 800 triệu → nhận 400 triệu.
+  - Client: gửi khi chưa nối → `chua-ket-noi-ws`; cleaner ack
+    bỏ req_id 0 / ok không bool / price_received âm / money âm /
+    owned không phải dict; ack đủ giữ đủ trường + `owned_present`.
+  - Server qua WS: A mua áo dài (2 triệu) → bán lại nhận 1 triệu,
+    tiền 4 triệu, owned xóa key, `shop_sell_count` 1, `shop_log`
+    2 mục (buy + sell, sell có `price_received` 1 triệu,
+    `price_paid` 0, `fame_gained` 0); mua lại áo dài ok, count vẫn 1.
+  - Lỗi qua packet thô: bán món chưa có → `khong-so-huu`;
+    phòng-trọ → `khong-ban-duoc`; món lạ → `khong-co-mon`;
+    req_id 0 + thiếu req_id → drop, không ack; ngày sai →
+    `ngay-server-khong-khop`, tiền + owned không đổi; peer chưa
+    hello → ack `chua-hello` + dropped tăng; client C chưa đồng bộ
+    sổ cái → `chua-dong-bo-so-cai`, vẫn chưa có entry ledger.
+  - Persistence: stop → file đủ `shop_log` 3 mục (buy/sell/buy)
+    + ledger A 2 triệu + owned áo dài ×1; restart cổng mới →
+    `shop_sell_count` vẫn 1, log + ledger giữ nguyên. File kiểu
+    v84 (buy không kind) vẫn nạp được, kind mặc định "buy",
+    `shop_sell_count` 0.
+  - Main end-to-end: chưa sở hữu gì → không có món bán được; mua
+    áo dài qua WS → bán qua WS (pending 1 lần, toast "Đang chờ
+    máy chủ xác nhận bán…", bán chen → `dang-cho-may-chu`); ack
+    về → ví 4 triệu, owned hết, toast "Đã bán … 1.000.000";
+    ngắt WS → mua/bán local ok, nhận 1 triệu, không pending.
+  - Cleaner `_clean_shop_log_entry`: sell đủ trường giữ kind +
+    price_received; sell thiếu/0 price_received → bỏ; kind lạ →
+    bỏ; buy cũ không kind → "buy", không price_received → 0.
+- **Hồi quy 114 suite, 5014 check, 0 FAIL** (log
+  `hidden_files/regression-2026-11-27-2245.log`) — 0 fail lần thứ
+  8 liên tiếp (r79–r86); r86 **131/131**, r85 25/25, r84 145/145,
+  r83 120/120, r82 78/78, r81 96/96, r80 110/110, r78 53/53,
+  G1 419/419, G3 95/95, G1 playtest 14/14, không regression.
+  (111 suite chuẩn = 4998 check; + transfer-move 16 = 5014;
+  2 diag test không in số đếm.)
+- Sửa kèm trong vòng: `tools/godot/run_regression.sh` nay chạy đủ
+  114 suite — trước đây script chỉ liệt kê 103, 11 suite r78–r86
+  + diag/transfer phải chạy riêng ngoài script (đã thêm tên vào
+  list + ghi chú ở đầu file, theo mẫu các vòng trước).
+
+### 108.4 Verify + export — XONG (hồi quy 0 fail, pck mới)
+
+- `--check-only` 6 file đổi/mới (`main.gd`, `pxb_online.gd`,
+  `pxb_economy.gd`, `pxb_balance.gd`, `pxb_server.gd`,
+  `g4_r86_shop_sell_test.gd`) exit 0; scene Main 120 frame
+  exit 0, 0 ERROR/warning.
+- Export web exit 0: pck **28.023.812 byte, SHA `5618ee9c…`**
+  (trước `9c914dea…`, +31.572 byte do code + test mới), wasm không
+  đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`; pck chứa
+  "shop_sell" ×4 (grep -a); HTTP 200 đủ 6 file (cổng 8186).
+- Staging rebuild `build_gh_pages.py` OK: pck 208 chunk, ráp lại
+  khớp byte từng byte; `versions.json` ghi pck=`5618ee9c`.
+  (Cảnh báo `title_bg.jpg` thiếu vẫn như các vòng trước — DOM dùng
+  fallback, không phải lỗi mới.)
+
+### 108.5 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r86 (`hidden_files/pxb-push-main-r86.py`, 4 lô):
+  a 137 paths (r85-a 135, thay 2 file test r85 bằng 2 file test
+  r86 `.gd` + `.uid`; thêm `pxb_economy.gd` + `pxb_balance.gd`;
+  `main.gd` + `pxb_online.gd` + `pxb_server.gd` đã có sẵn trong
+  a), b 20, c 37, docs 2 — tất cả path tồn tại, không file nào
+  vượt giới hạn snapshot-push 188.416 byte/file **trừ**
+  `docs/godot-g4.md` (~771 KB) và `docs/roles-qc.md` mới vượt
+  (~192 KB, chỉ hơn giới hạn ~3,5 KB sau dòng r86 — 75+ lần push
+  docs trước đều thành công nên giữ nguyên mẫu cũ; nếu lô docs
+  lỗi thì tách `roles-qc.md` ra đẩy riêng sau). Thay script r85
+  (pck `9c914dea` chưa lên — bỏ, file giữ lại). (`hidden_files/pxb-deploy-r86.py`,
+  12 lô: 11 chunk pck 208 + final versions.json/index.html;
+  manifest đã kiểm đủ path, file chunk tồn tại trong staging,
+  ráp lại khớp byte). Thay script r85.
+- **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn thẻ chờ;
+  live vẫn `5f2a052f` r41).
+
+### 108.6 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r86 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 86 + vòng 85 + vòng 84 + vòng 83 + vòng 82 +
+   vòng 81 + vòng 80 + vòng 78 + vòng 77 + vòng 68 (thắng 1 trận
+   demo → giữ sạp → mua dien-thoai-cu giảm 10% thật trên server;
+   sang ngày server mới thì hold hết hạn → toast tiếng Việt; bấm B
+   lúc đang giữ sạp → toast tiếng Việt, không mở trận; trade/auction/
+   chat còn nguyên sau restart server thật bằng `server_main.gd
+   --state-file`; mở điện thoại tab Tin nhắn sau khi nối lại chat
+   thì thấy lại tin cũ; **bán lại ao-dai nhận 50% giá thật trên
+   server**) — cần thắng 1 trận demo trước để có hold.
+3. Chủ chốt tỷ lệ bán lại (50% hiện là PROVISIONAL) — nếu đổi số
+   thì chỉ sửa `PxbBalance.SHOP_SELLBACK_PERCENT` + chạy lại test
+   r86 (test tính 50% từ hằng, không hardcode).
+4. Vòng 87 (ứng viên lớn nhất, khoảng trống thật từ G2 §6 phần 3):
+   khóa ngắn tốt nghiệp ghi `+10` chỉ số phụ vào
+   `education.pending_stat_gain` nhưng KHÔNG nơi nào áp vào chỉ số
+   phụ — Main chỉ áp `pending_exp`/`pending_fame`; kiểm chứng rồi
+   nối `PxbStats` áp đúng chỉ số phụ khi tốt nghiệp khóa ngắn.
+
+## §109 — Vòng 87: nối `pending_stat_gain` khóa ngắn hạn vào `PxbStats` (28/11 ~00:00–00:30 +07, cron 23:45)
+
+### 109.1 Chẩn đoán — khoảng trống thật (mục 4 của §108.6)
+
+- G2 §6 phần 3 đã ghi từ đầu: khóa ngắn hạn tốt nghiệp ghi +10 vào
+  `education.pending_stat_gain` nhưng CHƯA áp vào đâu — `PxbStats`
+  chỉ có `set_stat` cho 3 gốc, 4 chỉ số trộn là hàm tính sẵn.
+  `Main._check_graduations()` chỉ notify + toast "(chờ áp vào chỉ
+  số phụ)". Học phí đã trừ, khóa đã xong, +10 không tới tay người chơi.
+- Quyết định thiết kế (Bậc 1, theo GDD Mục 5 "+10 một chỉ số phụ"):
+  KHÔNG cộng vào 2 gốc (tri+10/tam+10 thì Kỷ/Dũng cũng tăng ké +
+  phá trần tổng 300; tri+5/tam+5 thì Sáng chỉ +5, sai số chốt).
+  Bonus riêng `stat_bonus` cộng trên giá trị trộn: đúng +10 vào
+  đúng chỉ số phụ, 3 gốc + `total()` không đổi. Bonus KHÔNG kẹp
+  `STAT_MAX`: đã trả phí thì +10 phải thấy, kể cả trộn đã 100
+  (chưa chốt trần bonus — GDD/PM chốt sau nếu cần). An Yên khi
+  lệch: gốc 0 + bonus (đã trả phí thì không mất im lặng).
+
+### 109.2 Sửa — `PxbStats` + Main (không sửa education, không sửa luật)
+
+- `PxbStats`: const `SUB_STATS`; var `stat_bonus` {}; `sub_stat(key)`;
+  `apply_stat_gain(sub, gain) -> bool` (khóa lạ / gain <= 0 → false);
+  `ky()`/`dung()`/`sang()`/`an_yen()` cộng bonus; `data()` thêm
+  `stat_bonus`; `from_data()` lọc khóa lạ / số âm (save cũ không có
+  khóa thì bonus rỗng).
+- Main: `_apply_pending_stat_gains()` — drain `pending_stat_gain`
+  qua `stats.apply_stat_gain` mỗi ngày game mới (cả khi không có
+  tốt nghiệp mới, để save r86 trở về trước còn pending cũng được áp
+  ở ngày đổi đầu tiên); mục rác (khóa lạ / gain <= 0) bị xóa luôn.
+  `_check_graduations()` gọi drain sau `check_short_course_graduation()`;
+  toast mới "Xong khóa ngắn hạn: Sáng +10" (fallback "(chờ áp…)"
+  chỉ khi áp thất bại). `_format_stat_gains()` + const
+  `SUB_STAT_NAMES` {"ky": "Kỷ", "dung": "Dũng", "sang": "Sáng",
+  "an-yen": "An Yên"}. `_education_text()` thêm dòng "Chờ nhận chỉ
+  số phụ: …" khi pending còn (cửa sổ giữa load save cũ và ngày đổi).
+  `_apply_save_data()`: khôi phục `stat_bonus` qua
+  `PxbStats.from_data(sd)` (lọc như MarketBattle).
+
+### 109.3 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_r87_shortcourse_stat_test.gd` (không server,
+  không cổng, scene Main thật): **42/42 PASS, lần 1** (chạy ~2s,
+  exit 0).
+  - Unit: ky/dung/sang gốc + bonus đúng chỉ số, chỉ số khác không
+    đổi, total 3 gốc không đổi; khóa lạ / gain 0 / âm bị chặn; cộng
+    dồn; An Yên cân bằng 90+10=100, lệch 0+10=10; `data()`/
+    `from_data()` giữ bonus, bỏ khóa lạ / âm, save cũ bonus rỗng.
+  - Main e2e: khóa mẫu Sáng 3 ngày 2tr — tốt nghiệp Sáng 100 → 110,
+    pending xóa, toast "Sáng +10"; khóa 2 cộng dồn 120; pending cũ
+    {"ky": 10, "la": 5} dồn ở ngày đổi (không tốt nghiệp mới):
+    Ky +10, rác xóa, không toast mới; save/load slot 1 giữ bonus
+    (Sang 120, Ky 110; đổi Tri 50 thì Sang 95, tải lại về 120).
+- Sửa kèm trong vòng: `g2_ui_wiring2_test.gd` state 3 — check cũ
+  "pending sang 10" thành 3 check (Sáng +10 áp thật, pending xóa,
+  toast "Sáng +10"); `g2_selftest.gd` — `data()` nay thêm
+  `"stat_bonus": {}` (bắt đúng 1 FAIL ở hồi quy lần 1: check cũ so
+  `data()` bằng đúng dict 3 khóa; đã sửa, không phải lỗi logic).
+  Lỗi test do chính tác giả viết sai kỳ vọng, đã sửa trước khi chạy
+  lại: `from_data` bỏ khóa lạ — ky phải 110 (gốc 100 + bonus 10)
+  chứ không phải 60; Trí 50 thì Sang 95 chứ không phải 85.
+- **Hồi quy 115 suite, 5058 check, 0 FAIL** (log
+  `hidden_files/regression-2026-11-28-0010.log`) — 0 fail lần thứ
+  9 liên tiếp (r79–r87); r87 **42/42**, r86 131/131, r85 25/25,
+  r84 145/145, r83 120/120, r82 78/78, r81 96/96, r80 110/110,
+  r78 53/53, G1 419/419, G3 95/95, G1 playtest 14/14, không
+  regression. (111 suite có đếm = 5058; +44 so với r86: r87 42 +
+  wiring2 thêm 2 check; 2 diag test + probe + v6_geometry không in
+  số đếm.)
+- Sửa kèm trong vòng: `tools/godot/run_regression.sh` nay chạy đủ
+  115 suite — thêm `g4_r87_shortcourse_stat_test` vào list + cập
+  nhật số đếm ở đầu file (theo mẫu vòng 86).
+
+### 109.4 Verify + export — XONG (hồi quy 0 fail, pck mới)
+
+- `--check-only` 4 file đổi/mới (`pxb_stats.gd`, `main.gd`,
+  `g4_r87_shortcourse_stat_test.gd`, `g2_ui_wiring2_test.gd`) exit 0
+  (lỗi parse lúc đầu: `var x := _main.stats.sang()` không suy được
+  kiểu vì `_main` là Node — đã ghi rõ `var x: int = …` ở cả 2 file);
+  `g2_selftest` 87/87 + wiring2 73/73 chạy riêng trước hồi quy;
+  scene Main 120 frame exit 0, 0 ERROR/warning.
+- Export web exit 0: pck **28.029.944 byte, SHA `fd086f6b…`**
+  (trước `5618ee9c…`, +6.132 byte do test mới + code), wasm không
+  đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`; pck chứa
+  "g4_r87" ×4 (đường dẫn file test .gd/.gdc/.remap); HTTP 200 đủ 6
+  file (cổng 8187).
+- LƯU Ý PHƯƠNG PHÁP (đính chính §108.4): script Godot 4 export
+  thành `.gdc` nhị phân nên tên hàm / chuỗi code KHÔNG còn dạng text
+  trong pck — "shop_sell ×4" ở §108.4 thực ra cũng chỉ là tên file
+  test `g4_r86_shop_sell_test`, không phải bằng chứng nội dung code.
+  Bằng chứng thật là test headless + hồi quy + scene 120 frame
+  (chạy trên đúng source đã export), pck chỉ kiểm SHA/size + đường
+  dẫn file mới.
+- Staging rebuild `build_gh_pages.py` OK: pck 208 chunk, ráp lại
+  khớp byte từng byte; `versions.json` ghi pck=`fd086f6b`.
+  (Cảnh báo `title_bg.jpg` thiếu vẫn như các vòng trước — DOM dùng
+  fallback, không phải lỗi mới.)
+
+### 109.5 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r87 (`hidden_files/pxb-push-main-r87.py`, 4 lô):
+  a 140 paths (r86-a 137, bỏ 2 file test r86 `.gd` + `.uid`, thêm 2 file
+  test r87 `.gd` + `.uid`; thêm `pxb_stats.gd` + `g2_ui_wiring2_test.gd` + `.uid`;
+  `main.gd` + `run_regression.sh` đã có sẵn trong a), b 20 paths
+  (`.import` atlas/bg/ground, không đổi so với r86), c 37 paths
+  (artpass43..63, không đổi so với r86), docs 2 paths (godot-g4 +
+  roles-qc) — tất cả path tồn tại, không file nào vượt giới hạn
+  snapshot-push 188.416 byte/file **trừ** `docs/godot-g4.md`
+  (~763 KB) và `docs/roles-qc.md` mới vượt (~189 KB, chỉ hơn giới
+  hạn ~4,8 KB — 75+ lần push docs trước đều thành công nên giữ
+  nguyên mẫu cũ; nếu lô docs lỗi thì tách `roles-qc.md` ra đẩy
+  riêng sau). Thay script r86 (pck `fd086f6b` chưa lên — bỏ, file
+  giữ lại). (`hidden_files/pxb-deploy-r87.py`, 12 lô: 11 chunk pck
+  208 + final versions.json/index.html; manifest đã kiểm đủ path,
+  file chunk tồn tại trong staging, ráp lại khớp byte). Thay script
+  r86.
+- **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn thẻ chờ;
+  live vẫn `5f2a052f` r41).
+
+### 109.6 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r87 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 87 + vòng 86 + vòng 85 + vòng 84 + vòng 83 +
+   vòng 82 + vòng 81 + vòng 80 + vòng 78 + vòng 77 + vòng 68 (thắng
+   1 trận demo → giữ sạp → mua dien-thoai-cu giảm 10% thật trên
+   server; sang ngày server mới thì hold hết hạn → toast tiếng Việt;
+   bấm B lúc đang giữ sạp → toast tiếng Việt, không mở trận;
+   trade/auction/chat còn nguyên sau restart server thật bằng
+   `server_main.gd --state-file`; mở điện thoại tab Tin nhắn sau
+   khi nối lại chat thì thấy lại tin cũ; **bán lại ao-dai nhận 50%
+   giá thật trên server; tốt nghiệp khóa ngắn Sáng +10 thấy ngay
+   trên chỉ số phụ**).
+3. Chủ chốt trần bonus chỉ số phụ (hiện KHÔNG kẹp STAT_MAX — nếu
+   chốt trần thì chỉ sửa `PxbStats.apply_stat_gain`/`stat_bonus` +
+   chạy lại test r87).
+4. Vòng 88 (ứng viên lớn nhất, hệ quả trực tiếp của vòng 87): HUD
+   chỉ hiện Thể/Trí/Tâm, 4 chỉ số phụ (Kỷ/Dũng/Sáng/An Yên) không
+   có chỗ nào xem thường trực — +10 khóa ngắn chỉ thấy qua toast
+   rồi mất; hiển thị 4 chỉ số phụ lên HUD + tab Bạn thân trong điện
+   thoại (kèm bonus), để người chơi thấy được kết quả khóa học.
+
+## §110 — Vòng 88: hiển thị 4 chỉ số phụ lên HUD + tab Bạn thân (28/11 ~00:45–01:20 +07, cron 00:45)
+
+### 110.1 Chẩn đoán — khoảng trống thật (mục 4 của §109.6)
+
+- Vòng 87 nối `pending_stat_gain` vào `PxbStats` xong (+10 đúng chỉ
+  số phụ, save/load giữ bonus) nhưng người chơi KHÔNG có chỗ nào xem
+  thường trực: HUD chỉ hiện Thể/Trí/Tâm, 4 chỉ số phụ (Kỷ/Dũng/Sáng/
+  An Yên) chỉ ló qua toast tốt nghiệp rồi mất. Học xong khóa ngắn mà
+  không thấy kết quả đâu = vòng 87 chưa tới tay người chơi.
+- Quyết định thiết kế (Bậc 1): hiện 4 chỉ số phụ ở 2 chỗ — (1) thêm
+  1 dòng lên HUD, (2) thêm 1 mục lên đầu tab Bạn thân trong điện
+  thoại (kèm dòng bonus khi có). KHÔNG sửa luật, KHÔNG sửa
+  `PxbStats` (chỉ đọc `ky()`/`dung()`/`sang()`/`an_yen()` +
+  `stat_bonus` đã có), KHÔNG thêm hệ mới.
+
+### 110.2 Sửa — Main (không sửa luật, không sửa PxbStats)
+
+- HUD (`main.gd`, `_build_ui` + `_update_hud`): label mới
+  `_hud_substats` (font 18), text `"Kỷ %d • Dũng %d • Sáng %d •
+  An Yên %d"` cập nhật mỗi `_update_hud()`; `_fit_hud_substats()`
+  co 18 → 16 nếu dòng rộng quá 412px (như `_fit_hud_map`).
+  Để panel không vượt 170px của artpass3: 3 dòng nội dung thu từ
+  24 về 20. Đo thật bằng probe headless: dòng phụ cỡ 18 rộng
+  403px (≤ 412), cỡ 20 đã 448px (tràn); panel cao ~163px lúc
+  spawn Map001 (tên map cỡ 28), cao nhất ~168px khi tên map ngắn
+  vừa cỡ 30 ("Phố Tây") — vẫn ≤ 170. Điện thoại y=216 không đổi
+  (216 ≥ 168+26).
+- Điện thoại (`_social_text()`, tab Bạn thân): thêm khối chỉ số
+  phụ + dòng `"Bonus khóa ngắn hạn: …"` (tái dùng
+  `_format_stat_gains(stats.stat_bonus)`, chỉ hiện khi bonus
+  không rỗng). **Sửa sau khi tự xem ảnh thật:** lần 1 đặt khối ở
+  CUỐI danh bạ (sau 38 bullet "chưa quen") — ảnh browser cho thấy
+  phải cuộn hết mới thấy, sai mục đích "thấy ngay kết quả khóa
+  học"; đã dời lên NGAY SAU dòng tiêu đề, xem lại ảnh thì hiện
+  ngay khi mở tab. Không test nào khóa dòng đầu của
+  `_social_text()` nên không sửa test cũ.
+
+### 110.3 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_r88_substats_hud_test.gd`: **25/25 PASS**
+  (lỗi parse lúc đầu: `var w := _main.font.get_string_size(…)` không
+  suy được kiểu vì `_main` là Node — đã ghi rõ `var w: float = …`,
+  cùng mẫu lỗi r87).
+  - Ban đầu: HUD gốc không đổi, dòng phụ đúng 100 cả 4, cỡ 18, 3
+    dòng nội dung cỡ 20, panel ≤ 170; tab có dòng chỉ số phụ,
+    không có dòng bonus, vẫn kết thúc `"\n "`.
+  - Bonus: Sang +10, Kỷ +10 → HUD/tab hiện 110 đúng chỗ, dòng
+    bonus đúng thứ tự `"Kỷ +10 • Sáng +10"`; panel vẫn ≤ 170.
+  - An Yên lệch (Tri 50): gốc 0 + bonus 10 = 10, HUD/tab hiện
+    đúng `"An Yên 10"`.
+  - Save/load slot 1: bonus + Tri 50 đi kèm save, HUD/tab sau
+    tải giữ nguyên.
+  - Trường hợp xấu nhất: tên map ngắn vừa cỡ 30, panel vẫn ≤ 170,
+    dòng phụ rộng ≤ 412.
+- **Hồi quy 116 suite, 5083 check, 0 FAIL** (log
+  `~/workspace/regression-move.log`, script chuẩn
+  `tools/godot/run_regression.sh`) — 0 fail lần thứ 10 liên tiếp
+  (r79–r88); r88 25/25, r87 42/42, r86 131/131, r85 25/25, r84
+  145/145, r83 120/120, r82 78/78, r81 96/96, r80 110/110, r78
+  53/53, G1 419/419, G3 95/95, G1 playtest 14/14, không regression.
+  (112 suite có đếm = 5083 = 5058 r87 + 25 r88; 4 suite không in
+  số đếm: 2 diag + probe + v6_geometry.)
+- Bài học hồi quy trong vòng này: lần chạy đầu (script
+  `hidden_files/run_regression_2026-11-27-2145.sh` copy sang) chỉ
+  chạy 113 suite / 4996 check — glob `*_test.gd` không bắt
+  `g2_selftest.gd` (đuôi `selftest`, không phải `_test`) và 2 probe
+  (`g4_online_server_probe`, `v6_geometry_probe`) không có trong
+  list; suýt báo sai tổng. Đã chạy lại bằng script chuẩn của repo
+  (đủ 116 suite) mới kết luận. Sửa kèm: `tools/godot/run_regression.sh`
+  thêm `g4_r88_substats_hud_test` vào list + cập nhật đầu file;
+  script hidden_files vòng này đã vá glob thêm `g2_selftest.gd` +
+  `v6_geometry_probe.gd` (probe server vẫn chỉ chạy bằng script
+  chuẩn).
+
+### 110.4 Verify + export — XONG (hồi quy 0 fail, pck mới)
+
+- `--check-only` `main.gd` exit 0; `--import` exit 0 (sinh `.uid`
+  test r88); scene Main 120 frame exit 0, 0 ERROR/warning.
+- Export web exit 0: pck **28.034.100 byte, SHA `3b37615d`**
+  (trước `fd086f6b…`, export lần 1 `dd75a130` đã bị thay trước khi
+  staging — export lần 1 chạy trước khi dời khối chỉ số phụ lên
+  đầu tab, export lần 2 sau khi dời), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; pck chứa
+  `g4_r88_substats_hud_test` ×4; HTTP 200 đủ 6 file (cổng 8189
+  lần 1, 8191 lần 2).
+- Staging rebuild `build_gh_pages.py` OK: pck 208 chunk, ráp lại
+  khớp byte; `versions.json` ghi pck=`3b37615d`.
+- **Browser-verify thật (Chromium 1255 + swiftshader, 720×1280,
+  script mới `hidden_files/pxb-browser-verify-r88.py`, venv
+  `/tmp/pxb-pw-venv` vì python hệ thống chặn PEP 668):** engine
+  khởi động, bấm Bắt đầu chơi, HUD 5 dòng hiện đủ trong panel
+  không tràn, bấm P mở điện thoại tab Danh bạ thấy ngay dòng chỉ
+  số phụ ở đầu; 0 pageerror — ảnh
+  `hidden_files/pxb-browser-verify-2026-11-28/31-r88-hud.png`,
+  `32-r88-phone.png` + `console-r88.json`. 9 console error đều là
+  404 tài nguyên `web_shell.html` xin file lẻ (`/char_player.png`,
+  `/char_banthan.png`, `/title_bg.jpg` — đã nướng trong pck, không
+  có file lẻ trong build; đã biết từ §109.4, DOM dùng fallback,
+  KHÔNG phải lỗi mới của vòng 88).
+- Cảnh báo có từ trước, ghi lại (không do vòng 88): export in 3
+  WARNING `UID duplicate detected` giữa `atlas-map003/004/005.png`
+  với `atlas-map001/002/003.png` (atlas PNG không có file `.uid`,
+  copy file giữ trùng UID import) — chưa thấy ảnh hưởng hành vi
+  (map vẫn vẽ đúng trên browser), để vòng sau sửa.
+
+### 110.5 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r88 (`hidden_files/pxb-push-main-r88.py`, 4 lô):
+  a 140 paths (r87-a 140, bỏ 2 file test r87 `.gd` + `.uid`, thêm
+  2 file test r88 `.gd` + `.uid`; `main.gd` +
+  `tools/godot/run_regression.sh` đã có sẵn trong a), b 20 paths
+  (`.import` atlas/bg/ground, không đổi so với r87), c 37 paths
+  (artpass43..63, không đổi so với r87), docs 2 paths (godot-g4 +
+  roles-qc) — tất cả path tồn tại, không file nào vượt giới hạn
+  snapshot-push 188.416 byte/file **trừ** `docs/godot-g4.md`
+  (~780 KB) và `docs/roles-qc.md` (~193 KB — 75+ lần push docs
+  trước đều thành công nên giữ nguyên mẫu cũ; nếu lô docs lỗi thì
+  tách `roles-qc.md` ra đẩy riêng sau). Thay script r87 (pck
+  `fd086f6b` chưa lên — bỏ, file giữ lại).
+- Deploy r88 (`hidden_files/pxb-deploy-r88.py`, 12 lô: 11 chunk pck
+  208 + final versions.json/index.html; manifest đã kiểm đủ path,
+  file chunk tồn tại trong staging, ráp lại khớp byte). Thay script
+  r87.
+- **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn thẻ chờ;
+  live vẫn `5f2a052f` r41).
+
+### 110.6 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r88 (4 lô) → deploy pck mới
+   (12 lô) → kiểm live pin + đối chiếu byte.
+2. Browser-verify vòng 88 + vòng 87 + vòng 86 + vòng 85 + vòng 84 +
+   vòng 83 + vòng 82 + vòng 81 + vòng 80 + vòng 78 + vòng 77 +
+   vòng 68 (thắng 1 trận demo → giữ sạp → mua dien-thoai-cu giảm
+   10% thật trên server; sang ngày server mới thì hold hết hạn →
+   toast tiếng Việt; bấm B lúc đang giữ sạp → toast tiếng Việt,
+   không mở trận; trade/auction/chat còn nguyên sau restart server
+   thật bằng `server_main.gd --state-file`; mở điện thoại tab Tin
+   nhắn sau khi nối lại chat thì thấy lại tin cũ; **bán lại ao-dai
+   nhận 50% giá thật trên server; tốt nghiệp khóa ngắn Sáng +10
+   thấy ngay trên chỉ số phụ** — nay đã thấy trên HUD + tab Bạn
+   thân).
+3. Chủ chốt trần bonus chỉ số phụ (hiện KHÔNG kẹp STAT_MAX — nếu
+   chốt trần thì chỉ sửa `PxbStats.apply_stat_gain`/`stat_bonus` +
+   chạy lại test r87).
+4. Vòng 89 (ứng viên lớn nhất, từ verify vòng này): dọn 9 console
+   404 (bỏ tham chiếu file lẻ trong `web_shell.html` hoặc copy
+   `char_player.png`/`char_banthan.png`/`title_bg.jpg` vào build)
+   + sửa trùng UID atlas-map003/004/005 (cấp `.uid` riêng) — cả 2
+   đều là lỗi hiển thị/log đã biết, sửa gọn trong 1 vòng.
+
+## §111 — Vòng 89: dọn 9 console 404 + trùng UID atlas (28/11 ~01:45–02:15 +07, cron 01:45)
+
+### 111.1 Chẩn đoán — gốc của 9 lỗi 404 (mục 4 của §110.6)
+
+- 9 console error ở verify vòng 88 KHÔNG phải 9 file khác nhau: là
+  **3 file × 3 lần retry** của `fetchBlobRetry` trong
+  `web_shell.html` (`loadTitleArt`): `title_bg.jpg`,
+  `char_player.png`, `char_banthan.png`.
+- Gốc 1 — sai tên file: `title_bg.jpg` **không tồn tại**; file thật
+  là `title_bg.png` (1.335.112 byte, `src/godot/art/`). Vì tên sai
+  nên `build_gh_pages.py` cũng bỏ qua ảnh này khi chunk
+  (`CANH BAO: thieu anh title_bg.jpg — bo qua`, IMG_PARTS không có
+  `title_bg.jpg`) → loader không chặn được fetch → 404 cả trên live
+  lẫn local. `char_player.png`/`char_banthan.png` có chunk trên live
+  nhưng local `src/godot-build/` không có file lẻ (export Godot
+  không copy art lẻ vào build) → 404 khi serve local.
+- Gốc 2 — trùng UID: `tiles/atlas-map003.png.import` dùng chung UID
+  `uid://bfgvu5kjfxhle` với map001, map004 chung `b08jg2ohakm5p`
+  với map002, map005 chung `bfgvu5kjfxhle` với map001 (copy file giữ
+  trùng UID import). Quét toàn project (300 `.import`): chỉ 2 UID
+  trùng này, không còn chỗ khác.
+
+### 111.2 Sửa — web_shell + staging + UID
+
+- `web_shell.html`: `title_bg.jpg` → `title_bg.png` (fetch + 2
+  comment). Không đổi logic retry/fallback.
+- `tools/godot/build_gh_pages.py`:
+  - `IMG_TYPES`: `"title_bg.png": "image/png"` (bỏ `"title_bg.jpg":
+    "image/jpeg"`).
+  - `img_srcs`: `title_bg.png` đọc từ `src/godot/art/title_bg.png`
+    (như 2 char PNG đã làm) thay vì `BUILD_DIR/title_bg.jpg`.
+  - Mới `sync_loose_art()`: copy 3 ảnh từ `art/` sang `BUILD_DIR`
+    sau mỗi lần export để chạy local không 404; gọi ở đầu cả
+    `build()` lẫn `verify()` (verify kiểm thêm file lẻ trong
+    BUILD_DIR khớp byte với `art/`).
+- UID atlas: sửa `uid=` trong 3 `.import` map003/004/005 sang UID
+  mới sinh ngẫu nhiên, chạy `--headless --import` — **Godot tự cấp
+  lại UID khác** (`b38h5xnk8m3f5`, `bhissgu4fvtk`, `eig07pm56sin`)
+  và ghi lại 3 file `.import` (lần import 1 còn in 3 warning trùng
+  do cache cũ; lần import 2: **0 warning**). Bài học: không cần giữ
+  UID tự sinh tay — chỉ cần đổi UID rồi import lại, Godot tự giải
+  quyết trùng; test khóa đúng UID Godot đã cấp, không khóa UID tay.
+
+### 111.3 Test mới + hồi quy — XONG
+
+- Test mới `tests/g4_r89_cleanup_test.gd`: **23/23 PASS** lần đầu
+  (web_shell không còn `title_bg.jpg`, fetch đúng 3 tên, cả 3 ảnh
+  có trong `art/` + có file lẻ trong build, `build_gh_pages.py`
+  không còn `.jpg` + có `sync_loose_art`, 18 atlas UID duy nhất,
+  map001/002 giữ UID cũ).
+- **Hồi quy 117 suite, 5106 check, 0 FAIL** (log
+  `hidden_files/regression-2026-11-28-0145.log`, script chuẩn
+  `tools/godot/run_regression.sh` + thêm r89 vào list) — 0 fail lần
+  thứ 11 liên tiếp (r79–r89); r89 23/23, r88 25/25, r87 42/42,
+  r86 131/131, G1 419/419, G3 95/95, không regression. Đếm đủ:
+  113 suite có đếm = 5106 (4971 dạng N/N + 76 dạng "N PASS / 0
+  FAIL" + 16 dạng "N PASS, 0 FAIL" + 43 dạng "N pass, 0 fail");
+  4 suite không in số đếm như cũ (2 diag + probe + v6_geometry).
+
+### 111.4 Verify + export — XONG (hồi quy 0 fail, pck mới)
+
+- `--check-only` `main.gd` exit 0; scene Main 120 frame exit 0,
+  0 ERROR/warning; `--import` lần 2: 0 warning trùng UID.
+- Export web exit 0: **0 warning UID duplicate, 0 ERROR**; pck
+  **28.036.920 byte, SHA `654e9e35`** (trước `3b37615d`), wasm
+  không đổi `fc74679e…`, `GODOT_THREADS_ENABLED = false`. Lỗi
+  thao tác lúc đầu: export từ repo root với đường dẫn tương đối
+  `src/godot-build` bị lỗi "Target folder does not exist" (đường
+  dẫn export tính theo project dir) — chạy lại từ `src/godot`
+  với `../godot-build/index.html` như G0 thì xong.
+- HTTP 200 đủ **7 file** (cổng 8192): index.html/js/wasm/pck +
+  `title_bg.png`/`char_player.png`/`char_banthan.png` (3 file lẻ
+  lần đầu có 200 sau khi copy).
+- Staging rebuild `build_gh_pages.py` VERIFY OK: pck 208 chunk
+  khớp byte; **`img title_bg.png: version 739e0a57, 10 chunk,
+  khop byte: True`** (trước đây bị bỏ qua); file lẻ trong
+  BUILD_DIR khớp `art/` cả 3.
+- **Browser-verify thật (Chromium 1255 + swiftshader, 720×1280,
+  script mới `hidden_files/pxb-browser-verify-r89.py`):**
+  engine khởi động, ảnh nền title + 2 nhân vật tải được (blob
+  URL, không còn fallback gradient), bấm Bắt đầu chơi, HUD 5
+  dòng như r88 — **0 console error (trước đây 9), 0 pageerror,
+  0 failed request** — ảnh `hidden_files/pxb-browser-verify-
+  2026-11-28/33-r89-title.png`, `34-r89-hud.png` +
+  `console-r89.json`. Venv Playwright `/tmp/pxb-pw-venv` đã mất
+  do /tmp dọn — đã tạo lại (`python3 -m venv` + `pip install
+  playwright`), lần sau kiểm tra lại trước khi chạy.
+
+### 111.5 Push + Deploy — CHUẨN BỊ XONG, CHƯA CHẠY (chờ 'đẩy tiếp')
+
+- Push main r89 (`hidden_files/pxb-push-main-r89.py`, 4 lô):
+  a 141 paths (r88-a 140, bỏ 2 file test r88 `.gd` + `.uid`, thêm
+  2 file test r89 `.gd` + `.uid`, thêm `web_shell.html` +
+  `build_gh_pages.py`; `run_regression.sh` đã có sẵn trong a),
+  b 20 paths (`.import` atlas/bg/ground, không đổi danh sách so
+  với r88 — nội dung 3 file atlas-map003/004/005 đổi UID),
+  c 37 paths (artpass43..63, không đổi so với r88),
+  docs 2 paths (godot-g4 + roles-qc) — tất cả path tồn tại, không
+  file nào vượt giới hạn snapshot-push 188.416 byte/file **trừ**
+  `docs/godot-g4.md` (~790 KB) và `docs/roles-qc.md` (~195 KB —
+  75+ lần push docs trước đều thành công nên giữ nguyên mẫu cũ;
+  nếu lô docs lỗi thì tách `roles-qc.md` ra đẩy riêng sau). Thay
+  script r88 (pck `3b37615d` chưa lên — bỏ, file giữ lại).
+- Deploy r89 (`hidden_files/pxb-deploy-r89.py`, 12 lô: 11 chunk pck
+  208 + final versions.json/index.html; manifest đã kiểm đủ path,
+  file chunk tồn tại trong staging, ráp lại khớp byte). Thay script
+  r88. Lưu ý deploy: `img/title_bg.png/739e0a57/` là thư mục chunk
+  MỚI (10 chunk) — phải push kèm như pck/wasm version mới.
+- **CHƯA CHẠY — chờ chủ nói 'đẩy tiếp'** (không còn thẻ chờ;
+  live vẫn `5f2a052f` r41).
+
+### 111.6 Việc tiếp theo
+
+1. Chủ nói 'đẩy tiếp' → chạy push r89 (4 lô) → deploy pck mới
+   (12 lô + 10 chunk `img/title_bg.png/739e0a57/`) → kiểm live
+   pin + đối chiếu byte.
+2. Browser-verify vòng 89 + vòng 88 + vòng 87 + vòng 86 + vòng 85 +
+   vòng 84 + vòng 83 + vòng 82 + vòng 81 + vòng 80 + vòng 78 +
+   vòng 77 + vòng 68 (thắng 1 trận demo → giữ sạp → mua
+   dien-thoai-cu giảm 10% thật trên server; sang ngày server mới
+   thì hold hết hạn → toast tiếng Việt; bấm B lúc đang giữ sạp →
+   toast tiếng Việt, không mở trận; trade/auction/chat còn nguyên
+   sau restart server thật bằng `server_main.gd --state-file`; mở
+   điện thoại tab Tin nhắn sau khi nối lại chat thì thấy lại tin
+   cũ; **bán lại ao-dai nhận 50% giá thật trên server; tốt nghiệp
+   khóa ngắn Sáng +10 thấy ngay trên chỉ số phụ** — nay đã thấy
+   trên HUD + tab Bạn thân).
+3. Chủ chốt trần bonus chỉ số phụ (hiện KHÔNG kẹp STAT_MAX — nếu
+   chốt trần thì chỉ sửa `PxbStats.apply_stat_gain`/`stat_bonus` +
+   chạy lại test r87).
+4. Vòng 90 (ứng viên lớn nhất còn lại, từ §110.6 mục 2 + §111.4):
+   browser-verify lại toàn bộ các vòng r68–r89 trên build mới
+   (hiện chỉ verify từng vòng lúc làm, chưa có 1 vòng chạy lại
+   hết các kịch bản cũ trên build mới nhất).
+
+## §112 — Vòng 90: browser-verify lại r68–r89 trên build mới, PHA 1 (28/11 ~02:45–03:50 +07, cron 02:45)
+
+> Pha 1 xong: headless subset r68–r89 + browser thật (chat gửi/nhận,
+> làm ca kiếm tiền, mua/bán Áo dài qua server, restart server rồi nối
+> lại thấy tin cũ, lưu slot 1) — đều PASS trên build pck `654e9e35`
+> (không đổi code, không export lại). Còn lại pha 2: thắng trận demo
+> → giữ sạp → mua dien-thoai-cu giảm 10% → sang ngày server hold hết
+> hạn → bấm B lúc giữ sạp; tốt nghiệp khóa ngắn Sáng +10; trade/auction
+> còn nguyên sau restart (cần 2 client — headless đã cover r83).
+
+### 112.1 Headless subset r68–r89 — 23/23 OK, 0 FAIL
+
+- Script mới `hidden_files/pxb-v90-subset.sh` (chạy lại 23 test r68–
+  r89 + online server/probe, log `hidden_files/regression-2026-11-28-
+  0245-v90subset.log`): r68 28/28+33/33, trade 69/69, trade-apply
+  76/76, auction 95/95, ledger 127/127, trade-ledger 97/97, r74 44/44,
+  r75 45/45, r76 125/125, r77 99/99, r78 53/53, r80 110/110, r81 96/96,
+  r82 78/78, r83 120/120, r84 145/145, r85 25/25, r86 131/131, r87
+  42/42, r88 25/25, r89 23/23, online-server 37/37, g2-online 91/91.
+  Code không đổi từ V89 nên không chạy lại full regression 117 suite
+  (V89 đã xanh 5106 check); subset này là bằng chứng đủ cho pha 1.
+
+### 112.2 Browser thật — kịch bản đã chạy (Chromium 1255 + swiftshader, 720×1280)
+
+- Server thật `server_main.gd --port 8765 --state-file
+  /tmp/pxb-v90-state.json` (bản sao bằng chứng:
+  `hidden_files/pxb-v90-server-state.json`); game serve cổng 8193;
+  Chrome thường trực CDP 9222 (giữ 1 session xuyên suốt các script);
+  script `hidden_files/pxb-browser-verify-r90p1.py`,
+  `pxb-browser-verify-r90p2{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q}.py`;
+  ảnh `hidden_files/pxb-browser-verify-2026-11-28/35–68` +
+  `console-r90*.json`. **0 console error, 0 pageerror, 0 failed
+  request trong mọi script.**
+- Load + title art + HUD 5 dòng + 4 chỉ số phụ (r88/r89): PASS
+  (ảnh 35–37; HUD `Ví: 0đ`, `Kỷ 100 • Dũng 100 • Sáng 100 • An Yên 100`).
+- Chat: nối `ws://localhost:8765` (server log `+ peer …,
+  dang online: 1`, toast `Đã nối chat online (1 người).`); gửi
+  `v90 xin chao` → server log `chat [Người chơi] v90 xin chao` +
+  `chat_log` trong state file (ảnh 54–55).
+- Làm ca: 8 ca Bán rong × 292.500đ → ví **2.340.000đ**, EXP 80
+  (HUD ảnh 58; ledger server `money: 2340000`).
+- Mua Áo dài qua server: bấm `Mua Áo dài — 2.000.000đ` → ledger
+  `money: 340000`, `owned: {ao-dai: 1}`, `shop_log` ghi
+  `price_paid: 2000000, discount_applied: 0` (không giữ sạp nên
+  đúng 0% — ảnh 59–61).
+- Bán lại Áo dài qua server: bấm `Bán Áo dài — nhận 1.000.000đ` →
+  ledger `money: 1340000`, `owned: {}`, `shop_log` kind `sell`,
+  `price_received: 1000000` = đúng 50% giá catalog (ảnh 61–62).
+- Restart server thật (kill + chạy lại cùng `--state-file`):
+  state nạp lại đủ (`chat_log` 1 tin, `money: 1340000`,
+  `shop_log` 2 mục); client nối lại cùng `player_id`
+  (`pxb-1795809621536-451257650`, toast `Đã nối chat online`),
+  ví HUD vẫn 1.340.000đ; cuộn tab Tin nhắn xuống cuối thấy lại
+  `Người chơi: v90 xin chao` (ảnh 64–66).
+- Lưu slot 1: tab Cài đặt → `Lưu vào slot 1` → toast `Đã lưu vào
+  slot 1 (file).` + `Đồng bộ: local-ok (da-luu-local-slot-1-qua-file)`
+  (ảnh 67–68).
+
+### 112.3 Bài học phương pháp — viewport CDP + click chậm (ghi để không tái phạm)
+
+1. **CDP persistent tự về viewport 720×1080:** script 2a gọi
+   `set_viewport_size(720,1280)` nên ảnh 35–38 đúng 1280; các script
+   2b–2h KHÔNG gọi lại nên viewport về 720×1080, canvas 720×1080,
+   mọi tọa độ click đọc từ ảnh 1280 đều lệch hệ số 1280/1080 ≈
+   1,185 theo chiều dọc. Hậu quả đã thấy: click (150,368) trúng tab
+   Sức khỏe thay vì Việc làm; click (360,795) không focus được ô
+   nhập chat; click (455,1130) nằm NGOÀI viewport nên nút `Đóng (B)`
+   không đóng trận (tưởng bug game — KHÔNG phải); gõ `V90 xin chao
+   Pho Xo Bo` khi điện thoại đã đóng thì `P` đóng điện thoại + `B`
+   mở trận demo. Sau khi sửa (gọi `set_viewport_size` đầu MỖI
+   script + verify `canvas 720×1280`, ảnh 53) mọi click đều trúng.
+   **LUẬT: script CDP nào cũng set viewport 720×1280 + đo lại
+   canvas trước khi click.**
+2. **Click chậm mới ăn ở FPS thấp:** `mouse.click` nhanh (down+up
+   trong vài ms) có lúc không focus được LineEdit; click giữ 800ms
+   (`mouse.down`, đợi, `mouse.up`) thì focus + gõ chữ được ngay
+   (đã chứng minh ở 2g: `12345` hiện trong ô nhập + con trỏ).
+   Dùng `slow_click` cho mọi tương tác canvas từ nay.
+3. **Gõ chữ có phím nóng thì phải chắc ô nhập đã focus:** nếu chưa
+   focus, `P`/`B`/`F`/WASD trong chuỗi gõ sẽ kích hoạt hotkey game
+   (đóng điện thoại/mở trận/đổi khung/di chuyển). Gõ xong chụp ngay
+   để xác nhận chữ đã vào ô trước khi bấm Gửi.
+4. **Chat history nhân đôi khi nối lại (phát hiện nhỏ, chưa sửa):**
+   sau restart + nối lại, tab Tin nhắn hiện `Người chơi: v90 xin
+   chao` 2 lần (ảnh 66) trong khi `chat_log` server chỉ có 1 mục —
+   client giữ log cũ của mình rồi cộng thêm history server gửi lúc
+   hello. Cần sửa ở vòng sau (khử trùng theo `at_ms`/`text` khi
+   nhận history), không chặn V90.
+5. **Cài đặt hiện `Online: ngoại tuyến` dù chat đã nối** (ảnh 68) —
+   `_online_text()` báo theo kênh khác với trạng thái WS; ghi để
+   vòng sau kiểm, không chặn V90.
+
+### 112.4 Việc tiếp theo — Vòng 90 pha 2
+
+1. Thắng 1 trận demo (bấm B, đánh bằng click ô xanh/địch trong tầm
+   — NHỚ click chậm + viewport 1280) → giữ sạp → mua
+   dien-thoai-cu giảm 10% thật trên server (cần ví ≥ 4.500.000đ:
+   làm thêm ca Bán rong/Shipper; có thể tải lại slot 1 đã lưu ở
+   pha 1: ví 1.340.000đ + làm thêm ~11 ca) → sang ngày server mới
+   thì hold hết hạn → toast tiếng Việt → bấm B lúc đang giữ sạp →
+   toast tiếng Việt, không mở trận.
+2. Tốt nghiệp khóa ngắn Sáng +10: đăng ký khóa ngắn (tab Học tập,
+   nút `Khóa ngắn: Sáng tạo 3 ngày — 2.000.000đ`) → bấm F ×9 (3
+   ngày game) → toast tốt nghiệp + Sáng 110 trên HUD + tab Bạn thân.
+3. Trade/auction còn nguyên sau restart server (cần 2 client cùng
+   lúc — headless r83 đã 120/120; browser chỉ làm khi có 2 tab).
+4. Sửa nhân đôi chat history khi nối lại (§112.3 mục 4).
+5. Chủ nói 'đẩy tiếp' → chạy push r89 (4 lô) → deploy pck `654e9e35`
+   (12 lô + 10 chunk `img/title_bg.png/739e0a57/`) → kiểm live pin +
+   đối chiếu byte (script r89 vẫn giữ, chưa chạy).
+6. Chủ chốt trần bonus chỉ số phụ (hiện KHÔNG kẹp STAT_MAX).
+
+## §114 — Vòng 92: cầu nối window.__pxb_battle + replay đồng bộ, trận vẫn thua (28/11 ~04:45–05:45 +07, cron 04:45)
+
+### 114.1 Chẩn đoán V91 — XONG (nguyên nhân replay mù)
+
+- Đợi 3s sau Kết thúc lượt < AI delay 1,2s game (≈ 5,5s wall ở
+  ~0,22×) nên click lượt A sau rơi vào lượt địch (bị bỏ qua/chỉ xem),
+  click Kết thúc lượt bỏ qua lượt địch trước khi AI kịp đi. Bằng
+  chứng: ảnh 83 cả 2 đội 100% vòng 12/12; ảnh 84 đội Chợ thắng vòng
+  13 sau khi script dừng bấm. Luật trận đúng (sim 2/2 PASS) — lỗi ở
+  đồng bộ script, không phải luật.
+
+### 114.2 Sửa — cầu nối trận ra JS (code thật)
+
+- `scripts/battle_scene.gd`: `battle_status()` (open/over/winner/
+  round/turn_fighter/turn_team/% HP 2 đội/last_action/result_text/
+  reachable/attackable/vị trí + HP + moved/acted từng đấu sĩ) +
+  `_push_bridge()` (`window.__pxb_battle = JSON.stringify(status)`,
+  chỉ trên web theo đúng mẫu `__pxb_map`/`__pxb_tile` của Main) +
+  cờ `_bridge_dirty` (đặt ở setup/turn-changed/battle-finished/
+  click/end-turn/AI-turn, flush trong `_process`).
+- `main.gd` `_close_battle()`: `window.__pxb_battle = null` (chỉ web)
+  để script không đọc nhầm trận cũ; mở trận bị chặn (đang giữ sạp)
+  thì bridge vẫn null — phân biệt được.
+- Test mới `tests/g4_r92_battle_bridge_test.gd`: **42/42 PASS**
+  (trạng thái rỗng/mới/di/đánh/kết thúc lượt + AI/kết trận/JSON
+  round-trip; `_push_bridge` headless không lỗi).
+- Hồi quy đầy đủ `run_regression_2026-11-28-0445-v92.sh`:
+  **119 suite, 5165 check, 0 FAIL** (lần sạch thứ 12; log
+  `regression-2026-11-28-0445-v92.log`).
+- Export web exit 0: pck **28.056.808 byte, SHA `4367b31a…`**
+  (trước `6dd6bf10…`), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; scene 120 frame exit 0, 0 ERROR;
+  HTTP 200 đủ 6 file (cổng 8194).
+
+### 114.3 Browser-verify replay đồng bộ (r92a) — bridge CHẠY, trận VẪN THUA
+
+- Chạy bằng venv `~/workspace/pxb-pw-venv` (python3 hệ thống KHÔNG
+  có playwright — ghi để vòng sau khỏi tìm lại); reload build mới,
+  Start, nối chat, mở trận bằng B; script
+  `hidden_files/pxb-browser-verify-r92a.py`, ảnh 85–88 +
+  `console-r92a.json`; **0 console error / 0 pageerror /
+  0 failed request**.
+- Bridge đọc được thật: đợi đúng đấu sĩ từng lượt (34 lượt, 0 skip),
+  kiểm chứng từng click (vị trí/HP/cờ acted) rồi mới Kết thúc lượt.
+- Kết quả: **landed 9/37, missed 28** — toàn bộ miss là "diverged"
+  (ô đích không có địch + không nằm trong reachable); 3 đòn trúng
+  (luợt 5, 7, 18) không đủ; **winner=B** — "Đội Chợ Đầu Mối thắng
+  trận! Danh vọng: Đội Bạn +10, Đội Chợ Đầu Mối +50. Giữ sạp
+  sap-cho-dau-moi đến ngày game 8." (hold về đội Chợ, không phải
+  client — client thua nên không sync hold lên server).
+- Probe headless (`tests/zz_v92_probe_tmp.gd`, đã xóa sau khi chạy):
+  qua BattleScene + `click_screen` + `simulate_seconds(3.0)` thì sau
+  vòng 1: B1 (8,3), **B2 (6,4)**, B3 (8,5) — ĐÚNG như sim (đích tấn
+  công vòng 2 của ban-1 là B2 ở (6,4)); `move_range` = 3 cả 2 bên.
+  → Tầng BattleScene/logic KHỚP sim khi chạy bằng simulate_seconds.
+  Lệch chỉ xuất hiện trên trình duyệt thật (khung hình chậm).
+- Ảnh 87 (giữa trận, vòng 6): cả 2 đội 100%, B vẫn ở phía phải,
+  chưa áp sát — B di chuyển rải rác, không đánh như sim.
+- Giả thuyết mạnh nhất cho V93 kiểm: đồng hồ lượt (10s) và AI delay
+  (1,2s) cùng tích delta khung hình; khi khung hình chậm/giật, lượt
+  địch có thể hết giờ (`expire_turn`) trước khi AI kịp đi, hoặc lượt
+  AI chạy không đủ — cần probe headless với delta lớn (gọi
+  `_advance_timers` với delta 2–9s) để tái hiện, rồi sửa (vd: AI đi
+  ngay khi tới lượt thay vì tích delay, hoặc đồng hồ lượt không hết
+  khi đang chờ AI). Phương án dự phòng: replay tham lam trực tiếp từ
+  bridge (`reachable`/`attackable`) thay vì theo kế hoạch sim.
+
+### 114.4 Hai phát hiện chặn pha 2 (§112.4 mục 1–2)
+
+1. **player_id KHÔNG lưu qua reload** — `ws_player_id` rỗng → tự
+   sinh `pxb-<ms>-<rand>` mỗi lần nối (`pxb_online.gd:279,687-710`).
+   Reload trang ở r92a tạo player mới `pxb-1795818138627-308217860`,
+   ví 0đ (HUD ảnh 85c: "Ví: 0đ • EXP 0", ngày 1); 4.668.750đ của V91
+   kẹt trên player cũ `pxb-1795813828101-971133250` (ledger server
+   nay có 2 entry; `holds: {}`, `shop_log: []`). → Mua
+   dien-thoai-cu -10% (cần 4.500.000đ) hiện KHÔNG làm được trên
+   client mới nếu không kiếm lại ~16 ca hoặc khôi phục player_id cũ
+   (save slot có lưu player_id không — chưa kiểm).
+2. **Hold-sync có nguy cơ bị server từ chối `het-han-giu-sap` —
+   CHƯA kiểm chứng bằng browser** (client thua trận nên chưa từng
+   gửi sync): hold client [startGameDay=1, untilGameDay=8] so với
+   `server_day` 8 (đã sang 9 sau rollover 22:25 UTC) → `until <=
+   server_day` → server từ chối (`pxb_server.gd`
+   `_handle_stall_hold_sync`). Cần trận thắng thật để thấy ack; nếu
+   đúng bị từ chối thì phải quyết cách neo cửa sổ hold theo ngày
+   server (vòng 81: ngày server làm chủ) thay vì ngày game local.
+
+### 114.5 Việc tiếp theo — Vòng 93
+
+1. Probe delta lớn tái hiện AI địch không đi trên trình duyệt → sửa
+   (ưu tiên 1 — chặn cả pha 2 mục 1).
+2. Quyết + sửa player_id lưu qua reload (lưu vào save slot /
+   localStorage) để ví server không mất khi F5.
+3. Thắng trận thật → sync hold → xem ack server (kiểm giả thuyết
+   `het-han-giu-sap` ở §114.4 mục 2) → mua dien-thoai-cu -10% → sang
+   ngày server → bấm B lúc giữ sạp.
+4. Tốt nghiệp khóa ngắn Sáng +10; trade/auction sau restart server
+   (cần 2 client).
+5. Chuẩn bị lại push main (gộp tới r92: `battle_scene.gd` +
+   `main.gd` + test r92 + docs §113/§114 + roles-qc) + deploy pck
+   `4367b31a` (staging `tools/godot/build_gh_pages.py` rồi verify
+   khớp byte) — bộ r89 (pck `654e9e35`) đã LỖI THỜI, không chạy;
+   CHƯA CHẠY — vẫn chờ chủ nói 'đẩy tiếp'. Live vẫn r41
+   pck `5f2a052f`.
+6. Chủ chốt trần bonus chỉ số phụ (hiện KHÔNG kẹp STAT_MAX).
+
+## §113 — Vòng 91: sửa nhân đôi chat history + kiếm tiền + replay trận mù (28/11 ~03:45–04:45 +07, cron 03:45)
+
+> Mục này tái dựng từ bằng chứng (script/log/ảnh/state file) vì lượt
+> V91 kết thúc mà chưa kịp ghi docs — không có §113 trong lượt đó.
+
+### 113.1 Sửa nhân đôi chat history khi nối lại (§112.3 mục 4) — XONG
+
+- `scripts/pxb_online.gd` (sửa 20:52 UTC): khi nhận history lúc hello,
+  khử trùng theo `at_ms`/`text` qua `_chat_msg_seen` — cả trùng trong
+  cùng 1 gói history (dòng ~844–854). Client giữ log cũ của mình rồi
+  cộng thêm history server gửi nên trước đây tin hiện 2 lần (ảnh 66).
+- Test mới `tests/g4_r90_chat_dedupe_test.gd`: **15/15 PASS** — 2 client
+  WS (Main + peer B, cổng 18790): B gửi 2 tin, Main nhận đủ 2, Main
+  ngắt + nối lại giữ nguyên log → history không nhân đôi (vẫn 2 tin).
+- Subset hồi quy `pxb-v91-subset.sh`: **24/24 OK, 0 FAIL** (log
+  `regression-2026-11-28-0345-v91subset.log`; r68 28/28+33/33, trade
+  69/69, trade-apply 76/76, auction 95/95, ledger 129/129,
+  trade-ledger 100/100, r74–r89 như V90 subset, online-server 37/37,
+  g2-online 91/91).
+
+### 113.2 Kiếm tiền cho pha 2 (§112.4 mục 1) — XONG, ví 4.668.750đ
+
+- Build mới export 21:01 UTC (pck 28.042.740 byte, SHA đo lúc 04:50
+  là `6dd6bf10…`; docstring r91a ghi `b91fbec5` — CHƯA đối chiếu, ghi
+  để vòng sau kiểm lại), serve cổng 8194, server mới
+  `--state-file /tmp/pxb-v91-state.json` cổng 8765, Chrome CDP 9222
+  giữ nguyên; script `pxb-browser-verify-r91a..k.py`, ảnh 69–84 +
+  `console-r91*.json`, 0 console error / 0 pageerror / 0 failed request.
+- r91d: 14 ca Bán rong × 292.500đ → ví 4.095.000đ (hết quota tuần 1);
+  r91e: restart server → nối lại → 2 ca nữa → HUD 4.680.000đ; state
+  file lúc 21:27 UTC ghi `money: 4.668.750` — chênh 11.250đ đúng bằng
+  1 ca Shipper 281.250đ thay cho Bán rong (15×292.500 + 281.250 =
+  4.668.750; suy ra từ số liệu, chưa đối chiếu log ca).
+- Server log: peer `pxb-1795813828101-971133250` nối, `dang online: 1`.
+
+### 113.3 Replay trận demo mù (r91h–r91k) — THUA, nguyên nhân đã rõ
+
+- Test mới `tests/g4_r91_battle_sim_test.gd` (21:35 UTC): **2/2 PASS** —
+  mô phỏng trận demo 3v3, cả 2 bên theo đúng luật AI (`ai_take_turn`),
+  in kế hoạch 37 click; kết quả sim: **đội A thắng, 13 vòng**
+  (`winner=A rounds=13 teamA_turns=37 clicks=37` — HP in ra là sau
+  khi hồi đầy nên 350/350 cả 2 bên, không phải tỉ số lúc chốt trận).
+- r91j chạy lại kế hoạch mù: 34 lượt, mỗi lượt click xong bấm Kết thúc
+  lượt rồi chỉ đợi 3s cho lượt AI — ảnh 83 (sau 34 lượt): vòng 12/12,
+  **cả 2 đội 100% HP** (không đòn nào của A trúng); ảnh 84 (r91k):
+  panel `KẾT THÚC TRẬN — Đội Chợ Đầu Mối thắng trận!`, vòng 13/12,
+  còn 1:28 — sau khi script dừng bấm, AI đội Chợ được đi đủ lượt và
+  đánh đội Bạn xuống dưới 100% rồi chốt trận ở vòng 13.
+- Chẩn đoán (V92 xác nhận bằng code): AI cần 1,2s game ≈ 5,5s wall
+  mới hành động; đợi 3s nên click lượt A sau rơi vào lượt địch (bị
+  bỏ qua/chỉ xem), click Kết thúc lượt bỏ qua lượt địch trước khi AI
+  kịp đi — A không đánh trúng đòn nào, B cũng không được đi đủ lượt
+  trong lúc replay. Không phải lỗi luật trận (sim 2/2 PASS) mà lỗi
+  đồng bộ script. Sửa ở V92 (§114): cầu nối `window.__pxb_battle`.
+- Hạ tầng V91 còn chạy lúc bàn giao V92: Chrome CDP 9222, http.server
+  8194 (`src/godot-build`), server 8765 + state `/tmp/pxb-v91-state.json`
+  (`money: 4.668.750`, `holds: {}`, `shop_log: []`, `chat_log: []`).
+- Push/deploy r89 CHƯA CHẠY — vẫn chờ chủ nói 'đẩy tiếp'; live vẫn
+  r41 pck `5f2a052f`.
+
+### 113.4 Việc tiếp theo — Vòng 92
+
+1. Cầu nối `window.__pxb_battle` + test mới → export → replay trận
+   có đồng bộ, thắng trận demo thật trên trình duyệt.
+2. Thắng trận → giữ sạp → mua dien-thoai-cu giảm 10% → sang ngày
+   server hold hết hạn → bấm B lúc giữ sạp (theo §112.4 mục 1).
+3. Tốt nghiệp khóa ngắn Sáng +10 (§112.4 mục 2); trade/auction sau
+   restart (§112.4 mục 3, cần 2 client).
+4. Đối chiếu SHA pck V91 (`6dd6bf10…` đo được vs `b91fbec5` trong
+   docstring r91a). — HẾT HIỆU LỰC: pck V91 đã bị thay bằng pck V92
+   `4367b31a…`; chênh có thể do export lại sau khi viết script r91a.
+
+
+## §115 — Vòng 94: hoàn thiện V93 + replay trình duyệt THẮNG TRẬN, hold-sync bị từ chối vì lệch ngày (28/11 ~06:45–08:15 +07, cron 06:45)
+
+### 115.1 Hoàn thiện V93 — dòng main.gd đã có sẵn trong cây làm việc
+
+- Dòng "tùy chọn" ở `_ready()` mà báo cáo V93 còn để lại đã CÓ trong
+  cây làm việc: `main.gd:231` `online.ensure_ws_player_id()` kèm chú
+  thích Vòng 93 (khôi phục id từ kho bền ngay lúc mở game). Không cần
+  sửa thêm code ở vòng này.
+- Xác nhận code V93 có mặt: `battle_scene.gd:499` `_ai_pending()` +
+  `:524` AI đi trước khi xét hết giờ + `:535` không hết giờ khi đang
+  chờ AI; `pxb_online.gd:174` `PLAYER_ID_FILE` + `ensure_ws_player_id()`.
+- `--check-only` exit 0: `battle_scene.gd`, `pxb_online.gd`, `main.gd`,
+  `g4_r93_battle_timer_test.gd`, `g4_r93_player_id_test.gd`.
+- Test r93 chạy lại headless: timer **31/31**, player_id **25/25**,
+  double-click **9/9**, bridge r92 **42/42** PASS.
+- Hồi quy đầy đủ `run_regression_2026-11-28-0645-v94.sh`:
+  **5230 check, 0 FAIL** (lần sạch thứ 13; bằng tổng v93 vì không
+  thêm suite mới). Log `regression-2026-11-28-0645-v94.log`.
+- Scene 120 frame exit 0, 0 ERROR. Export web exit 0 (~19s): pck
+  **28.073.140 byte, SHA `ef840bd0…`** — trùng byte với pck export
+  23:44 UTC 27/11 (export xác định), wasm không đổi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; HTTP 200 đủ 6 file (cổng 8195).
+
+### 115.2 Browser-verify r93 — LẦN ĐẦU THẮNG TRẬN THẬT (build đã sửa)
+
+- Chạy script `hidden_files/pxb-browser-verify-r93.py` bằng venv
+  `~/workspace/pxb-pw-venv`, serve `src/godot-build/` cổng 8195 +
+  server Godot cổng 8765 (state `user://pxb_server_state.json`).
+  Ảnh 89–92 + `console-r93.json` (ghi đè bản chạy 23:17 UTC).
+- **Phần 1 — player_id bền qua reload: PASS.** Trước reload
+  `pxb-1795824012388-180572357`, sau reload giống hệt, sau nối lại
+  chat vẫn giống hệt. Server log xác nhận phía server: peer rời rồi
+  vào lại với CÙNG id (`+ peer 838523185 (pxb-1795824012388-…)`).
+- **Phần 2 — replay trận: THẮNG, landed 36/37, winner=A.**
+  `plan-summary landed=36 missed=1 skipped=0` (r92a và bản chạy
+  23:17 UTC trước sửa đều 9/37, toàn "diverged"); duy nhất 1 miss
+  là `plan-34-ban-1-attack-miss` (không phải diverged — click tấn
+  công không trừ HP, cần theo dõi, chưa rõ nguyên nhân).
+  Kết quả: "Đội Bạn thắng trận! Danh vọng: Đội Bạn +50, Đội Chợ Đầu
+  Mối +10. Giữ sạp sap-cho-dau-moi đến ngày game 8."
+  **0 console error / 0 pageerror / 0 failed request.**
+- Đối chiếu bản chạy 23:17 UTC 27/11 (build TRƯỚC sửa đồng hồ —
+  `battle_scene.gd` sửa xong 23:37 UTC, sau giờ chạy): landed=9,
+  winner=B, player_id đã PASS (build lúc đó đã có sửa player_id).
+  Chênh 9 → 36 là bằng chứng trực tiếp sửa V93 có tác dụng trên
+  trình duyệt thật, không chỉ headless.
+
+### 115.3 Hold-sync sau trận thắng — BỊ TỪ CHỐI, lý do KHÔNG PHẢI het-han-giu-sap
+
+- Client thắng → `_on_battle_finished` gọi `_sync_hold_to_server()`
+  (main.gd:984) gửi hold [startGameDay=1, untilGameDay=8, game_day=1]
+  lên server. Server sau trận: **`holds: {}`** — hold KHÔNG được
+  chấp nhận.
+- Lý do thật (đọc code, không đoán): `_check_client_day`
+  (`pxb_server.gd:1013`) so game_day client (1) với
+  `server_day()` ≈ **17** (state file tồn tại từ 27/11,
+  `server_day_base=1`, `day_length_ms=1800000`, đã trôi ~16,4 ngày
+  server) → 1 ≠ 17 nên server trả ack
+  **`ngay-server-khong-khop`** ngay ở gate đầu, CHƯA tới gate
+  `until <= day` (`het-han-giu-sap`). Giả thuyết §114.4 mục 2
+  (het-han-giu-sap vì cửa sổ [1,8) < server_day 8/9) SAI về lý do
+  trực tiếp — gate kiểm ngày chạy trước; dù vậy kết luận vẫn đúng
+  ở chỗ hold local [1,8) không bao giờ qua được server ngày 17.
+- Hạn chế bằng chứng: toast ack
+  ("Ngày game lệch với máy chủ — thử đồng bộ lại sau.") không được
+  chụp lại — ảnh kết quả 92 chụp 2s sau khi trận kết thúc chỉ hiện
+  toast thắng trận; server không log gói hold-sync. Kết luận dựa
+  trên: client đã nối (peer cùng id), code gọi sync vô điều kiện
+  khi thắng, `holds:{}` sau trận, và gate ngày trong code là xác
+  định (1 ≠ 17).
+- Hệ quả pha 2 (§114.5 mục 3): mua dien-thoai-cu -10% CHƯA làm
+  được — không có hold trên server nên không có giá sỉ; ví của
+  player mới trong phiên browser là 0đ. Cần quyết + sửa neo cửa
+  sổ hold theo ngày server (xem §115.4 mục 1).
+- Ghi chú state file: lúc mở server lần này, ledger đang RỖNG
+  (0 entry) — ví 4.668.750đ của V91 trên player cũ
+  `pxb-1795823828101-971133250` KHÔNG còn trong state file hiện tại
+  (không rõ bị reset bởi lần chạy server/test nào sau r92a).
+  Sau phiên này ledger có 1 entry là player mới, money 0.
+
+### 115.4 Việc tiếp theo — Vòng 95
+
+1. **Neo cửa sổ hold theo ngày server (ưu tiên 1 — chặn pha 2).**
+   Client mới luôn bắt đầu ngày game 1 trong khi server đã ngày
+   ~17 (state tồn tại, 30 phút/ngày) nên hold local [1,8) không
+   bao giờ được chấp nhận. Quyết Bậc 1: khi thắng trận mà đang nối
+   server, tính cửa sổ hold từ `server_day` (start=server_day,
+   until=server_day+7) thay vì ngày local; hiển thị "Giữ sạp đến
+   ngày X" + logic chặn B phải dùng cùng mốc. Cần test headless
+   mới (sync được chấp nhận khi ngày khớp) + replay trình duyệt
+   (thắng → holds có entry → mua dien-thoai-cu -10%).
+2. Tốt nghiệp khóa ngắn Sáng +10; trade/auction sau restart server
+   (cần 2 client).
+3. Push main gộp tới r93 + deploy pck `ef840bd0` (staging
+   `tools/godot/build_gh_pages.py` rồi verify khớp byte) — CHƯA
+   CHẠY, deploy vẫn chờ chủ nói 'đẩy tiếp'. Live vẫn r41
+   pck `5f2a052f`.
+4. Theo dõi miss `plan-34 attack-miss` (1/37) ở replay sau — nếu
+   lặp lại thì probe headless click tấn công khi địch vừa di
+   chuyển.
+5. Chủ chốt trần bonus chỉ số phụ (hiện KHÔNG kẹp STAT_MAX).
+

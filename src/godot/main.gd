@@ -7,6 +7,13 @@ extends Node2D
 ## Education (dang ky hoc) + Social / Titles / Story (hien thi + len
 ## chuong) + Tools (xem bac + nang cap trong tab Viec lam) + Online
 ## (trang thai + kiem tra mang trong tab Cai dat).
+## + G4 vong 74: UI trade / dau gia trong dien thoai — nut gui de
+## nghi doi do cho nguoi online, chap nhan/tu choi/huy de nghi (tab
+## Tin nhan) + dat gia / mo phien / huy phien / lam moi (tab Cho).
+## + G4 vong 75: o nhap so trong dien thoai — so tien muon lay khi
+## doi do, gia khoi diem + thoi gian phien, gia dau; het so mau co
+## dinh 100.000d / 60 giay o vong 74 (chi con lam mac dinh khi o
+## trong hoac go sai).
 ## Vi: MỘT vi duy nhat la jobs.gold; economy.money chi la ban dong bo
 ## tam truoc moi giao dich mua/gui/rut (xem _wallet_to_economy).
 ## Danh vong: bien fame cua Main (PxbStats chua co fame); tot nghiep
@@ -61,6 +68,17 @@ const CRAFT_RECIPE_BY_NAME := {
 	"Xe Đẩy Hàng": "che-xe-day",
 	"Đèn Soi": "che-den-soi",
 }
+# Vong 74 (G4 §95.5): UI trade / dau gia trong dien thoai — de nghi
+# mau + phien mau dung so mac dinh, nguoi choi go so tay o vong 75.
+# De nghi: cho mon dau tien trong tui, lay so tien o nhap (mac dinh
+# 100.000d). Phien: ban mon dau tien trong tui, gia khoi diem + thoi
+# gian o nhap (mac dinh 100.000d, 60 giay). Dat gia: o nhap, de
+# trong thi lay gia tiep theo (gia hien tai + 1.000d).
+const TRADE_OFFER_WANT_MONEY_VND := 100000
+const AUCTION_CREATE_START_PRICE_VND := 100000
+const AUCTION_CREATE_DURATION_S := 60
+# Vòng 87: tên hiển thị 4 chỉ số phụ (khóa ngắn hạn tốt nghiệp).
+const SUB_STAT_NAMES := {"ky": "Kỷ", "dung": "Dũng", "sang": "Sáng", "an-yen": "An Yên"}
 
 var font: Font
 var font_bold: Font
@@ -87,12 +105,28 @@ var crafting: PxbCrafting = null
 var phonehub: PxbPhoneHub = null
 var savecloud: PxbSaveCloud = null
 var economy: PxbEconomy = null
+# Túi đồ slice (PxbInventory: com-tam / ca-phe / sach / ao-mua) —
+# khác `inventory` (Dictionary nguyên liệu chế đồ của hotspot).
+# G4 bước 11: bag là túi để áp trade WS vào.
+var bag: PxbInventory = null
 var education: PxbEducation = null
 var social: PxbSocial = null
 var titles: PxbTitles = null
 var story: PxbStory = null
 var tools: PxbTools = null
 var online: PxbOnline = null
+## Vong 77: lan mua o cho dang cho server xac nhan (chi 1 lan
+## cho — nut mua an trong luc cho, xem TAB_CHO): {req_id,
+## item_id, discount_percent, money_at_send} (money_at_send =
+## jobs.gold luc gui — ack ve thi ap jobs.gold = ack.money +
+## (jobs.gold - money_at_send) de khong mat tien kiem/tieu local
+## trong luc cho ack; rong = khong co lan mua nao dang cho).
+var _pending_shop_buy: Dictionary = {}
+# Vong 86: lan ban lai cho cho dang cho server xac nhan
+# shop_sell_ack — {req_id, item_id, money_at_send} (money_at_send =
+# jobs.gold luc gui — ack ve thi ap jobs.gold = ack.money +
+# (jobs.gold - money_at_send); rong = khong co lan ban nao dang cho).
+var _pending_shop_sell: Dictionary = {}
 # Danh vong (PxbStats chua co fame) + trang thai dien thoai.
 var fame := 0
 var phone_open := false
@@ -112,6 +146,7 @@ var _hud_day: Label
 var _hud_bag: Label
 var _hud_gold: Label
 var _hud_stats: Label
+var _hud_substats: Label # Vong 88: dong chi so phu (Ky/Dung/Sang/An Yen).
 var _toast: Label
 var _dpad: Control = null  # Vong 10: nut mui ten tren man hinh (di bang cham).
 var _dpad_press_count := 0  # Vong 10b: dem button_down (chan doan click lap).
@@ -155,6 +190,14 @@ var _phone_actions: VBoxContainer
 var _phone_act_scroll: ScrollContainer
 var _phone_content_scroll: ScrollContainer  # Vong 4: cao 224 de hien tron dong Chi Le.
 var _phone_chat_input: LineEdit = null  # G4 buoc 7: o nhap chat WS (tab Tin nhan).
+var _phone_trade_money_input: LineEdit = null  # Vong 75: o nhap so tien muon lay khi doi do.
+var _phone_auction_price_input: LineEdit = null  # Vong 75: o nhap gia khoi diem.
+var _phone_auction_duration_input: LineEdit = null  # Vong 75: o nhap thoi gian phien (giay).
+var _phone_bid_input: LineEdit = null  # Vong 75: o nhap gia dau.
+var _trade_want_money_vnd := TRADE_OFFER_WANT_MONEY_VND  # Vong 75: giu so da go qua moi lan ve lai dien thoai.
+var _auction_start_price_vnd := AUCTION_CREATE_START_PRICE_VND
+var _auction_duration_s := AUCTION_CREATE_DURATION_S
+var _bid_amount_vnd := 0  # Vong 75: 0 = de trong, tu lay gia tiep theo.
 var _phone_today: Label  # Khoi "Hom nay" lap khoang trong dien thoai.
 var _phone_tab_buttons := {}
 
@@ -182,6 +225,10 @@ func _ready() -> void:
 	# Man hinh title mo san: khoa input cho toi khi bam "Bat dau".
 	if player != null:
 		player.input_blocked = true
+	# Vong 93: khoi phuc player_id WS ben tu kho luu (file user:// /
+	# localStorage) ngay tu luc mo game, de vi server khong mat khi
+	# F5 — khong doi id neu da co (xem PxbOnline.ensure_ws_player_id).
+	online.ensure_ws_player_id()
 
 
 # Tao cac he G2 lam node con cua Main. Stats uu tien dung autoload
@@ -209,6 +256,8 @@ func _create_systems() -> void:
 	add_child(savecloud)
 	economy = PxbEconomy.new()
 	add_child(economy)
+	bag = PxbInventory.new()
+	add_child(bag)
 	education = PxbEducation.new()
 	education.day_number = day
 	add_child(education)
@@ -229,8 +278,45 @@ func _create_systems() -> void:
 	# G4 buoc 7: chat WS — tin/presence moi thi lam tuoi dien
 	# thoai neu dang mo tab Tin nhan, khong thi bao so chua doc.
 	online.ws_chat_received.connect(_on_ws_chat_received)
+	# Vong 85: lich su chat ve sau khi hello lai — noi de lam tuoi
+	# tab Tin nhan ngay khi lich su ve (welcome den truoc nen
+	# _refresh_phone o _on_ws_status_changed chay luc log con trong).
+	online.ws_chat_history_received.connect(_on_ws_chat_history_received)
 	online.ws_presence_changed.connect(_on_ws_presence_changed)
 	online.ws_status_changed.connect(_on_ws_status_changed)
+	# G4 bước 11: nối túi + ví cho trade WS — bag là túi đồ slice,
+	# economy.money là bản đồng bộ của ví chung jobs.gold.
+	online.trade_inventory = bag
+	online.trade_economy = economy
+	online.ws_trade_completed.connect(_on_ws_trade_completed)
+	online.ws_auction_closed.connect(_on_ws_auction_closed)
+	# Vong 74: UI trade / dau gia trong dien thoai — de nghi den,
+	# de nghi da gui / bi tu choi / huy, phien mo / dau gia / dong.
+	online.ws_trade_offer_received.connect(_on_ws_trade_offer_received)
+	online.ws_trade_offered_sent.connect(_on_ws_trade_offered_sent)
+	online.ws_trade_declined.connect(_on_ws_trade_declined)
+	online.ws_trade_cancelled.connect(_on_ws_trade_cancelled)
+	online.ws_trade_error.connect(_on_ws_trade_error)
+	online.ws_auction_created.connect(_on_ws_auction_created)
+	online.ws_auction_bid.connect(_on_ws_auction_bid)
+	online.ws_auction_list.connect(_on_ws_auction_list)
+	online.ws_auction_cancelled.connect(_on_ws_auction_cancelled)
+	online.ws_auction_error.connect(_on_ws_auction_error)
+	# Vong 76: ack so cai server — so lech thi ap vao vi/tui.
+	online.ws_ledger_sync_acked.connect(_on_ws_ledger_sync_acked)
+	# Vong 77: ack mua o cho qua server — ap vao vi + owned +
+	# Danh vong khi ok (xem _on_ws_shop_buy_acked).
+	online.ws_shop_buy_acked.connect(_on_ws_shop_buy_acked)
+	# Vong 86: ack ban lai cho cho qua server — ap vao vi +
+	# owned khi ok (xem _on_ws_shop_sell_acked).
+	online.ws_shop_sell_acked.connect(_on_ws_shop_sell_acked)
+	# Vong 80: ack dong bo giu sap — bao khi server tu choi hold
+	# (xem _on_ws_stall_hold_synced); ngay game cho server xet han.
+	online.ws_stall_hold_synced.connect(_on_ws_stall_hold_synced)
+	# Vong 81: ngay server doi thi dong bo lai hold dang giu
+	# theo ngay moi (xem _on_ws_server_day_changed).
+	online.ws_server_day_changed.connect(_on_ws_server_day_changed)
+	online.ws_game_day = day
 
 func _map_by_id(map_id: int) -> Dictionary:
 	for m in maps_data["maps"]:
@@ -258,6 +344,16 @@ func load_map(map_id: int, spawn_tile: Vector2i) -> void:
 		_camera.reset_smoothing()
 	_hud_map.text = "Phố Xô Bồ — " + String(_map_by_id(map_id)["name"])
 	_fit_hud_map()
+	# Vong 53: lo map hien tai ra window.__pxb_map de script
+	# browser-verify xac nhan dung map sau moi chan (bai hoc vong 52:
+	# anh lech +1 map ma ten file khong phat hien). Chi tren web.
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.__pxb_map = %d" % map_id)
+		# Vong 56: lo them o hien tai cua player ra window.__pxb_tile
+		# de script browser-verify lai chinh xac toi cua — giu phim 400ms
+		# doi luc di 2 o (bai hoc vong 55) nen dem so phim co dinh
+		# khong tin duoc; doc tile that sau moi phim roi tinh lai.
+		JavaScriptBridge.eval("window.__pxb_tile = [%d, %d]" % [spawn_tile.x, spawn_tile.y])
 	_update_hud()
 	_update_ground(map_id)  # Vong 17: Map001 dung dat ve tay rieng.
 	_update_daynight()  # Ap khung hien tai cho map moi (anh dem/tint/mat troi).
@@ -268,9 +364,27 @@ func load_map(map_id: int, spawn_tile: Vector2i) -> void:
 ## ground_wide.jpg.
 ## Ca 3 anh deu 1440x900 nen scale giu nguyen. Neu thieu file (clone
 ## moi chua co art nhi phan — chi co local + trong pck) thi giu anh cu.
+## Vong 62: khung Toi (frame 2) tren Map001-002 doi sang anh dat dem
+## rieng ground_map00N_night.png (cung 1440x900, toi + lanh hon,
+## den vang sang) neu co file; thieu file thi giu anh ngay + lop MUL
+## nhu cu (khong crash). Anh dem da toi san (~0.6) nen sau lop MUL
+## dem (0.7,0.78,0.95) dat dat ~0.42 — gan bang anh nen dem
+## (0.41 x MUL), khong con dat sang hon troi nhu truoc.
+func _night_ground_path(map_id: int) -> String:
+	if map_id == 1 and ResourceLoader.exists("res://art/ground_map001_night.png"):
+		return "res://art/ground_map001_night.png"
+	if map_id == 2 and ResourceLoader.exists("res://art/ground_map002_night.png"):
+		return "res://art/ground_map002_night.png"
+	return ""
+
 func _update_ground(map_id: int) -> void:
 	if _ground_sprite == null:
 		return
+	if frame_idx == 2:
+		var night_path := _night_ground_path(map_id)
+		if night_path != "":
+			_ground_sprite.texture = load(night_path) as Texture2D
+			return
 	if map_id == 1 and ResourceLoader.exists("res://art/ground_map001.png"):
 		_ground_sprite.texture = load("res://art/ground_map001.png") as Texture2D
 	elif map_id == 2 and ResourceLoader.exists("res://art/ground_map002.png"):
@@ -280,6 +394,9 @@ func _update_ground(map_id: int) -> void:
 
 func _on_player_moved_to(tile: Vector2i) -> void:
 	_update_dbg()
+	# Vong 56: cap nhat o player ra window.__pxb_tile (xem load_map).
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.__pxb_tile = [%d, %d]" % [tile.x, tile.y])
 	_refresh_hotspot_player_flags()
 	var ev := iso_map.event_at(tile)
 	if not ev.is_empty() and String(ev.get("kind", "")) == "door":
@@ -314,8 +431,31 @@ func _fit_hud_map() -> void:
 		size -= 2
 	_hud_map.add_theme_font_size_override("font_size", size)
 
+
+# Vong 88: dong chi so phu co 18, vua long panel 412px; neu so
+# lon (bonus cong don) lam dong rong qua 412px thi co xuong 16
+# (nhu _fit_hud_map) thay vi de tran panel.
+func _fit_hud_substats() -> void:
+	var size := 18
+	while size > 16:
+		var w := font.get_string_size(_hud_substats.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+		if w <= 412.0:
+			break
+		size -= 2
+	_hud_substats.add_theme_font_size_override("font_size", size)
+
 # --- Thoi gian ---
 func _process(delta: float) -> void:
+	# G4 bước 11: ví chung jobs.gold là nguồn sự thật duy nhất,
+	# economy.money chỉ là bản đồng bộ. Trade WS áp tiền vào
+	# economy.money lúc poll (cha _process chạy trước con — xem ghi
+	# chú vòng 4) nên đồng bộ trước mỗi frame để lúc áp không lấy
+	# nhầm số dư cũ (vd vừa làm ca: lương mới chỉ vào jobs.gold).
+	# Sau khi áp xong, _on_ws_trade_completed đồng bộ ngược về
+	# jobs.gold. Giao dịch mua/bán trong Main vẫn theo cặp
+	# _wallet_to_economy/_wallet_from_economy như cũ (đồng bộ trong
+	# cùng 1 lượt gọi nên không bị _process chen giữa).
+	_wallet_to_economy()
 	# Camera bam theo nguoi choi (zoom CAMERA_ZOOM: thay het map luc spawn).
 	if _camera != null and player != null:
 		_camera.position = player.position + CAMERA_LOOK_UP
@@ -367,6 +507,11 @@ func _advance_frame() -> void:
 	if frame_idx >= 3:
 		frame_idx = 0
 		day += 1
+		# Vong 80: ngay game moi thi bao cho PxbOnline de cac goi
+		# len server (ledger_sync / shop_buy / stall_hold_sync)
+		# kem ngay moi nhat, server moi xet han giu sap dung.
+		if online != null:
+			online.ws_game_day = day
 		# G4 buoc 5: sang ngay moi thi don sap tran da het han giu.
 		PxbMarketBattle.expire_holds(battle_state, day)
 		# G4 buoc 8: giu sap thi +Danh vong moi ngay game (sau khi
@@ -398,7 +543,7 @@ func _advance_frame() -> void:
 # Kiem tra tot nghiep moi ngay game moi (goi 1 lan/ngay): tot nghiep
 # bang chinh cong EXP vao jobs.exp_total + Danh vong vao fame roi xoa
 # pending (dung hop dong PxbEducation: event tu ap pending); khoa
-# ngan han chi bao + notify (chi so phu chua co API ap qua PxbStats).
+# ngan han ap +10 chi so phu qua PxbStats (Vong 87) roi xoa pending.
 func _check_graduations() -> void:
 	var g := education.check_graduation()
 	if bool(g.get("graduated", false)):
@@ -411,10 +556,41 @@ func _check_graduations() -> void:
 			String((g.get("degree", {}) as Dictionary).get("name", "")),
 			int(g.get("exp", 0)), int(g.get("fame", 0))])
 	var sc := education.check_short_course_graduation()
+	var applied := _apply_pending_stat_gains()
 	if bool(sc.get("graduated", false)):
 		phonehub.notify(PxbPhoneHub.TAB_HOC_TAP)
-		show_toast("Xong khóa ngắn hạn: +%d %s (chờ áp vào chỉ số phụ)" % [
-			int(sc.get("gain", 0)), String(sc.get("sub_stat", ""))])
+		if not applied.is_empty():
+			show_toast("Xong khóa ngắn hạn: " + _format_stat_gains(applied))
+		else:
+			show_toast("Xong khóa ngắn hạn: +%d %s (chờ áp vào chỉ số phụ)" % [
+				int(sc.get("gain", 0)), String(sc.get("sub_stat", ""))])
+
+
+# Vong 87: ap het +chi so phu dang cho (education.pending_stat_gain)
+# vao PxbStats roi xoa pending. Goi moi ngay game moi — ca khi khong
+# co tot nghiep moi — de save cu (r86 tro ve truoc) con pending cung
+# duoc ap o ngay doi dau tien. Muc rac (khoa la / gain <= 0) bi xoa
+# luon vi khong bao gio ap duoc; chi muc ap thanh cong moi tra ve.
+func _apply_pending_stat_gains() -> Dictionary:
+	var applied := {}
+	if education == null or stats == null:
+		return applied
+	for sub in (education.pending_stat_gain.duplicate() as Dictionary):
+		var gain := int(education.pending_stat_gain[sub])
+		if stats.apply_stat_gain(String(sub), gain):
+			applied[String(sub)] = gain
+		education.pending_stat_gain.erase(sub)
+	return applied
+
+
+# Dinh dang {chi-so-phu: +gain} thanh "Sáng +10 • Kỷ +10" (theo thu
+# tu co dinh ky/dung/sang/an-yen, de toast + tab Hoc tap on dinh).
+func _format_stat_gains(applied: Dictionary) -> String:
+	var parts: Array[String] = []
+	for sub in PxbStats.SUB_STATS:
+		if applied.has(sub):
+			parts.append("%s +%d" % [String(SUB_STAT_NAMES.get(sub, sub)), int(applied[sub])])
+	return " • ".join(parts)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if title_open:
@@ -734,6 +910,15 @@ func _start_battle_demo() -> void:
 	PxbMarketBattle.expire_holds(battle_state, day)
 	battle_mb.from_data(battle_state)
 	_battle_saved = false
+	# G4 buoc 9 (vong 68): kiem tra can_challenge TRUOC khi mo tran —
+	# doi dang giu sap thi khong mo tran tranh sap moi; bao bang tieng
+	# Viet, khong mo tran (create_battle ben duoi cung chan lai).
+	var chk: Dictionary = battle_mb.can_challenge_now("doi-ban", "sap-cho-dau-moi", day)
+	if not bool(chk.get("ok", false)):
+		show_toast(_battle_block_text(str(chk.get("reason", "")), str(chk.get("holdingStallId", ""))))
+		battle_mb.queue_free()
+		battle_mb = null
+		return
 	var team_a := {"id": "doi-ban", "name": "Đội Bạn", "fighters": [
 		PxbMarketBattle.create_fighter("ban-1", "Bạn", "Do", "Chao",
 			{"the": 80, "tri": 40, "tam": 50}, []),
@@ -748,7 +933,7 @@ func _start_battle_demo() -> void:
 		"stallId": "sap-cho-dau-moi", "gameDay": day, "defenderTeam": "B",
 	})
 	if not bool(res.get("ok", false)):
-		show_toast("Không mở được trận: " + str(res.get("reason", "")))
+		show_toast(_battle_block_text(str(res.get("reason", "")), str(res.get("holdingStallId", ""))))
 		battle_mb.queue_free()
 		battle_mb = null
 		return
@@ -794,6 +979,9 @@ func _on_battle_finished(_winner: String) -> void:
 	if not hold.is_empty() and str(hold.get("teamId", "")) == "doi-ban":
 		msg += " Giữ sạp %s đến ngày %d." % [str(hold.get("stallId", "")), int(hold.get("untilGameDay", 0))]
 	show_toast(msg)
+	# Vong 80: thang tran tranh sap thi dong bo hold len server
+	# ngay (server moi validate gia si / phi dau gia duoc).
+	_sync_hold_to_server()
 
 
 func _close_battle() -> void:
@@ -807,6 +995,11 @@ func _close_battle() -> void:
 		battle_mb.queue_free()
 		battle_mb = null
 	battle_open = false
+	# Vòng 92: xóa cầu nối trận để script browser-verify không đọc
+	# nhầm trạng thái trận cũ sau khi đóng (mở trận mới mà bị chặn
+	# thì bridge vẫn null — phân biệt được với trận đang mở).
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.__pxb_battle = null")
 	if player != null:
 		player.input_blocked = false
 	_ui_layer.visible = true
@@ -898,6 +1091,41 @@ func _refresh_phone() -> void:
 			else:
 				_phone_chat_input = null
 				_phone_action("Kết nối chat online (server local)", _on_ws_connect_pressed)
+			# Vong 74: UI doi do — de nghi den (chap nhan/tu choi),
+			# de nghi da gui (huy), nut gui de nghi cho tung nguoi
+			# online. Chi khi da noi WS; chua noi thi chi co nut
+			# ket noi chat o tren. De nghi hien ca trong noi dung
+			# (de doc lai) lan tren nut (de bam).
+			if online.is_ws_connected():
+				if not online.ws_trade_offers.is_empty() or not online.ws_my_offers.is_empty():
+					var olines: Array[String] = ["", "Đề nghị đổi đồ:"]
+					for offer in online.ws_trade_offers:
+						olines.append("• Đến: " + _trade_offer_text(offer as Dictionary))
+					for sent in online.ws_my_offers:
+						olines.append("• Đã gửi: " + _trade_offer_text(sent as Dictionary))
+					_phone_content.text += "\n".join(olines)
+				for offer in online.ws_trade_offers:
+					var od := offer as Dictionary
+					_phone_action("Chấp nhận: " + _trade_offer_text(od),
+						_on_ws_trade_accept_pressed.bind(String(od.get("trade_id", ""))))
+					_phone_action("Từ chối: " + _trade_offer_text(od),
+						_on_ws_trade_decline_pressed.bind(String(od.get("trade_id", ""))))
+				for sent in online.ws_my_offers:
+					var sd := sent as Dictionary
+					_phone_action("Hủy đề nghị: " + _trade_offer_text(sd),
+						_on_ws_trade_cancel_pressed.bind(String(sd.get("trade_id", ""))))
+				# Vong 75: o nhap so tien muon lay khi doi do (mac
+				# dinh 100.000d; go sai thi handler dung mac dinh).
+				_phone_trade_money_input = _phone_number_input(
+					"Số tiền muốn lấy khi đổi đồ (đ) — mặc định 100.000",
+					_trade_want_money_vnd)
+				for p in online.ws_players:
+					var pd := p as Dictionary
+					var pid := String(pd.get("player_id", ""))
+					if pid.is_empty() or pid == online.ws_player_id:
+						continue
+					_phone_action("Đổi đồ với %s" % _ws_player_name(pid),
+						_on_ws_trade_offer_pressed.bind(pid))
 		PxbPhoneHub.TAB_NGAN_HANG:
 			_wallet_to_economy()
 			_phone_content.text = "Tiền mặt: %sđ\nTiết kiệm: %sđ (lãi 0,5%%/tháng game)\nĐiểm tín dụng: %d" % [
@@ -927,11 +1155,70 @@ func _refresh_phone() -> void:
 		PxbPhoneHub.TAB_CHO:
 			_phone_content.text = "Chợ — mua bằng ví (tiền mặt %sđ).\nĐã sở hữu: %s" % [
 				_fmt_vnd(jobs.gold), _owned_text()]
-			for it in _cheapest_shop_items(4):
-				var iid := String((it as Dictionary)["id"])
-				_phone_action("Mua %s — %sđ" % [
-					String((it as Dictionary)["name"]), _fmt_vnd(int((it as Dictionary)["price_vnd"]))],
-					_on_buy_pressed.bind(iid))
+			# Vong 74: UI dau gia — danh sach phien trong noi dung
+			# (ws_auctions_text, ke ca khi chua noi — bao ngoai
+			# tuyen) + nut dat gia / mo phien / huy phien / lam
+			# moi. Chi khi da noi WS.
+			_phone_content.text += "\n\n" + online.ws_auctions_text()
+			# Vong 77: dang cho server xac nhan 1 lan mua thi an
+			# nut mua (chi 1 lan cho — tranh xep hang ack lech
+			# so) + bao ro dang cho, khong de bam mua chong.
+			if not _pending_shop_buy.is_empty():
+				_phone_content.text += "\n\nĐang chờ máy chủ xác nhận mua hàng…"
+			else:
+				for it in _cheapest_shop_items(4):
+					var iid := String((it as Dictionary)["id"])
+					_phone_action("Mua %s — %sđ" % [
+						String((it as Dictionary)["name"]), _fmt_vnd(int((it as Dictionary)["price_vnd"]))],
+						_on_buy_pressed.bind(iid))
+			# Vong 86: nut ban lai cho mon dang so huu (nhan 50%
+			# gia catalog); dang cho server xac nhan 1 lan ban thi
+			# an nut ban + bao ro, khong de bam ban chong.
+			if not _pending_shop_sell.is_empty():
+				_phone_content.text += "\n\nĐang chờ máy chủ xác nhận bán hàng…"
+			else:
+				for it in _sellable_owned_items(4):
+					var iid := String((it as Dictionary)["id"])
+					_phone_action("Bán %s — nhận %sđ" % [
+						String((it as Dictionary)["name"]),
+						_fmt_vnd(PxbEconomy.shop_sellback_price(int((it as Dictionary)["price_vnd"])))],
+						_on_sell_pressed.bind(iid))
+			if online.is_ws_connected():
+				# Vong 75: o nhap gia dau (de trong = gia tiep theo).
+				_phone_bid_input = _phone_number_input(
+					"Giá đấu của bạn (đ) — để trống = giá tiếp theo",
+					_bid_amount_vnd)
+				for a in online.ws_auctions:
+					var ad := a as Dictionary
+					var aid := String(ad.get("auction_id", ""))
+					var iname := _trade_item_name(String(ad.get("item_id", "")))
+					if iname.is_empty():
+						iname = String(ad.get("item_id", "?"))
+					if String(ad.get("seller_player_id", "")) == online.ws_player_id:
+						if int(ad.get("current_bid", 0)) == 0:
+							_phone_action("Hủy phiên: %s" % iname,
+								_on_ws_auction_cancel_pressed.bind(aid))
+					else:
+						_phone_action("Đặt giá %sđ: %s" % [
+							_fmt_vnd(_ws_auction_next_bid(ad)), iname],
+							_on_ws_auction_bid_pressed.bind(aid))
+				if not _has_my_auction_open():
+					# Vong 75: o nhap gia khoi diem + thoi gian phien.
+					_phone_auction_price_input = _phone_number_input(
+						"Giá khởi điểm (đ) — mặc định 100.000",
+						_auction_start_price_vnd)
+					_phone_auction_duration_input = _phone_number_input(
+						"Thời gian phiên (giây, 30–3600) — mặc định 60",
+						_auction_duration_s)
+					var first_name := _first_owned_item_name()
+					if first_name.is_empty():
+						_phone_action("Mở phiên đấu giá", _on_ws_auction_create_pressed)
+					else:
+						_phone_action("Mở phiên: bán %s — %sđ, %d giây" % [
+							first_name, _fmt_vnd(_auction_start_price_vnd),
+							_auction_duration_s],
+							_on_ws_auction_create_pressed)
+				_phone_action("Làm mới danh sách đấu giá", _on_ws_auction_list_pressed)
 		PxbPhoneHub.TAB_HOC_TAP:
 			_phone_content.text = _education_text()
 			for i in PxbEducation.degree_list().size():
@@ -987,6 +1274,13 @@ func _today_text() -> String:
 
 func _social_text() -> String:
 	var lines: Array[String] = ["Danh bạ — trò chuyện tăng thân thiết (+5/lần). Chưa quen thì nói ở ngoài đời:"]
+	# Vong 88: 4 chi so phu len DAU tab (kem bonus khoa ngan han)
+	# — de o cuoi danh ba 38 dong thi nguoi choi phai cuon het
+	# moi thay (§109.6 muc 4: thay duoc ket qua khoa hoc ngay).
+	lines.append("Chỉ số phụ — Kỷ %d • Dũng %d • Sáng %d • An Yên %d" % [
+		stats.ky(), stats.dung(), stats.sang(), stats.an_yen()])
+	if not stats.stat_bonus.is_empty():
+		lines.append("Bonus khóa ngắn hạn: " + _format_stat_gains(stats.stat_bonus))
 	var known: Dictionary = {}
 	for rel in social.all_relations():
 		var r := rel as Dictionary
@@ -1072,6 +1366,20 @@ func _cheapest_shop_items(count: int) -> Array:
 	return all.slice(0, mini(count, all.size()))
 
 
+# Mon dang so huu ban lai duoc (vong 86): co trong catalog +
+# khong phai phong tro (thue thang, khong ban lai duoc), sap theo
+# gia tang dan de nut ban hien mon re truoc nhu nut mua.
+func _sellable_owned_items(count: int) -> Array:
+	var all: Array = []
+	for group in [PxbEconomy.houses(), PxbEconomy.cars(), PxbEconomy.phones(), PxbEconomy.clothes()]:
+		for it in group:
+			var iid := String((it as Dictionary)["id"])
+			if iid != "phong-tro" and economy.owned.has(iid):
+				all.append(it)
+	all.sort_custom(func(a, b) -> bool: return int(a["price_vnd"]) < int(b["price_vnd"]))
+	return all.slice(0, mini(count, all.size()))
+
+
 func _education_text() -> String:
 	var lines: Array[String] = ["Học tập — 5 bậc (học phí trả 1 lần lúc đăng ký):"]
 	for i in PxbEducation.degree_list().size():
@@ -1088,6 +1396,8 @@ func _education_text() -> String:
 			int(prog["days_left"]), int(e["end_day"])])
 	if education.pending_exp > 0 or education.pending_fame > 0:
 		lines.append("Chờ nhận: +%d EXP, +%d Danh vọng" % [education.pending_exp, education.pending_fame])
+	if not education.pending_stat_gain.is_empty():
+		lines.append("Chờ nhận chỉ số phụ: " + _format_stat_gains(education.pending_stat_gain))
 	return "\n".join(lines)
 
 
@@ -1121,6 +1431,63 @@ func _hold_benefits_now() -> Dictionary:
 	return PxbMarketBattle.hold_benefits(battle_state, "doi-ban", day)
 
 
+## Vong 80: dong bo hold dang giu len server (goi sau khi thang
+## tran tranh sap + khi WS (re)connect). Khong co hold / chua noi
+## WS thi khong lam gi; gui that bai thi lan sau gui lai (khong
+## toast — tranh spam khi offline). Tra {} khi khong gui.
+func _sync_hold_to_server() -> Dictionary:
+	if online == null or not online.is_ws_connected():
+		return {}
+	var ben := _hold_benefits_now()
+	if ben.is_empty():
+		return {}
+	var stall_id := String(ben.get("stallId", ""))
+	var holds: Dictionary = battle_state.get("holds", {}) as Dictionary
+	if stall_id.is_empty() or not holds.has(stall_id):
+		return {}
+	var hold: Dictionary = holds[stall_id]
+	return online.send_ws_stall_hold_sync(stall_id,
+		int(hold.get("startGameDay", day)), int(hold.get("untilGameDay", day + 1)), day)
+
+
+## G4 buoc 9 (vong 68): ngay het han giu sap (0 neu khong giu sap do).
+func _hold_until_day(stall_id: String) -> int:
+	var holds: Dictionary = battle_state.get("holds", {}) as Dictionary
+	if holds.has(stall_id):
+		return int((holds[stall_id] as Dictionary).get("untilGameDay", 0))
+	return 0
+
+
+## G4 buoc 9 (vong 68): cau tieng Viet giai thich vi sao khong mo
+## duoc tran tranh sap (thay ma reason tho nhu "dang-giu-sap-khac").
+func _battle_block_text(reason: String, holding_stall_id: String) -> String:
+	match reason:
+		"dang-giu-sap-khac":
+			return "Đội Bạn đang giữ sạp %s đến ngày %d — không thách đấu sạp khác được." % [holding_stall_id, _hold_until_day(holding_stall_id)]
+		"da-giu-sap-nay":
+			return "Đội Bạn đã giữ sạp này đến ngày %d rồi." % _hold_until_day(holding_stall_id)
+		"doi-thieu-nguoi":
+			return "Đội thiếu người, không mở được trận."
+		"doi-khong-bang-nhau":
+			return "Hai đội không bằng nhau, không mở được trận."
+		"co-doi-khong-hop-le":
+			return "Cỡ đội không hợp lệ, không mở được trận."
+	return "Không mở được trận: " + reason
+
+
+# Tien giu ho dau gia/trade co bi cham vao khong (vong 76):
+# chi chan khi da noi WS + server dang giu ho + khoan chi nay
+# lam vi xuong duoi so giu ho. Chua noi WS / khong giu ho thi
+# khong chan (choi offline nhu cu). economy.money phai la so
+# moi nhat — cac ham goi deu _wallet_to_economy() truoc.
+func _reserve_blocked(amount: int) -> bool:
+	if online == null or not online.is_ws_connected():
+		return false
+	if online.ws_reserved_money <= 0:
+		return false
+	return economy.money - amount < online.ws_reserved_money
+
+
 func buy_item(item_id: String) -> Dictionary:
 	_wallet_to_economy()
 	# G4 buoc 8: dang giu sap thi mua gia si -10% (tru tien thue
@@ -1129,6 +1496,38 @@ func buy_item(item_id: String) -> Dictionary:
 	var disc := 0
 	if not ben.is_empty() and item_id != "phong-tro":
 		disc = int(ben.get("wholesaleDiscountPercent", 0))
+	# Vong 76: chan tieu tien dang giu ho dau gia/trade — gia
+	# tinh dung nhu economy.buy (gia si chi khi co disc va khong
+	# phai phong tro); mon la thi gia 0, khong chan, de economy
+	# tra khong-co-mon nhu cu.
+	var price := 0
+	var it := PxbEconomy.get_item(item_id)
+	if not it.is_empty():
+		price = int(it.get("price_vnd", 0))
+		if disc > 0 and item_id != "phong-tro":
+			price = price * (100 - disc) / 100
+	if price > 0 and _reserve_blocked(price):
+		show_toast("Tiền đang giữ hộ đấu giá/trade, không dùng để mua được.")
+		_refresh_phone()
+		return {"ok": false, "fame_gained": 0, "reason": "tien-dang-giu-ho", "price_paid": 0}
+	# Vong 77: da noi WS thi mua qua server validate (kinh te
+	# server-authoritative) — chi 1 lan mua cho ack (nut mua an
+	# trong luc cho, xem TAB_CHO); gui that bai (mat ket noi
+	# giua chung) thi roi ve mua local nhu cu. Tien/mon chi ap
+	# khi ack ok ve (xem _on_ws_shop_buy_acked).
+	if online != null and online.is_ws_connected():
+		if not _pending_shop_buy.is_empty():
+			show_toast("Đang chờ máy chủ xác nhận lần mua trước.")
+			_refresh_phone()
+			return {"ok": false, "fame_gained": 0, "reason": "dang-cho-may-chu", "price_paid": 0}
+		var sent := online.send_ws_shop_buy(item_id, disc)
+		if bool(sent.get("ok", false)):
+			_pending_shop_buy = {"req_id": int(sent.get("req_id", 0)),
+				"item_id": item_id, "discount_percent": disc,
+				"money_at_send": jobs.gold}
+			show_toast("Đang chờ máy chủ xác nhận mua %s…" % String(PxbEconomy.get_item(item_id).get("name", item_id)))
+			_refresh_phone()
+			return {"ok": false, "fame_gained": 0, "reason": "cho-may-chu", "pending": true, "price_paid": 0}
 	var res := economy.buy(item_id, disc)
 	if bool(res.get("ok", false)):
 		fame += int(res.get("fame_gained", 0))
@@ -1150,8 +1549,54 @@ func buy_item(item_id: String) -> Dictionary:
 	return res
 
 
+# Bán lại 1 món đang sở hữu cho chợ (vòng 86 — đối xứng
+# buy_item): bán thì CỘNG tiền nên không cần chặn tiền giữ hộ
+# như mua (vòng 76). Đường WS thì bán qua server validate (chỉ
+# 1 lần bán chờ ack, nút bán ẩn trong lúc chờ); gửi thất bại
+# (mất kết nối giữa chừng) thì rơi về bán local như cũ.
+# Tiền/món chỉ áp khi ack ok về (xem _on_ws_shop_sell_acked).
+func sell_item(item_id: String) -> Dictionary:
+	_wallet_to_economy()
+	if online != null and online.is_ws_connected():
+		if not _pending_shop_sell.is_empty():
+			show_toast("Đang chờ máy chủ xác nhận lần bán trước.")
+			_refresh_phone()
+			return {"ok": false, "reason": "dang-cho-may-chu", "price_received": 0}
+		var sent := online.send_ws_shop_sell(item_id)
+		if bool(sent.get("ok", false)):
+			_pending_shop_sell = {"req_id": int(sent.get("req_id", 0)),
+				"item_id": item_id,
+				"money_at_send": jobs.gold}
+			show_toast("Đang chờ máy chủ xác nhận bán %s…" % String(PxbEconomy.get_item(item_id).get("name", item_id)))
+			_refresh_phone()
+			return {"ok": false, "reason": "cho-may-chu", "pending": true, "price_received": 0}
+	var res := economy.sell(item_id)
+	if bool(res.get("ok", false)):
+		_wallet_from_economy()
+		show_toast("Đã bán %s (nhận %sđ)." % [
+			String(PxbEconomy.get_item(item_id).get("name", item_id)),
+			_fmt_vnd(int(res.get("price_received", 0)))])
+	else:
+		match String(res.get("reason", "")):
+			"khong-so-huu":
+				show_toast("Bạn chưa sở hữu món này.")
+			"khong-ban-duoc":
+				show_toast("Món này không bán lại được.")
+			"khong-co-mon":
+				show_toast("Không có món này trong chợ.")
+			_:
+				show_toast("Không bán được.")
+	_refresh_phone()
+	return res
+
+
 func deposit_savings(amount: int) -> bool:
 	_wallet_to_economy()
+	# Vong 76: chan gui tiet kiem bang tien dang giu ho.
+	if amount > 0 and _reserve_blocked(amount):
+		show_toast("Tiền đang giữ hộ đấu giá/trade, không gửi tiết kiệm được.")
+		_refresh_phone()
+		return false
 	var ok := economy.deposit_savings(amount)
 	_wallet_from_economy()
 	show_toast("Đã gửi tiết kiệm %sđ." % _fmt_vnd(amount) if ok else "Không gửi được (vượt tiền mặt).")
@@ -1169,6 +1614,17 @@ func withdraw_savings(amount: int) -> bool:
 
 
 func enroll_degree(idx: int) -> Dictionary:
+	# Vong 76: chan dong hoc phi bang tien dang giu ho — kiem tra
+	# TRUOC khi goi enroll (fee biet truoc qua get_degree; enroll
+	# thanh cong thi khong hoan tac duoc nen khong doi toi khi
+	# biet fee_paid). Bang chua co / idx sai thi fee 0, khong
+	# chan, de enroll tra ly do cu.
+	_wallet_to_economy()
+	var fee_pre := int(PxbEducation.get_degree(idx).get("fee_vnd", 0))
+	if fee_pre > 0 and _reserve_blocked(fee_pre):
+		show_toast("Tiền đang giữ hộ đấu giá/trade, không đóng học phí được.")
+		_refresh_phone()
+		return {"ok": false, "reason": "tien-dang-giu-ho"}
 	var res := education.enroll(idx, stats.tri, -1, jobs.gold)
 	if bool(res.get("ok", false)):
 		var fee := int(res.get("fee_paid", 0))
@@ -1199,6 +1655,13 @@ func enroll_degree(idx: int) -> Dictionary:
 
 # Khoa ngan han mau cua UI (PROVISIONAL): Sang tao, 3 ngay, 2 trieu.
 func enroll_short_course() -> Dictionary:
+	# Vong 76: chan dong phi khoa ngan bang tien dang giu ho —
+	# phi 2 trieu biet truoc nen kiem tra truoc khi enroll.
+	_wallet_to_economy()
+	if _reserve_blocked(2000000):
+		show_toast("Tiền đang giữ hộ đấu giá/trade, không đóng học phí được.")
+		_refresh_phone()
+		return {"ok": false, "reason": "tien-dang-giu-ho"}
 	var res := education.enroll_short_course("sang", 3, 2000000, jobs.gold)
 	if bool(res.get("ok", false)):
 		var fee := int(res.get("fee_paid", 0))
@@ -1327,7 +1790,7 @@ func _collect_system_data() -> Dictionary:
 		"pxb_stats": stats.data(), "pxb_jobs": jobs.data(),
 		"pxb_hotspot": hotspot.data(), "pxb_crafting": crafting.data(),
 		"pxb_economy": economy.data(), "pxb_education": education.data(),
-		"pxb_social": social.data(), "pxb_titles": titles.data(),
+		"pxb_inventory": bag.data(), "pxb_social": social.data(), "pxb_titles": titles.data(),
 		"pxb_story": story.data(), "pxb_tools": tools.data(),
 		"pxb_phonehub": phonehub.data(), "pxb_savecloud": savecloud.data(),
 		"pxb_online": online.data(), "pxb_marketbattle": battle_state,
@@ -1366,6 +1829,9 @@ func _apply_save_data(gs: Dictionary) -> void:
 	if gs.is_empty():
 		return
 	day = maxi(int(gs.get("day", gs.get("game_day", 1))), 1)
+	# Vong 80: tai save doi ngay thi bao cho PxbOnline (xem _ready).
+	if online != null:
+		online.ws_game_day = day
 	frame_idx = clampi(int(gs.get("frame", 0)), 0, 2)
 	fame = maxi(int(gs.get("fame", 0)), 0)
 	var sd: Dictionary = gs.get("pxb_stats", {})
@@ -1373,6 +1839,10 @@ func _apply_save_data(gs: Dictionary) -> void:
 		stats.set_stat("the", int(sd.get("the", stats.the)))
 		stats.set_stat("tri", int(sd.get("tri", stats.tri)))
 		stats.set_stat("tam", int(sd.get("tam", stats.tam)))
+		# Vòng 87: khôi phục bonus chỉ số phụ qua from_data (lọc khóa
+		# lạ / số âm như MarketBattle ở dưới); save cũ không có khóa
+		# này thì bonus rỗng.
+		stats.stat_bonus = PxbStats.from_data(sd).stat_bonus.duplicate()
 	_replace_system("jobs", PxbJobs.from_data(gs.get("pxb_jobs", {})))
 	jobs.stats = stats
 	jobs.set_day_number(day)
@@ -1381,6 +1851,9 @@ func _apply_save_data(gs: Dictionary) -> void:
 	crafting.bind_materials(hotspot.materials)
 	inventory = hotspot.materials
 	_replace_system("economy", PxbEconomy.from_data(gs.get("pxb_economy", {})))
+	# G4 bước 11: túi đồ slice — save cũ không có khóa này thì
+	# from_data({}) trả túi rỗng (tương thích ngược).
+	_replace_system("inventory", PxbInventory.from_data(gs.get("pxb_inventory", {})))
 	_replace_system("education", PxbEducation.from_data(gs.get("pxb_education", {})))
 	education.day_number = day
 	_replace_system("social", PxbSocial.from_data(gs.get("pxb_social", {})))
@@ -1401,6 +1874,10 @@ func _apply_save_data(gs: Dictionary) -> void:
 	_mb_tmp.free()
 	PxbMarketBattle.expire_holds(battle_state, day)
 	_wallet_to_economy()
+	# G4 bước 11: _replace_system đã tạo bag/economy mới — nối lại
+	# túi/ví cho trade WS (nối cũ trỏ node đã queue_free).
+	online.trade_inventory = bag
+	online.trade_economy = economy
 
 
 func _replace_system(kind: String, node: Node) -> void:
@@ -1417,6 +1894,9 @@ func _replace_system(kind: String, node: Node) -> void:
 		"economy":
 			economy.queue_free()
 			economy = node as PxbEconomy
+		"inventory":
+			bag.queue_free()
+			bag = node as PxbInventory
 		"education":
 			education.queue_free()
 			education = node as PxbEducation
@@ -1457,6 +1937,10 @@ func _on_phone_tab_pressed(tab_id: String) -> void:
 
 func _on_buy_pressed(item_id: String) -> void:
 	buy_item(item_id)
+
+
+func _on_sell_pressed(item_id: String) -> void:
+	sell_item(item_id)
 
 
 func _on_deposit_pressed(amount: int) -> void:
@@ -1526,6 +2010,20 @@ func _on_ws_chat_received(_msg: Dictionary) -> void:
 		phonehub.notify(PxbPhoneHub.TAB_DANH_BA_TIN_NHAN)
 
 
+# Lich su chat ve sau khi hello lai (vong 85): PxbOnline da them
+# cac tin vao ws_chat_log truoc khi phat signal (vong 83) nen o
+# day chi can lam tuoi / bao chua doc giong tin chat moi — KHONG
+# them tin vao log nua (tranh nhan doi). Ly do can handler rieng:
+# welcome den truoc lich su, _on_ws_status_changed lam tuoi dien
+# thoai luc log con trong nen noi dung tab Tin nhan van cu cho
+# toi khi co tin moi / doi tab.
+func _on_ws_chat_history_received(_messages: Array) -> void:
+	if phone_open and phonehub.current_tab == PxbPhoneHub.TAB_DANH_BA_TIN_NHAN:
+		_refresh_phone()
+	else:
+		phonehub.notify(PxbPhoneHub.TAB_DANH_BA_TIN_NHAN)
+
+
 # Presence doi: lam tuoi nhu tin chat (danh sach online trong
 # _phone_content thay doi).
 func _on_ws_presence_changed(_players: Array) -> void:
@@ -1540,6 +2038,373 @@ func _on_ws_presence_changed(_players: Array) -> void:
 func _on_ws_status_changed(connected: bool) -> void:
 	if connected:
 		show_toast("Đã nối chat online (%d người)." % online.ws_players.size())
+		# Vong 80: (re)connect thi gui lai hold dang giu (neu co)
+		# de server biet ma validate gia si / phi dau gia.
+		_sync_hold_to_server()
+	elif not _pending_shop_buy.is_empty() or not _pending_shop_sell.is_empty():
+		# Vong 77 + 86: mat ket noi trong luc cho ack mua/ban o
+		# cho — server chua chac da tru/cong tien, lan mua/ban nay
+		# huy; xoa pending de nut mua/ban hien lai, nguoi choi
+		# mua/ban lai sau.
+		var was_buy := not _pending_shop_buy.is_empty()
+		var was_sell := not _pending_shop_sell.is_empty()
+		_pending_shop_buy = {}
+		_pending_shop_sell = {}
+		if was_buy and was_sell:
+			show_toast("Mất kết nối, lần mua/bán chưa được xác nhận — thử lại.")
+		elif was_buy:
+			show_toast("Mất kết nối, lần mua chưa được xác nhận — thử mua lại.")
+		else:
+			show_toast("Mất kết nối, lần bán chưa được xác nhận — thử bán lại.")
+	_refresh_phone()
+
+
+# Giao dịch đổi đồ đã chốt (G4 bước 11): PxbOnline đã áp thỏa
+# thuận vào bag + economy.money lúc nhận trade_completed — ở đây
+# chỉ đồng bộ ngược về ví chung jobs.gold + báo cho người chơi.
+# trade["apply"] ghi kết quả áp (applied / missing_item /
+# receive_failed / short_money) — thiếu món/tiền thì báo rõ phần
+# thiếu, không giả vờ đủ.
+func _on_ws_trade_completed(trade: Dictionary) -> void:
+	var res: Dictionary = trade.get("apply", {})
+	if bool(res.get("applied", false)):
+		_wallet_from_economy()
+		var give_name := _trade_item_name(String(res.get("give_item_id", "")))
+		var want_name := _trade_item_name(String(res.get("want_item_id", "")))
+		var parts: Array[String] = []
+		if not give_name.is_empty():
+			parts.append("đã cho %s" % give_name)
+		if int(res.get("money_given", 0)) > 0:
+			parts.append("đã cho %sđ" % _fmt_vnd(int(res.get("money_given", 0))))
+		if not want_name.is_empty():
+			parts.append("nhận %s" % want_name)
+		if int(res.get("money_received", 0)) > 0:
+			parts.append("nhận %sđ" % _fmt_vnd(int(res.get("money_received", 0))))
+		var msg := "Đã đổi đồ xong"
+		if not parts.is_empty():
+			msg += ": " + " • ".join(parts)
+		if bool(res.get("missing_item", false)):
+			msg += " (thiếu món cho đi — túi không đủ)"
+		if bool(res.get("receive_failed", false)):
+			msg += " (món nhận về không vào túi được)"
+		if int(res.get("short_money", 0)) > 0:
+			msg += " (thiếu %sđ tiền cho)" % _fmt_vnd(int(res.get("short_money", 0)))
+		show_toast(msg + ".")
+	else:
+		# Vòng 73 (sổ cái): giao dịch bị HỦY ở server (1 bên đã
+		# đồng bộ không đủ tiền/món lúc chốt) thì báo rõ lý do,
+		# không giả vờ đã đổi xong.
+		if bool(res.get("voided", false)):
+			var why := String(res.get("reason", ""))
+			var why_text := "đối phương không đủ tiền/đồ lúc chốt"
+			match why:
+				"thieu-tien-nguoi-gui":
+					why_text = "người gửi không đủ tiền lúc chốt"
+				"thieu-do-nguoi-gui":
+					why_text = "người gửi không còn món cho đi lúc chốt"
+				"thieu-tien-nguoi-nhan":
+					why_text = "người nhận không đủ tiền lúc chốt"
+				"thieu-do-nguoi-nhan":
+					why_text = "người nhận không còn món cho đi lúc chốt"
+			show_toast("Đổi đồ bị hủy: %s." % why_text)
+		else:
+			show_toast("Đổi đồ đã chốt nhưng chưa áp vào túi/ví (%s)." % String(res.get("reason", "khong-ro")))
+	_refresh_phone()
+
+
+# Tên hiển thị của 1 mã món slice (PxbBalance.ITEMS); mã rỗng/lạ
+# thì trả "" (toast bỏ phần đó) — không bịa tên.
+func _trade_item_name(item_id: String) -> String:
+	if item_id.is_empty():
+		return ""
+	return String(PxbInventory.get_item(item_id).get("name", ""))
+
+
+# Phiên đấu giá đã đóng (G4 bước 12): PxbOnline đã áp kết quả vào
+# bag + economy.money lúc nhận auction_closed — ở đây chỉ đồng bộ
+# ngược về ví chung jobs.gold + báo cho người chơi. auction["apply"]
+# ghi kết quả áp (applied / missing_item / receive_failed /
+# short_money) — thiếu món/tiền thì báo rõ phần thiếu, không giả
+# vờ đủ. Không phải người bán / người thắng thì chỉ báo kết quả
+# chung (ai thắng, giá chốt) để người xem chợ biết.
+func _on_ws_auction_closed(auction: Dictionary) -> void:
+	var res: Dictionary = auction.get("apply", {})
+	var item_name := _trade_item_name(String(auction.get("item_id", "")))
+	if item_name.is_empty():
+		item_name = String(auction.get("item_id", ""))
+	var winner := String(auction.get("winner_player_id", ""))
+	var hammer := int(auction.get("hammer_price", 0))
+	if winner.is_empty():
+		show_toast("Đấu giá %s đã đóng — không ai đấu giá." % item_name)
+		_refresh_phone()
+		return
+	if bool(res.get("applied", false)):
+		_wallet_from_economy()
+		var role := String(res.get("role", ""))
+		if role == "seller":
+			var msg := "Đã bán %s giá %sđ (phí sàn %sđ)." % [
+				item_name, _fmt_vnd(hammer),
+				_fmt_vnd(int(res.get("fee_vnd", 0)))]
+			if bool(res.get("missing_item", false)):
+				msg += " (món đã không còn trong túi — chỉ nhận tiền)"
+			show_toast(msg)
+		elif role == "winner":
+			var msg2 := "Đã thắng đấu giá %s giá %sđ." % [
+				item_name, _fmt_vnd(hammer)]
+			if bool(res.get("receive_failed", false)):
+				msg2 += " (món không vào túi được)"
+			if int(res.get("short_money", 0)) > 0:
+				msg2 += " (thiếu %sđ tiền trả)" % _fmt_vnd(int(res.get("short_money", 0)))
+			show_toast(msg2)
+		else:
+			show_toast("Đấu giá %s đã đóng — %s thắng giá %sđ." % [
+				item_name, winner, _fmt_vnd(hammer)])
+	else:
+		var reason := String(res.get("reason", "khong-ro"))
+		if reason == "khong-lien-quan":
+			show_toast("Đấu giá %s đã đóng — %s thắng giá %sđ." % [
+				item_name, winner, _fmt_vnd(hammer)])
+		else:
+			show_toast("Đấu giá %s đã đóng nhưng chưa áp vào túi/ví (%s)." % [
+				item_name, reason])
+	_refresh_phone()
+
+
+# Ack so cai server (vong 76): PxbOnline da dat baseline theo
+# ack; neu ack stale HOAC so server lech vi/tui local thi ap so
+# server — vi ve ack money, tui dong bo theo ack items (them/bot
+# chenh lech tung mon; mon local ma ack khong co thi bot het; mon
+# ack co ma local thieu thi them du). Ack binh thuong (khong
+# stale, so khop) thi khong lam gi. Chi toast khi that su co
+# thay doi so — tranh spam toast moi lan sync.
+# Vong 77: neu ack kem sent_money (tien local luc gui sync nay)
+# thi ap vi theo delta (ack.money + (vi hien tai - sent_money))
+# de khong nuot tien kiem/tieu local trong luc cho ack (vd
+# pre-sync mua o cho gui 200 trieu, kiem them 100k thi vi ve
+# 200 trieu + 100k); khong co sent_money (sync gui tho / server
+# cu) thi ap tuyet doi nhu vong 76.
+# Ap owned server tra ve lam chuan (vong 78): dung lai
+# economy.owned tu dict {item_id: count} (sap id theo alphabet
+# cho on dinh, lap lai theo count). Tra true khi owned doi.
+# An toan khi ap ack (khong mat mon mua local offline): mua
+# local chi xay ra khi WS da ngat (khong co ack nao dang bay);
+# khi da noi WS thi owned chi doi qua ack server, va moi sync
+# deu gui owned local len truoc de server hop nhat.
+func _apply_server_owned(owned: Dictionary) -> bool:
+	var want: Array[String] = []
+	var ids: Array[String] = []
+	for k in owned.keys():
+		ids.append(String(k))
+	ids.sort()
+	for item_id in ids:
+		var n := maxi(int(owned.get(item_id, 0)), 0)
+		for i in range(n):
+			want.append(item_id)
+	var changed := false
+	if economy.owned.size() != want.size():
+		changed = true
+	else:
+		for i in range(want.size()):
+			if String(economy.owned[i]) != want[i]:
+				changed = true
+				break
+	if changed:
+		economy.owned.clear()
+		for item_id in want:
+			economy.owned.append(item_id)
+	return changed
+
+
+func _on_ws_ledger_sync_acked(ack: Dictionary) -> void:
+	var ack_money := int(ack.get("money", -1))
+	if ack_money < 0:
+		return
+	var ack_items: Variant = ack.get("items", {})
+	if not (ack_items is Dictionary):
+		return
+	var new_gold := ack_money
+	var sent_money := int(ack.get("sent_money", -1))
+	if sent_money >= 0:
+		new_gold = maxi(ack_money + (jobs.gold - sent_money), 0)
+	var money_changed := new_gold != jobs.gold
+	var items_changed := false
+	var seen := {}
+	for item_id in (ack_items as Dictionary).keys():
+		seen[String(item_id)] = true
+		if bag.count(String(item_id)) != int((ack_items as Dictionary)[item_id]):
+			items_changed = true
+	var local_items: Dictionary = (bag.data() as Dictionary).get("items", {})
+	for item_id in local_items.keys():
+		if not seen.has(String(item_id)) and bag.count(String(item_id)) != 0:
+			items_changed = true
+	# Vong 78: ack co owned thi ap owned server lam chuan (server
+	# cu khong gui owned thi giu owned local nhu cu).
+	var owned_changed := false
+	if bool(ack.get("owned_present", false)):
+		owned_changed = _apply_server_owned(ack.get("owned", {}))
+	if not bool(ack.get("stale", false)) and not money_changed and not items_changed \
+			and not owned_changed:
+		return
+	jobs.gold = new_gold
+	_wallet_to_economy()
+	for item_id in (ack_items as Dictionary).keys():
+		var want := int((ack_items as Dictionary)[item_id])
+		var have := bag.count(String(item_id))
+		if have < want:
+			# Them tung cai de khong vo voi mon khong xep chong
+			# (add tra false khi da co — chi them duoc toi da 1).
+			var added := 0
+			while added < want - have and bag.add(String(item_id), 1):
+				added += 1
+			if added > 0:
+				items_changed = true
+	for item_id in local_items.keys():
+		var want2 := int((ack_items as Dictionary).get(item_id, 0))
+		var have2 := bag.count(String(item_id))
+		if have2 > want2 and bag.remove(String(item_id), have2 - want2):
+			items_changed = true
+	if money_changed or items_changed or owned_changed:
+		_update_hud()
+		_refresh_phone()
+		if money_changed or items_changed:
+			show_toast("Máy chủ đã đồng bộ lại ví/túi (đã trừ tiền đấu giá/trade đã chốt).")
+
+
+# Ack mua o cho qua server (vong 77): chi nhan khi req_id khop
+# lan mua dang cho (ack la thi PxbOnline da bo). ok=true thi ap:
+# vi = tien server sau khi tru + chenh lech tien local kiem/tieu
+# trong luc cho ack (money_at_send — vd lam them ca kiem them,
+# gui tiet kiem rut ra — de khong mat/nhan doi so do); owned ap
+# theo ack.owned khi server moi gui kem (vong 78 — server lam
+# chuan), server cu khong gui thi append local nhu cu; Danh vong
+# theo ack (nha/xe-sang +50).
+# ok=false thi khong tru/cong gi, chi bao ly do bang tieng Viet.
+# Chi 1 lan mua cho tai 1 thoi diem (nut mua an trong luc cho)
+# nen money_at_send luon tuoi, khong bi ack truoc lam lech nhu
+# khi xep hang nhieu lan mua.
+## Vong 80: server tra loi dong bo giu sap. Ok thi khong lam gi
+## (gia si / phi dau gia lan mua ke se dung so server); bi tu
+## choi thi bao de nguoi choi biet vi sao lan mua ke khong con
+## gia si — chi 2 ly do can bao, ly do khac thi im (tranh spam).
+func _on_ws_stall_hold_synced(ack: Dictionary) -> void:
+	if bool(ack.get("ok", false)):
+		return
+	match String(ack.get("reason", "")):
+		"het-han-giu-sap":
+			show_toast("Giữ sạp đã hết hạn theo máy chủ, lần mua sau không còn giá sỉ.")
+		"dang-giu-sap-khac":
+			show_toast("Máy chủ báo đội đang giữ sạp khác.")
+		"ngay-server-khong-khop":
+			show_toast("Ngày game lệch với máy chủ — thử đồng bộ lại sau.")
+		_:
+			pass
+
+
+# Vong 81: ngay server doi — dong bo lai hold dang giu de server
+# xet lai han theo ngay moi (het han thi ack het-han-giu-sap,
+# _on_ws_stall_hold_synced bao toast). Khong doi ngay local `day`
+# (dong ho offline) — chi dong bo hold online theo ngay server.
+func _on_ws_server_day_changed(_server_day: int) -> void:
+	_sync_hold_to_server()
+
+
+func _on_ws_shop_buy_acked(ack: Dictionary) -> void:
+	if _pending_shop_buy.is_empty():
+		return
+	var req_id := int(ack.get("req_id", 0))
+	if req_id != int(_pending_shop_buy.get("req_id", -1)):
+		return
+	var pending := _pending_shop_buy
+	_pending_shop_buy = {}
+	var item_id := String(pending.get("item_id", ""))
+	var disc := int(pending.get("discount_percent", 0))
+	var item_name := String(PxbEconomy.get_item(item_id).get("name", item_id))
+	if not bool(ack.get("ok", false)):
+		match String(ack.get("reason", "")):
+			"khong-du-tien":
+				show_toast("Máy chủ báo không đủ tiền mua %s." % item_name)
+			"khong-co-mon":
+				show_toast("Máy chủ báo không có món %s." % item_name)
+			"chua-dong-bo-so-cai":
+				show_toast("Chưa đồng bộ ví với máy chủ, thử mua lại.")
+			"gia-khong-hop-le":
+				show_toast("Giá mua không hợp lệ, thử mua lại.")
+			"chua-hello":
+				show_toast("Chưa nối máy chủ, thử mua lại.")
+			_:
+				show_toast("Không mua được %s (%s)." % [item_name, String(ack.get("reason", "khong-ro"))])
+		_refresh_phone()
+		return
+	var delta := jobs.gold - int(pending.get("money_at_send", 0))
+	jobs.gold = maxi(int(ack.get("money", 0)) + delta, 0)
+	_wallet_to_economy()
+	if bool(ack.get("owned_present", false)):
+		_apply_server_owned(ack.get("owned", {}))
+	else:
+		economy.owned.append(item_id)
+	fame += int(ack.get("fame_gained", 0))
+	_wallet_from_economy()
+	# Vong 80: gia si ap dung la so SERVER tra ve (discount_applied),
+	# khong phai so da khai luc gui — server co the sua ve 0 khi
+	# hold het han / chua dong bo; ack cu khong co khoa nay (-1)
+	# thi dung so pending nhu cu.
+	var applied := int(ack.get("discount_applied", -1))
+	if applied < 0:
+		applied = disc
+	if applied > 0:
+		show_toast("Đã mua %s (máy chủ đã trừ %sđ, giá sỉ −%d%%)." % [
+			item_name, _fmt_vnd(int(ack.get("price_paid", 0))), applied])
+	elif disc > 0:
+		show_toast("Đã mua %s (máy chủ đã trừ %sđ — không còn giá sỉ)." % [
+			item_name, _fmt_vnd(int(ack.get("price_paid", 0)))])
+	else:
+		show_toast("Đã mua %s (máy chủ đã trừ %sđ)." % [
+			item_name, _fmt_vnd(int(ack.get("price_paid", 0)))])
+	_refresh_phone()
+
+
+# Ack bán lại cho chợ qua server (vòng 86 — đối xứng
+# _on_ws_shop_buy_acked, nhưng bán thì CỘNG tiền + không Danh
+# vọng): chỉ nhận ack khớp lần bán đang chờ; ack lỗi thì báo lý
+# do tiếng Việt, không đổi ví/túi; ack ok thì áp ví theo delta
+# (tiền kiếm/tiêu local trong lúc chờ ack) + owned server làm
+# chuẩn rồi báo số tiền đã nhận.
+func _on_ws_shop_sell_acked(ack: Dictionary) -> void:
+	if _pending_shop_sell.is_empty():
+		return
+	var req_id := int(ack.get("req_id", 0))
+	if req_id != int(_pending_shop_sell.get("req_id", -1)):
+		return
+	var pending := _pending_shop_sell
+	_pending_shop_sell = {}
+	var item_id := String(pending.get("item_id", ""))
+	var item_name := String(PxbEconomy.get_item(item_id).get("name", item_id))
+	if not bool(ack.get("ok", false)):
+		match String(ack.get("reason", "")):
+			"khong-so-huu":
+				show_toast("Máy chủ báo bạn chưa sở hữu %s." % item_name)
+			"khong-ban-duoc":
+				show_toast("Máy chủ báo %s không bán lại được." % item_name)
+			"khong-co-mon":
+				show_toast("Máy chủ báo không có món %s." % item_name)
+			"chua-dong-bo-so-cai":
+				show_toast("Chưa đồng bộ ví với máy chủ, thử bán lại.")
+			"chua-hello":
+				show_toast("Chưa nối máy chủ, thử bán lại.")
+			_:
+				show_toast("Không bán được %s (%s)." % [item_name, String(ack.get("reason", "khong-ro"))])
+		_refresh_phone()
+		return
+	var delta := jobs.gold - int(pending.get("money_at_send", 0))
+	jobs.gold = maxi(int(ack.get("money", 0)) + delta, 0)
+	_wallet_to_economy()
+	if bool(ack.get("owned_present", false)):
+		_apply_server_owned(ack.get("owned", {}))
+	else:
+		economy.owned.erase(item_id)
+	_wallet_from_economy()
+	show_toast("Đã bán %s (máy chủ đã cộng %sđ)." % [
+		item_name, _fmt_vnd(int(ack.get("price_received", 0)))])
 	_refresh_phone()
 
 
@@ -1575,6 +2440,356 @@ func _on_ws_send_pressed() -> void:
 				show_toast("Tin nhắn quá dài (tối đa 500 ký tự).")
 			_:
 				show_toast("Không gửi được chat.")
+	_refresh_phone()
+
+
+# --- UI trade / dau gia trong dien thoai (G4 vong 74 + 75) ---
+# De nghi: cho mon dau tien trong tui, lay so tien o nhap (vong 75;
+# mac dinh 100.000d). Mon dau tien = id nho nhat theo thu tu
+# alphabet (on dinh giua cac lan mo, khong phu thuoc thu tu chen
+# cua Dictionary).
+
+func _first_owned_item_id() -> String:
+	if bag == null:
+		return ""
+	var items: Dictionary = (bag.data() as Dictionary).get("items", {})
+	var ids: Array[String] = []
+	for k in items:
+		if int(items[k]) > 0:
+			ids.append(String(k))
+	ids.sort()
+	return ids[0] if not ids.is_empty() else ""
+
+
+func _first_owned_item_name() -> String:
+	return _trade_item_name(_first_owned_item_id())
+
+
+func _ws_player_name(player_id: String) -> String:
+	for p in online.ws_players:
+		var pd := p as Dictionary
+		if String(pd.get("player_id", "")) == player_id:
+			var n := String(pd.get("name", ""))
+			if not n.is_empty():
+				return n
+	return player_id
+
+
+# "Bình cho Cà Phê, muốn Cơm Tấm + 100.000đ" — ten mon lay tu
+# catalog, ma la thi in ma tho (khong bia ten); phan trong thi bo.
+func _trade_offer_text(offer: Dictionary) -> String:
+	var from_name := _ws_player_name(String(offer.get("from_player_id", "")))
+	var give_name := _trade_item_name(String(offer.get("give_item_id", "")))
+	if give_name.is_empty():
+		give_name = String(offer.get("give_item_id", ""))
+	var want_name := _trade_item_name(String(offer.get("want_item_id", "")))
+	if want_name.is_empty():
+		want_name = String(offer.get("want_item_id", ""))
+	var give_parts: Array[String] = []
+	if not give_name.is_empty():
+		give_parts.append(give_name)
+	if int(offer.get("give_money", 0)) > 0:
+		give_parts.append("%sđ" % _fmt_vnd(int(offer.get("give_money", 0))))
+	var want_parts: Array[String] = []
+	if not want_name.is_empty():
+		want_parts.append(want_name)
+	if int(offer.get("want_money", 0)) > 0:
+		want_parts.append("%sđ" % _fmt_vnd(int(offer.get("want_money", 0))))
+	var give_text := " + ".join(give_parts) if not give_parts.is_empty() else "(không có gì)"
+	var want_text := " + ".join(want_parts) if not want_parts.is_empty() else "(không có gì)"
+	return "%s cho %s, muốn %s" % [from_name, give_text, want_text]
+
+
+# Gia dat tiep theo cho 1 phien: chua ai dau thi gia khoi diem,
+# co roi thi gia hien tai + buoc toi thieu 1.000d (luat PxbOnline).
+func _ws_auction_next_bid(auction: Dictionary) -> int:
+	var cur := int(auction.get("current_bid", 0))
+	if cur > 0:
+		return cur + PxbOnline.WS_MIN_BID_INCREMENT_VND
+	return int(auction.get("start_price", 0))
+
+
+# Vong 75: doc so nguoi choi go trong o nhap dien thoai. Bo dau
+# cham/phay/khoang trang (nguoi choi go "100.000" hay "100000" deu
+# duoc); trong / sai dinh dang / am -> mac dinh; vuot tran -> kep
+# ve min/max. LineEdit da bi xoa (doi tab) thi tra mac dinh.
+func _parse_vnd_input(le: LineEdit, default_vnd: int, min_vnd: int, max_vnd: int) -> int:
+	if le == null or not is_instance_valid(le):
+		return default_vnd
+	var t := (le.text as String).strip_edges().replace(".", "").replace(",", "").replace(" ", "").replace("_", "")
+	if t.is_empty() or not t.is_valid_int():
+		return default_vnd
+	return clampi(t.to_int(), min_vnd, max_vnd)
+
+
+# Vong 75: gia dau hieu luc cho 1 phien — o nhap trong thi gia tiep
+# theo; go so thi phai >= gia tiep theo (thap hon thi bao loi, tra
+# -1 de handler khong gui); vuot tran thi kep ve max.
+func _ws_auction_bid_amount(auction: Dictionary) -> int:
+	var next_bid := _ws_auction_next_bid(auction)
+	if _phone_bid_input == null or not is_instance_valid(_phone_bid_input):
+		return next_bid
+	var t := (_phone_bid_input.text as String).strip_edges().replace(".", "").replace(",", "").replace(" ", "").replace("_", "")
+	if t.is_empty() or not t.is_valid_int():
+		return next_bid
+	var raw := t.to_int()
+	if raw < next_bid:
+		return -1
+	return mini(raw, PxbOnline.WS_MAX_AUCTION_MONEY_VND)
+
+
+# Vong 75: tao 1 o nhap so trong dien thoai (cung kho voi nut hanh
+# dong, nhu o chat WS). text hien tai lay tu gia tri da luu de
+# khong mat so da go khi dien thoai ve lai.
+func _phone_number_input(placeholder: String, current_value: int) -> LineEdit:
+	var le := LineEdit.new()
+	le.placeholder_text = placeholder
+	le.custom_minimum_size = Vector2(580, 56)
+	le.max_length = 15
+	if current_value > 0:
+		le.text = str(current_value)
+	_phone_actions.add_child(le)
+	return le
+
+
+func _has_my_auction_open() -> bool:
+	for a in online.ws_auctions:
+		if String((a as Dictionary).get("seller_player_id", "")) == online.ws_player_id:
+			return true
+	return false
+
+
+# Dich ma loi trade / dau gia cua PxbOnline sang tieng Viet de bao
+# tren toast (khong de ma tho lo ra man hinh).
+func _ws_trade_reason_text(reason: String) -> String:
+	match reason:
+		"chua-ket-noi-ws":
+			return "Chưa nối chat online."
+		"thieu-nguoi-nhan":
+			return "Chưa chọn người để đổi đồ."
+		"khong-doi-voi-chinh-minh":
+			return "Không đổi đồ với chính mình được."
+		"de-nghi-trong":
+			return "Đề nghị trống — chưa có gì để cho / muốn."
+		"da-co-de-nghi-cho":
+			return "Đang có 1 đề nghị chờ — hủy đề nghị cũ rồi gửi lại."
+		"khong-du-do-cho":
+			return "Không đủ món để cho đi."
+		"khong-du-tien-cho":
+			return "Không đủ tiền để cho đi."
+		"khong-tim-thay-de-nghi":
+			return "Không tìm thấy đề nghị đó nữa."
+		"thieu-trade-id":
+			return "Thiếu mã đề nghị."
+		_:
+			return "Không làm được (%s)." % reason
+
+
+func _ws_auction_reason_text(reason: String) -> String:
+	match reason:
+		"chua-ket-noi-ws":
+			return "Chưa nối chat online."
+		"thieu-item-id":
+			return "Chưa chọn món để bán."
+		"gia-khoi-diem-khong-hop-le":
+			return "Giá khởi điểm không hợp lệ."
+		"thoi-gian-khong-hop-le":
+			return "Thời gian đấu giá không hợp lệ."
+		"da-co-dau-gia-mo":
+			return "Đang có 1 phiên đấu giá mở rồi."
+		"khong-du-do-cho":
+			return "Không còn món đó trong túi."
+		"khong-tim-thay-dau-gia":
+			return "Không tìm thấy phiên đó nữa."
+		"nguoi-ban-khong-duoc-dau-gia":
+			return "Người bán không được đấu giá của mình."
+		"gia-dau-khong-hop-le":
+			return "Giá đấu không hợp lệ."
+		"gia-dau-thap-hon-gia-hien-tai":
+			return "Giá đấu thấp hơn giá hiện tại."
+		"khong-du-tien-cho":
+			return "Không đủ tiền để đấu giá."
+		"khong-phai-nguoi-ban":
+			return "Chỉ người bán mới hủy được phiên này."
+		"da-co-gia-khong-huy-duoc":
+			return "Đã có người đấu giá nên không hủy được."
+		"thieu-auction-id":
+			return "Thiếu mã phiên đấu giá."
+		_:
+			return "Không làm được (%s)." % reason
+
+
+func _on_ws_trade_offer_pressed(to_player_id: String) -> void:
+	var item_id := _first_owned_item_id()
+	if item_id.is_empty():
+		show_toast("Túi đang trống — nhặt món rồi mới đổi đồ được.")
+		return
+	# Vong 75: so tien muon lay lay tu o nhap (mac dinh 100.000d
+	# khi o trong / go sai); giu lai de lan sau mo dien thoai van
+	# thay so vua go.
+	_trade_want_money_vnd = _parse_vnd_input(_phone_trade_money_input,
+		TRADE_OFFER_WANT_MONEY_VND, 0, PxbOnline.WS_MAX_TRADE_MONEY_VND)
+	var res: Dictionary = online.send_ws_trade_offer(to_player_id, item_id, 0,
+		"", _trade_want_money_vnd)
+	if bool(res.get("ok", false)):
+		show_toast("Đã gửi đề nghị đổi đồ: cho %s, lấy %sđ." % [
+			_trade_item_name(item_id), _fmt_vnd(_trade_want_money_vnd)])
+	else:
+		show_toast(_ws_trade_reason_text(String(res.get("reason", ""))))
+	_refresh_phone()
+
+
+func _on_ws_trade_accept_pressed(trade_id: String) -> void:
+	var res: Dictionary = online.send_ws_trade_accept(trade_id)
+	if bool(res.get("ok", false)):
+		show_toast("Đã chấp nhận — chờ server chốt giao dịch…")
+	else:
+		show_toast(_ws_trade_reason_text(String(res.get("reason", ""))))
+	_refresh_phone()
+
+
+func _on_ws_trade_decline_pressed(trade_id: String) -> void:
+	var res: Dictionary = online.send_ws_trade_decline(trade_id)
+	if bool(res.get("ok", false)):
+		show_toast("Đã từ chối đề nghị đổi đồ.")
+	else:
+		show_toast(_ws_trade_reason_text(String(res.get("reason", ""))))
+	_refresh_phone()
+
+
+func _on_ws_trade_cancel_pressed(trade_id: String) -> void:
+	var res: Dictionary = online.send_ws_trade_cancel(trade_id)
+	if bool(res.get("ok", false)):
+		show_toast("Đã hủy đề nghị đổi đồ.")
+	else:
+		show_toast(_ws_trade_reason_text(String(res.get("reason", ""))))
+	_refresh_phone()
+
+
+func _on_ws_auction_create_pressed() -> void:
+	var item_id := _first_owned_item_id()
+	if item_id.is_empty():
+		show_toast("Túi đang trống — nhặt món rồi mới mở phiên được.")
+		return
+	# Vong 75: gia khoi diem + thoi gian lay tu o nhap (mac dinh
+	# 100.000d / 60 giay khi o trong / go sai; gia < 1.000d kep len
+	# 1.000d, thoi gian kep 30..3600 giay theo luat PxbOnline).
+	_auction_start_price_vnd = _parse_vnd_input(_phone_auction_price_input,
+		AUCTION_CREATE_START_PRICE_VND, PxbOnline.WS_MIN_AUCTION_START_PRICE_VND,
+		PxbOnline.WS_MAX_AUCTION_MONEY_VND)
+	_auction_duration_s = _parse_vnd_input(_phone_auction_duration_input,
+		AUCTION_CREATE_DURATION_S, PxbOnline.WS_MIN_AUCTION_DURATION_S,
+		PxbOnline.WS_MAX_AUCTION_DURATION_S)
+	var res: Dictionary = online.send_ws_auction_create(item_id,
+		_auction_start_price_vnd, _auction_duration_s)
+	if bool(res.get("ok", false)):
+		show_toast("Đã mở phiên đấu giá: %s — %sđ, %d giây." % [
+			_trade_item_name(item_id), _fmt_vnd(_auction_start_price_vnd),
+			_auction_duration_s])
+	else:
+		show_toast(_ws_auction_reason_text(String(res.get("reason", ""))))
+	_refresh_phone()
+
+
+func _on_ws_auction_bid_pressed(auction_id: String) -> void:
+	var auction := {}
+	for a in online.ws_auctions:
+		if String((a as Dictionary).get("auction_id", "")) == auction_id:
+			auction = a
+			break
+	if (auction as Dictionary).is_empty():
+		show_toast("Không tìm thấy phiên đó nữa.")
+		_refresh_phone()
+		return
+	# Vong 75: gia dau lay tu o nhap (de trong = gia tiep theo);
+	# go thap hon gia tiep theo thi bao loi, khong gui.
+	var amount := _ws_auction_bid_amount(auction)
+	if amount < 0:
+		show_toast("Giá đấu phải từ %sđ trở lên." % _fmt_vnd(_ws_auction_next_bid(auction)))
+		return
+	_bid_amount_vnd = amount
+	var res: Dictionary = online.send_ws_auction_bid(auction_id, amount)
+	if bool(res.get("ok", false)):
+		show_toast("Đã đặt giá %sđ." % _fmt_vnd(amount))
+	else:
+		show_toast(_ws_auction_reason_text(String(res.get("reason", ""))))
+	_refresh_phone()
+
+
+func _on_ws_auction_cancel_pressed(auction_id: String) -> void:
+	var res: Dictionary = online.send_ws_auction_cancel(auction_id)
+	if bool(res.get("ok", false)):
+		show_toast("Đã gửi yêu cầu hủy phiên đấu giá.")
+	else:
+		show_toast(_ws_auction_reason_text(String(res.get("reason", ""))))
+	_refresh_phone()
+
+
+func _on_ws_auction_list_pressed() -> void:
+	var res: Dictionary = online.request_ws_auction_list()
+	if not bool(res.get("ok", false)):
+		show_toast(_ws_auction_reason_text(String(res.get("reason", ""))))
+	_refresh_phone()
+
+
+# De nghi den: dang mo tab Tin nhan thi lam tuoi ngay (nut Chap
+# nhan / Tu choi hien trong dien thoai), khong thi bao so chua doc.
+func _on_ws_trade_offer_received(offer: Dictionary) -> void:
+	if phone_open and phonehub.current_tab == PxbPhoneHub.TAB_DANH_BA_TIN_NHAN:
+		_refresh_phone()
+	else:
+		phonehub.notify(PxbPhoneHub.TAB_DANH_BA_TIN_NHAN)
+	show_toast("Có đề nghị đổi đồ mới từ %s." % _ws_player_name(String(offer.get("from_player_id", ""))))
+
+
+func _on_ws_trade_offered_sent(_trade: Dictionary) -> void:
+	_refresh_phone()
+
+
+func _on_ws_trade_declined(_trade_id: String, _reason: String) -> void:
+	show_toast("Đề nghị đổi đồ bị từ chối.")
+	_refresh_phone()
+
+
+func _on_ws_trade_cancelled(_trade_id: String, _reason: String) -> void:
+	show_toast("Đề nghị đổi đồ đã bị hủy.")
+	_refresh_phone()
+
+
+func _on_ws_trade_error(reason: String) -> void:
+	show_toast(_ws_trade_reason_text(reason))
+	_refresh_phone()
+
+
+# Phien moi / co gia moi: dang mo tab Cho thi lam tuoi ngay, khong
+# thi bao so chua doc o tab Cho.
+func _on_ws_auction_created(auction: Dictionary) -> void:
+	if phone_open and phonehub.current_tab == PxbPhoneHub.TAB_CHO:
+		_refresh_phone()
+	else:
+		phonehub.notify(PxbPhoneHub.TAB_CHO)
+	show_toast("Đã mở phiên đấu giá %s." % _trade_item_name(String(auction.get("item_id", ""))))
+
+
+func _on_ws_auction_bid(_auction: Dictionary) -> void:
+	if phone_open and phonehub.current_tab == PxbPhoneHub.TAB_CHO:
+		_refresh_phone()
+	else:
+		phonehub.notify(PxbPhoneHub.TAB_CHO)
+
+
+func _on_ws_auction_list(_auctions: Array) -> void:
+	if phone_open and phonehub.current_tab == PxbPhoneHub.TAB_CHO:
+		_refresh_phone()
+
+
+func _on_ws_auction_cancelled(_auction_id: String, _reason: String) -> void:
+	show_toast("Phiên đấu giá đã bị hủy.")
+	_refresh_phone()
+
+
+func _on_ws_auction_error(reason: String) -> void:
+	show_toast(_ws_auction_reason_text(reason))
 	_refresh_phone()
 
 
@@ -1722,20 +2937,43 @@ const DPAD_RECT := Rect2(Vector2(48, 880), Vector2(160, 160))
 const LABEL_BOTTOM_MAX := 1200.0
 
 func _sprite_obstacle_rect(screen_pos: Vector2) -> Rect2:
-	# Dau + than tren cua sprite anh cao 104 world (~146px man hinh
-	# o zoom 1.4): tam o chan nhan vat, toc o -165, nguc o -50.
-	# (Vong 5: -150 cu de nhan cham toc — toc nhon cao hon dinh dau
-	# tinh toan, tang them 15px.)
-	return Rect2(screen_pos + Vector2(-48, -165), Vector2(96, 115))
+	# Vong 64: tinh tu CharacterSprite.TEX_HEIGHT (128, vong 63)
+	# x zoom camera hien tai — khong hard-code so thoi 104/zoom 1.4
+	# nua. Ti le giu nguyen nhu ban cu (104 world, zoom 1.4, rect
+	# (-48,-165,96,115)): rong 96/(104*1.4), nguc -50/(104*1.4)
+	# theo TEX_HEIGHT; dinh = -(TEX_HEIGHT*zoom + 15) — toc + bien
+	# toc 15px man hinh (vong 5). O zoom 1.25: (-52.7,-175,105.4,
+	# 120.1): dinh cao hon dinh dau that (-157px) 18px, day o nguc
+	# -55px, rong phu NPC rong nhat (83 world -> 104px).
+	var z := CAMERA_ZOOM
+	var cam := get_viewport().get_camera_2d()
+	if cam != null:
+		z = cam.zoom.y
+	var top := -(CharacterSprite.TEX_HEIGHT * z + 15.0)
+	var chest := -(50.0 / (104.0 * 1.4)) * CharacterSprite.TEX_HEIGHT * z
+	var w := (96.0 / (104.0 * 1.4)) * CharacterSprite.TEX_HEIGHT * z
+	return Rect2(screen_pos + Vector2(-w / 2.0, top), Vector2(w, chest - top))
+
+## Vong 66: hinh chu nhat DAU NPC (mat/toc) tu vat can sprite:
+## cung dinh + rong voi _sprite_obstacle_rect, cao 32 world
+## (dau) x zoom + 15px bien toc — khop _head_rect trong test
+## r64/r66 (dau = 32 world tren dinh anh that).
+func _npc_head_rect(screen_pos: Vector2) -> Rect2:
+	var ob := _sprite_obstacle_rect(screen_pos)
+	var z := CAMERA_ZOOM
+	var cam := get_viewport().get_camera_2d()
+	if cam != null:
+		z = cam.zoom.y
+	return Rect2(ob.position, Vector2(ob.size.x, 32.0 * z + 15.0))
 
 ## Vong 12b: nhan co DE LEN nhan vat chinh / nut D-pad khong?
 ## Giao nhau phai >= 10px CA 2 chieu moi tinh — quet nhe vai px
 ## thi khong dang ke. Chi xet 2 thu "khong duoc che": dau/than
 ## nhan vat chinh (tam man hinh) va nut D-pad (nut bam). De len
-## sprite NPC hay icon (vd "Sap rau" Map002 quet dau Anh Hai
-## sau khi camera cuon) thi CHAP NHAN — neo quan trong hon,
-## khong co test nao bat loi do, va nhay xa 200-600px de tranh
-## NPC moi la loi (nhan bay len troi, mat neo).
+## sprite NPC hay icon thi CHAP NHAN — neo quan trong hon, va
+## nhay xa 200-600px de tranh NPC moi la loi (nhan bay len troi,
+## mat neo). NGOAI LE vong 66: chi DAU NPC (mat/toc) thi khong
+## chap nhan — xem _label_hits_other_npc_head (phat hien §87.3).
 func _label_hits_player_or_dpad(r: Rect2, player_rect: Rect2) -> bool:
 	if player_rect.size != Vector2.ZERO:
 		var inter := r.intersection(player_rect)
@@ -1744,6 +2982,30 @@ func _label_hits_player_or_dpad(r: Rect2, player_rect: Rect2) -> bool:
 	if _dpad != null and _dpad.visible:
 		var inter2 := r.intersection(DPAD_RECT)
 		if inter2.size.x >= 10.0 and inter2.size.y >= 10.0:
+			return true
+	return false
+
+## Vong 66: nhan co DE LEN DAU NPC KHAC dang ke khong? (mat/toc
+## — 32 world tren dinh anh + 15px bien toc, lay tu
+## _npc_head_rect.) Giao nhau >= 10px ca 2 chieu moi tinh (nhu
+## luat thoat nhan vat chinh). Chi xet NPC (nhan dang xet la
+## hotspot/craft/door — khong phai NPC; nhan NPC co dinh, khong
+## dich). Than/nguc NPC khong tinh: nhan de than 1 chut van doc
+## duoc, chi mat moi khong duoc che (phat hien §87.3: "Sap rau
+## buoi toi" che mat Chi Le o camera (9,2) Toi, giao 63.8x34.3px,
+## best_y cach 157px — trong 200px nhung vuot 120px nen vong
+## chinh giu neo; mo rong thoat cho dau NPC thi nhan nhay len
+## best_y ma van trong luat neo).
+func _label_hits_other_npc_head(r: Rect2) -> bool:
+	if iso_map == null:
+		return false
+	var ct := get_viewport().get_canvas_transform()
+	for mk in iso_map.markers:
+		if String(mk.event_data.get("kind", "")) != "npc":
+			continue
+		var hr := _npc_head_rect(ct * mk.global_position)
+		var inter := r.intersection(hr)
+		if inter.size.x >= 10.0 and inter.size.y >= 10.0:
 			return true
 	return false
 
@@ -1885,6 +3147,16 @@ func _resolve_label_overlaps() -> void:
 			# (kiem live 14:34). Vat can nho, chi bao ve tam bieu
 			# tuong, khong day nhan di xa.
 			obstacles.append(Rect2(sp + Vector2(-24, -24), Vector2(48, 48)))
+	# Vong 45: bien sap (NadiaScene) la vat can vong chinh — nhan
+	# hotspot/craft/door tranh bien nhu tranh icon ("Goc Che Tao"
+	# Map002 de bien "GIA VI", "Sap rau buoi sang" de bien hang
+	# sap; anh that r45-01). KHONG dua vao hard_obstacles (bien
+	# khong phai nut bam / dau nhan vat — neu khong con khoang
+	# trong gan thi nhan duoc phep che bien 1 chut chu khong bay
+	# xa mat neo). Nhan NPC khong dich duoc nen bien khong cuu
+	# duoc "Anh Hai" (xem docs/godot-g4.md §67.4).
+	if iso_map.nadia_scene != null:
+		obstacles.append_array(iso_map.nadia_scene.stall_sign_screen_rects())
 	# Nhan NPC trong the gioi (vong 15): co dinh tren dau NPC,
 	# resolver KHONG dich duoc (dich la roi neo) — chi ghi rect
 	# cua chung vao placed truoc de nhan khac (hotspot/cua/che
@@ -1961,13 +3233,26 @@ func _resolve_label_overlaps() -> void:
 			# (vd "Sap rau" Map002 spawn: best_y 1067 cach
 			# 249px — nhay thi mat neo, dung yen thi chi che
 			# nhan vat tam thoi khi nguoi choi dung o spawn).
-			# De len NPC/icon thi khong tinh (giu neo; xem
-			# _label_hits_player_or_dpad).
+			# De len than NPC/icon thi khong tinh (giu neo; xem
+			# _label_hits_player_or_dpad). Vong 66: de len DAU
+			# NPC khac dang ke (>= 10px ca 2 chieu) thi thoat nhu
+			# nhan vat chinh (toi da 200px) — xem
+			# _label_hits_other_npc_head.
+			# Vong 45: da thu mo rong ngoai le cho BIEN SAP
+			# (de bien dang ke thi nhay toi da 200px) nhung
+			# PHAI BO — nhay xa pha vo bat buoc neo <=120px
+			# (artpass12: "Sap rau" roi neo -161px; artpass4/5:
+			# "Hem tro buoi toi" nhay len de dau nhan vat).
+			# Bien che nhe thi chap nhan (xem test g4_polish:
+			# ngoai le "Sap rau" de THIT HEO 15x20px); chi
+			# truong hop nao co khoang trong trong vong 120px
+			# thi resolver tu dich qua _nearest_free_y vi bien
+			# da nam trong obstacles.
 			if not shifted:
 				var p_rect := Rect2()
 				if player != null:
 					p_rect = _sprite_obstacle_rect(ct * player.position)
-				if best_y >= 0.0 and absf(best_y - want_y) <= LABEL_ESCAPE_MAX_DRIFT and _label_hits_player_or_dpad(r, p_rect):
+				if best_y >= 0.0 and absf(best_y - want_y) <= LABEL_ESCAPE_MAX_DRIFT and (_label_hits_player_or_dpad(r, p_rect) or _label_hits_other_npc_head(r)):
 					r.position.y = best_y
 		else:
 			r.position.y = best_y
@@ -1975,6 +3260,10 @@ func _resolve_label_overlaps() -> void:
 		r.position.y = clampf(r.position.y, 190.0, LABEL_BOTTOM_MAX - r.size.y)
 		placed.append(r)
 		e["mk"].label_override = r
+	# Vong 65: bien sap de luot tach tranh — xem _nudge_clear_of_signs.
+	var sign_rects: Array[Rect2] = []
+	if iso_map.nadia_scene != null:
+		sign_rects = iso_map.nadia_scene.stall_sign_screen_rects()
 	# Vong 12b — luot tach nhan con chong nhau: sau vong chinh
 	# van co the con cap nhan chong nhau (vd 2 nhan cua Map002
 	# cham nhau 7px o spawn, 20px o (4,4): nhan duoi kep o day
@@ -2005,11 +3294,13 @@ func _resolve_label_overlaps() -> void:
 				var dn_r: Rect2 = entries[dn_i]["mk"].label_override
 				# Thu day nhan tren len (co cascade 1 cap).
 				var cand_up := Rect2(Vector2(up_r.position.x, dn_r.position.y - up_r.size.y - LABEL_GAP), up_r.size)
-				if cand_up.position.y >= 190.0 and _try_move_up(up_i, cand_up, hard_obstacles, entries):
+				cand_up = _nudge_clear_of_signs(cand_up, sign_rects, hard_obstacles)
+				if cand_up.position.y >= 190.0 and _try_move_up(up_i, cand_up, hard_obstacles, entries, sign_rects):
 					moved = true
 					continue
 				# Khong len duoc: day nhan duoi xuong.
 				var cand_dn := Rect2(Vector2(dn_r.position.x, up_r.end.y + LABEL_GAP), dn_r.size)
+				cand_dn = _nudge_clear_of_signs(cand_dn, sign_rects, hard_obstacles)
 				if cand_dn.end.y <= LABEL_BOTTOM_MAX and not _rect_hits_any(cand_dn, hard_obstacles, entries, dn_i):
 					entries[dn_i]["mk"].label_override = cand_dn
 					moved = true
@@ -2020,7 +3311,9 @@ func _resolve_label_overlaps() -> void:
 ## cand khong de len vat can cung / nhan khac; neu chi bi 1
 ## nhan khac chan thi day luon nhan do len 1 nac nua (cascade
 ## 1 cap) roi moi day nhan nay. Tra false neu khong day duoc.
-func _try_move_up(idx: int, cand: Rect2, hard_obstacles: Array[Rect2], entries: Array) -> bool:
+## Vong 65: nhan bi day len (cascade) cung khong duoc de len
+## bien sap — neu khong, luot tach lai tao ra chong bien moi.
+func _try_move_up(idx: int, cand: Rect2, hard_obstacles: Array[Rect2], entries: Array, signs: Array[Rect2] = []) -> bool:
 	var blocker_idx := -1
 	for o in hard_obstacles:
 		if cand.intersects(o):
@@ -2041,6 +3334,9 @@ func _try_move_up(idx: int, cand: Rect2, hard_obstacles: Array[Rect2], entries: 
 	var cand_blk := Rect2(Vector2(blk.position.x, cand.position.y - blk.size.y - LABEL_GAP), blk.size)
 	if cand_blk.position.y < 190.0:
 		return false
+	for s in signs:
+		if cand_blk.intersects(s):
+			return false
 	if _rect_hits_any(cand_blk, hard_obstacles, entries, blocker_idx, idx):
 		return false
 	entries[blocker_idx]["mk"].label_override = cand_blk
@@ -2060,6 +3356,51 @@ func _rect_hits_any(r: Rect2, obstacles: Array[Rect2], entries: Array, skip_idx:
 		if ov.size != Vector2.ZERO and r.intersects(ov):
 			return true
 	return false
+
+## Vong 65 — dich ngang ung vien tach de tranh bien sap: luot tach
+## truoc day chi kiem vat can CUNG (nhan vat/D-pad/NPC) nen day
+## "Cua ve Xom Tro Cu" len 1112 dung ngay bien GIA VI (35x15px,
+## camera (5,2)) — vong chinh tranh bien, luot tach lai day vao.
+## Neu ung vien de len bien thi thu dich ngang giu nguyen y
+## (+-40/80/120/160, thu tu gan truoc — nhu vong chinh), lay cai
+## dau tien sach bien + vat can cung (kiem bang rect grow
+## LABEL_GAP cho bien, tho cho vat can cung); khong co thi tra
+## ve ung vien goc (giu hanh vi cu, khong bay xa). Chi dich khi
+## ung vien de bien — 99% truong hop khong doi gi.
+## CO TINH KHONG kiem nhan khac o day: nhan chan dich ngang
+## (vd "Goc Che Tao" dang o 1107.25) se duoc luot tach day len
+## bang cascade ngay sau do — kiem no o day se chan het moi
+## dich ngang (probe vong 65). Chong nhan van do _try_move_up
+## (co kiem cascade khong de bien) + luot tach xu ly.
+func _nudge_clear_of_signs(cand: Rect2, signs: Array[Rect2], hard_obstacles: Array[Rect2]) -> Rect2:
+	var hits := false
+	for s in signs:
+		if cand.intersects(s):
+			hits = true
+			break
+	if not hits:
+		return cand
+	for dx in [40.0, -40.0, 80.0, -80.0, 120.0, -120.0, 160.0, -160.0]:
+		var shifted := Rect2(cand.position + Vector2(dx, 0.0), cand.size)
+		shifted.position.x = clampf(shifted.position.x, 16.0, 704.0 - cand.size.x)
+		if shifted.position.x == cand.position.x:
+			continue
+		var grown := shifted.grow(LABEL_GAP)
+		var bad := false
+		for s2 in signs:
+			if grown.intersects(s2):
+				bad = true
+				break
+		if bad:
+			continue
+		for o in hard_obstacles:
+			if shifted.intersects(o):
+				bad = true
+				break
+		if bad:
+			continue
+		return shifted
+	return cand
 
 ## Top gan nhat trong khoang doc trong (khong de len vat can / nhan
 ## da dat, cach LABEL_GAP). Tra -1 neu khong co khoang trong nao.
@@ -2114,6 +3455,10 @@ func _nearest_free_y(r: Rect2, obstacles: Array[Rect2], placed: Array[Rect2]) ->
 	return best_y
 
 func _update_daynight() -> void:
+	# Vong 62: doi dat ngay/dem theo khung (F) — _update_ground chi
+	# goi o load_map thi bam F khong doi dat (dat ngay giu sang
+	# trong khi nen dem da toi). Goi o day la idempotent.
+	_update_ground(current_map_id)
 	if _daynight != null:
 		_daynight.color = _daynight_color(frame_idx)
 	if iso_map != null and iso_map.night_glow != null:
@@ -2169,10 +3514,20 @@ func _refresh_hotspot_player_flags() -> void:
 ## thong nhat (CanvasLayer layer 1, tren toan bo the gioi) da toi
 ## nhan vat cung muc voi nen. Tint rieng truoc day nhan them 1 nac
 ## (overlay 0.55 x tint 0.42 = 0.23) lam nhan vat thanh bong den
-## chi con mat trang (kiem live 14:34). Giu ham de khong phai sua
-## cac noi goi; tra ve trang o moi khung.
+## chi con mat trang (kiem live 14:34).
+## Vong 62 — NGOAI LE co dieu kien cho Map001-002: tu khi dat co
+## ban dem rieng (ground_map00N_night.png, toi san ~0.6), dat dem
+## sau MUL ve ~0.42 trong khi nhan vat chi co MUL (0.7) nen "dan"
+## tren dat toi (anh dem r61: nhan vat sang hon ca nen). Tint dem
+## (0.60,0.62,0.70) x MUL (0.7,0.78,0.95) = ~(0.42,0.48,0.67),
+## gan bang dat dem — nhan vat hoa vao canh dem chu khong thanh
+## bong den (khac loi 20/11: luc do dat KHONG co ban dem, tint
+## rieng la nac thu 2 khong co co so). Chi ap khi map co dat dem
+## (frame 2 + _night_ground_path != ""); map khac giu trang.
 func _update_character_tint() -> void:
 	var tint := Color(1, 1, 1, 1)
+	if frame_idx == 2 and _night_ground_path(current_map_id) != "":
+		tint = Color(0.60, 0.62, 0.70, 1)
 	if player != null:
 		player.set_tint(tint)
 	if iso_map != null:
@@ -2264,9 +3619,11 @@ func _build_ui() -> void:
 	_ui_layer = layer
 	layer.layer = 1
 	add_child(layer)
-	# HUD GON 4 dong (panel cao thuc te ~157px do min-size cua noi
-	# dung, day panel y ~173 — dat size 124px nhung PanelContainer
-	# tu no ra min-size) thay vi 5 dong 236px — HUD cu chiem het dai
+	# HUD GON 5 dong (Vong 88: them dong chi so phu — panel cao
+	# thuc te ~163px, cao nhat ~168px khi ten map vua co 30, van
+	# <= 170 cua artpass3). 3 dong noi dung thu tu 24 ve 20 de
+	# nhuong cho dong phu co 18 (co nho xuong 16 neu rong qua
+	# 412px, xem _fit_hud_substats). HUD cu 4 dong chiem het dai
 	# troi tren cung nen troi khong bao gio thay duoc luc spawn
 	# (loi 20/11 12:30). Gop: tui vao dong ngay, vi+EXP vao dong
 	# rieng; dong tui rieng (_hud_bag) an di.
@@ -2279,11 +3636,12 @@ func _build_ui() -> void:
 	hvb.add_theme_constant_override("separation", 2)
 	hud_panel.add_child(hvb)
 	_hud_map = _mk_label(hvb, font_bold, 30, Vector2.ZERO, "Phố Xô Bồ")
-	_hud_day = _mk_label(hvb, font, 24, Vector2.ZERO, "")
-	_hud_bag = _mk_label(hvb, font, 24, Vector2.ZERO, "")
+	_hud_day = _mk_label(hvb, font, 20, Vector2.ZERO, "")
+	_hud_bag = _mk_label(hvb, font, 20, Vector2.ZERO, "")
 	_hud_bag.visible = false
-	_hud_gold = _mk_label(hvb, font, 24, Vector2.ZERO, "")
-	_hud_stats = _mk_label(hvb, font, 24, Vector2.ZERO, "")
+	_hud_gold = _mk_label(hvb, font, 20, Vector2.ZERO, "")
+	_hud_stats = _mk_label(hvb, font, 20, Vector2.ZERO, "")
+	_hud_substats = _mk_label(hvb, font, 18, Vector2.ZERO, "")
 	var frame_btn := Button.new()
 	frame_btn.text = "Đổi khung (F)"
 	_style_button(frame_btn)
@@ -2641,6 +3999,11 @@ func _update_hud() -> void:
 		("%d loại" % parts.size()) if not parts.is_empty() else "trống"]
 	_hud_gold.text = "Ví: %sđ • EXP %d" % [_fmt_vnd(jobs.gold), jobs.exp_total]
 	_hud_stats.text = "Thể %d • Trí %d • Tâm %d" % [stats.the, stats.tri, stats.tam]
+	# Vong 88: 4 chi so phu xem thuong truc tren HUD (truoc day
+	# chi thay qua toast tot nghiep roi mat, §109.6 muc 4).
+	_hud_substats.text = "Kỷ %d • Dũng %d • Sáng %d • An Yên %d" % [
+		stats.ky(), stats.dung(), stats.sang(), stats.an_yen()]
+	_fit_hud_substats()
 	var unread := phonehub.total_unread() if phonehub != null else 0
 	_phone_btn.text = ("Điện thoại (%d)" % unread) if unread > 0 else "Điện thoại (P)"
 

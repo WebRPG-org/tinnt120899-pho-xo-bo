@@ -65,6 +65,18 @@ var _ai_done_this_turn := false
 var _end_rect := Rect2(16, 1120, 330, 70)
 var _close_rect := Rect2(374, 1120, 330, 70)
 
+## Cầu nối trạng thái trận ra JS (Vòng 92) — xem battle_status().
+var _bridge_dirty := false
+
+## V93: chống click kép do emulate_touch_from_mouse=true — 1 click
+## chuột sinh CẢ InputEventMouseButton LẪN InputEventScreenTouch, nên
+## _unhandled_input gọi click_screen 2 lần: click "Kết thúc lượt" thứ
+## 2 bỏ qua luôn lượt địch vừa tới (A -> B -> A kế trong cùng 1
+## khung, B đứng yên cả trận — probe r93b). Chặn click thứ 2 cùng vị
+## trí trong 300ms; click khác vị trí / sau 300ms vẫn qua bình thường.
+var _last_click_msec := -100000
+var _last_click_pos := Vector2.INF
+
 ## Animation trận (G4 — chỉ lớp vẽ, KHÔNG sửa luật PxbMarketBattle).
 ## Đấu sĩ trước đây nhảy ô tức thì; nay vị trí VẼ (_visual_pos) trượt
 ## về ô logic với tốc độ MOVE_ANIM_SPEED, đánh thì lao tới + chớp
@@ -104,6 +116,7 @@ func setup(p_mb: PxbMarketBattle, p_battle: Dictionary, p_font: Font, p_font_bol
 	_attack_fx = {}
 	_support_fx = {}
 	_sync_visual_pos()
+	_bridge_dirty = true
 	if mb != null:
 		mb.turn_changed.connect(_on_turn_changed)
 		mb.battle_finished.connect(_on_battle_finished)
@@ -114,13 +127,73 @@ func _on_turn_changed(_fighter_id: String) -> void:
 	_selected_id = str(battle.get("activeFighterId", ""))
 	_ai_wait = 0.0
 	_ai_done_this_turn = false
+	_bridge_dirty = true
 	queue_redraw()
 
 
 func _on_battle_finished(_winner: String) -> void:
 	_last_action = result_text()
+	_bridge_dirty = true
 	queue_redraw()
 	battle_finished.emit(_winner)
+
+
+## --- Cầu nối trạng thái trận ra JS (Vòng 92) ---
+## Bài học V91: replay mù 34 lượt không trúng đòn nào — click rơi
+## vào lượt địch (đợi 3s sau Kết thúc lượt, trong khi AI cần 1,2s
+## game ≈ 5,5s wall mới đi) và click Kết thúc lượt bỏ qua lượt địch
+## trước khi AI kịp hành động. Script browser-verify từ nay đọc
+## window.__pxb_battle để đồng bộ từng lượt (đợi đúng đấu sĩ, kiểm
+## chứng đòn đã trúng rồi mới Kết thúc lượt), thay vì bấm mù theo
+## thời gian. Chỉ đẩy trên web (OS.has_feature("web")), theo đúng
+## mẫu window.__pxb_map/__pxb_tile của Main; headless/test không
+## gọi JavaScriptBridge — battle_status() thuần, test gọi trực tiếp.
+func battle_status() -> Dictionary:
+	var fighters: Array = []
+	if mb != null and not battle.is_empty():
+		for f in mb.all_fighters(battle):
+			fighters.append({
+				"id": str(f.get("id", "")),
+				"team": mb.team_of(battle, f),
+				"name": str(f.get("name", "")),
+				"x": int(f.get("x", -1)), "y": int(f.get("y", -1)),
+				"hp": int(f.get("hp", 0)), "maxHp": int(f.get("maxHp", 0)),
+				"alive": bool(f.get("alive", false)),
+				"moved": bool(f.get("movedThisTurn", false)),
+				"acted": bool(f.get("actedThisTurn", false)),
+			})
+	var reach: Array = []
+	for t in reachable_tiles():
+		reach.append([t.x, t.y])
+	var atk: Array = []
+	for e in attackable_targets():
+		atk.append([int(e.get("x", -1)), int(e.get("y", -1))])
+	var act := active_fighter()
+	var over := not battle.is_empty() and not is_fighting()
+	var winner := ""
+	if over:
+		winner = str((battle.get("result", {}) as Dictionary).get("winner", ""))
+	return {
+		"open": not battle.is_empty(),
+		"over": over,
+		"winner": winner,
+		"round": int(battle.get("round", 0)),
+		"turn_fighter": str(act.get("id", "")),
+		"turn_team": ("" if act.is_empty() else mb.team_of(battle, act)),
+		"hp_a_pct": (mb.team_hp_percent(battle, "A") if mb != null else 0.0),
+		"hp_b_pct": (mb.team_hp_percent(battle, "B") if mb != null else 0.0),
+		"last_action": _last_action,
+		"result_text": (result_text() if over else ""),
+		"reachable": reach,
+		"attackable": atk,
+		"fighters": fighters,
+	}
+
+
+func _push_bridge() -> void:
+	if not OS.has_feature("web"):
+		return
+	JavaScriptBridge.eval("window.__pxb_battle = " + JSON.stringify(battle_status()))
 
 
 ## --- Toán lưới (cùng công thức IsoMap) ---
@@ -317,6 +390,7 @@ func _update_visual_pos(delta: float) -> void:
 func click_tile(tile: Vector2i) -> String:
 	if not is_fighting() or mb == null:
 		return "none"
+	_bridge_dirty = true
 	var f := active_fighter()
 	if f.is_empty():
 		return "none"
@@ -373,6 +447,7 @@ func end_turn_now() -> bool:
 		return false
 	var ok := mb.end_turn(battle)
 	if ok:
+		_bridge_dirty = true
 		_last_action = "Hết lượt — tới %s." % str(active_fighter().get("name", ""))
 		queue_redraw()
 	return ok
@@ -397,6 +472,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		click_pos = event.position
 	if click_pos == Vector2.INF:
 		return
+	# V93: bỏ click lặp cùng vị trí trong 300ms (chuột + touch giả lập
+	# của cùng 1 lần bấm — xem _last_click_msec ở trên).
+	var now_msec := Time.get_ticks_msec()
+	if now_msec - _last_click_msec < 300 and click_pos.distance_to(_last_click_pos) < 12.0:
+		return
+	_last_click_msec = now_msec
+	_last_click_pos = click_pos
 	if click_screen(click_pos) == "close":
 		close_requested.emit()
 
@@ -404,9 +486,21 @@ func _unhandled_input(event: InputEvent) -> void:
 ## --- Đồng hồ (gọi mỗi khung; test gọi simulate_seconds) ---
 
 func _process(delta: float) -> void:
+	if _bridge_dirty:
+		_bridge_dirty = false
+		_push_bridge()
 	_update_visual_pos(delta)
 	_advance_timers(delta)
 	queue_redraw()
+
+
+## Đang chờ AI đi: lượt của đội AI và AI chưa đi xong lượt này.
+## _advance_timers dùng để không hết giờ lượt khi đang chờ AI (V93).
+func _ai_pending() -> bool:
+	if not ai_enabled or _ai_done_this_turn or mb == null:
+		return false
+	var act := active_fighter()
+	return not act.is_empty() and mb.team_of(battle, act) == ai_team
 
 
 func _advance_timers(seconds: float) -> void:
@@ -419,21 +513,28 @@ func _advance_timers(seconds: float) -> void:
 		mb.tick(battle, 1.0)
 		if not is_fighting():
 			return
-	if _turn_elapsed >= float(PxbMarketBattle.TURN_SECONDS):
-		_turn_elapsed = 0.0
-		mb.expire_turn(battle)
-		if not is_fighting():
-			return
+	# V93: cho AI đi TRƯỚC khi xét hết giờ lượt. Trước đây hết giờ
+	# chạy trước khối AI nên một khung hình giật (delta lớn đẩy
+	# _turn_elapsed qua 10s trong lúc _ai_wait còn < 1,2s) nuốt trọn
+	# lượt địch: expire_turn chuyển lượt trước khi AI kịp đi — trên
+	# trình duyệt thật đội B đứng rải rác, không đánh như sim (V92).
 	# AI lượt địch: tới lượt đội AI thì đợi AI_ACT_DELAY rồi đi 1
 	# lượt (di chuyển/đánh/hỗ trợ + kết thúc lượt) qua
 	# PxbMarketBattle.ai_take_turn.
-	if ai_enabled and not _ai_done_this_turn:
-		var act := active_fighter()
-		if not act.is_empty() and mb.team_of(battle, act) == ai_team:
-			_ai_wait += seconds
-			if _ai_wait >= AI_ACT_DELAY:
-				_ai_done_this_turn = true
-				_run_ai_turn()
+	if _ai_pending():
+		_ai_wait += seconds
+		if _ai_wait >= AI_ACT_DELAY:
+			_ai_done_this_turn = true
+			_run_ai_turn()
+			if not is_fighting():
+				return
+	# Không hết giờ lượt khi đang chờ AI: đồng hồ lượt của đấu sĩ AI
+	# dừng ở mốc chờ, AI đi xong mới tính lượt mới (turn_changed
+	# reset _turn_elapsed về 0 nên khung giật không ăn mất lượt kế
+	# tiếp). Lượt người chơi vẫn hết giờ đúng 10s như luật.
+	if _turn_elapsed >= float(PxbMarketBattle.TURN_SECONDS) and not _ai_pending():
+		_turn_elapsed = 0.0
+		mb.expire_turn(battle)
 
 
 ## Chạy 1 lượt AI cho đấu sĩ đang tới lượt; ghi hành động vào
@@ -467,6 +568,7 @@ func _run_ai_turn() -> void:
 	else:
 		_last_action = " ".join(parts)
 	_selected_id = str(battle.get("activeFighterId", ""))
+	_bridge_dirty = true
 	queue_redraw()
 
 
