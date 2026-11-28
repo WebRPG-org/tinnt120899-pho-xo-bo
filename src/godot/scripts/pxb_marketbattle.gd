@@ -360,10 +360,19 @@ func create_battle(options: Dictionary) -> Dictionary:
 	if defender_team != "A" and defender_team != "B":
 		defender_team = ""
 
+	# G4 buoc 9 (vong 68): doi thach dau dang giu sap thi khong mo
+	# tran tranh sap moi (luat can_challenge: 1 doi giu toi da 1 sap).
+	# Tran khong tranh sap (stallId "") thi khong chan.
+	var stall_id: String = str(options.get("stallId", ""))
+	if stall_id != "":
+		var chk: Dictionary = can_challenge(_state, str(team_a.get("id", "doi-a")), stall_id, game_day)
+		if not bool(chk.get("ok", false)):
+			return {"ok": false, "reason": str(chk.get("reason", "")), "holdingStallId": str(chk.get("holdingStallId", ""))}
+
 	var battle: Dictionary = {
 		"teamA": {"id": str(team_a.get("id", "doi-a")), "name": str(team_a.get("name", "Đội A")), "fighters": []},
 		"teamB": {"id": str(team_b.get("id", "doi-b")), "name": str(team_b.get("name", "Đội B")), "fighters": []},
-		"stallId": str(options.get("stallId", "")),
+		"stallId": stall_id,
 		"gameDay": game_day,
 		"defenderTeam": defender_team,
 		"gridW": GRID_W,
@@ -896,6 +905,28 @@ static func apply_hold_win(st: Dictionary, hold: Dictionary) -> bool:
 		"untilGameDay": int(hold["untilGameDay"]),
 	}
 	return true
+
+
+## Vong 95: neo lai cua so giu sap theo ngay server — tra hold moi voi
+## startGameDay = anchor_day, untilGameDay = anchor_day + HOLD_DAYS,
+## giu nguyen stallId/teamId/teamName. Tra {} khi hold rong / thieu
+## stallId / anchor_day < 1. Khong doi luat giu 7 ngay, chi doi moc:
+## client moi luon bat dau ngay local 1 trong khi server co the da
+## ngay 17+ (state ton tai) nen hold [1,8) khong bao gio qua duoc cua
+## server (het-han-giu-sap / ngay-server-khong-khop — xem §115.3).
+static func reanchor_hold_window(hold: Dictionary, anchor_day: int) -> Dictionary:
+	if hold.is_empty() or anchor_day < 1:
+		return {}
+	var stall_id := str(hold.get("stallId", ""))
+	if stall_id.is_empty():
+		return {}
+	return {
+		"stallId": stall_id,
+		"teamId": str(hold.get("teamId", "")),
+		"teamName": str(hold.get("teamName", "")),
+		"startGameDay": anchor_day,
+		"untilGameDay": anchor_day + HOLD_DAYS,
+	}
 
 
 ## Dọn sạp đã hết hạn ở ngày game đó. Trả số sạp đã dọn.

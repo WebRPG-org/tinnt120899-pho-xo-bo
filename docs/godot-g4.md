@@ -12653,3 +12653,100 @@ gửi lại cho ai.
    chuyển.
 5. Chủ chốt trần bonus chỉ số phụ (hiện KHÔNG kẹp STAT_MAX).
 
+## §116 — Vòng 95: neo cửa sổ hold theo ngày server — XONG (28/11 ~10:45–12:45 +07, cron 10:45)
+
+### 116.1 Sửa code — neo ở 3 chỗ + 1 mốc chung
+
+- `PxbMarketBattle.reanchor_hold_window(hold, anchor_day)` (mới,
+  `scripts/pxb_marketbattle.gd`): tra hold moi start=anchor,
+  until=anchor+7, giu stallId/teamId/teamName; {} khi hold rong /
+  thieu stall / anchor < 1. Khong doi luat giu 7 ngay, chi doi moc.
+- `Main._hold_anchor_day()` (mới, `main.gd`): ngay server khi dang
+  noi WS (da biet, `ws_server_day > 0`), khong thi ngay local.
+  Moi tinh toan giu sap dung chung moc nay: `_hold_benefits_now()`
+  (quyen loi -10%/Danh vong), `_advance_frame` (expire + fame
+  /ngay), `_start_battle_demo` (expire + `can_challenge_now` —
+  logic chan B), `_sync_hold_to_server` (game_day gui len server).
+- `Main._on_battle_finished`: thang khi dang noi server thi neo
+  cua so hold theo ngay server roi moi toast + sync — ghi de ca 2
+  cho: `battle_state["holds"][stall]` (di theo save) +
+  `battle_scene.battle["hold"]` (toast hien until moi). Offline
+  giu nguyen ngay local.
+- `_sync_hold_to_server()`: GUI CA KHI hold da het han theo ngay
+  neo — chi can `battle_state` con hold cua doi-ban la gui, de
+  SERVER xet han (het-han-giu-sap) va bao cho nguoi choi; khong
+  chan theo quyen loi nua.
+- `_on_ws_stall_hold_synced`: ack het-han-giu-sap thi don hold het
+  han khoi `battle_state` ngay (`expire_holds` theo ngay neo) —
+  khong gui lai + bao lai o moi lan doi ngay / (re)connect sau.
+
+### 116.2 Hoi quy r81 rot 1 check — loi that, da sua trong vong
+
+- Hoi quy lan 1: **5254 pass, 1 fail** (`g4_r81_server_day_test`,
+  phase 8 timeout step 4). Nguyen nhan that: `_sync_hold_to_server`
+  ban dau chan theo quyen loi — ngay neo 15 ngoai cua so [8,15)
+  nen khong gui, ack het-han thu 3 khong bao gio ve. Day la hanh vi
+  moi cua V95, khong phai flake (v94: 5230 pass, 0 fail).
+- Sua: gui khi con hold doi-ban (muc tren) + don hold khi nhan ack
+  het-han. Test r95 phase 3 sua theo hop dong dung: hold cu [1,8)
+  duoc gui len server, ack het-han-giu-sap + toast + hold cu bi don.
+- Chay lai: r81 **96/96 PASS** (du ca phase 9, truoc timeout nen
+  chi dem 87), r95 **35/35 PASS**. Hoi quy day du lan 2:
+  **5265 check, 0 FAIL** (lan sach thu 14; +35 so voi v94 = test
+  moi r95).
+
+### 116.3 Test headless moi — 35/35 PASS
+
+- `tests/g4_r95_hold_server_day_test.gd` (moi): (A) thuan
+  `reanchor_hold_window` 5 check; (B) Main + PxbServer that qua
+  loopback cong 18796, server ngay 17: thang offline -> hold
+  [1,8), toast "den ngay 8"; noi server -> hold cu duoc gui, ack
+  het-han-giu-sap + toast "het han" + hold cu bi don; mo tran moi
+  (khong bi hold cu chan) -> thang -> hold local [17,24), toast
+  "den ngay 24", quyen loi -10% con voi ngay local 1, server ack
+  ok discount 10, holds tren server co entry [17,24); mua
+  dien-thoai-cu: gui cho ack -> vi 10M -> 5,5M (tra 4.500.000,
+  gia si -10%), toast "4.500.000 ... -10%", server owned x1; mo
+  tran lai bi chan, toast "den ngay 24".
+
+### 116.4 Export + browser-verify r95 — THANG + HOLD DUOC CHAP NHAN
+
+- Scene 120 frame exit 0, 0 ERROR. Export web exit 0: pck
+  **28.082.216 byte, SHA `722f0219…`** (truoc `ef840bd0…`,
+  28.073.140), wasm khong doi `fc74679e…`,
+  `GODOT_THREADS_ENABLED = false`; HTTP 200 du 6 file (cong 8196).
+- Luu y export: chay tu `src/godot` voi duong dan
+  `../godot-build/index.html` — chay tu repo root voi
+  `src/godot-build/index.html` thi Godot hieu duong dan tuong doi
+  theo thu muc project nen bao "Target folder does not exist".
+  (Lan 1 that, lan 2 dung.)
+- Browser-verify r95 (Chromium 1255 + swiftshader, 720x1280,
+  serve cong 8196 + server Godot that cong 8765, state cu ngay
+  ~27): script `hidden_files/pxb-browser-verify-r95.py`, anh
+  93–96 + `console-r95.json` + `holds-r95.json`:
+  **thang tran, winner=A, landed 36/37, 0 miss** (plan-34 tran da
+  xong truoc khi toi luot — khong phai miss nhu r93); ket qua
+  "Giữ sạp sap-cho-dau-moi đến ngày game 34"; **server holds co
+  entry `pxb-1795842449298-627988461`: start_day 27, until_day 34
+  (= server_day + 7), stall sap-cho-dau-moi** — lan dau hold duoc
+  server chap nhan tren trinh duyet that. **0 console error /
+  0 pageerror / 0 failed request.**
+- Han che: vi trong trinh duyet la 0d nen KHONG mua dien-thoai-cu
+  o day — buoc mua -10% da co trong test headless §116.3.
+  Anh ket qua 96: panel ket qua cat chu o mep phai ("Đội Chợ Đầu
+  Mố...") — loi cat chu cu, khong phai do V95.
+- Server + HTTP da dung sau verify (khong de chay nen).
+
+### 116.5 Viec tiep theo — Vong 96
+
+1. Push main gộp tới r95 (commit moi — xem §116.6); deploy pck
+   `722f0219` — CHƯA CHẠY, deploy vẫn chờ chủ nói 'đẩy tiếp'.
+   Live vẫn r41 pck `5f2a052f`.
+2. Tốt nghiệp khóa ngắn Sáng +10; trade/auction sau restart server
+   (cần 2 client).
+3. Chủ chốt trần bonus chỉ số phụ (hiện KHÔNG kẹp STAT_MAX).
+4. Panel kết quả trận cắt chữ ở mép phải (ảnh 96-r95) — co chữ /
+   xuong dong khi mo tran sau.
+
+### 116.6 Push main — (ghi sau khi push xong)
+

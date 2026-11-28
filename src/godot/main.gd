@@ -513,10 +513,13 @@ func _advance_frame() -> void:
 		if online != null:
 			online.ws_game_day = day
 		# G4 buoc 5: sang ngay moi thi don sap tran da het han giu.
-		PxbMarketBattle.expire_holds(battle_state, day)
+		# Vong 95: xet theo ngay neo giu sap — hold neo theo ngay
+		# server chi het han khi ngay server qua until, khong theo
+		# ngay local (client moi ngay local 1 khong bao gio toi 24).
+		PxbMarketBattle.expire_holds(battle_state, _hold_anchor_day())
 		# G4 buoc 8: giu sap thi +Danh vong moi ngay game (sau khi
 		# expire — sap het han ngay hom nay khong cong nua).
-		var ben_day := PxbMarketBattle.hold_benefits(battle_state, "doi-ban", day)
+		var ben_day := PxbMarketBattle.hold_benefits(battle_state, "doi-ban", _hold_anchor_day())
 		if not ben_day.is_empty():
 			hold_fame_today = int(ben_day.get("famePerDay", 0))
 			fame += hold_fame_today
@@ -906,14 +909,17 @@ func _start_battle_demo() -> void:
 	battle_mb = PxbMarketBattle.new()
 	add_child(battle_mb)
 	# G4 buoc 5: khoi phuc giu sap + lich su tu save truoc (neu co),
-	# don sap het han theo ngay game hien tai truoc khi nap vao tran.
-	PxbMarketBattle.expire_holds(battle_state, day)
+	# don sap het han theo ngay neo giu sap truoc khi nap vao tran
+	# (vong 95: ngay server khi dang noi — hold cu [1,8) het han
+	# theo ngay server thi don, khong chan tran moi).
+	PxbMarketBattle.expire_holds(battle_state, _hold_anchor_day())
 	battle_mb.from_data(battle_state)
 	_battle_saved = false
 	# G4 buoc 9 (vong 68): kiem tra can_challenge TRUOC khi mo tran —
 	# doi dang giu sap thi khong mo tran tranh sap moi; bao bang tieng
 	# Viet, khong mo tran (create_battle ben duoi cung chan lai).
-	var chk: Dictionary = battle_mb.can_challenge_now("doi-ban", "sap-cho-dau-moi", day)
+	# Vong 95: chan theo ngay neo giu sap (cung moc voi hold).
+	var chk: Dictionary = battle_mb.can_challenge_now("doi-ban", "sap-cho-dau-moi", _hold_anchor_day())
 	if not bool(chk.get("ok", false)):
 		show_toast(_battle_block_text(str(chk.get("reason", "")), str(chk.get("holdingStallId", ""))))
 		battle_mb.queue_free()
@@ -972,6 +978,20 @@ func _on_battle_finished(_winner: String) -> void:
 		var team_a: Dictionary = rewards.get("teamA", {})
 		fame_gain = int(team_a.get("famePerFighter", 0))
 		hold = battle_scene.battle.get("hold", {})
+	# Vong 95: thang tran khi dang noi server thi neo cua so hold
+	# theo ngay server (start=server_day, until=server_day+7) thay
+	# vi ngay local — neu khong server tu choi vi cua so [1,8) da
+	# het han theo ngay cua no (xem §115.3). Chi neo khi dang noi
+	# + da biet ngay server; choi offline giu nguyen ngay local.
+	# Ghi de ca 2 cho: battle_state (di theo save) + battle cua
+	# scene (toast ben duoi doc until moi).
+	if not hold.is_empty() and str(hold.get("teamId", "")) == "doi-ban" \
+			and online != null and online.is_ws_connected() and online.ws_server_day > 0:
+		var anchored: Dictionary = PxbMarketBattle.reanchor_hold_window(hold, online.ws_server_day)
+		if not anchored.is_empty():
+			hold = anchored
+			battle_scene.battle["hold"] = anchored
+			PxbMarketBattle.apply_hold_win(battle_state, anchored)
 	if fame_gain > 0:
 		fame += fame_gain
 		_update_hud()
@@ -1425,29 +1445,54 @@ func _online_text() -> String:
 
 # --- Hanh dong tu dien thoai (tra Dictionary de test goi truc tiep) ---
 
+## Vong 95: ngay lam moc cho moi tinh toan giu sap — ngay server khi
+## dang noi WS (da biet ngay), khong thi ngay local. Client moi luon
+## bat dau ngay local 1 trong khi server co the da ngay 17+ (state
+## ton tai, 30 phut/ngay) nen moi phep tinh giu sap (quyen loi / het
+## han / chan mo tran / dong bo) phai dung chung moc nay thi moi
+## khop voi server.
+func _hold_anchor_day() -> int:
+	if online != null and online.is_ws_connected() and online.ws_server_day > 0:
+		return online.ws_server_day
+	return day
+
+
 ## G4 buoc 8: quyen loi giu sap cua doi-ban hien tai ({} neu khong
 ## giu sap nao). Dung chung cho gia si khi mua + Danh vong/ngay.
+## Vong 95: xet theo ngay neo giu sap (_hold_anchor_day), khong
+## theo ngay local — hold [17,24) van co quyen loi khi ngay local 1.
 func _hold_benefits_now() -> Dictionary:
-	return PxbMarketBattle.hold_benefits(battle_state, "doi-ban", day)
+	return PxbMarketBattle.hold_benefits(battle_state, "doi-ban", _hold_anchor_day())
 
 
 ## Vong 80: dong bo hold dang giu len server (goi sau khi thang
-## tran tranh sap + khi WS (re)connect). Khong co hold / chua noi
-## WS thi khong lam gi; gui that bai thi lan sau gui lai (khong
-## toast — tranh spam khi offline). Tra {} khi khong gui.
+## tran tranh sap + khi WS (re)connect + khi ngay server doi).
+## Khong co hold cua doi-ban / chua noi WS thi khong lam gi; gui
+## that bai thi lan sau gui lai (khong toast — tranh spam khi
+## offline). Tra {} khi khong gui.
+## Vong 95: GUI CA KHI hold da het han theo ngay neo — chi can
+## battle_state con hold cua doi-ban la gui, de SERVER xet han
+## (het-han-giu-sap) va bao cho nguoi choi biet gia si da het.
+## Chan theo quyen loi (nhu ban truoc) lam mat ack het-han +
+## toast o vong 81 phase 8: ngay neo 15 ngoai [8,15) thi khong
+## gui, ack thu 3 khong bao gio ve. Gui game_day theo ngay neo
+## giu sap (ngay server khi dang noi).
 func _sync_hold_to_server() -> Dictionary:
 	if online == null or not online.is_ws_connected():
 		return {}
-	var ben := _hold_benefits_now()
-	if ben.is_empty():
-		return {}
-	var stall_id := String(ben.get("stallId", ""))
 	var holds: Dictionary = battle_state.get("holds", {}) as Dictionary
-	if stall_id.is_empty() or not holds.has(stall_id):
+	var stall_id := ""
+	var hold: Dictionary = {}
+	for sid in holds.keys():
+		var h: Dictionary = holds[sid]
+		if str(h.get("teamId", "")) == "doi-ban":
+			stall_id = str(sid)
+			hold = h
+			break
+	if stall_id.is_empty() or hold.is_empty():
 		return {}
-	var hold: Dictionary = holds[stall_id]
 	return online.send_ws_stall_hold_sync(stall_id,
-		int(hold.get("startGameDay", day)), int(hold.get("untilGameDay", day + 1)), day)
+		int(hold.get("startGameDay", day)), int(hold.get("untilGameDay", day + 1)), _hold_anchor_day())
 
 
 ## G4 buoc 9 (vong 68): ngay het han giu sap (0 neu khong giu sap do).
@@ -2292,6 +2337,10 @@ func _on_ws_stall_hold_synced(ack: Dictionary) -> void:
 	match String(ack.get("reason", "")):
 		"het-han-giu-sap":
 			show_toast("Giữ sạp đã hết hạn theo máy chủ, lần mua sau không còn giá sỉ.")
+			# Vong 95: hold het han theo ngay server thi don khoi
+			# battle_state luon — khong gui lai + bao lai o moi lan
+			# doi ngay / (re)connect sau nay.
+			PxbMarketBattle.expire_holds(battle_state, _hold_anchor_day())
 		"dang-giu-sap-khac":
 			show_toast("Máy chủ báo đội đang giữ sạp khác.")
 		"ngay-server-khong-khop":
